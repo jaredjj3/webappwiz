@@ -1,0 +1,13 @@
+{
+  "name": "webappwiz",
+  "module": "index.ts",
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.5",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  }
+}
