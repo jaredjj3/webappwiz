@@ -1,6 +1,6 @@
 {
-  "name": "@webappwiz/cli",
-  "version": "0.0.0",
-  "type": "module",
-  "module": "index.ts"
+	"name": "@webappwiz/cli",
+	"version": "0.0.0",
+	"type": "module",
+	"module": "index.ts"
 }

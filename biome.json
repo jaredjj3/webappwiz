@@ -1,6 +1,13 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  "linter": { "enabled": true, "rules": { "recommended": true } },
-  "formatter": { "enabled": true }
+	"$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
+	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"style": { "useBlockStatements": "error" },
+			"correctness": { "noUndeclaredDependencies": "error" }
+		}
+	},
+	"formatter": { "enabled": true }
 }
