@@ -2,6 +2,7 @@ import { cli, t } from "@webappwiz/cli";
 import { ConsoleLogger } from "@webappwiz/log";
 import { fix } from "./fix";
 import { path } from "./path";
+import { test } from "./test";
 
 const log = new ConsoleLogger();
 
@@ -28,5 +29,10 @@ wiz
 		description: "remove bin/ from your PATH",
 	})
 	.action((opts) => path(opts, log));
+
+wiz
+	.command("test")
+	.description("run each package's tests")
+	.action(() => test(log));
 
 await wiz.run();
