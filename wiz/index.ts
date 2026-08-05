@@ -1,12 +1,13 @@
 import { cli, t } from "@webappwiz/cli";
 import { ConsoleLogger } from "@webappwiz/log";
-import { NodeFs } from "@webappwiz/sys";
+import { NodeFs, NodePs } from "@webappwiz/sys";
 import { fix } from "./fix";
 import { path } from "./path";
 import { test } from "./test";
 
 const log = new ConsoleLogger();
 const fs = new NodeFs();
+const ps = new NodePs();
 
 const wiz = cli("wiz", log);
 
@@ -17,7 +18,7 @@ wiz
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action((opts) => fix(opts, log));
+	.action((opts) => fix(opts, log, ps));
 
 wiz
 	.command("path")
@@ -35,6 +36,6 @@ wiz
 wiz
 	.command("test")
 	.description("run each package's tests")
-	.action(() => test(log, fs));
+	.action(() => test(log, fs, ps));
 
 await wiz.run();

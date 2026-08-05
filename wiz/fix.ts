@@ -1,17 +1,25 @@
 import { color, type Logger } from "@webappwiz/log";
+import type { Ps } from "@webappwiz/sys";
 
 export async function fix(
 	opts: { check: boolean },
 	log: Logger,
+	ps: Ps,
 ): Promise<void> {
-	await biome(opts.check, log);
-	await typecheck(log);
+	await biome(opts.check, log, ps);
+	await typecheck(log, ps);
 }
 
-async function biome(check: boolean, log: Logger): Promise<void> {
+async function biome(check: boolean, log: Logger, ps: Ps): Promise<void> {
 	// --write --unsafe applies fixable lint rules (e.g. useBlockStatements); --check is read-only for CI.
 	const flags = check ? [] : ["--write", "--unsafe"];
-	const { exitCode } = await Bun.$`bunx biome check ${flags} .`.nothrow();
+	const { exitCode } = await ps.spawn([
+		"bunx",
+		"biome",
+		"check",
+		...flags,
+		".",
+	]);
 	if (exitCode === 0) {
 		log.info(`biome: ${color.green("success")}`);
 	} else {
@@ -20,9 +28,9 @@ async function biome(check: boolean, log: Logger): Promise<void> {
 	}
 }
 
-async function typecheck(log: Logger): Promise<void> {
+async function typecheck(log: Logger, ps: Ps): Promise<void> {
 	// One root tsconfig covers every workspace, so a single tsc run is enough here.
-	const { exitCode } = await Bun.$`bunx tsc --noEmit`.nothrow();
+	const { exitCode } = await ps.spawn(["bunx", "tsc", "--noEmit"]);
 	log.info(
 		`typecheck: ${exitCode === 0 ? color.green("success") : color.red("failed")}`,
 	);

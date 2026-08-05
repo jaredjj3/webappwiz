@@ -1,9 +1,9 @@
 import { color, type Logger } from "@webappwiz/log";
-import type { Fs } from "@webappwiz/sys";
+import type { Fs, Ps } from "@webappwiz/sys";
 
 const packages = `${import.meta.dir}/../packages`;
 
-export async function test(log: Logger, fs: Fs): Promise<void> {
+export async function test(log: Logger, fs: Fs, ps: Ps): Promise<void> {
 	const entries = await fs.readdir(packages);
 	const dirs: string[] = [];
 	for (const entry of entries.sort()) {
@@ -16,9 +16,9 @@ export async function test(log: Logger, fs: Fs): Promise<void> {
 	for (const dir of dirs) {
 		log.info(`\n${dir}:`);
 		// one run per package, cwd'd into it, so each picks up its own bunfig.toml
-		const { exitCode } = await Bun.$`bun test`
-			.cwd(`${packages}/${dir}`)
-			.nothrow();
+		const { exitCode } = await ps.spawn(["bun", "test"], {
+			cwd: `${packages}/${dir}`,
+		});
 		if (exitCode !== 0) {
 			failed.push(dir);
 		}
