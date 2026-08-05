@@ -1,10 +1,12 @@
 import { cli, t } from "@webappwiz/cli";
 import { ConsoleLogger } from "@webappwiz/log";
+import { NodeFs } from "@webappwiz/sys";
 import { fix } from "./fix";
 import { path } from "./path";
 import { test } from "./test";
 
 const log = new ConsoleLogger();
+const fs = new NodeFs();
 
 const wiz = cli("wiz", log);
 
@@ -28,11 +30,11 @@ wiz
 		default: false,
 		description: "remove bin/ from your PATH",
 	})
-	.action((opts) => path(opts, log));
+	.action((opts) => path(opts, log, fs));
 
 wiz
 	.command("test")
 	.description("run each package's tests")
-	.action(() => test(log));
+	.action(() => test(log, fs));
 
 await wiz.run();

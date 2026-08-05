@@ -1,13 +1,16 @@
-import { readdir } from "node:fs/promises";
 import { color, type Logger } from "@webappwiz/log";
+import type { Fs } from "@webappwiz/sys";
 
 const packages = `${import.meta.dir}/../packages`;
 
-export async function test(log: Logger): Promise<void> {
-	const dirs = (await readdir(packages, { withFileTypes: true }))
-		.filter((e) => e.isDirectory())
-		.map((e) => e.name)
-		.sort();
+export async function test(log: Logger, fs: Fs): Promise<void> {
+	const entries = await fs.readdir(packages);
+	const dirs: string[] = [];
+	for (const entry of entries.sort()) {
+		if ((await fs.stat(`${packages}/${entry}`)).isDirectory()) {
+			dirs.push(entry);
+		}
+	}
 
 	const failed: string[] = [];
 	for (const dir of dirs) {
