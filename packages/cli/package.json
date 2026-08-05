@@ -1,8 +1,12 @@
 {
 	"name": "@webappwiz/cli",
 	"version": "0.0.0",
+	"private": true,
 	"type": "module",
 	"module": "index.ts",
+	"exports": {
+		".": "./index.ts"
+	},
 	"dependencies": {
 		"@webappwiz/log": "workspace:*"
 	}
