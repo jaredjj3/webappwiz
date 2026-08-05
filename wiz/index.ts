@@ -1,8 +1,9 @@
 import { cli, t } from "@webappwiz/cli";
 import { fix } from "./fix";
+import { log } from "./log";
 import { path } from "./path";
 
-const wiz = cli("wiz");
+const wiz = cli("wiz", log);
 
 wiz
 	.command("fix")

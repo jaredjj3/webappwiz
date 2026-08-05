@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { log } from "./log";
 
 // Tag every line we add so `remove` can find and delete exactly ours.
 const TAG = "# webappwiz";
@@ -17,13 +18,11 @@ async function add(): Promise<void> {
 		.text()
 		.catch(() => "");
 	if (current.includes(line)) {
-		console.log(`Already on PATH in ${profile}`);
+		log.info(`Already on PATH in ${profile}`);
 		return;
 	}
 	await Bun.write(profile, `${current}\n${line}\n`);
-	console.log(
-		`Added ${binDir} to ${profile} — restart your shell to pick it up.`,
-	);
+	log.info(`Added ${binDir} to ${profile} — restart your shell to pick it up.`);
 }
 
 async function remove(): Promise<void> {
@@ -33,7 +32,7 @@ async function remove(): Promise<void> {
 		.catch(() => "");
 	const kept = current.split("\n").filter((l) => !l.endsWith(TAG));
 	await Bun.write(profile, kept.join("\n"));
-	console.log(
+	log.info(
 		`Removed ${binDir} from ${profile} — restart your shell to pick it up.`,
 	);
 }

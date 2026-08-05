@@ -1,4 +1,4 @@
-import { ConsoleLogger, type Logger } from "@webappwiz/logs";
+import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import type { Schema } from "./schema";
 
 // unknown return so `.action(() => doThing())` type-checks and async actions

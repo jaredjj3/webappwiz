@@ -1,4 +1,4 @@
-import { ConsoleLogger, type Logger } from "@webappwiz/logs";
+import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import { Command } from "./command";
 
 class Cli {

@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from "bun:test";
-import { MemoryLogger } from "@webappwiz/logs";
+import { MemoryLogger } from "@webappwiz/log";
 import { cli, t } from "./index";
 
 // errors exit the process, so tests stub it out and read the logger instead
