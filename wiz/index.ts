@@ -10,7 +10,7 @@ const wiz = cli("wiz", log);
 wiz
 	.command("fix")
 	.description("format, lint, and typecheck the workspace")
-	.option("check", t.boolean, {
+	.option("check", t.boolean(), {
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
@@ -19,11 +19,11 @@ wiz
 wiz
 	.command("path")
 	.description("manage bin/ on your shell PATH")
-	.option("add", t.boolean, {
+	.option("add", t.boolean(), {
 		default: false,
 		description: "add bin/ to your PATH",
 	})
-	.option("remove", t.boolean, {
+	.option("remove", t.boolean(), {
 		default: false,
 		description: "remove bin/ from your PATH",
 	})
