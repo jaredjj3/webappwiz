@@ -1,3 +1,4 @@
+import { ConsoleLogger, type Logger } from "@webappwiz/logs";
 import type { Schema } from "./schema";
 
 // unknown return so `.action(() => doThing())` type-checks and async actions
@@ -19,7 +20,10 @@ export class Command<O> {
 	private options: OptionMeta[] = [];
 	private handler: Handler<O> = () => {};
 
-	constructor(readonly name: string) {}
+	constructor(
+		readonly name: string,
+		private log: Logger = new ConsoleLogger(),
+	) {}
 
 	get summary(): string {
 		return this.desc;
@@ -114,6 +118,6 @@ export class Command<O> {
 		for (const [flag, text] of rows) {
 			lines.push(`  ${flag.padEnd(pad)}  ${text}`.trimEnd());
 		}
-		console.log(lines.join("\n"));
+		this.log.info(lines.join("\n"));
 	}
 }

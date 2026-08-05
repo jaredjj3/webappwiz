@@ -1,14 +1,18 @@
+import { ConsoleLogger, type Logger } from "@webappwiz/logs";
 import { Command } from "./command";
 
 class Cli {
 	private cmds = new Map<string, Command<unknown>>();
 
-	constructor(readonly name: string) {}
+	constructor(
+		readonly name: string,
+		private log: Logger,
+	) {}
 
 	// unknown is the empty-options seed: `unknown & { name: string }` reduces to
 	// `{ name: string }`, so options accumulate cleanly as they're declared.
 	command(name: string): Command<unknown> {
-		const c = new Command<unknown>(name);
+		const c = new Command<unknown>(name, this.log);
 		this.cmds.set(name, c); // registered by reference; chain mutates the same object
 		return c;
 	}
@@ -38,10 +42,10 @@ class Cli {
 			"",
 			`Run \`${this.name} <command> --help\` for a command's options.`,
 		];
-		console.log(lines.join("\n"));
+		this.log.info(lines.join("\n"));
 	}
 }
 
-export function cli(name: string): Cli {
-	return new Cli(name);
+export function cli(name: string, log: Logger = new ConsoleLogger()): Cli {
+	return new Cli(name, log);
 }

@@ -2,5 +2,8 @@
 	"name": "@webappwiz/cli",
 	"version": "0.0.0",
 	"type": "module",
-	"module": "index.ts"
+	"module": "index.ts",
+	"dependencies": {
+		"@webappwiz/logs": "workspace:*"
+	}
 }

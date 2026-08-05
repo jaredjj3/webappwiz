@@ -1,4 +1,5 @@
 import { expect, spyOn, test } from "bun:test";
+import { MemoryLogger } from "@webappwiz/logs";
 import { cli, t } from "./index";
 
 test("dispatches to the named command with parsed, typed opts", () => {
@@ -127,6 +128,20 @@ test("-h works the same as --help", () => {
 	wiz.run(["x", "-h"]);
 	log.mockRestore();
 	expect(ran).toBe(false);
+});
+
+test("help goes to the injected logger, not the console", () => {
+	const log = new MemoryLogger();
+	const wiz = cli("wiz", log);
+	wiz
+		.command("greet")
+		.description("greet someone")
+		.action(() => {});
+	wiz.run([]); // program help
+	wiz.run(["greet", "--help"]); // command help
+	const out = log.entries.map((e) => String(e.message)).join("\n");
+	expect(out).toContain("Usage: wiz <command> [options]");
+	expect(out).toContain("Usage: wiz greet [options]");
 });
 
 test("action opts are statically typed", () => {
