@@ -10,7 +10,7 @@ export { PlatformIpProvider } from "./ip/platform-ip-provider";
 export { SequentialIpProvider } from "./ip/sequential-ip-provider";
 export { StaticIpProvider } from "./ip/static-ip-provider";
 export { Win32IpProvider } from "./ip/win32-ip-provider";
-export { BunPs } from "./ps/bun-ps";
+export { NodePs } from "./ps/node-ps";
 export type {
 	Ps,
 	SpawnCaptureResult,
