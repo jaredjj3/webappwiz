@@ -1,0 +1,96 @@
+import type { Ps, SpawnCaptureResult, SpawnResult } from "./ps";
+
+export class FakePs implements Ps {
+	platform: NodeJS.Platform = "darwin";
+
+	private path = "/";
+	private calls: string[] = [];
+	private handlers = new Map<string, Array<() => void>>();
+	private exitCode = 0;
+	private exited = false;
+	private captureOutput = { stdout: "", stderr: "" };
+	private simulation = () => Promise.resolve(0);
+
+	async spawn(argv: string[]): Promise<SpawnResult> {
+		if (!this.exited) {
+			this.calls.push(argv.join(" "));
+			await this.simulation();
+		}
+		return { exitCode: this.exitCode };
+	}
+
+	async spawnCapture(argv: string[]): Promise<SpawnCaptureResult> {
+		if (!this.exited) {
+			this.calls.push(argv.join(" "));
+			await this.simulation();
+		}
+		return {
+			exitCode: this.exitCode,
+			stdout: this.captureOutput.stdout,
+			stderr: this.captureOutput.stderr,
+		};
+	}
+
+	cd(path: string): void {
+		if (!this.exited) {
+			this.path = path;
+		}
+	}
+
+	exit(code: number): void {
+		if (!this.exited) {
+			this.exitCode = code;
+			this.exited = true;
+		}
+	}
+
+	on(signal: string, handler: () => void): void {
+		const handlers = this.handlers.get(signal) ?? [];
+		handlers.push(handler);
+		this.handlers.set(signal, handlers);
+	}
+
+	once(event: "exit", handler: () => void): void {
+		const wrapped = () => {
+			handler();
+			const handlers = this.handlers.get(event) ?? [];
+			const index = handlers.indexOf(wrapped);
+			if (index !== -1) {
+				handlers.splice(index, 1);
+			}
+		};
+		this.on(event, wrapped);
+	}
+
+	simulate(simulation: () => Promise<number>): void {
+		this.simulation = simulation;
+	}
+
+	setCaptureOutput(stdout: string, stderr: string): void {
+		this.captureOutput = { stdout, stderr };
+	}
+
+	getCurrentPath(): string {
+		return this.path;
+	}
+
+	getCalls(): string[] {
+		return this.calls;
+	}
+
+	getExitCode(): number {
+		return this.exitCode;
+	}
+
+	dispatch(signal: string): void {
+		if (!this.exited) {
+			for (const handler of this.handlers.get(signal) ?? []) {
+				handler();
+			}
+		}
+	}
+
+	isExited(): boolean {
+		return this.exited;
+	}
+}

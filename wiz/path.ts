@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { log } from "./log";
+import type { Logger } from "@webappwiz/log";
 
 // Tag every line we add so `remove` can find and delete exactly ours.
 const TAG = "# webappwiz";
@@ -11,7 +11,7 @@ function profilePath(): string {
 
 const binDir = resolve(import.meta.dir, "../bin");
 
-async function add(): Promise<void> {
+async function add(log: Logger): Promise<void> {
 	const profile = profilePath();
 	const line = `export PATH="${binDir}:$PATH" ${TAG}`;
 	const current = await Bun.file(profile)
@@ -25,7 +25,7 @@ async function add(): Promise<void> {
 	log.info(`Added ${binDir} to ${profile} — restart your shell to pick it up.`);
 }
 
-async function remove(): Promise<void> {
+async function remove(log: Logger): Promise<void> {
 	const profile = profilePath();
 	const current = await Bun.file(profile)
 		.text()
@@ -37,16 +37,16 @@ async function remove(): Promise<void> {
 	);
 }
 
-export async function path(opts: {
-	add: boolean;
-	remove: boolean;
-}): Promise<void> {
+export async function path(
+	opts: { add: boolean; remove: boolean },
+	log: Logger,
+): Promise<void> {
 	if (opts.add && opts.remove) {
 		throw new Error("must specify one of --add or --remove");
 	} else if (opts.add) {
-		await add();
+		await add(log);
 	} else if (opts.remove) {
-		await remove();
+		await remove(log);
 	} else {
 		throw new Error("must specify one of --add or --remove");
 	}

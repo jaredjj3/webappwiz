@@ -1,7 +1,9 @@
 import { cli, t } from "@webappwiz/cli";
+import { ConsoleLogger } from "@webappwiz/log";
 import { fix } from "./fix";
-import { log } from "./log";
 import { path } from "./path";
+
+const log = new ConsoleLogger();
 
 const wiz = cli("wiz", log);
 
@@ -12,7 +14,7 @@ wiz
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action(fix);
+	.action((opts) => fix(opts, log));
 
 wiz
 	.command("path")
@@ -25,6 +27,6 @@ wiz
 		default: false,
 		description: "remove bin/ from your PATH",
 	})
-	.action(path);
+	.action((opts) => path(opts, log));
 
 await wiz.run();

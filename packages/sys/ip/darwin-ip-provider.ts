@@ -1,0 +1,24 @@
+import type { Ps } from "../ps/ps";
+import type { IpProvider } from "./ip-provider";
+
+export class DarwinIpProvider implements IpProvider {
+	constructor(private readonly ps: Ps) {
+		if (ps.platform !== "darwin") {
+			throw new Error("DarwinIpProvider is only supported on macOS");
+		}
+	}
+
+	async get(): Promise<string> {
+		const result = await this.ps.spawnCapture(["ipconfig", "getifaddr", "en0"]);
+		if (result.exitCode !== 0) {
+			throw new Error("failed to get IP address from en0");
+		}
+
+		const ip = result.stdout.trim();
+		if (!ip) {
+			throw new Error("no IP address found on en0");
+		}
+
+		return ip;
+	}
+}
