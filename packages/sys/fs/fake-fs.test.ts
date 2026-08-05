@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { FakeFs } from "../index";
+import { FakeFs } from "../testing";
 
 test("reads back what it writes and lists a directory's direct children", async () => {
 	const fs = new FakeFs();

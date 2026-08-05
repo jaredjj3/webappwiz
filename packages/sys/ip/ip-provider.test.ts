@@ -2,12 +2,12 @@ import { expect, test } from "bun:test";
 
 import {
 	DarwinIpProvider,
-	FakePs,
 	LinuxIpProvider,
 	PlatformIpProvider,
 	SequentialIpProvider,
 	StaticIpProvider,
 } from "../index";
+import { FakePs } from "../testing";
 
 test("darwin provider reads the trimmed address from ipconfig", async () => {
 	const ps = new FakePs();

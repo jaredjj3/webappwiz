@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 
 import { MemoryLogger } from "@webappwiz/log";
-import { FakeFs, FakePs, FileHostMapper } from "../index";
+import { FileHostMapper } from "../index";
+import { FakeFs, FakePs } from "../testing";
 
 const HOSTS = "127.0.0.1   localhost\n10.0.0.1   old.test";
 

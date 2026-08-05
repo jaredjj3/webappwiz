@@ -3,6 +3,10 @@
 	"version": "0.0.0",
 	"type": "module",
 	"module": "index.ts",
+	"exports": {
+		".": "./index.ts",
+		"./testing": "./testing.ts"
+	},
 	"dependencies": {
 		"@webappwiz/log": "workspace:*"
 	}
