@@ -2,6 +2,20 @@ import { expect, spyOn, test } from "bun:test";
 import { MemoryLogger } from "@webappwiz/logs";
 import { cli, t } from "./index";
 
+// errors exit the process, so tests stub it out and read the logger instead
+function exitCode(exit: ReturnType<typeof spyOn>): unknown {
+	const [call] = exit.mock.calls;
+	exit.mockRestore();
+	return call?.[0];
+}
+
+function trapExit() {
+	return {
+		log: new MemoryLogger(),
+		exit: spyOn(process, "exit").mockImplementation((() => {}) as never),
+	};
+}
+
 test("dispatches to the named command with parsed, typed opts", () => {
 	let got: { name: string; count: number } | undefined;
 	const wiz = cli("wiz");
@@ -59,12 +73,16 @@ test("unknown or missing command falls back to help without throwing", () => {
 });
 
 test("number schema rejects non-numbers", () => {
-	const wiz = cli("wiz");
+	const { log, exit } = trapExit();
+	const wiz = cli("wiz", log);
 	wiz
 		.command("n")
 		.option("x", t.number)
 		.action(() => {});
-	expect(() => wiz.run(["n", "--x", "abc"])).toThrow(/number/);
+	wiz.run(["n", "--x", "abc"]);
+	const code = exitCode(exit); // read before restore; restoring clears the calls
+	expect(String(log.entries.at(-1)?.message)).toMatch(/^error: .*number/);
+	expect(code).toBe(1);
 });
 
 test("option with a default is used when the flag is absent", () => {
@@ -83,13 +101,31 @@ test("option with a default is used when the flag is absent", () => {
 	expect(out).toEqual({ add: true, name: "ada" });
 });
 
-test("missing required option throws naming the option", () => {
-	const wiz = cli("wiz");
+test("missing required option prints a readable error and exits 1", () => {
+	const { log, exit } = trapExit();
+	const wiz = cli("wiz", log);
 	wiz
 		.command("r")
 		.option("must", t.string)
 		.action(() => {});
-	expect(() => wiz.run(["r"])).toThrow(/must/);
+	wiz.run(["r"]);
+	const code = exitCode(exit);
+	expect(log.entries.at(-1)?.message).toBe(
+		"error: missing required option --must",
+	);
+	expect(code).toBe(1);
+});
+
+test("a throwing async action is reported the same way", async () => {
+	const { log, exit } = trapExit();
+	const wiz = cli("wiz", log);
+	wiz.command("boom").action(async () => {
+		throw new Error("nope");
+	});
+	await wiz.run(["boom"]);
+	const code = exitCode(exit);
+	expect(log.entries.at(-1)?.message).toBe("error: nope");
+	expect(code).toBe(1);
 });
 
 test("--help lists options with descriptions and skips the action, even with a required option", () => {

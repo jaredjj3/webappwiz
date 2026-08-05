@@ -43,14 +43,12 @@ export async function path(opts: {
 	remove: boolean;
 }): Promise<void> {
 	if (opts.add && opts.remove) {
-		console.error("error: pass only one of --add or --remove");
-		process.exit(1);
-	}
-	if (opts.add) {
+		throw new Error("must specify one of --add or --remove");
+	} else if (opts.add) {
 		await add();
 	} else if (opts.remove) {
 		await remove();
 	} else {
-		console.log("usage: wiz path --add | --remove");
+		throw new Error("must specify one of --add or --remove");
 	}
 }

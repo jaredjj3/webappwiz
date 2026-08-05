@@ -26,7 +26,19 @@ class Cli {
 		if (!cmd) {
 			return this.help();
 		}
-		return cmd.exec(rest, this.name);
+		try {
+			const out = cmd.exec(rest, this.name);
+			// async actions reject after exec() returns, so cover that path too
+			return out instanceof Promise ? out.catch((e) => this.fail(e)) : out;
+		} catch (e) {
+			return this.fail(e);
+		}
+	}
+
+	// ponytail: message only, no stack — a bad flag is a user error, not a crash
+	private fail(e: unknown): never {
+		this.log.error(`error: ${e instanceof Error ? e.message : e}`);
+		process.exit(1);
 	}
 
 	private help(): void {
