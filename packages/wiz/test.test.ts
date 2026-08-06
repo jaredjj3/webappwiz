@@ -22,12 +22,29 @@ bunTest("runs bun test once per package directory, in order", async () => {
 	const ps = new FakePs();
 	const fs = await packagesDir("sys", "log", "README.md");
 
-	await test(new MemoryLogger(), fs, ps);
+	await test({ package: "" }, new MemoryLogger(), fs, ps);
 
 	expect(ps.getCalls()).toEqual([
 		"bun test --pass-with-no-tests",
 		"bun test --pass-with-no-tests",
 	]);
+});
+
+bunTest("runs only the named package when given one", async () => {
+	const ps = new FakePs();
+	const fs = await packagesDir("sys", "log");
+
+	await test({ package: "log" }, new MemoryLogger(), fs, ps);
+
+	expect(ps.getCalls()).toEqual(["bun test --pass-with-no-tests"]);
+});
+
+bunTest("rejects a package that does not exist", async () => {
+	const fs = await packagesDir("sys");
+
+	await expect(
+		test({ package: "nope" }, new MemoryLogger(), fs, new FakePs()),
+	).rejects.toThrow("no such package: nope");
 });
 
 bunTest("names the packages whose tests failed", async () => {
@@ -36,6 +53,8 @@ bunTest("names the packages whose tests failed", async () => {
 	const fs = await packagesDir("sys");
 	const log = new MemoryLogger();
 
-	await expect(test(log, fs, ps)).rejects.toThrow("Tests failed");
+	await expect(test({ package: "" }, log, fs, ps)).rejects.toThrow(
+		"Tests failed",
+	);
 	expect(log.entries.at(-1)?.message).toContain("sys");
 });

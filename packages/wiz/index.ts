@@ -37,6 +37,10 @@ wiz
 wiz
 	.command("test")
 	.description("run each package's tests")
-	.action(() => test(log, fs, ps));
+	.arg("package", t.string(), {
+		default: "",
+		description: "only test this package (default: all)",
+	})
+	.action((opts) => test(opts, log, fs, ps));
 
 await wiz.run();
