@@ -1,4 +1,4 @@
-import { cli, t } from "@webappwiz/cli";
+import { cli, t } from "@webappwiz/cmd";
 import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs, NodePs } from "@webappwiz/sys";
 import { fix } from "./fix";

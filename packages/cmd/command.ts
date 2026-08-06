@@ -66,20 +66,20 @@ export class Command<O> {
 	private parse(argv: string[]): O {
 		const raw = new Map<string, string>();
 		for (let i = 0; i < argv.length; i++) {
-			const tok = argv[i];
-			if (tok === undefined || !tok.startsWith("--")) {
+			const token = argv[i];
+			if (token === undefined || !token.startsWith("--")) {
 				continue; // ponytail: no positionals yet, add an .arg() chain when needed
 			}
-			const eq = tok.indexOf("=");
+			const eq = token.indexOf("=");
 			if (eq !== -1) {
-				raw.set(tok.slice(2, eq), tok.slice(eq + 1));
+				raw.set(token.slice(2, eq), token.slice(eq + 1));
 			} else {
 				const next = argv[i + 1];
 				if (next !== undefined && !next.startsWith("--")) {
-					raw.set(tok.slice(2), next);
+					raw.set(token.slice(2), next);
 					i++;
 				} else {
-					raw.set(tok.slice(2), "true"); // bare flag
+					raw.set(token.slice(2), "true"); // bare flag
 				}
 			}
 		}

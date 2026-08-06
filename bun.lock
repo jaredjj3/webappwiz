@@ -12,8 +12,8 @@
         "typescript": "^7",
       },
     },
-    "packages/cli": {
-      "name": "@webappwiz/cli",
+    "packages/cmd": {
+      "name": "@webappwiz/cmd",
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/log": "workspace:*",
@@ -34,7 +34,7 @@
       "name": "wiz",
       "version": "0.0.0",
       "dependencies": {
-        "@webappwiz/cli": "workspace:*",
+        "@webappwiz/cmd": "workspace:*",
         "@webappwiz/log": "workspace:*",
         "@webappwiz/sys": "workspace:*",
       },
@@ -103,7 +103,7 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
 
-    "@webappwiz/cli": ["@webappwiz/cli@workspace:packages/cli"],
+    "@webappwiz/cmd": ["@webappwiz/cmd@workspace:packages/cmd"],
 
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
 
