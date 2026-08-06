@@ -11,7 +11,6 @@ export async function fix(
 }
 
 async function biome(check: boolean, log: Logger, ps: Ps): Promise<void> {
-	// --write --unsafe applies fixable lint rules (e.g. useBlockStatements); --check is read-only for CI.
 	const flags = check ? [] : ["--write", "--unsafe"];
 	const { exitCode } = await ps.spawn([
 		"bunx",
