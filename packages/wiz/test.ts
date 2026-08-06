@@ -14,7 +14,7 @@ export async function test(log: Logger, fs: Fs, ps: Ps): Promise<void> {
 
 	const failed: string[] = [];
 	for (const dir of dirs) {
-		log.info(`\n${dir}:`);
+		log.info(`\n${color.blue(`${dir}:`)}`);
 		// one run per package, cwd'd into it, so each picks up its own bunfig.toml
 		const { exitCode } = await ps.spawn(
 			["bun", "test", "--pass-with-no-tests"],

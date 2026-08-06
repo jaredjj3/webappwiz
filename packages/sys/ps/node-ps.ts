@@ -2,14 +2,34 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { hostname } from "node:os";
 import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 
+/**
+ * The parts of `process` that NodePs touches. Injecting it is what lets a test
+ * keep real spawning — real subprocesses, real exit codes — without a real
+ * `process.exit` killing the runner or signal handlers leaking between tests.
+ */
+export interface ProcessLike {
+	platform: NodeJS.Platform;
+	pid: number;
+	kill(pid: number, signal: 0): boolean;
+	chdir(path: string): void;
+	exit(code: number): void;
+	on(event: string, handler: (...args: unknown[]) => void): void;
+	once(event: string, handler: () => void): void;
+}
+
 export class NodePs implements Ps {
-	platform: NodeJS.Platform = process.platform;
-	pid = process.pid;
+	platform: NodeJS.Platform;
+	pid: number;
 	hostname = hostname();
+
+	constructor(private readonly proc: ProcessLike = process) {
+		this.platform = proc.platform;
+		this.pid = proc.pid;
+	}
 
 	alive(pid: number): boolean {
 		try {
-			process.kill(pid, 0); // signal 0 checks for existence without delivering
+			this.proc.kill(pid, 0); // signal 0 checks for existence without delivering
 			return true;
 		} catch (e) {
 			// EPERM means it exists but belongs to another user.
@@ -46,19 +66,19 @@ export class NodePs implements Ps {
 	}
 
 	cd(path: string): void {
-		process.chdir(path);
+		this.proc.chdir(path);
 	}
 
 	exit(code: number): void {
-		process.exit(code);
+		this.proc.exit(code);
 	}
 
 	on(signal: string, handler: () => void): void {
-		process.on(signal, handler);
+		this.proc.on(signal, handler);
 	}
 
 	once(event: "exit", handler: () => void): void {
-		process.once(event, handler);
+		this.proc.once(event, handler);
 	}
 }
 

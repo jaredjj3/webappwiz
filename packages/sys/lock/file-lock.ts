@@ -1,0 +1,158 @@
+import { rmSync } from "node:fs";
+import { color, type Logger } from "@webappwiz/log";
+import type { Fs } from "../fs/fs";
+import type { Ps } from "../ps/ps";
+import type { Lock } from "./lock";
+
+interface Holder {
+	pid: number;
+	hostname: string;
+	at: string;
+}
+
+export interface FileLockOptions {
+	/** How long a holder may go quiet before its lock can be stolen. */
+	stalenessMs?: number;
+	/** How often to re-check a lock that is already taken. */
+	pollMs?: number;
+}
+
+/**
+ * A mutex between processes, held by a directory on disk. `mkdir` is the whole
+ * mechanism: it is atomic on every filesystem and either creates the directory
+ * or fails, so there is no check-then-write window to lose.
+ *
+ * `acquire` blocks until the lock is free — there is deliberately no "busy"
+ * return, so callers cannot wander off and do work they are not holding the
+ * lock for.
+ */
+export class FileLock implements Lock {
+	private held = false;
+	private handlersRegistered = false;
+	private readonly stalenessMs: number;
+	private readonly pollMs: number;
+
+	constructor(
+		private readonly fs: Fs,
+		private readonly ps: Ps,
+		private readonly log: Logger,
+		readonly path: string,
+		{ stalenessMs = 60_000, pollMs = 2_000 }: FileLockOptions = {},
+	) {
+		this.stalenessMs = stalenessMs;
+		this.pollMs = pollMs;
+	}
+
+	async acquire(): Promise<void> {
+		let unreadableSince: number | null = null;
+
+		for (let waited = false; ; waited = true) {
+			try {
+				await this.fs.mkdir(this.path, { recursive: false });
+			} catch {
+				const holder = await this.holder();
+				if (holder === null) {
+					// A holder that has not written its metadata yet: give the winner
+					// time to finish before deciding the directory is orphaned.
+					unreadableSince ??= Date.now();
+					if (Date.now() - unreadableSince > this.stalenessMs) {
+						unreadableSince = null;
+						this.steal("it has no holder metadata");
+						continue;
+					}
+				} else if (this.isStale(holder)) {
+					this.steal(`holder pid ${holder.pid} is gone or stale`);
+					continue;
+				}
+				await Bun.sleep(this.pollMs);
+				continue;
+			}
+			if (waited) {
+				this.log.error(`acquired ${this.path} after waiting`);
+			}
+			break;
+		}
+
+		this.held = true;
+		await this.fs.write(
+			this.holderPath,
+			JSON.stringify({
+				pid: this.ps.pid,
+				hostname: this.ps.hostname,
+				at: new Date().toISOString(),
+			} satisfies Holder),
+		);
+		this.registerCleanup();
+	}
+
+	async release(): Promise<void> {
+		if (this.held) {
+			this.held = false;
+			await this.fs.rm(this.path, { recursive: true, force: true });
+		}
+	}
+
+	/** Releases only a lock this process recorded itself as holding. */
+	async releaseIfOurs(): Promise<void> {
+		const holder = await this.holder();
+		if (holder?.pid === this.ps.pid && holder.hostname === this.ps.hostname) {
+			this.held = true;
+			await this.release();
+		}
+	}
+
+	private get holderPath(): string {
+		return `${this.path}/holder.json`;
+	}
+
+	private async holder(): Promise<Holder | null> {
+		const raw = await this.fs.read(this.holderPath).catch(() => null);
+		try {
+			return raw === null ? null : (JSON.parse(raw) as Holder);
+		} catch {
+			return null;
+		}
+	}
+
+	private isStale(holder: Holder): boolean {
+		if (Date.now() - Date.parse(holder.at) > this.stalenessMs) {
+			return true;
+		}
+		return holder.hostname === this.ps.hostname && !this.ps.alive(holder.pid);
+	}
+
+	private steal(why: string): void {
+		this.log.error(color.yellow(`stealing stale lock ${this.path} (${why})`));
+		rmSync(this.path, { recursive: true, force: true });
+	}
+
+	/**
+	 * A crashed holder that never releases wedges every other waiter, so the
+	 * removal has to survive signals and uncaught exceptions. It is sync
+	 * because exit handlers cannot await.
+	 */
+	private registerCleanup(): void {
+		if (this.handlersRegistered) {
+			return;
+		}
+		this.handlersRegistered = true;
+		const drop = (): void => {
+			if (this.held) {
+				this.held = false;
+				rmSync(this.path, { recursive: true, force: true });
+			}
+		};
+		this.ps.once("exit", drop);
+		for (const signal of ["SIGINT", "SIGTERM"]) {
+			this.ps.on(signal, () => {
+				drop();
+				this.ps.exit(130);
+			});
+		}
+		this.ps.on("uncaughtException", (e: unknown) => {
+			drop();
+			this.log.error(e);
+			this.ps.exit(1);
+		});
+	}
+}

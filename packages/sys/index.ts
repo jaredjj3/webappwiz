@@ -10,6 +10,8 @@ export { PlatformIpProvider } from "./ip/platform-ip-provider";
 export { SequentialIpProvider } from "./ip/sequential-ip-provider";
 export { StaticIpProvider } from "./ip/static-ip-provider";
 export { Win32IpProvider } from "./ip/win32-ip-provider";
+export { FileLock, type FileLockOptions } from "./lock/file-lock";
+export type { Lock } from "./lock/lock";
 export { NodePs } from "./ps/node-ps";
 export type {
 	Ps,
