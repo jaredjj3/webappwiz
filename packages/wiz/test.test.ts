@@ -25,8 +25,8 @@ bunTest("runs bun test once per package directory, in order", async () => {
 	await test({ package: "" }, new MemoryLogger(), fs, ps);
 
 	expect(ps.getCalls()).toEqual([
-		"bun test --pass-with-no-tests",
-		"bun test --pass-with-no-tests",
+		"bun test --pass-with-no-tests --concurrent",
+		"bun test --pass-with-no-tests --concurrent",
 	]);
 });
 
@@ -36,7 +36,7 @@ bunTest("runs only the named package when given one", async () => {
 
 	await test({ package: "log" }, new MemoryLogger(), fs, ps);
 
-	expect(ps.getCalls()).toEqual(["bun test --pass-with-no-tests"]);
+	expect(ps.getCalls()).toEqual(["bun test --pass-with-no-tests --concurrent"]);
 });
 
 bunTest("rejects a package that does not exist", async () => {

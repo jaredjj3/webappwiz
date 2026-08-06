@@ -45,6 +45,9 @@ export class FileLock implements Lock {
 
 	async acquire(): Promise<void> {
 		let unreadableSince: number | null = null;
+		// Short first waits so a lock freed quickly is picked up quickly, backing
+		// off to `pollMs` for a holder that is settling in for a long test run.
+		let sleepMs = 5;
 
 		for (let waited = false; ; waited = true) {
 			try {
@@ -64,7 +67,8 @@ export class FileLock implements Lock {
 					this.steal(`holder pid ${holder.pid} is gone or stale`);
 					continue;
 				}
-				await Bun.sleep(this.pollMs);
+				await Bun.sleep(sleepMs);
+				sleepMs = Math.min(sleepMs * 2, this.pollMs);
 				continue;
 			}
 			if (waited) {

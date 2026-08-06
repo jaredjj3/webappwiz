@@ -28,7 +28,8 @@ export async function test(
 		log.info(`\n${color.blue(`${dir}:`)}`);
 		// one run per package, cwd'd into it, so each picks up its own bunfig.toml
 		const { exitCode } = await ps.spawn(
-			["bun", "test", "--pass-with-no-tests"],
+			// --concurrent: the suites are mostly waiting on git and the filesystem
+			["bun", "test", "--pass-with-no-tests", "--concurrent"],
 			{
 				cwd: `${packages}/${dir}`,
 			},
@@ -38,9 +39,11 @@ export async function test(
 		}
 	}
 
-	const ms = (performance.now() - start).toFixed(2);
+	const ms = performance.now() - start;
+	const elapsed =
+		ms < 1000 ? `${ms.toFixed(2)}ms` : `${(ms / 1000).toFixed(2)}s`;
 	log.info(
-		`\ntests: ${failed.length === 0 ? color.green("success") : color.red(`fail (${failed.join(", ")})`)} ${color.gray(`[${color.bold(`${ms}ms`)}]`)}`,
+		`\ntests: ${failed.length === 0 ? color.green("success") : color.red(`fail (${failed.join(", ")})`)} ${color.gray(`[${color.bold(elapsed)}]`)}`,
 	);
 	if (failed.length > 0) {
 		throw new Error("Tests failed");
