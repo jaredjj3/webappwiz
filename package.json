@@ -1,10 +1,8 @@
 {
 	"name": "webappwiz",
-	"module": "index.ts",
 	"type": "module",
 	"workspaces": [
-		"packages/*",
-		"wiz"
+		"packages/*"
 	],
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.5",

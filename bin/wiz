@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-exec bun "$(dirname "$0")/../wiz/index.ts" "$@"
+exec bun "$(dirname "$0")/../packages/wiz/index.ts" "$@"

@@ -10,7 +10,7 @@ function profilePath(): string {
 	return resolve(process.env.HOME ?? "~", `.${shellName}rc`); // ~/.zshrc, ~/.bashrc, etc.
 }
 
-const binDir = resolve(import.meta.dir, "../bin");
+const binDir = resolve(import.meta.dir, "../../bin");
 
 async function add(log: Logger, fs: Fs): Promise<void> {
 	const profile = profilePath();
