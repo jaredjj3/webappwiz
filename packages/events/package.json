@@ -1,0 +1,13 @@
+{
+	"name": "@webappwiz/events",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"module": "index.ts",
+	"exports": {
+		".": "./index.ts"
+	},
+	"dependencies": {
+		"@webappwiz/disposable": "workspace:*"
+	}
+}
