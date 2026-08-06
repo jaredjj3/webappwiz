@@ -1,8 +1,21 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { hostname } from "node:os";
 import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 
 export class NodePs implements Ps {
 	platform: NodeJS.Platform = process.platform;
+	pid = process.pid;
+	hostname = hostname();
+
+	alive(pid: number): boolean {
+		try {
+			process.kill(pid, 0); // signal 0 checks for existence without delivering
+			return true;
+		} catch (e) {
+			// EPERM means it exists but belongs to another user.
+			return (e as NodeJS.ErrnoException).code === "EPERM";
+		}
+	}
 
 	async spawn(argv: string[], opts?: SpawnOptions): Promise<SpawnResult> {
 		const [cmd, args] = parse(argv);

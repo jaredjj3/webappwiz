@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import { normalize } from "node:path";
-import type { Fs, RmOptions, StatResult } from "./fs";
+import type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs";
 
 export class NodeFs implements Fs {
 	async exists(path: string): Promise<boolean> {
@@ -10,8 +10,10 @@ export class NodeFs implements Fs {
 		);
 	}
 
-	async mkdir(path: string): Promise<void> {
-		await fs.mkdir(normalize(path), { recursive: true });
+	async mkdir(path: string, options?: MkdirOptions): Promise<void> {
+		await fs.mkdir(normalize(path), {
+			recursive: options?.recursive ?? true,
+		});
 	}
 
 	read(path: string): Promise<string> {
@@ -20,6 +22,10 @@ export class NodeFs implements Fs {
 
 	write(path: string, data: string): Promise<void> {
 		return fs.writeFile(normalize(path), data);
+	}
+
+	rename(from: string, to: string): Promise<void> {
+		return fs.rename(normalize(from), normalize(to));
 	}
 
 	readdir(path: string): Promise<string[]> {

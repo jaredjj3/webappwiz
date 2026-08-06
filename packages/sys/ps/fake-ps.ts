@@ -2,7 +2,10 @@ import type { Ps, SpawnCaptureResult, SpawnResult } from "./ps";
 
 export class FakePs implements Ps {
 	platform: NodeJS.Platform = "darwin";
+	pid = 4242;
+	hostname = "fake-host";
 
+	private dead = new Set<number>();
 	private path = "/";
 	private calls: string[] = [];
 	private handlers = new Map<string, Array<() => void>>();
@@ -10,6 +13,15 @@ export class FakePs implements Ps {
 	private exited = false;
 	private captureOutput = { stdout: "", stderr: "" };
 	private simulation = () => Promise.resolve(0);
+
+	alive(pid: number): boolean {
+		return !this.dead.has(pid);
+	}
+
+	/** Marks a pid dead, so `alive` reports false for it. */
+	kill(pid: number): void {
+		this.dead.add(pid);
+	}
 
 	async spawn(argv: string[]): Promise<SpawnResult> {
 		if (!this.exited) {

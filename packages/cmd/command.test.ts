@@ -148,3 +148,43 @@ test("action opts are statically typed", () => {
 			void wrong;
 		});
 });
+
+test("positional args bind by declaration order, alongside options", () => {
+	let got: { task: string; force: boolean } | undefined;
+	new Command("prune")
+		.arg("task", t.string())
+		.option("force", t.boolean(), { default: false })
+		.action((o) => {
+			got = o;
+		})
+		.exec(["alpha", "--force"]);
+	expect(got).toEqual({ task: "alpha", force: true });
+});
+
+test("a missing positional is an error unless it has a default", () => {
+	const cmd = () =>
+		new Command("prune").arg("task", t.string()).action(() => {});
+	expect(() => cmd().exec([])).toThrow("missing required argument <task>");
+
+	let got: unknown;
+	new Command("ls")
+		.arg("task", t.string(), { default: "all" })
+		.action((o) => {
+			got = o;
+		})
+		.exec([]);
+	expect(got).toEqual({ task: "all" });
+});
+
+test("help shows arguments in the usage line and its own section", () => {
+	const log = new MemoryLogger();
+	new Command("escalate", log, "arbor")
+		.arg("reason", t.string(), { description: "why this needs a human" })
+		.arg("note", t.string(), { default: "" })
+		.action(() => {})
+		.exec(["--help"]);
+
+	const text = out(log);
+	expect(text).toContain("Usage: arbor escalate <reason> [note] [options]");
+	expect(text).toContain("why this needs a human");
+});

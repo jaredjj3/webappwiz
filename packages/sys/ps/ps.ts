@@ -3,6 +3,10 @@
  */
 export interface Ps {
 	platform: NodeJS.Platform;
+	pid: number;
+	hostname: string;
+	/** Whether a pid on *this* host is still running. */
+	alive(pid: number): boolean;
 	spawn(argv: string[], opts?: SpawnOptions): Promise<SpawnResult>;
 	spawnCapture(
 		argv: string[],

@@ -1,5 +1,5 @@
 import { dirname, normalize } from "node:path";
-import type { Fs, RmOptions, StatResult } from "./fs";
+import type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs";
 
 const DIRECTORY = Symbol("directory");
 
@@ -13,8 +13,12 @@ export class FakeFs implements Fs {
 		return this.store.has(normalize(path));
 	}
 
-	async mkdir(path: string): Promise<void> {
-		this.store.set(normalize(path), DIRECTORY);
+	async mkdir(path: string, options?: MkdirOptions): Promise<void> {
+		const target = normalize(path);
+		if (options?.recursive === false && this.store.has(target)) {
+			throw new Error(`Path already exists: ${path}`);
+		}
+		this.store.set(target, DIRECTORY);
 	}
 
 	async read(path: string): Promise<string> {
@@ -27,6 +31,16 @@ export class FakeFs implements Fs {
 
 	async write(path: string, data: string): Promise<void> {
 		this.store.set(normalize(path), data);
+	}
+
+	async rename(from: string, to: string): Promise<void> {
+		const source = normalize(from);
+		const entry = this.store.get(source);
+		if (entry === undefined) {
+			throw new Error(`Path does not exist: ${from}`);
+		}
+		this.store.set(normalize(to), entry);
+		this.store.delete(source);
 	}
 
 	async readdir(path: string): Promise<string[]> {

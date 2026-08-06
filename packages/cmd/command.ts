@@ -14,6 +14,7 @@ type OptionMeta = {
 export class Command<O> {
 	private _description = "";
 	private options: OptionMeta[] = [];
+	private args: OptionMeta[] = []; // positionals, in declaration order
 	private _action: Action<O> = () => {};
 
 	constructor(
@@ -47,6 +48,21 @@ export class Command<O> {
 		return this as unknown as Command<O & { [P in K]: T }>;
 	}
 
+	arg<K extends string, T>(
+		name: K,
+		schema: Schema<T>,
+		meta?: { default?: T; description?: string },
+	): Command<O & { [P in K]: T }> {
+		this.args.push({
+			name,
+			schema: schema as Schema<unknown>,
+			description: meta?.description,
+			hasDefault: meta !== undefined && "default" in meta,
+			default: meta?.default,
+		});
+		return this as unknown as Command<O & { [P in K]: T }>;
+	}
+
 	action(action: Action<O>): this {
 		this._action = action;
 		return this;
@@ -63,10 +79,15 @@ export class Command<O> {
 
 	private parse(argv: string[]): O {
 		const raw = new Map<string, string>();
+		const positional: string[] = [];
 		for (let i = 0; i < argv.length; i++) {
 			const token = argv[i];
-			if (token === undefined || !token.startsWith("--")) {
-				continue; // ponytail: no positionals yet, add an .arg() chain when needed
+			if (token === undefined) {
+				continue;
+			}
+			if (!token.startsWith("--")) {
+				positional.push(token);
+				continue;
 			}
 			const eq = token.indexOf("=");
 			if (eq !== -1) {
@@ -82,6 +103,19 @@ export class Command<O> {
 			}
 		}
 		const out: Record<string, unknown> = {};
+		// ponytail: positionals bind by order, so a bare flag before them steals
+		// one (`cmd --force task`). Put flags last, or add arity to option().
+		this.args.forEach((arg, i) => {
+			const value = positional[i];
+			if (value === undefined) {
+				if (!arg.hasDefault) {
+					throw new Error(`missing required argument <${arg.name}>`);
+				}
+				out[arg.name] = arg.default;
+				return;
+			}
+			out[arg.name] = arg.schema.parse(value);
+		});
 		for (const opt of this.options) {
 			const value = raw.get(opt.name);
 			if (value === undefined) {
@@ -105,12 +139,22 @@ export class Command<O> {
 	}
 
 	private help(): void {
-		const usage = [this.program, this.name, "[options]"]
+		const args = this.args.map((a) =>
+			a.hasDefault ? `[${a.name}]` : `<${a.name}>`,
+		);
+		const usage = [this.program, this.name, ...args, "[options]"]
 			.filter(Boolean)
 			.join(" ");
 		const lines = [`Usage: ${usage}`];
 		if (this._description) {
 			lines.push("", this._description);
+		}
+		if (this.args.length > 0) {
+			lines.push("", "Arguments:");
+			const pad = Math.max(...this.args.map((a) => a.name.length));
+			for (const a of this.args) {
+				lines.push(`  ${a.name.padEnd(pad)}  ${a.description ?? ""}`.trimEnd());
+			}
 		}
 		lines.push("", "Options:");
 		const rows = [
