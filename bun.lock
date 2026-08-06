@@ -17,6 +17,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/log": "workspace:*",
+        "@webappwiz/t": "workspace:*",
       },
     },
     "packages/log": {
@@ -29,6 +30,10 @@
       "dependencies": {
         "@webappwiz/log": "workspace:*",
       },
+    },
+    "packages/t": {
+      "name": "@webappwiz/t",
+      "version": "0.0.0",
     },
     "packages/wiz": {
       "name": "wiz",
@@ -108,6 +113,8 @@
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
 
     "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
+
+    "@webappwiz/t": ["@webappwiz/t@workspace:packages/t"],
 
     "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 

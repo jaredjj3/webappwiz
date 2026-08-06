@@ -1,5 +1,5 @@
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
-import type { Schema } from "./schema";
+import type { Schema } from "@webappwiz/t";
 
 // unknown return so `.action(() => doThing())` type-checks and async actions
 // propagate their Promise out through run() for top-level await.

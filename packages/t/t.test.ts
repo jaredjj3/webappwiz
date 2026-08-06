@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { t } from "./schema";
+import { t } from "./t";
 
 test("string passes the raw arg through", () => {
 	expect(t.string().parse("ada")).toBe("ada");
@@ -17,9 +17,9 @@ test("number rejects non-numbers with a readable message", () => {
 	expect(() => t.number().parse("abc")).toThrow('expected a number, got "abc"');
 });
 
-test("boolean is a presence flag: only =false is false", () => {
-	expect(t.boolean().parse("true")).toBe(true);
+test("boolean is a presence flag: --loud is true, --loud=false is false", () => {
 	expect(t.boolean().parse("")).toBe(true);
+	expect(t.boolean().parse("true")).toBe(true);
 	expect(t.boolean().parse("false")).toBe(false);
 });
 

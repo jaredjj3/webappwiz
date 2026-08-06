@@ -1,8 +1,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
-
+import { t } from "@webappwiz/t";
 import { cli } from "./cli";
-import { t } from "./schema";
 
 // errors exit the process, so tests stub it out and read the logger instead
 function trapExit() {

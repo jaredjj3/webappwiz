@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
-
+import { t } from "@webappwiz/t";
 import { Command } from "./command";
-import { t } from "./schema";
 
 function out(log: MemoryLogger): string {
 	return log.entries.map((e) => String(e.message)).join("\n");
