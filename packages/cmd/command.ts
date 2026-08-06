@@ -1,9 +1,7 @@
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import type { Schema } from "@webappwiz/t";
 
-// unknown return so `.action(() => doThing())` type-checks and async actions
-// propagate their Promise out through run() for top-level await.
-type Handler<O> = (opts: O) => unknown;
+type Action<O> = (opts: O) => unknown;
 
 type OptionMeta = {
 	name: string;
@@ -13,25 +11,24 @@ type OptionMeta = {
 	default?: unknown;
 };
 
-// `.option()` accumulates its value type into `O`, so `.action`'s param is
-// fully inferred from the options declared before it.
 export class Command<O> {
-	private desc = "";
+	private _description = "";
 	private options: OptionMeta[] = [];
-	private handler: Handler<O> = () => {};
+	private _action: Action<O> = () => {};
 
 	constructor(
 		readonly name: string,
 		private log: Logger = new ConsoleLogger(),
+		private program = "", // program name for the usage line; empty when run standalone
 	) {}
 
-	get summary(): string {
-		return this.desc;
+	description(description: string): this {
+		this._description = description;
+		return this;
 	}
 
-	description(text: string): this {
-		this.desc = text;
-		return this;
+	helpLine(pad: number): string {
+		return `  ${this.name.padEnd(pad)}${this._description ? `  ${this._description}` : ""}`;
 	}
 
 	option<K extends string, T>(
@@ -50,17 +47,18 @@ export class Command<O> {
 		return this as unknown as Command<O & { [P in K]: T }>;
 	}
 
-	action(fn: Handler<O>): this {
-		this.handler = fn;
+	action(action: Action<O>): this {
+		this._action = action;
 		return this;
 	}
 
-	exec(argv: string[], prog = ""): unknown {
+	exec(argv: string[]): unknown {
 		if (argv.includes("--help") || argv.includes("-h")) {
-			this.printHelp(prog);
-			return undefined;
+			this.help();
+		} else {
+			const opts = this.parse(argv);
+			return this._action(opts);
 		}
-		return this.handler(this.parse(argv));
 	}
 
 	private parse(argv: string[]): O {
@@ -98,20 +96,25 @@ export class Command<O> {
 		return out as O;
 	}
 
-	private printHelp(prog: string): void {
-		const usage = [prog, this.name, "[options]"].filter(Boolean).join(" ");
+	// a [flag, text] pair for the help table, e.g. ["--count", "how many (default: 1)"]
+	private optionRow(o: OptionMeta): readonly [string, string] {
+		const defaultDescription = o.hasDefault
+			? ` (default: ${JSON.stringify(o.default)})`
+			: "";
+		return [`--${o.name}`, `${o.description ?? ""}${defaultDescription}`];
+	}
+
+	private help(): void {
+		const usage = [this.program, this.name, "[options]"]
+			.filter(Boolean)
+			.join(" ");
 		const lines = [`Usage: ${usage}`];
-		if (this.desc) {
-			lines.push("", this.desc);
+		if (this._description) {
+			lines.push("", this._description);
 		}
 		lines.push("", "Options:");
 		const rows = [
-			...this.options.map((o) => {
-				const def = o.hasDefault
-					? ` (default: ${JSON.stringify(o.default)})`
-					: "";
-				return [`--${o.name}`, `${o.description ?? ""}${def}`] as const;
-			}),
+			...this.options.map((o) => this.optionRow(o)),
 			["-h, --help", "show this help"] as const,
 		];
 		const pad = Math.max(...rows.map(([flag]) => flag.length));

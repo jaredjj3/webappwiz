@@ -92,24 +92,24 @@ test("a command with no action is a no-op", () => {
 	expect(new Command("noop").exec([])).toBeUndefined();
 });
 
-test("summary reflects the description", () => {
-	expect(new Command("c").description("does a thing").summary).toBe(
-		"does a thing",
+test("helpLine pads the name and omits an unset description", () => {
+	expect(new Command("c").description("does a thing").helpLine(4)).toBe(
+		"  c     does a thing",
 	);
-	expect(new Command("c").summary).toBe("");
+	expect(new Command("c").helpLine(4)).toBe("  c   ");
 });
 
 test("--help prints usage, options and defaults, and skips the action", () => {
 	const log = new MemoryLogger();
 	let ran = false;
-	new Command("greet", log)
+	new Command("greet", log, "wiz")
 		.description("greet someone")
 		.option("name", t.string(), { description: "who to greet" })
 		.option("count", t.number(), { default: 1, description: "how many times" })
 		.action(() => {
 			ran = true;
 		})
-		.exec(["--help"], "wiz");
+		.exec(["--help"]);
 
 	expect(ran).toBe(false); // required --name is not enforced when asking for help
 	const text = out(log);

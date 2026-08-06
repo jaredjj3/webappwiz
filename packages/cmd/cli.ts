@@ -12,7 +12,7 @@ class Cli {
 	// unknown is the empty-options seed: `unknown & { name: string }` reduces to
 	// `{ name: string }`, so options accumulate cleanly as they're declared.
 	command(name: string): Command<unknown> {
-		const c = new Command<unknown>(name, this.log);
+		const c = new Command<unknown>(name, this.log, this.name);
 		this.cmds.set(name, c); // registered by reference; chain mutates the same object
 		return c;
 	}
@@ -27,7 +27,7 @@ class Cli {
 			return this.help();
 		}
 		try {
-			const out = cmd.exec(rest, this.name);
+			const out = cmd.exec(rest);
 			// async actions reject after exec() returns, so cover that path too
 			return out instanceof Promise ? out.catch((e) => this.fail(e)) : out;
 		} catch (e) {
@@ -48,9 +48,7 @@ class Cli {
 			`Usage: ${this.name} <command> [options]`,
 			"",
 			"Commands:",
-			...cmds.map(
-				(c) => `  ${c.name.padEnd(pad)}${c.summary ? `  ${c.summary}` : ""}`,
-			),
+			...cmds.map((c) => c.helpLine(pad)),
 			"",
 			`Run \`${this.name} <command> --help\` for a command's options.`,
 		];
