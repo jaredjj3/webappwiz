@@ -12,6 +12,7 @@ export async function test(log: Logger, fs: Fs, ps: Ps): Promise<void> {
 		}
 	}
 
+	const start = performance.now();
 	const failed: string[] = [];
 	for (const dir of dirs) {
 		log.info(`\n${color.blue(`${dir}:`)}`);
@@ -27,8 +28,9 @@ export async function test(log: Logger, fs: Fs, ps: Ps): Promise<void> {
 		}
 	}
 
+	const ms = (performance.now() - start).toFixed(2);
 	log.info(
-		`\ntests: ${failed.length === 0 ? color.green("success") : color.red(`failed (${failed.join(", ")})`)}`,
+		`\ntests: ${failed.length === 0 ? color.green("success") : color.red(`fail (${failed.join(", ")})`)} ${color.gray(`[${color.bold(`${ms}ms`)}]`)}`,
 	);
 	if (failed.length > 0) {
 		throw new Error("Tests failed");
