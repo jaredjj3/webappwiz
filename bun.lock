@@ -20,6 +20,7 @@
       },
       "dependencies": {
         "@webappwiz/cmd": "workspace:*",
+        "@webappwiz/events": "workspace:*",
         "@webappwiz/log": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
@@ -31,6 +32,17 @@
       "dependencies": {
         "@webappwiz/log": "workspace:*",
         "@webappwiz/t": "workspace:*",
+      },
+    },
+    "packages/disposable": {
+      "name": "@webappwiz/disposable",
+      "version": "0.0.0",
+    },
+    "packages/events": {
+      "name": "@webappwiz/events",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/disposable": "workspace:*",
       },
     },
     "packages/log": {
@@ -125,6 +137,10 @@
     "@webappwiz/arbor": ["@webappwiz/arbor@workspace:packages/arbor"],
 
     "@webappwiz/cmd": ["@webappwiz/cmd@workspace:packages/cmd"],
+
+    "@webappwiz/disposable": ["@webappwiz/disposable@workspace:packages/disposable"],
+
+    "@webappwiz/events": ["@webappwiz/events@workspace:packages/events"],
 
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
 

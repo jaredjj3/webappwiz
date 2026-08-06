@@ -1,19 +1,35 @@
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import { Command } from "./command";
+import type { AnyMiddleware, Middleware } from "./middleware";
 
-class Cli {
-	private cmds = new Map<string, Command<unknown>>();
+class Cli<C extends object = object> {
+	private cmds = new Map<string, Command<unknown, object>>();
+	private middleware: AnyMiddleware[] = [];
 
 	constructor(
 		readonly name: string,
 		private log: Logger,
 	) {}
 
+	/**
+	 * Wraps every command's action. Has to come before the commands it wraps:
+	 * `command()` fixes the context type at the point it is called, so a later
+	 * `use` would change what actions receive without changing their types.
+	 */
+	use<Out extends object>(middleware: Middleware<C, Out>): Cli<Out> {
+		if (this.cmds.size > 0) {
+			throw new Error(`${this.name}: use() must come before command()`);
+		}
+		this.middleware.push(middleware as unknown as AnyMiddleware);
+		return this as unknown as Cli<Out>;
+	}
+
 	// unknown is the empty-options seed: `unknown & { name: string }` reduces to
 	// `{ name: string }`, so options accumulate cleanly as they're declared.
-	command(name: string): Command<unknown> {
-		const c = new Command<unknown>(name, this.log, this.name);
-		this.cmds.set(name, c); // registered by reference; chain mutates the same object
+	command(name: string): Command<unknown, C> {
+		const c = new Command<unknown, C>(name, this.log, this.name);
+		// registered by reference; chain mutates the same object
+		this.cmds.set(name, c as unknown as Command<unknown, object>);
 		return c;
 	}
 
@@ -27,7 +43,7 @@ class Cli {
 			return this.help();
 		}
 		try {
-			const out = cmd.exec(rest);
+			const out = cmd.exec(rest, this.middleware);
 			// async actions reject after exec() returns, so cover that path too
 			return out instanceof Promise ? out.catch((e) => this.fail(e)) : out;
 		} catch (e) {

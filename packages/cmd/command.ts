@@ -1,7 +1,8 @@
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import type { Schema } from "@webappwiz/t";
+import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 
-type Action<O> = (opts: O) => unknown;
+type Action<O, C> = (opts: O, ctx: C) => unknown;
 
 type OptionMeta = {
 	name: string;
@@ -11,11 +12,13 @@ type OptionMeta = {
 	default?: unknown;
 };
 
-export class Command<O> {
+export class Command<O, C extends object = object> {
 	private _description = "";
 	private options: OptionMeta[] = [];
 	private args: OptionMeta[] = []; // positionals, in declaration order
-	private _action: Action<O> = () => {};
+	private middleware: AnyMiddleware[] = [];
+	private _action: Action<O, C> = () => {};
+	private hasAction = false;
 
 	constructor(
 		readonly name: string,
@@ -36,7 +39,7 @@ export class Command<O> {
 		name: K,
 		schema: Schema<T>,
 		meta?: { default?: T; description?: string },
-	): Command<O & { [P in K]: T }> {
+	): Command<O & { [P in K]: T }, C> {
 		this.options.push({
 			name,
 			schema: schema as Schema<unknown>,
@@ -45,14 +48,14 @@ export class Command<O> {
 			hasDefault: meta !== undefined && "default" in meta,
 			default: meta?.default,
 		});
-		return this as unknown as Command<O & { [P in K]: T }>;
+		return this as unknown as Command<O & { [P in K]: T }, C>;
 	}
 
 	arg<K extends string, T>(
 		name: K,
 		schema: Schema<T>,
 		meta?: { default?: T; description?: string },
-	): Command<O & { [P in K]: T }> {
+	): Command<O & { [P in K]: T }, C> {
 		this.args.push({
 			name,
 			schema: schema as Schema<unknown>,
@@ -60,21 +63,45 @@ export class Command<O> {
 			hasDefault: meta !== undefined && "default" in meta,
 			default: meta?.default,
 		});
-		return this as unknown as Command<O & { [P in K]: T }>;
+		return this as unknown as Command<O & { [P in K]: T }, C>;
 	}
 
-	action(action: Action<O>): this {
+	/**
+	 * Wraps this command's action, inside whatever the `Cli` already wraps it
+	 * with. Has to come before `action`, which is typed against the context the
+	 * chain produces.
+	 */
+	use<Out extends object>(middleware: Middleware<C, Out>): Command<O, Out> {
+		if (this.hasAction) {
+			throw new Error(`${this.name}: use() must come before action()`);
+		}
+		this.middleware.push(middleware as unknown as AnyMiddleware);
+		return this as unknown as Command<O, Out>;
+	}
+
+	action(action: Action<O, C>): this {
 		this._action = action;
+		this.hasAction = true;
 		return this;
 	}
 
-	exec(argv: string[]): unknown {
+	exec(argv: string[], outer: AnyMiddleware[] = []): unknown {
 		if (argv.includes("--help") || argv.includes("-h")) {
 			this.help();
-		} else {
-			const opts = this.parse(argv);
-			return this._action(opts);
+			return;
 		}
+		const opts = this.parse(argv);
+		const chain = [...outer, ...this.middleware];
+		// Without middleware there is nothing to await, and a sync action stays
+		// sync — parse errors included.
+		if (chain.length === 0) {
+			return this._action(opts, {} as C);
+		}
+		let result: unknown;
+		const run = compose(chain, async (ctx) => {
+			result = await this._action(opts, ctx as C);
+		});
+		return run({}).then(() => result);
 	}
 
 	private parse(argv: string[]): O {
