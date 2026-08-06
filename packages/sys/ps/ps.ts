@@ -19,6 +19,7 @@ export interface Ps {
 }
 
 export interface SpawnOptions {
+	/** Added to the current environment, not a replacement for it. */
 	env?: Record<string, string>;
 	cwd?: string;
 }

@@ -9,6 +9,7 @@ import type { ProcessLike } from "./node-ps";
 export class FakeProcess implements ProcessLike {
 	platform: NodeJS.Platform = process.platform;
 	pid = process.pid;
+	env: NodeJS.ProcessEnv = process.env;
 	readonly exits: number[] = [];
 	cwd = process.cwd();
 

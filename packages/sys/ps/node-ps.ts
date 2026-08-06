@@ -10,6 +10,7 @@ import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 export interface ProcessLike {
 	platform: NodeJS.Platform;
 	pid: number;
+	env: NodeJS.ProcessEnv;
 	kill(pid: number, signal: 0): boolean;
 	chdir(path: string): void;
 	exit(code: number): void;
@@ -39,7 +40,10 @@ export class NodePs implements Ps {
 
 	async spawn(argv: string[], opts?: SpawnOptions): Promise<SpawnResult> {
 		const [cmd, args] = parse(argv);
-		const child = spawn(cmd, args, { ...opts, stdio: "inherit" });
+		const child = spawn(cmd, args, {
+			...this.options(opts),
+			stdio: "inherit",
+		});
 		return { exitCode: await exitCode(child) };
 	}
 
@@ -49,7 +53,7 @@ export class NodePs implements Ps {
 	): Promise<SpawnCaptureResult> {
 		const [cmd, args] = parse(argv);
 		const child = spawn(cmd, args, {
-			...opts,
+			...this.options(opts),
 			stdio: ["inherit", "pipe", "pipe"],
 		});
 
@@ -63,6 +67,21 @@ export class NodePs implements Ps {
 		});
 
 		return { exitCode: await exitCode(child), stdout, stderr };
+	}
+
+	/**
+	 * Node replaces the whole environment when `env` is given, so a command
+	 * launched with the caller's two or three variables would have no PATH and
+	 * no HOME. Callers mean "and these as well", so that is what this does.
+	 *
+	 * Always built from `proc.env` rather than left undefined for Node to
+	 * inherit, so what a child sees comes through the seam either way.
+	 */
+	private options(opts?: SpawnOptions): {
+		cwd?: string;
+		env: NodeJS.ProcessEnv;
+	} {
+		return { cwd: opts?.cwd, env: { ...this.proc.env, ...opts?.env } };
 	}
 
 	cd(path: string): void {
