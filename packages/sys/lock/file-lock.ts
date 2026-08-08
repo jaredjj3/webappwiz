@@ -1,5 +1,6 @@
 import { rmSync } from "node:fs";
 import { color, type Logger } from "@webappwiz/log";
+import { Duration, sleep } from "@webappwiz/time";
 import type { Fs } from "../fs/fs";
 import type { Ps } from "../ps/ps";
 import type { Lock } from "./lock";
@@ -67,7 +68,7 @@ export class FileLock implements Lock {
 					this.steal(`holder pid ${holder.pid} is gone or stale`);
 					continue;
 				}
-				await Bun.sleep(sleepMs);
+				await sleep(Duration.ms(sleepMs));
 				sleepMs = Math.min(sleepMs * 2, this.pollMs);
 				continue;
 			}

@@ -1,5 +1,5 @@
 {
-	"name": "@webappwiz/sys",
+	"name": "@webappwiz/time",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -9,7 +9,6 @@
 		"./testing": "./testing.ts"
 	},
 	"dependencies": {
-		"@webappwiz/log": "workspace:*",
-		"@webappwiz/time": "workspace:*"
+		"@webappwiz/disposable": "workspace:*"
 	}
 }

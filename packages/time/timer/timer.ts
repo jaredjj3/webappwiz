@@ -1,0 +1,12 @@
+import type { Disposable } from "@webappwiz/disposable";
+import type { Duration } from "../duration";
+
+/**
+ * Scheduling of future work. Both methods hand back a `Disposable` rather than
+ * an id, so cancelling is the same move as releasing any other resource and a
+ * pending callback cannot outlive the thing that scheduled it.
+ */
+export interface Timer {
+	setTimeout(callback: () => void, delay: Duration): Disposable;
+	setInterval(callback: () => void, interval: Duration): Disposable;
+}

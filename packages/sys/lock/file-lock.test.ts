@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MemoryLogger } from "@webappwiz/log";
+import { Duration, sleep } from "@webappwiz/time";
 import { NodeFs } from "../fs/node-fs";
 import { FakePs } from "../ps/fake-ps";
 import { FileLock } from "./file-lock";
@@ -43,7 +44,7 @@ test("a second acquire blocks until the first releases", async () => {
 		await second.release();
 	});
 
-	await Bun.sleep(50);
+	await sleep(Duration.ms(50));
 	expect(order).toEqual(["first-in"]); // still waiting on the mutex
 
 	order.push("first-out");

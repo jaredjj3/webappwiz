@@ -1,0 +1,73 @@
+import type { Disposable } from "@webappwiz/disposable";
+import type { Duration } from "../duration";
+import type { Timer } from "./timer";
+
+interface Entry {
+	callback: () => void;
+	delay: Duration;
+	disposed: boolean;
+}
+
+/**
+ * A {@link Timer} whose callbacks fire only when the test drives them, so tests
+ * about scheduled work do not have to wait for real time to pass.
+ *
+ * ponytail: callbacks are fired explicitly rather than by advancing a fake
+ * clock — swap in a scheduling queue if a test ever needs delays to be ordered.
+ */
+export class FakeTimer implements Timer {
+	readonly timeouts: Entry[] = [];
+	readonly intervals: Entry[] = [];
+
+	setTimeout(callback: () => void, delay: Duration): Disposable {
+		return this.add(this.timeouts, callback, delay);
+	}
+
+	setInterval(callback: () => void, interval: Duration): Disposable {
+		return this.add(this.intervals, callback, interval);
+	}
+
+	/** Fires and clears every pending timeout. */
+	fireTimeouts(): void {
+		const pending = this.timeouts.filter((entry) => !entry.disposed);
+		this.timeouts.length = 0;
+		for (const entry of pending) {
+			entry.callback();
+		}
+	}
+
+	/**
+	 * Fires a single pending timeout by registration order, leaving the rest
+	 * pending — for when nested deadlines race and only the outer one should go.
+	 */
+	fireTimeout(index: number): void {
+		const entry = this.timeouts[index];
+		if (entry && !entry.disposed) {
+			entry.disposed = true;
+			entry.callback();
+		}
+	}
+
+	/** Fires every live interval callback once, as one tick would. */
+	fireIntervals(): void {
+		for (const entry of [...this.intervals]) {
+			if (!entry.disposed) {
+				entry.callback();
+			}
+		}
+	}
+
+	private add(
+		entries: Entry[],
+		callback: () => void,
+		delay: Duration,
+	): Disposable {
+		const entry: Entry = { callback, delay, disposed: false };
+		entries.push(entry);
+		return {
+			dispose() {
+				entry.disposed = true;
+			},
+		};
+	}
+}

@@ -2,11 +2,14 @@ import { expect, test } from "bun:test";
 
 import { AsyncDisposer } from "./index";
 
+// Inlined rather than taking @webappwiz/time, which depends on this package.
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 test("awaits each release, in reverse order of registration", async () => {
 	const released: string[] = [];
 	const disposer = new AsyncDisposer();
 	const slow = (name: string) => async () => {
-		await Bun.sleep(1);
+		await sleep(1);
 		released.push(name);
 	};
 
