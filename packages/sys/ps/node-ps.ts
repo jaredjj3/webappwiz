@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { hostname } from "node:os";
+import { constants, hostname } from "node:os";
 import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 
 /**
@@ -121,7 +121,12 @@ function parse(argv: string[]): [string, string[]] {
 function exitCode(child: ChildProcess): Promise<number> {
 	return new Promise((resolve, reject) => {
 		// close, not exit: also waits for piped stdio to drain.
-		child.on("close", (code) => resolve(code ?? 0));
+		child.on("close", (code, signal) =>
+			// A child killed by a signal has no exit code, and reading that as 0
+			// would let an OOM-killed test command pass for a green test run.
+			// 128 + signal is what a shell reports for the same death.
+			resolve(code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0)),
+		);
 		child.on("error", reject);
 	});
 }

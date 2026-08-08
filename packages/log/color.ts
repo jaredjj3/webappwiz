@@ -1,3 +1,6 @@
+// Named, not inlined: it lets `strip` build its pattern without putting a
+// control character in a regex literal.
+const ESC = "\u001B";
 // attribute-specific resets (39 = default fg, 22 = normal intensity) so nesting works
 const FG_RESET = "39";
 const INTENSITY_RESET = "22";
@@ -35,7 +38,15 @@ export class color {
 		return color.wrap("90", FG_RESET, value);
 	}
 
+	/**
+	 * Undoes `wrap`, for output that is read rather than displayed: a test
+	 * assertion, a log file, a pipe. Only the sequences `wrap` writes.
+	 */
+	static strip(value: unknown): string {
+		return String(value).replaceAll(new RegExp(`${ESC}\\[\\d+m`, "g"), "");
+	}
+
 	private static wrap(code: string, reset: string, value: unknown): string {
-		return `\u001B[${code}m${String(value)}\u001B[${reset}m`;
+		return `${ESC}[${code}m${String(value)}${ESC}[${reset}m`;
 	}
 }

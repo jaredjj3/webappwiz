@@ -33,3 +33,9 @@ test("passing no env inherits the whole environment", async () => {
 
 	expect(stdout).toBe("kept|");
 });
+
+test("a command killed by a signal does not report success", async () => {
+	const { exitCode } = await ps({}).spawnCapture(["sh", "-c", "kill -9 $$"]);
+
+	expect(exitCode).toBe(137); // 128 + SIGKILL, the way a shell reports it
+});
