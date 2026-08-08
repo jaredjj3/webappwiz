@@ -32,7 +32,7 @@ wiz
 		default: false,
 		description: "remove bin/ from your PATH",
 	})
-	.action((opts) => path(opts, log, fs));
+	.action((opts) => path(opts, log, fs, ps));
 
 wiz
 	.command("test")

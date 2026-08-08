@@ -12,6 +12,7 @@ export interface ProcessLike {
 	pid: number;
 	env: NodeJS.ProcessEnv;
 	kill(pid: number, signal: 0): boolean;
+	cwd(): string;
 	chdir(path: string): void;
 	exit(code: number): void;
 	on(event: string, handler: (...args: unknown[]) => void): void;
@@ -82,6 +83,14 @@ export class NodePs implements Ps {
 		env: NodeJS.ProcessEnv;
 	} {
 		return { cwd: opts?.cwd, env: { ...this.proc.env, ...opts?.env } };
+	}
+
+	cwd(): string {
+		return this.proc.cwd();
+	}
+
+	env(name: string): string | undefined {
+		return this.proc.env[name];
 	}
 
 	cd(path: string): void {

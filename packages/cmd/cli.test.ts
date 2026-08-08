@@ -1,20 +1,12 @@
 import { expect, spyOn, test } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
+import { FakePs } from "@webappwiz/sys/testing";
 import { t } from "@webappwiz/t";
 import { cli } from "./cli";
 
-// errors exit the process, so tests stub it out and read the logger instead
+// errors exit the process, so tests record the exit and read the logger instead
 function trapExit() {
-	return {
-		log: new MemoryLogger(),
-		exit: spyOn(process, "exit").mockImplementation((() => {}) as never),
-	};
-}
-
-function exitCode(exit: ReturnType<typeof spyOn>): unknown {
-	const [call] = exit.mock.calls;
-	exit.mockRestore();
-	return call?.[0];
+	return { log: new MemoryLogger(), ps: new FakePs() };
 }
 
 function out(log: MemoryLogger): string {
@@ -79,67 +71,62 @@ test("command help goes to the injected logger, not the console", () => {
 });
 
 test("a bad option value is reported as an error and exits 1", () => {
-	const { log, exit } = trapExit();
-	const wiz = cli("wiz", log);
+	const { log, ps } = trapExit();
+	const wiz = cli("wiz", log, ps);
 	wiz
 		.command("n")
 		.option("x", t.number())
 		.action(() => {});
 	wiz.run(["n", "--x", "abc"]);
-	const code = exitCode(exit); // read before restore; restoring clears the calls
 	expect(String(log.entries.at(-1)?.message)).toMatch(/^error: .*number/);
-	expect(code).toBe(1);
+	expect(ps.getExitCode()).toBe(1);
 });
 
 test("missing required option prints a readable error and exits 1", () => {
-	const { log, exit } = trapExit();
-	const wiz = cli("wiz", log);
+	const { log, ps } = trapExit();
+	const wiz = cli("wiz", log, ps);
 	wiz
 		.command("r")
 		.option("must", t.string())
 		.action(() => {});
 	wiz.run(["r"]);
-	const code = exitCode(exit);
 	expect(log.entries.at(-1)?.message).toBe(
 		"error: missing required option --must",
 	);
-	expect(code).toBe(1);
+	expect(ps.getExitCode()).toBe(1);
 });
 
 test("a throwing sync action is reported and exits 1", () => {
-	const { log, exit } = trapExit();
-	const wiz = cli("wiz", log);
+	const { log, ps } = trapExit();
+	const wiz = cli("wiz", log, ps);
 	wiz.command("boom").action(() => {
 		throw new Error("nope");
 	});
 	wiz.run(["boom"]);
-	const code = exitCode(exit);
 	expect(log.entries.at(-1)?.message).toBe("error: nope");
-	expect(code).toBe(1);
+	expect(ps.getExitCode()).toBe(1);
 });
 
 test("a rejecting async action is reported the same way", async () => {
-	const { log, exit } = trapExit();
-	const wiz = cli("wiz", log);
+	const { log, ps } = trapExit();
+	const wiz = cli("wiz", log, ps);
 	wiz.command("boom").action(async () => {
 		throw new Error("nope");
 	});
 	await wiz.run(["boom"]);
-	const code = exitCode(exit);
 	expect(log.entries.at(-1)?.message).toBe("error: nope");
-	expect(code).toBe(1);
+	expect(ps.getExitCode()).toBe(1);
 });
 
 test("non-Error throws are still reported", () => {
-	const { log, exit } = trapExit();
-	const wiz = cli("wiz", log);
+	const { log, ps } = trapExit();
+	const wiz = cli("wiz", log, ps);
 	wiz.command("boom").action(() => {
 		throw "plain string";
 	});
 	wiz.run(["boom"]);
-	const code = exitCode(exit);
 	expect(log.entries.at(-1)?.message).toBe("error: plain string");
-	expect(code).toBe(1);
+	expect(ps.getExitCode()).toBe(1);
 });
 
 test("defaults to the console logger when none is injected", () => {

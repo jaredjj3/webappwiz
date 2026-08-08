@@ -7,6 +7,7 @@ export class FakePs implements Ps {
 
 	private dead = new Set<number>();
 	private path = "/";
+	private vars: Record<string, string> = {};
 	private calls: string[] = [];
 	private handlers = new Map<string, Array<() => void>>();
 	private exitCode = 0;
@@ -41,6 +42,14 @@ export class FakePs implements Ps {
 			stdout: this.captureOutput.stdout,
 			stderr: this.captureOutput.stderr,
 		};
+	}
+
+	cwd(): string {
+		return this.path;
+	}
+
+	env(name: string): string | undefined {
+		return this.vars[name];
 	}
 
 	cd(path: string): void {
@@ -82,8 +91,13 @@ export class FakePs implements Ps {
 		this.captureOutput = { stdout, stderr };
 	}
 
-	getCurrentPath(): string {
-		return this.path;
+	setEnv(vars: Record<string, string>): void {
+		this.vars = { ...this.vars, ...vars };
+	}
+
+	/** Starts the fake somewhere other than `/`, as if launched there. */
+	setCwd(path: string): void {
+		this.path = path;
 	}
 
 	getCalls(): string[] {

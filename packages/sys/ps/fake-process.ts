@@ -11,8 +11,8 @@ export class FakeProcess implements ProcessLike {
 	pid = process.pid;
 	env: NodeJS.ProcessEnv = process.env;
 	readonly exits: number[] = [];
-	cwd = process.cwd();
 
+	private path = process.cwd();
 	private readonly dead = new Set<number>();
 	private readonly handlers = new Map<
 		string,
@@ -34,8 +34,12 @@ export class FakeProcess implements ProcessLike {
 		this.dead.add(pid);
 	}
 
+	cwd(): string {
+		return this.path;
+	}
+
 	chdir(path: string): void {
-		this.cwd = path;
+		this.path = path;
 	}
 
 	exit(code: number): void {

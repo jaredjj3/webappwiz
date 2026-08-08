@@ -1,4 +1,5 @@
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
+import { NodePs, type Ps } from "@webappwiz/sys";
 import { Command } from "./command";
 import type { AnyMiddleware, Middleware } from "./middleware";
 
@@ -9,6 +10,7 @@ class Cli<C extends object = object> {
 	constructor(
 		readonly name: string,
 		private log: Logger,
+		private ps: Ps,
 	) {}
 
 	/**
@@ -52,9 +54,9 @@ class Cli<C extends object = object> {
 	}
 
 	// ponytail: message only, no stack — a bad flag is a user error, not a crash
-	private fail(e: unknown): never {
+	private fail(e: unknown): void {
 		this.log.error(`error: ${e instanceof Error ? e.message : e}`);
-		process.exit(1);
+		this.ps.exit(1);
 	}
 
 	private help(): void {
@@ -72,6 +74,10 @@ class Cli<C extends object = object> {
 	}
 }
 
-export function cli(name: string, log: Logger = new ConsoleLogger()): Cli {
-	return new Cli(name, log);
+export function cli(
+	name: string,
+	log: Logger = new ConsoleLogger(),
+	ps: Ps = new NodePs(),
+): Cli {
+	return new Cli(name, log, ps);
 }
