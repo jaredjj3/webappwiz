@@ -1,4 +1,4 @@
-Use the `arbor` skill to make coding changes in an isolated environment.
+For any task spanning more than one file, load the arbor skill. You have `arbor` in your PATH.
 
 After making code changes:
 
