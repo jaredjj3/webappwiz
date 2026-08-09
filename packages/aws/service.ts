@@ -4,8 +4,8 @@ import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { Construct } from "constructs";
-import type { ICacheable } from "../domain";
 import type { DockerImage } from "./docker-image";
+import type { ICacheable } from "./domain";
 
 export type ServiceInstance =
 	(typeof SERVICE_INSTANCES)[keyof typeof SERVICE_INSTANCES];
