@@ -1,4 +1,5 @@
 import type { Schema } from "./schema";
+import { SchemaError } from "./schema-error";
 
 export class SchemaNumber implements Schema<number> {
 	parse(raw: string): number {
@@ -7,5 +8,12 @@ export class SchemaNumber implements Schema<number> {
 			throw new Error(`expected a number, got "${raw}"`);
 		}
 		return n;
+	}
+
+	check(value: unknown): number {
+		if (typeof value !== "number" || Number.isNaN(value)) {
+			throw new SchemaError([], "expected number");
+		}
+		return value;
 	}
 }
