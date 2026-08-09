@@ -1,4 +1,4 @@
-Use the arbor skill to perform your work in an isolated environment.
+Use the `arbor` skill to make coding changes in an isolated environment.
 
 After making code changes:
 
