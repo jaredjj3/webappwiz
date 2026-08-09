@@ -22,6 +22,10 @@ what a command does and its arguments.
 2. Do the work; commit with git (arbor never commits for you).
 3. `arbor graft`. On failure, act on the exit code below and graft again.
 
+A successful graft discards the worktree, branch and record — the task is done
+and disappears from `arbor ls`. Your working directory is deleted with it, so
+`cd` to the main tree (the path graft prints) before running anything else.
+
 ## Committing
 
 Write plain commit messages with **no attribution**: no `Co-authored-by:`
