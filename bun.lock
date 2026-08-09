@@ -60,6 +60,13 @@
       "name": "@webappwiz/log",
       "version": "0.0.0",
     },
+    "packages/rpc": {
+      "name": "@webappwiz/rpc",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/t": "workspace:*",
+      },
+    },
     "packages/sys": {
       "name": "@webappwiz/sys",
       "version": "0.0.0",
@@ -176,6 +183,8 @@
     "@webappwiz/events": ["@webappwiz/events@workspace:packages/events"],
 
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
+
+    "@webappwiz/rpc": ["@webappwiz/rpc@workspace:packages/rpc"],
 
     "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
 
