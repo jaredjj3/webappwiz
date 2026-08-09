@@ -19,12 +19,42 @@ what a command does and its arguments.
 ## Workflow
 
 1. `arbor create <task>` (or `arbor claim <task>` to resume).
-2. Do the work; commit with git (arbor never commits for you).
-3. `arbor graft`. On failure, act on the exit code below and graft again.
+2. Write `TODO.md` at the worktree root before starting (see below).
+3. Do the work; commit with git (arbor never commits for you). Keep `TODO.md`
+   current as you go.
+4. `arbor graft`. On failure, act on the exit code below and graft again.
 
 A successful graft discards the worktree, branch and record — the task is done
 and disappears from `arbor ls`. Your working directory is deleted with it, so
 `cd` to the main tree (the path graft prints) before running anything else.
+
+## TODO.md
+
+Your session can die at any moment. Keep a `TODO.md` at the worktree root so
+another agent with zero context can `arbor claim` the task and continue. It is
+gitignored — never commit it, and never mention it in a commit message.
+
+Write it for a stranger: the task, what you have done, what is left, and
+anything you learned that is not obvious from the diff (files that matter,
+decisions made, dead ends, commands to verify). Update it as you finish steps,
+not just at the end — an unupdated TODO.md is worse than none.
+
+```markdown
+# <task>
+
+## Goal
+One or two lines: what "done" means.
+
+## Done
+- [x] thing that is committed and working
+
+## Next
+- [ ] the immediate next step
+- [ ] after that
+
+## Notes
+- Where the relevant code lives, decisions, dead ends, how to verify.
+```
 
 ## Committing
 
