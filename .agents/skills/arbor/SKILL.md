@@ -24,6 +24,23 @@ what a command does and its arguments.
    current as you go.
 4. `arbor graft`. On failure, act on the exit code below and graft again.
 
+### Escalation
+
+If the work needs verification that tests alone can't provide — visual or UX
+changes, external services, destructive migrations, anything you can't confirm
+mechanically — do not graft. Instead:
+
+1. `arbor escalate <reason>`.
+2. In `TODO.md`, state exactly what needs verifying and the question the
+   human must answer — specific enough that a yes/no or a short answer
+   unblocks the task.
+3. Print the output of `arbor path <task>` so the human can find the worktree
+   and view the work.
+
+If you claim a tree whose `TODO.md` records an escalation that has not been
+answered, do not resume work or graft: ask the user the open question and
+wait for their answer first.
+
 A successful graft discards the worktree, branch and record — the task is done
 and disappears from `arbor ls`. Your working directory is deleted with it, so
 `cd` to the main tree (the path graft prints) before running anything else.
