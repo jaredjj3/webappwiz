@@ -1,4 +1,4 @@
-For any task spanning more than one file, load the arbor skill. You have `arbor` in your PATH.
+Use the arbor skill to perform your work in an isolated environment.
 
 After making code changes:
 
