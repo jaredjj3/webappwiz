@@ -27,7 +27,6 @@ describe("FileHostMapper", () => {
 	});
 
 	it("rewrites an existing hostname whose IP changed", async () => {
-		// Capture what would have been copied over /etc/hosts by reading the temp file mid-flight.
 		let staged = "";
 		ps.simulate(async () => {
 			staged = await fs.read(`${ps.getCalls().at(-1)?.split(" ")[2]}`);

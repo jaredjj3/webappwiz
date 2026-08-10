@@ -14,7 +14,7 @@ export type Middleware<In, Out = In> = (
 	next: Next<Out>,
 ) => Promise<void>;
 
-/** Storage form: every chain is heterogeneous, so it is erased on the way in. */
+/** A middleware of any context types, as a chain holds it. */
 export type AnyMiddleware = Middleware<never, never>;
 
 /** Folds a chain into one call, innermost last. */

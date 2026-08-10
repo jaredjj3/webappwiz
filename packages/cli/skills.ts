@@ -4,7 +4,7 @@ import type { Fs } from "@webappwiz/sys";
 import { table } from "./table";
 import { walk } from "./walk";
 
-/** Skills ship inside this package, so a published copy carries them too. */
+/** The directory holding the skills this package ships. */
 export const source = `${import.meta.dir}/skills`;
 
 /** The release a skill came from. Null when the file does not carry one. */

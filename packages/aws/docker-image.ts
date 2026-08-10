@@ -52,17 +52,14 @@ export class DockerImage extends Construct implements ServiceImage {
 		return this.asset.assetHash;
 	}
 
-	/** The image as an ECS container image, ready for a Fargate task definition. */
 	get containerImage(): ecs.ContainerImage {
 		return ecs.ContainerImage.fromDockerImageAsset(this.asset);
 	}
 
-	/** Plain environment variables to inject into the container at runtime. */
 	get environment(): Record<string, string> {
 		return { ...this.env.variables };
 	}
 
-	/** Secrets to inject into the container at runtime, as ECS-sourced secrets. */
 	get secrets(): Record<string, ecs.Secret> {
 		const result: Record<string, ecs.Secret> = {};
 		for (const [key, secret] of Object.entries(this.env.secrets ?? {})) {

@@ -5,7 +5,6 @@ const DIRECTORY = Symbol("directory");
 
 /** An in-memory {@link Fs} for tests. */
 export class FakeFs implements Fs {
-	// Directories are entries holding DIRECTORY.
 	readonly store = new Map<string, string | typeof DIRECTORY>();
 
 	async exists(path: string): Promise<boolean> {

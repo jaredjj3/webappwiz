@@ -14,7 +14,6 @@ export interface Ps {
 	): Promise<SpawnCaptureResult>;
 	/** The working directory, as `cd` last left it. */
 	cwd(): string;
-	/** One environment variable, or undefined when it is unset. */
 	env(name: string): string | undefined;
 	cd(path: string): void;
 	exit(code: number): void;

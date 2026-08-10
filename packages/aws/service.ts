@@ -4,7 +4,7 @@ import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { Construct } from "constructs";
-import type { DockerImage } from "./docker-image";
+import type { ServiceImage } from "./docker-image";
 import type { Cacheable } from "./domain";
 
 export type ServiceInstance =
@@ -29,7 +29,7 @@ export type LoadBalancerOptions = {
 export type ServiceProps = {
 	/** Cluster to run on. Several services can share one. */
 	cluster: ecs.ICluster;
-	image: DockerImage;
+	image: ServiceImage;
 	containerPort: number;
 	/** Container name, also the log stream prefix. Defaults to 'app'. */
 	containerName?: string;
