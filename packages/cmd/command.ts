@@ -31,8 +31,8 @@ export class Command<O, C extends object = object> {
 		return this;
 	}
 
-	helpLine(pad: number): string {
-		return `  ${this.name.padEnd(pad)}${this._description ? `  ${this._description}` : ""}`;
+	helpLine(name: string, pad: number): string {
+		return `  ${name.padEnd(pad)}${this._description ? `  ${this._description}` : ""}`;
 	}
 
 	option<K extends string, T>(

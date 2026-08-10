@@ -3,7 +3,7 @@ import { cli } from "@webappwiz/cmd";
 import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
-import { skills } from "./skills";
+import * as skills from "./skills";
 import { update } from "./update";
 
 const log = new ConsoleLogger();
@@ -30,17 +30,27 @@ app
 	})
 	.action((opts) => update(opts, log, fs));
 
-app
-	.command("skills")
-	.description("copy webappwiz agent skills into a project's .agents/skills")
+const group = app
+	.group("skills")
+	.description("manage webappwiz agent skills in .agents/skills");
+
+group
+	.command("add")
+	.description("add a skill to a project")
+	.arg("skill", t.string(), { description: "skill name" })
 	.arg("dir", t.string(), {
 		default: ".",
-		description: "project to sync into (default: .)",
+		description: "project to add it to (default: .)",
 	})
-	.arg("skill", t.string(), {
-		default: "",
-		description: "only this skill (default: all)",
+	.action((opts) => skills.add(opts, log, fs));
+
+group
+	.command("update")
+	.description("refresh the skills a project already has")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to refresh (default: .)",
 	})
-	.action((opts) => skills(opts, log, fs));
+	.action((opts) => skills.update(opts, log, fs));
 
 await app.run();

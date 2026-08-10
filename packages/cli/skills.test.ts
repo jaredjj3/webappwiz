@@ -3,7 +3,7 @@ import { MemoryLogger } from "@webappwiz/log";
 import { NodeFs } from "@webappwiz/sys";
 import { FakeFs } from "@webappwiz/sys/testing";
 
-import { skills, source } from "./skills";
+import { add, source, update } from "./skills";
 
 describe("skills", () => {
 	let fs: FakeFs;
@@ -21,44 +21,81 @@ describe("skills", () => {
 		await fs.write(`${source}/arbor/references/deep.md`, "deep");
 	});
 
-	it("copies every skill, including nested files", async () => {
-		await skills({ dir: "/p", skill: "" }, log, fs);
+	describe("add", () => {
+		it("copies the named skill, including nested files", async () => {
+			await add({ dir: "/p", skill: "arbor" }, log, fs);
 
-		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
-			"# arbor",
-		);
-		expect(await fs.read("/p/.agents/skills/arbor/references/deep.md")).toEqual(
-			"deep",
-		);
-		expect(await fs.read("/p/.agents/skills/other/SKILL.md")).toEqual(
-			"# other",
-		);
+			expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
+				"# arbor",
+			);
+			expect(
+				await fs.read("/p/.agents/skills/arbor/references/deep.md"),
+			).toEqual("deep");
+		});
+
+		it("leaves the skills it was not asked for alone", async () => {
+			await add({ dir: "/p", skill: "arbor" }, log, fs);
+
+			expect(await fs.exists("/p/.agents/skills/other/SKILL.md")).toBe(false);
+		});
+
+		it("rejects a skill that does not exist, and says what there is", async () => {
+			await expect(add({ dir: "/p", skill: "nope" }, log, fs)).rejects.toThrow(
+				"no such skill: nope (have arbor, other)",
+			);
+		});
+
+		it("overwrites whatever is already there", async () => {
+			await fs.mkdir("/p/.agents/skills/arbor");
+			await fs.write("/p/.agents/skills/arbor/SKILL.md", "stale");
+
+			await add({ dir: "/p", skill: "arbor" }, log, fs);
+
+			expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
+				"# arbor",
+			);
+		});
 	});
 
-	it("copies only the named skill", async () => {
-		await skills({ dir: "/p", skill: "other" }, log, fs);
+	describe("update", () => {
+		it("refreshes the skills the project has", async () => {
+			await fs.mkdir("/p/.agents/skills/arbor");
+			await fs.write("/p/.agents/skills/arbor/SKILL.md", "stale");
 
-		expect(await fs.exists("/p/.agents/skills/arbor/SKILL.md")).toBe(false);
-		expect(await fs.read("/p/.agents/skills/other/SKILL.md")).toEqual(
-			"# other",
-		);
-	});
+			await update({ dir: "/p" }, log, fs);
 
-	it("rejects a skill that does not exist", async () => {
-		await expect(skills({ dir: "/p", skill: "nope" }, log, fs)).rejects.toThrow(
-			"no such skill: nope",
-		);
-	});
+			expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
+				"# arbor",
+			);
+		});
 
-	it("overwrites whatever is already there", async () => {
-		await fs.mkdir("/p/.agents/skills/arbor");
-		await fs.write("/p/.agents/skills/arbor/SKILL.md", "stale");
+		it("does not add a skill the project chose not to install", async () => {
+			await fs.mkdir("/p/.agents/skills/arbor");
+			await fs.write("/p/.agents/skills/arbor/SKILL.md", "stale");
 
-		await skills({ dir: "/p", skill: "arbor" }, log, fs);
+			await update({ dir: "/p" }, log, fs);
 
-		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
-			"# arbor",
-		);
+			expect(await fs.exists("/p/.agents/skills/other/SKILL.md")).toBe(false);
+		});
+
+		it("ignores skills that are not ours", async () => {
+			await fs.mkdir("/p/.agents/skills/theirs");
+			await fs.write("/p/.agents/skills/theirs/SKILL.md", "theirs");
+
+			await update({ dir: "/p" }, log, fs);
+
+			expect(await fs.read("/p/.agents/skills/theirs/SKILL.md")).toEqual(
+				"theirs",
+			);
+		});
+
+		it("says so when a project has none, rather than failing", async () => {
+			await update({ dir: "/p" }, log, fs);
+
+			expect(String(log.entries.at(-1)?.message)).toContain(
+				"no webappwiz skills in /p",
+			);
+		});
 	});
 });
 

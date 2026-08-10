@@ -3,15 +3,32 @@ import { NodePs, type Ps } from "@webappwiz/sys";
 import { Command } from "./command";
 import type { AnyMiddleware, Middleware } from "./middleware";
 
-class Cli<C extends object = object> {
-	private cmds = new Map<string, Command<unknown, object>>();
+/**
+ * What a `Cli` dispatches to: a command, or a group that dispatches again.
+ * `Command` satisfies it as it is, which is what lets the two nest freely.
+ */
+interface Node {
+	/** One row of the parent's help table, keyed by the name it registered under. */
+	helpLine(name: string, pad: number): string;
+	exec(argv: string[], outer: AnyMiddleware[]): unknown;
+}
+
+class Cli<C extends object = object> implements Node {
+	private cmds = new Map<string, Node>();
 	private middleware: AnyMiddleware[] = [];
+	private _description = "";
 
 	constructor(
 		readonly name: string,
 		private log: Logger,
 		private ps: Ps,
 	) {}
+
+	/** Only shown when this is a group, on its line in the parent's help. */
+	description(description: string): this {
+		this._description = description;
+		return this;
+	}
 
 	/**
 	 * Wraps every command's action. Has to come before the commands it wraps:
@@ -31,11 +48,37 @@ class Cli<C extends object = object> {
 	command(name: string): Command<unknown, C> {
 		const c = new Command<unknown, C>(name, this.log, this.name);
 		// registered by reference; chain mutates the same object
-		this.cmds.set(name, c as unknown as Command<unknown, object>);
+		this.cmds.set(name, c as unknown as Node);
 		return c;
 	}
 
+	/**
+	 * A subcommand that is itself a set of subcommands — `skills add`, `skills
+	 * update`. The group is a `Cli` too, so it groups, takes middleware and
+	 * prints help exactly the way the root does; only its name is longer.
+	 */
+	group(name: string): Cli<C> {
+		const g = new Cli<C>(`${this.name} ${name}`, this.log, this.ps);
+		this.cmds.set(name, g as Node);
+		return g;
+	}
+
 	run(argv: string[] = Bun.argv.slice(2)): unknown {
+		try {
+			const out = this.exec(argv, []);
+			// async actions reject after exec() returns, so cover that path too
+			return out instanceof Promise ? out.catch((e) => this.fail(e)) : out;
+		} catch (e) {
+			return this.fail(e);
+		}
+	}
+
+	/**
+	 * Dispatch, with whatever middleware the levels above contribute. Errors are
+	 * left to propagate: only the root's `run` ends the process, so a group
+	 * nested three deep still fails once, at the top.
+	 */
+	exec(argv: string[], outer: AnyMiddleware[] = []): unknown {
 		const [name, ...rest] = argv;
 		if (!name || name === "--help" || name === "-h") {
 			return this.help();
@@ -44,13 +87,11 @@ class Cli<C extends object = object> {
 		if (!cmd) {
 			return this.help();
 		}
-		try {
-			const out = cmd.exec(rest, this.middleware);
-			// async actions reject after exec() returns, so cover that path too
-			return out instanceof Promise ? out.catch((e) => this.fail(e)) : out;
-		} catch (e) {
-			return this.fail(e);
-		}
+		return cmd.exec(rest, [...outer, ...this.middleware]);
+	}
+
+	helpLine(name: string, pad: number): string {
+		return `  ${name.padEnd(pad)}${this._description ? `  ${this._description}` : ""}`;
 	}
 
 	// ponytail: message only, no stack — a bad flag is a user error, not a crash
@@ -60,13 +101,13 @@ class Cli<C extends object = object> {
 	}
 
 	private help(): void {
-		const cmds = [...this.cmds.values()];
-		const pad = Math.max(0, ...cmds.map((c) => c.name.length));
+		const entries = [...this.cmds];
+		const pad = Math.max(0, ...entries.map(([name]) => name.length));
 		const lines = [
 			`Usage: ${this.name} <command> [options]`,
 			"",
 			"Commands:",
-			...cmds.map((c) => c.helpLine(pad)),
+			...entries.map(([name, c]) => c.helpLine(name, pad)),
 			"",
 			`Run \`${this.name} <command> --help\` for a command's options.`,
 		];

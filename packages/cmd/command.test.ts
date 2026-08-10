@@ -96,10 +96,10 @@ describe("Command", () => {
 	});
 
 	it("helpLine pads the name and omits an unset description", () => {
-		expect(new Command("c").description("does a thing").helpLine(4)).toBe(
+		expect(new Command("c").description("does a thing").helpLine("c", 4)).toBe(
 			"  c     does a thing",
 		);
-		expect(new Command("c").helpLine(4)).toBe("  c   ");
+		expect(new Command("c").helpLine("c", 4)).toBe("  c   ");
 	});
 
 	it("--help prints usage, options and defaults, and skips the action", () => {

@@ -127,6 +127,89 @@ describe("cli", () => {
 		expect(ps.getExitCode()).toBe(1);
 	});
 
+	it("dispatches through a group to its subcommand", () => {
+		let got: { name: string } | undefined;
+		const wiz = cli("wiz", log);
+		wiz
+			.group("skills")
+			.command("add")
+			.option("name", t.string())
+			.action((o) => {
+				got = o;
+			});
+		wiz.run(["skills", "add", "--name", "arbor"]);
+		expect(got).toEqual({ name: "arbor" });
+	});
+
+	it("lists groups in program help and their commands in the group's", () => {
+		const wiz = cli("wiz", log);
+		wiz
+			.group("skills")
+			.description("manage skills")
+			.command("add")
+			.description("add one");
+		for (const argv of [
+			[],
+			["skills"],
+			["skills", "--help"],
+			["skills", "x"],
+		]) {
+			wiz.run(argv);
+		}
+		const [program, ...group] = log.entries.map((e) => String(e.message));
+		expect(program).toContain("skills  manage skills");
+		expect(group).toHaveLength(3);
+		for (const text of group) {
+			expect(text).toContain("Usage: wiz skills <command> [options]");
+			expect(text).toContain("add  add one");
+			expect(text).toContain(
+				"Run `wiz skills <command> --help` for a command's options.",
+			);
+		}
+	});
+
+	it("a subcommand's own help names its full path", () => {
+		const wiz = cli("wiz", log);
+		wiz
+			.group("skills")
+			.command("add")
+			.arg("skill", t.string())
+			.action(() => {});
+		wiz.run(["skills", "add", "--help"]);
+		expect(String(log.entries.at(-1)?.message)).toContain(
+			"Usage: wiz skills add <skill> [options]",
+		);
+	});
+
+	it("a subcommand's failure exits once, at the root", () => {
+		const wiz = cli("wiz", log, ps);
+		wiz
+			.group("skills")
+			.command("add")
+			.action(() => {
+				throw new Error("nope");
+			});
+		wiz.run(["skills", "add"]);
+		expect(log.entries.at(-1)?.message).toBe("error: nope");
+		expect(ps.getExitCode()).toBe(1);
+	});
+
+	it("group middleware runs inside the program's", () => {
+		const order: string[] = [];
+		const wiz = cli("wiz", log).use<{ n: number }>(async (ctx, next) => {
+			order.push("outer");
+			await next({ ...ctx, n: 1 });
+		});
+		const skills = wiz.group("skills").use<{ n: number }>(async (ctx, next) => {
+			order.push("inner");
+			await next({ ...ctx, n: ctx.n + 1 });
+		});
+		skills.command("add").action((_o, ctx) => order.push(`n=${ctx.n}`));
+		return Promise.resolve(wiz.run(["skills", "add"])).then(() => {
+			expect(order).toEqual(["outer", "inner", "n=2"]);
+		});
+	});
+
 	it("defaults to the console logger when none is injected", () => {
 		const spy = spyOn(console, "log").mockImplementation(() => {});
 		cli("wiz").run([]);

@@ -27,6 +27,26 @@ An arg or option without a `default` is required. Their types accumulate, so
 `opts` is fully typed in `action`. Args bind by declaration order, so put
 flags after them: `app greet --loud ada` reads `ada` as the value of `--loud`.
 
+## Groups
+
+`group` nests a set of subcommands under one name. A group is a cli itself, so
+it takes `use` and `command` the same way and prints the same help — only its
+name is longer.
+
+```ts
+const skills = app.group("skills").description("manage skills");
+
+skills.command("add").arg("skill", t.string()).action(/* … */);
+skills.command("update").action(/* … */);
+```
+
+```bash
+app skills add arbor
+app skills --help      # lists add and update
+```
+
+A failure anywhere in the tree is reported and exits once, at the root.
+
 ## Middleware
 
 `use` wraps a command's action with setup, teardown, and whatever an action
