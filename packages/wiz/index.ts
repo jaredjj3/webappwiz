@@ -3,8 +3,8 @@ import { cli } from "@webappwiz/cmd";
 import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs, NodePs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
-import { fix } from "./fix";
-import { path } from "./path";
+import { Fix } from "./fix";
+import { Path } from "./path";
 import { test } from "./test";
 
 const log = new ConsoleLogger();
@@ -20,7 +20,7 @@ wiz
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action((opts) => fix(opts, log, ps));
+	.action((opts) => new Fix(log, ps).run(opts));
 
 wiz
 	.command("path")
@@ -33,7 +33,7 @@ wiz
 		default: false,
 		description: "remove bin/ from your PATH",
 	})
-	.action((opts) => path(opts, log, fs, ps));
+	.action((opts) => new Path(log, fs, ps).run(opts));
 
 wiz
 	.command("test")

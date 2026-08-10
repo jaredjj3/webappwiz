@@ -1,5 +1,9 @@
 export { Database, type DatabaseProps } from "./database";
-export { DockerImage, type DockerImageProps } from "./docker-image";
+export {
+	DockerImage,
+	type DockerImageProps,
+	type IDockerImage,
+} from "./docker-image";
 export {
 	Domain,
 	type DomainProps,
