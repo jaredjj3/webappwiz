@@ -11,14 +11,18 @@ export type Contract = Record<
 		type: "query" | "mutation";
 		input: Schema<unknown>;
 		output: Schema<unknown>;
-		/** Cache-Control header for query responses, e.g. "max-age=60". */
-		cache?: string;
 	}
 >;
 
 export type In<M> = M extends { input: Schema<infer I> } ? I : never;
 export type Out<M> = M extends { output: Schema<infer O> } ? O : never;
 
+/** Per-request handles: read `request.headers`, write `headers` on the response. */
+export type Context = { request: Request; headers: Headers };
+
 export type Handlers<C extends Contract> = {
-	[K in keyof C]: (input: In<C[K]>) => Out<C[K]> | Promise<Out<C[K]>>;
+	[K in keyof C]: (
+		input: In<C[K]>,
+		ctx: Context,
+	) => Out<C[K]> | Promise<Out<C[K]>>;
 };

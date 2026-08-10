@@ -6,7 +6,6 @@ import { Client, type Contract, Server } from "./index";
 const contract = {
 	getTodo: {
 		type: "query",
-		cache: "max-age=60",
 		input: t.object({ id: t.number() }),
 		output: t.object({ title: t.string() }),
 	},
@@ -23,7 +22,14 @@ const contract = {
 } satisfies Contract;
 
 const server = new Server(contract, {
-	getTodo: ({ id }) => ({ title: `todo ${id}` }),
+	getTodo: ({ id }, ctx) => {
+		ctx.headers.set("cache-control", "max-age=60");
+		ctx.headers.set(
+			"x-seen-auth",
+			ctx.request.headers.get("authorization") ?? "",
+		);
+		return { title: `todo ${id}` };
+	},
 	addTodo: ({ title }) => ({ id: title.length }),
 	boom: () => {
 		throw new Error("kaboom");
@@ -44,12 +50,41 @@ test("query round-trips over GET", async () => {
 	expect(title).toBe("todo 7");
 });
 
-test("query responses carry the declared cache-control header", async () => {
+test("handlers set response headers", async () => {
 	const res = await fetch(
 		`${base}/getTodo?input=${encodeURIComponent('{"id":1}')}`,
 	);
 	expect(res.status).toBe(200);
 	expect(res.headers.get("cache-control")).toBe("max-age=60");
+});
+
+test("request headers merge, per-call over constructor, and reach handlers", async () => {
+	const authed = new Client(contract, base, {
+		headers: { authorization: "default" },
+	});
+	let seen = "";
+	await authed.call(
+		"getTodo",
+		{ id: 1 },
+		{
+			headers: { authorization: "per-call" },
+			onResponse: (res) => {
+				seen = res.headers.get("x-seen-auth") ?? "";
+			},
+		},
+	);
+	expect(seen).toBe("per-call");
+
+	await authed.call(
+		"getTodo",
+		{ id: 1 },
+		{
+			onResponse: (res) => {
+				seen = res.headers.get("x-seen-auth") ?? "";
+			},
+		},
+	);
+	expect(seen).toBe("default");
 });
 
 test("schema failures are 400 with a field path", async () => {

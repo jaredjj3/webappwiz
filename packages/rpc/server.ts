@@ -45,10 +45,13 @@ export class Server<C extends Contract> {
 			throw e;
 		}
 		try {
+			const headers = new Headers();
 			// input is validated above; TS can't correlate the contract lookup
 			// with the handler map, so one cast is needed.
-			const output = await this.handlers[name as keyof C](input as never);
-			const headers = method.cache ? { "cache-control": method.cache } : {};
+			const output = await this.handlers[name as keyof C](input as never, {
+				request: req,
+				headers,
+			});
 			return Response.json(output, { headers });
 		} catch (e) {
 			const message = e instanceof Error ? e.message : "handler failed";
