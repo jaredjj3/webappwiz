@@ -8,6 +8,7 @@ export const classesOverFunctionExports = here("classes-over-function-exports");
 export const testsReadLikeSentences = here("tests-read-like-sentences");
 export const commentsSayWhyNotWhat = here("comments-say-why-not-what");
 export const docCommentsAddressUsers = here("doc-comments-address-users");
+export const noPonytailPrefixes = here("no-ponytail-prefixes");
 
 /** The default style guide for webappwiz projects. */
 export const base: RuleRef[] = [
@@ -15,4 +16,5 @@ export const base: RuleRef[] = [
 	testsReadLikeSentences,
 	commentsSayWhyNotWhat,
 	docCommentsAddressUsers,
+	noPonytailPrefixes,
 ];
