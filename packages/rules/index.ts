@@ -9,6 +9,7 @@ export const testsReadLikeSentences = here("tests-read-like-sentences");
 export const commentsSayWhyNotWhat = here("comments-say-why-not-what");
 export const docCommentsAddressUsers = here("doc-comments-address-users");
 export const noPonytailPrefixes = here("no-ponytail-prefixes");
+export const oneDirPerInterface = here("one-dir-per-interface");
 
 /** The default style guide for webappwiz projects. */
 export const base: RuleRef[] = [
@@ -17,4 +18,5 @@ export const base: RuleRef[] = [
 	commentsSayWhyNotWhat,
 	docCommentsAddressUsers,
 	noPonytailPrefixes,
+	oneDirPerInterface,
 ];
