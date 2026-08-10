@@ -7,6 +7,18 @@
 			"preset": "recommended",
 			"style": {
 				"useBlockStatements": "error",
+				"useNamingConvention": {
+					"level": "error",
+					"options": {
+						"conventions": [
+							{
+								"selector": { "kind": "typeLike" },
+								"match": "([^I].*|I|I[^A-Z].*)"
+							},
+							{ "selector": { "kind": "any" }, "match": ".*" }
+						]
+					}
+				},
 				"noRestrictedImports": {
 					"level": "error",
 					"options": {

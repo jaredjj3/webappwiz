@@ -42,7 +42,7 @@ export type DomainProps = {
  * change whenever the content changes, so a cache can be invalidated exactly
  * once per update.
  */
-export interface ICacheable extends IConstruct {
+export interface Cacheable extends IConstruct {
 	readonly cacheKey: string;
 }
 
@@ -264,7 +264,7 @@ export class Domain extends Construct {
 	 * once the new content is live. Re-invalidates only when `origin.cacheKey`
 	 * changes, and no-ops otherwise.
 	 */
-	invalidateOnUpdate(origin: ICacheable): void {
+	invalidateOnUpdate(origin: Cacheable): void {
 		this.distribution.node.addDependency(origin);
 
 		new AwsCustomResource(this, "CacheInvalidation", {

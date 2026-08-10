@@ -16,7 +16,7 @@ type Env = {
 };
 
 /** What a service needs from an image: how to run it, and what to run it with. */
-export interface IDockerImage {
+export interface ServiceImage {
 	/** A content hash of the built image, stable while the image is unchanged. */
 	readonly assetHash: string;
 	/** The image as an ECS container image, ready for a Fargate task definition. */
@@ -27,7 +27,7 @@ export interface IDockerImage {
 	readonly secrets: Record<string, ecs.Secret>;
 }
 
-export class DockerImage extends Construct implements IDockerImage {
+export class DockerImage extends Construct implements ServiceImage {
 	private readonly asset: DockerImageAsset;
 	private readonly env: Env;
 

@@ -2,12 +2,12 @@ export { Database, type DatabaseProps } from "./database";
 export {
 	DockerImage,
 	type DockerImageProps,
-	type IDockerImage,
+	type ServiceImage,
 } from "./docker-image";
 export {
+	type Cacheable,
 	Domain,
 	type DomainProps,
-	type ICacheable,
 	type RedirectDomain,
 } from "./domain";
 export { Network, type NetworkProps } from "./network";
