@@ -35,6 +35,15 @@ const skillsGroup = app
 	.description("manage webappwiz agent skills in .agents/skills");
 
 skillsGroup
+	.command("ls")
+	.description("list the skills there are, and what the project has of them")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to inspect (default: .)",
+	})
+	.action((opts) => skills.ls(opts, log, fs));
+
+skillsGroup
 	.command("add")
 	.description("add a skill to a project")
 	.arg("skill", t.string(), { description: "skill name" })
