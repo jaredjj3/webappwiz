@@ -19,14 +19,14 @@ describe("test", () => {
 	it("runs bun test once, from the workspace root", async () => {
 		await test({ package: "" }, fs, ps);
 
-		expect(ps.getCalls()).toEqual(["bun test --pass-with-no-tests"]);
+		expect(ps.getCalls()).toEqual(["bun test --pass-with-no-tests --parallel"]);
 	});
 
 	it("filters to the named package", async () => {
 		await test({ package: "log" }, fs, ps);
 
 		expect(ps.getCalls()).toEqual([
-			"bun test --pass-with-no-tests packages/log/",
+			"bun test --pass-with-no-tests --parallel packages/log/",
 		]);
 	});
 

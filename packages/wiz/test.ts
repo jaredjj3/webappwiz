@@ -17,9 +17,10 @@ export async function test(
 		filter.push(`packages/${opts.package}/`);
 	}
 
-	// serial: the suites share fixtures built in beforeEach, which --concurrent races
+	// a worker per file; suites opt into within-file concurrency themselves,
+	// since most still share a fixture built in beforeEach
 	const { exitCode } = await ps.spawn(
-		["bun", "test", "--pass-with-no-tests", ...filter],
+		["bun", "test", "--pass-with-no-tests", "--parallel", ...filter],
 		{ cwd: root },
 	);
 	if (exitCode !== 0) {
