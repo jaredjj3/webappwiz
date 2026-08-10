@@ -2,7 +2,9 @@ import type { Cli } from "@webappwiz/cmd";
 import type { Logger } from "@webappwiz/log";
 import type { Fs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
+import { analyze } from "./analyze";
 import * as skills from "./skills";
+import { check } from "./style";
 import { update } from "./update";
 
 /**
@@ -30,6 +32,42 @@ export async function commands(app: Cli, log: Logger, fs: Fs): Promise<void> {
 			description: "version to pin to",
 		})
 		.action((opts) => update(opts, log, fs));
+
+	app
+		.command("analyze")
+		.description(
+			"compile a style guide into per-rule analysis tasks for agents",
+		)
+		.arg("rules", t.string(), {
+			description: "style guide module (a .ts file)",
+		})
+		.arg("dir", t.string(), {
+			default: ".",
+			description: "directory to analyze (default: .)",
+		})
+		.option("json", t.boolean(), {
+			default: false,
+			description: "print a machine-readable plan",
+		})
+		.option("chunk", t.number(), {
+			default: 25,
+			description: "files per task",
+		})
+		.action((opts) => analyze(opts, log, fs));
+
+	app
+		.group("style")
+		.description("author and check agent style guides")
+		.command("check")
+		.description("check that a style guide is sound")
+		.arg("rules", t.string(), {
+			description: "style guide module (a .ts file)",
+		})
+		.option("strict", t.boolean(), {
+			default: false,
+			description: "treat warnings as errors",
+		})
+		.action((opts) => check(opts, log, fs));
 
 	const group = app
 		.group("skills")

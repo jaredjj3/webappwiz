@@ -45,6 +45,8 @@
       "dependencies": {
         "@webappwiz/cmd": "workspace:*",
         "@webappwiz/log": "workspace:*",
+        "@webappwiz/md": "workspace:*",
+        "@webappwiz/style": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
       },
@@ -73,11 +75,22 @@
       "name": "@webappwiz/log",
       "version": "0.0.0",
     },
+    "packages/md": {
+      "name": "@webappwiz/md",
+      "version": "0.0.0",
+    },
     "packages/rpc": {
       "name": "@webappwiz/rpc",
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/t": "workspace:*",
+      },
+    },
+    "packages/style": {
+      "name": "@webappwiz/style",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/md": "workspace:*",
       },
     },
     "packages/sys": {
@@ -200,7 +213,11 @@
 
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
 
+    "@webappwiz/md": ["@webappwiz/md@workspace:packages/md"],
+
     "@webappwiz/rpc": ["@webappwiz/rpc@workspace:packages/rpc"],
+
+    "@webappwiz/style": ["@webappwiz/style@workspace:packages/style"],
 
     "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
 
