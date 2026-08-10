@@ -1,6 +1,6 @@
 ---
 name: arbor
-description: Use the @webappwiz/arbor CLI to land your work on trunk from an isolated git worktree without pull requests. Use this whenever you are an AI coding agent working on a task in an arbor worktree and need to create, claim, graft, prune, list, locate, or escalate a workstream.
+description: Use the @webappwiz/arbor CLI to land your work on trunk from an isolated git worktree without pull requests. Read this before making any code change in an arbor repository — it decides where the work happens — and whenever you need to create, claim, graft, prune, list, show, locate, or escalate a workstream.
 version: 0.0.0
 ---
 
@@ -17,9 +17,30 @@ rebase (`git add` / `git rebase --continue`), then grafting again.
 Run `arbor --help` for the list of commands, and `arbor <command> --help` for
 what a command does and its arguments.
 
+## Before you start
+
+Work happens in a worktree, and other agents may already be in one. Before
+creating anything:
+
+1. List the files and directories you expect to touch.
+2. `arbor ls`. For each task in flight, `arbor show <task>` — it prints that
+   task's state and its `TODO.md` without taking the lease, so looking cannot
+   disturb the agent driving it. For the files it has actually changed:
+   `git -C "$(arbor path <task>)" diff --name-only main...task/<task>`.
+3. Compare with your list. If nothing overlaps, carry on.
+
+If something does overlap, stop and ask. Say what you have not done:
+
+> `alpha` is already changing `packages/arbor/index.ts`. I have not started
+> anything. Wait for it to land, or work alongside it?
+
+Then wait for the answer. Waiting is the usual one — the overlap disappears
+once the other task grafts, and starting now buys a rebase conflict instead.
+
 ## Workflow
 
-1. `arbor create <task>` (or `arbor claim <task>` to resume).
+1. `arbor create <task>` (or `arbor claim <task>` to resume; `arbor show
+   <task>` first if you want to see what a tree is before taking its lease).
 2. Write `TODO.md` at the worktree root before starting (see below).
 3. Do the work; commit with git (arbor never commits for you). Keep `TODO.md`
    current as you go.
