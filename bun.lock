@@ -103,6 +103,7 @@
       "name": "wiz",
       "version": "0.0.0",
       "dependencies": {
+        "@webappwiz/cli": "workspace:*",
         "@webappwiz/cmd": "workspace:*",
         "@webappwiz/log": "workspace:*",
         "@webappwiz/sys": "workspace:*",

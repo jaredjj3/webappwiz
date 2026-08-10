@@ -1,3 +1,4 @@
+import { commands } from "@webappwiz/cli/commands";
 import { cli } from "@webappwiz/cmd";
 import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs, NodePs } from "@webappwiz/sys";
@@ -42,5 +43,11 @@ wiz
 		description: "only test this package (default: all)",
 	})
 	.action((opts) => test(opts, fs, ps));
+
+await commands(
+	wiz.group("cli").description("run @webappwiz/cli against a project"),
+	log,
+	fs,
+);
 
 await wiz.run();

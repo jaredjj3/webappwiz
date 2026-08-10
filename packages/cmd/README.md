@@ -47,6 +47,19 @@ app skills --help      # lists add and update
 
 A failure anywhere in the tree is reported and exits once, at the root.
 
+Since `cli()` and `group()` hand back the same thing, a function that takes a
+`Cli` can register commands on either — which is how one program mounts
+another's commands as a subcommand instead of shelling out to it.
+
+```ts
+export function commands(app: Cli): void {
+	app.command("update").action(/* … */);
+}
+
+commands(cli("webappwiz"));       // webappwiz update
+commands(wiz.group("cli"));       // wiz cli update
+```
+
 ## Middleware
 
 `use` wraps a command's action with setup, teardown, and whatever an action

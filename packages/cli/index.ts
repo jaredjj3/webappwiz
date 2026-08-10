@@ -2,64 +2,10 @@
 import { cli } from "@webappwiz/cmd";
 import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs } from "@webappwiz/sys";
-import { t } from "@webappwiz/t";
-import * as skills from "./skills";
-import { update } from "./update";
+import { commands } from "./commands";
 
 const log = new ConsoleLogger();
-const fs = new NodeFs();
-
-// Every @webappwiz package is released in lockstep, so this one's version is
-// the version — of the packages to pin, and of the skills bundled here.
-const { version } = JSON.parse(
-	await fs.read(`${import.meta.dir}/package.json`),
-);
-
 const app = cli("webappwiz", log);
 
-app
-	.command("update")
-	.description("pin every @webappwiz/* dependency in a tree to one version")
-	.arg("dir", t.string(), {
-		default: ".",
-		description: "directory to scan recursively (default: .)",
-	})
-	.option("version", t.string(), {
-		default: version,
-		description: "version to pin to",
-	})
-	.action((opts) => update(opts, log, fs));
-
-const skillsGroup = app
-	.group("skills")
-	.description("manage webappwiz agent skills in .agents/skills");
-
-skillsGroup
-	.command("ls")
-	.description("list the skills there are, and what the project has of them")
-	.arg("dir", t.string(), {
-		default: ".",
-		description: "project to inspect (default: .)",
-	})
-	.action((opts) => skills.ls(opts, log, fs));
-
-skillsGroup
-	.command("add")
-	.description("add a skill to a project")
-	.arg("skill", t.string(), { description: "skill name" })
-	.arg("dir", t.string(), {
-		default: ".",
-		description: "project to add it to (default: .)",
-	})
-	.action((opts) => skills.add(opts, log, fs));
-
-skillsGroup
-	.command("update")
-	.description("refresh the skills a project already has")
-	.arg("dir", t.string(), {
-		default: ".",
-		description: "project to refresh (default: .)",
-	})
-	.action((opts) => skills.update(opts, log, fs));
-
+await commands(app, log, new NodeFs());
 await app.run();

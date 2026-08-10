@@ -5,6 +5,7 @@
 	"type": "module",
 	"module": "index.ts",
 	"dependencies": {
+		"@webappwiz/cli": "workspace:*",
 		"@webappwiz/cmd": "workspace:*",
 		"@webappwiz/log": "workspace:*",
 		"@webappwiz/sys": "workspace:*",

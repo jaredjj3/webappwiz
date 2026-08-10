@@ -13,7 +13,7 @@ interface Node {
 	exec(argv: string[], outer: AnyMiddleware[]): unknown;
 }
 
-class Cli<C extends object = object> implements Node {
+export class Cli<C extends object = object> implements Node {
 	private cmds = new Map<string, Node>();
 	private middleware: AnyMiddleware[] = [];
 	private _description = "";
