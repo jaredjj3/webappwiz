@@ -12,7 +12,17 @@ const good = new MarkdownWriter()
 	.code("ts", "class Foo {}\nclass Bar {}")
 	.toString();
 
-describe("compile", () => {
+const stub = (name: string, path: string): Rule => ({
+	name,
+	path,
+	files: "**",
+	description: "",
+	good: [],
+	bad: [],
+	text: "",
+});
+
+describe("rule", () => {
 	it("compiles a sound rule with no diagnostics", () => {
 		const { rule, diagnostics } = compile(good, "r.md");
 
@@ -65,7 +75,7 @@ describe("compile", () => {
 		]);
 	});
 
-	it("warns on unknown sections, missing description, untagged fences", () => {
+	it("warns on unknown sections, missing descriptions, and untagged fences", () => {
 		const text = new MarkdownWriter()
 			.field("files", "**/*.ts")
 			.heading(1, "Terse")
@@ -86,24 +96,12 @@ describe("compile", () => {
 			'7: fenced block in "Good" has no language tag',
 		]);
 	});
-});
 
-describe("checkGuide", () => {
-	const rule = (name: string, path: string): Rule => ({
-		name,
-		path,
-		files: "**",
-		description: "",
-		good: [],
-		bad: [],
-		text: "",
-	});
-
-	it("errors on duplicate names, pointing at both files", () => {
+	it("finds duplicate rule names across a guide, pointing at both files", () => {
 		const diagnostics = checkGuide([
-			rule("A", "a.md"),
-			rule("B", "b.md"),
-			rule("A", "c.md"),
+			stub("A", "a.md"),
+			stub("B", "b.md"),
+			stub("A", "c.md"),
 		]);
 
 		expect(diagnostics).toEqual([
@@ -115,7 +113,7 @@ describe("checkGuide", () => {
 		]);
 	});
 
-	it("is quiet when names are unique", () => {
-		expect(checkGuide([rule("A", "a.md"), rule("B", "b.md")])).toEqual([]);
+	it("stays quiet when rule names are unique", () => {
+		expect(checkGuide([stub("A", "a.md"), stub("B", "b.md")])).toEqual([]);
 	});
 });

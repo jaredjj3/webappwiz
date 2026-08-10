@@ -1,10 +1,10 @@
 import type { Cli } from "@webappwiz/cmd";
 import type { Logger } from "@webappwiz/log";
+import { DEFAULT_GUIDE } from "@webappwiz/style";
 import type { Fs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
-import { analyze } from "./analyze";
-import * as skills from "./skills";
-import { check } from "./style";
+import { Skills } from "./skills";
+import { StyleCommands } from "./style";
 import { update } from "./update";
 
 /**
@@ -33,14 +33,37 @@ export async function commands(app: Cli, log: Logger, fs: Fs): Promise<void> {
 		})
 		.action((opts) => update(opts, log, fs));
 
-	app
+	const style = app
+		.group("style")
+		.description("author, check, and run agent style guides");
+	const styleCommands = new StyleCommands(log, fs);
+	const rulesArg = {
+		default: DEFAULT_GUIDE,
+		description: `style guide module (default: ${DEFAULT_GUIDE})`,
+	};
+
+	style
+		.command("check")
+		.description("check that a style guide is sound")
+		.arg("rules", t.string(), rulesArg)
+		.option("strict", t.boolean(), {
+			default: false,
+			description: "treat warnings as errors",
+		})
+		.action((opts) => styleCommands.check(opts));
+
+	style
+		.command("show")
+		.description("list a style guide's rules")
+		.arg("rules", t.string(), rulesArg)
+		.action((opts) => styleCommands.show(opts));
+
+	style
 		.command("analyze")
 		.description(
 			"compile a style guide into per-rule analysis tasks for agents",
 		)
-		.arg("rules", t.string(), {
-			description: "style guide module (a .ts file)",
-		})
+		.arg("rules", t.string(), rulesArg)
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "directory to analyze (default: .)",
@@ -53,36 +76,23 @@ export async function commands(app: Cli, log: Logger, fs: Fs): Promise<void> {
 			default: 25,
 			description: "files per task",
 		})
-		.action((opts) => analyze(opts, log, fs));
+		.action((opts) => styleCommands.analyze(opts));
 
-	app
-		.group("style")
-		.description("author and check agent style guides")
-		.command("check")
-		.description("check that a style guide is sound")
-		.arg("rules", t.string(), {
-			description: "style guide module (a .ts file)",
-		})
-		.option("strict", t.boolean(), {
-			default: false,
-			description: "treat warnings as errors",
-		})
-		.action((opts) => check(opts, log, fs));
-
-	const group = app
+	const skillsGroup = app
 		.group("skills")
 		.description("manage webappwiz agent skills in .agents/skills");
+	const skills = new Skills(log, fs);
 
-	group
+	skillsGroup
 		.command("ls")
 		.description("list the skills there are, and what the project has of them")
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "project to inspect (default: .)",
 		})
-		.action((opts) => skills.ls(opts, log, fs));
+		.action((opts) => skills.ls(opts));
 
-	group
+	skillsGroup
 		.command("add")
 		.description("add a skill to a project")
 		.arg("skill", t.string(), { description: "skill name" })
@@ -90,14 +100,14 @@ export async function commands(app: Cli, log: Logger, fs: Fs): Promise<void> {
 			default: ".",
 			description: "project to add it to (default: .)",
 		})
-		.action((opts) => skills.add(opts, log, fs));
+		.action((opts) => skills.add(opts));
 
-	group
+	skillsGroup
 		.command("update")
 		.description("refresh the skills a project already has")
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "project to refresh (default: .)",
 		})
-		.action((opts) => skills.update(opts, log, fs));
+		.action((opts) => skills.update(opts));
 }

@@ -1,19 +1,13 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 
 import { Duration, SystemClock, SystemTimer, sleep } from "../index";
 import { FakeClock, FakeTimer } from "../testing";
 
-describe("SystemTimer", () => {
-	let timer: SystemTimer;
-
-	beforeEach(() => {
-		timer = new SystemTimer();
-	});
-
+describe("timer", () => {
 	it("cancels a pending timeout when disposed", async () => {
 		let fired = false;
 
-		const pending = timer.setTimeout(() => {
+		const pending = new SystemTimer().setTimeout(() => {
 			fired = true;
 		}, Duration.ms(1));
 		pending.dispose();
@@ -25,7 +19,7 @@ describe("SystemTimer", () => {
 	it("repeats an interval until disposed", async () => {
 		let ticks = 0;
 
-		const interval = timer.setInterval(() => {
+		const interval = new SystemTimer().setInterval(() => {
 			ticks += 1;
 		}, Duration.ms(1));
 		await sleep(Duration.ms(20));
@@ -36,10 +30,8 @@ describe("SystemTimer", () => {
 		expect(settled).toBeGreaterThan(1);
 		expect(ticks).toBe(settled);
 	});
-});
 
-describe("sleep", () => {
-	it("waits at least the given duration", async () => {
+	it("sleeps at least the given duration", async () => {
 		const clock = new SystemClock();
 
 		const start = clock.now();
@@ -47,16 +39,9 @@ describe("sleep", () => {
 
 		expect(clock.now().subtract(start).ms).toBeGreaterThanOrEqual(15);
 	});
-});
 
-describe("FakeTimer", () => {
-	let timer: FakeTimer;
-
-	beforeEach(() => {
-		timer = new FakeTimer();
-	});
-
-	it("fires only what the test drives", () => {
+	it("fires only what the test drives on a fake timer", () => {
+		const timer = new FakeTimer();
 		const fired: string[] = [];
 
 		timer.setTimeout(() => fired.push("first"), Duration.secs(1));
@@ -74,7 +59,8 @@ describe("FakeTimer", () => {
 		expect(fired).toEqual(["first", "tick", "tick", "second"]);
 	});
 
-	it("skips disposed callbacks", () => {
+	it("skips disposed callbacks on a fake timer", () => {
+		const timer = new FakeTimer();
 		let fired = 0;
 
 		const pending = timer.setTimeout(() => {
@@ -91,10 +77,8 @@ describe("FakeTimer", () => {
 
 		expect(fired).toBe(0);
 	});
-});
 
-describe("FakeClock", () => {
-	it("moves only when advanced", () => {
+	it("moves a fake clock only when advanced", () => {
 		const clock = new FakeClock(Duration.secs(10));
 
 		expect(clock.now().secs).toBe(10);

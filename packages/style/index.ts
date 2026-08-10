@@ -1,4 +1,5 @@
 export {
+	DEFAULT_GUIDE,
 	defineStyleGuide,
 	isStyleGuide,
 	type RuleRef,

@@ -23,7 +23,7 @@ describe("Disposer", () => {
 		expect(disposer.disposed).toBe(true);
 	});
 
-	it("disposing twice releases each resource once", () => {
+	it("releases each resource once when disposed twice", () => {
 		disposer.defer(() => released.push("once"));
 
 		disposer.dispose();
@@ -32,17 +32,15 @@ describe("Disposer", () => {
 		expect(released).toEqual(["once"]);
 	});
 
-	it("registering on a disposed disposer throws", () => {
+	it("throws when registering on a disposed disposer", () => {
 		disposer.dispose();
 
 		expect(() => disposer.defer(() => {})).toThrow("disposed Disposer");
 		expect(() => disposer.use(disposables.noop())).toThrow("disposed Disposer");
 		expect(() => disposer.adopt(1, () => {})).toThrow("disposed Disposer");
 	});
-});
 
-describe("disposables", () => {
-	it("nullable falls back to a no-op", () => {
+	it("falls back to a no-op for a nullable disposable", () => {
 		expect(() => disposables.nullable(null).dispose()).not.toThrow();
 
 		const inner = disposables.callback(() => {

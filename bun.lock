@@ -7,6 +7,8 @@
       "devDependencies": {
         "@biomejs/biome": "^2.5.7",
         "@types/bun": "latest",
+        "@webappwiz/rules": "workspace:*",
+        "@webappwiz/style": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^7",
@@ -84,6 +86,13 @@
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/t": "workspace:*",
+      },
+    },
+    "packages/rules": {
+      "name": "@webappwiz/rules",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/style": "workspace:*",
       },
     },
     "packages/style": {
@@ -216,6 +225,8 @@
     "@webappwiz/md": ["@webappwiz/md@workspace:packages/md"],
 
     "@webappwiz/rpc": ["@webappwiz/rpc@workspace:packages/rpc"],
+
+    "@webappwiz/rules": ["@webappwiz/rules@workspace:packages/rules"],
 
     "@webappwiz/style": ["@webappwiz/style@workspace:packages/style"],
 
