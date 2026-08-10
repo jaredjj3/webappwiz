@@ -36,11 +36,11 @@ wiz
 
 wiz
 	.command("test")
-	.description("run each package's tests")
+	.description("run the workspace tests")
 	.arg("package", t.string(), {
 		default: "",
 		description: "only test this package (default: all)",
 	})
-	.action((opts) => test(opts, log, fs, ps));
+	.action((opts) => test(opts, fs, ps));
 
 await wiz.run();

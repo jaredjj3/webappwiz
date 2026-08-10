@@ -1,8 +1,13 @@
 import type { Contract, In, Out } from "./contract";
+import { RpcError } from "./error";
 
 export type ClientOptions = {
 	/** Sent with each request; per-call headers win over constructor ones. */
 	headers?: Record<string, string>;
+	/** Aborts the request; `AbortSignal.timeout(ms)` covers timeouts. */
+	signal?: AbortSignal;
+	/** Set to "include" for cookie auth across origins. */
+	credentials?: "omit" | "same-origin" | "include";
 	/** Receives the raw response, for reading its headers or status. */
 	onResponse?: (res: Response) => void;
 };
@@ -27,25 +32,32 @@ export class Client<C extends Contract> {
 		for (const [key, value] of new Headers(options.headers)) {
 			headers.set(key, value);
 		}
-		if (method.type === "mutation") {
+		const init = {
+			headers,
+			signal: options.signal ?? this.options.signal,
+			credentials: options.credentials ?? this.options.credentials,
+		};
+		let res: Response;
+		if (method.type === "query") {
+			// ponytail: input rides in the query string, which proxies cut off near
+			// 8k; POST-fallback for oversized queries is the fix, at the cost of
+			// making them uncacheable
+			res = await fetch(
+				`${this.baseUrl}/${name}?input=${encodeURIComponent(JSON.stringify(input))}`,
+				init,
+			);
+		} else {
 			headers.set("content-type", "application/json");
+			res = await fetch(`${this.baseUrl}/${name}`, {
+				...init,
+				method: "POST",
+				body: JSON.stringify(input),
+			});
 		}
-		const res =
-			method.type === "query"
-				? await fetch(
-						`${this.baseUrl}/${name}?input=${encodeURIComponent(JSON.stringify(input))}`,
-						{ headers },
-					)
-				: await fetch(`${this.baseUrl}/${name}`, {
-						method: "POST",
-						headers,
-						body: JSON.stringify(input),
-					});
 		options.onResponse?.(res);
 		this.options.onResponse?.(res);
 		if (!res.ok) {
-			// ponytail: status rides in the message; add an RpcError class when a caller needs to branch on it
-			throw new Error(`${name}: ${res.status} ${await res.text()}`);
+			throw new RpcError(res.status, `${name}: ${await res.text()}`);
 		}
 		return (await res.json()) as Out<C[K]>;
 	}

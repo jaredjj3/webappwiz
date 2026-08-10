@@ -1,51 +1,28 @@
-import { color, type Logger } from "@webappwiz/log";
 import type { Fs, Ps } from "@webappwiz/sys";
 
-const packages = `${import.meta.dir}/..`;
+const root = `${import.meta.dir}/../..`;
 
 export async function test(
 	opts: { package: string },
-	log: Logger,
 	fs: Fs,
 	ps: Ps,
 ): Promise<void> {
-	const entries = await fs.readdir(packages);
-	const all: string[] = [];
-	for (const entry of entries.sort()) {
-		if ((await fs.stat(`${packages}/${entry}`)).isDirectory()) {
-			all.push(entry);
+	// one run from the root, so bun reports every failure together instead of
+	// scrolling the early packages' errors off the top
+	const filter: string[] = [];
+	if (opts.package !== "") {
+		if (!(await fs.exists(`${root}/packages/${opts.package}`))) {
+			throw new Error(`no such package: ${opts.package}`);
 		}
-	}
-	const dirs =
-		opts.package === "" ? all : all.filter((d) => d === opts.package);
-	if (dirs.length === 0) {
-		throw new Error(`no such package: ${opts.package}`);
+		filter.push(`packages/${opts.package}/`);
 	}
 
-	const start = performance.now();
-	const failed: string[] = [];
-	for (const dir of dirs) {
-		log.info(`\n${color.blue(`${dir}:`)}`);
-		// one run per package, cwd'd into it, so each picks up its own bunfig.toml
-		const { exitCode } = await ps.spawn(
-			// --concurrent: the suites are mostly waiting on git and the filesystem
-			["bun", "test", "--pass-with-no-tests", "--concurrent"],
-			{
-				cwd: `${packages}/${dir}`,
-			},
-		);
-		if (exitCode !== 0) {
-			failed.push(dir);
-		}
-	}
-
-	const ms = performance.now() - start;
-	const elapsed =
-		ms < 1000 ? `${ms.toFixed(2)}ms` : `${(ms / 1000).toFixed(2)}s`;
-	log.info(
-		`\ntests: ${failed.length === 0 ? color.green("success") : color.red(`fail (${failed.join(", ")})`)} ${color.gray(`[${color.bold(elapsed)}]`)}`,
+	// serial: the suites share fixtures built in beforeEach, which --concurrent races
+	const { exitCode } = await ps.spawn(
+		["bun", "test", "--pass-with-no-tests", ...filter],
+		{ cwd: root },
 	);
-	if (failed.length > 0) {
+	if (exitCode !== 0) {
 		throw new Error("Tests failed");
 	}
 }

@@ -1,41 +1,53 @@
-import { expect, test } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { FakeProcess } from "../testing";
 import { NodePs } from "./node-ps";
 
-function ps(env: NodeJS.ProcessEnv): NodePs {
-	const proc = new FakeProcess();
-	proc.env = env;
-	return new NodePs(proc);
-}
+describe("NodePs", () => {
+	/** Echoes the variables a spawned command can actually see. */
+	const SHOW = ["sh", "-c", 'printf \'%s|%s\' "$INHERITED" "$ADDED"'];
+	let proc: FakeProcess;
 
-/** Echoes the variables a spawned command can actually see. */
-const SHOW = ["sh", "-c", 'printf \'%s|%s\' "$INHERITED" "$ADDED"'];
-
-test("env adds to the environment rather than replacing it", async () => {
-	const { stdout } = await ps({ INHERITED: "kept" }).spawnCapture(SHOW, {
-		env: { ADDED: "new" },
+	beforeEach(() => {
+		proc = new FakeProcess();
 	});
 
-	expect(stdout).toBe("kept|new");
-});
+	it("env adds to the environment rather than replacing it", async () => {
+		proc.env = { INHERITED: "kept" };
 
-test("a caller's value wins over the one it inherits", async () => {
-	const { stdout } = await ps({
-		INHERITED: "kept",
-		ADDED: "old",
-	}).spawnCapture(SHOW, { env: { ADDED: "new" } });
+		const { stdout } = await new NodePs(proc).spawnCapture(SHOW, {
+			env: { ADDED: "new" },
+		});
 
-	expect(stdout).toBe("kept|new");
-});
+		expect(stdout).toBe("kept|new");
+	});
 
-test("passing no env inherits the whole environment", async () => {
-	const { stdout } = await ps({ INHERITED: "kept" }).spawnCapture(SHOW);
+	it("a caller's value wins over the one it inherits", async () => {
+		proc.env = { INHERITED: "kept", ADDED: "old" };
 
-	expect(stdout).toBe("kept|");
-});
+		const { stdout } = await new NodePs(proc).spawnCapture(SHOW, {
+			env: { ADDED: "new" },
+		});
 
-test("a command killed by a signal does not report success", async () => {
-	const { exitCode } = await ps({}).spawnCapture(["sh", "-c", "kill -9 $$"]);
+		expect(stdout).toBe("kept|new");
+	});
 
-	expect(exitCode).toBe(137); // 128 + SIGKILL, the way a shell reports it
+	it("passing no env inherits the whole environment", async () => {
+		proc.env = { INHERITED: "kept" };
+
+		const { stdout } = await new NodePs(proc).spawnCapture(SHOW);
+
+		expect(stdout).toBe("kept|");
+	});
+
+	it("a command killed by a signal does not report success", async () => {
+		proc.env = {};
+
+		const { exitCode } = await new NodePs(proc).spawnCapture([
+			"sh",
+			"-c",
+			"kill -9 $$",
+		]);
+
+		expect(exitCode).toBe(137); // 128 + SIGKILL, the way a shell reports it
+	});
 });

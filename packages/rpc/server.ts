@@ -1,28 +1,65 @@
 import { SchemaError } from "@webappwiz/t";
 import type { Contract, Handlers } from "./contract";
+import { RpcError } from "./error";
 
+export type ServerOptions = {
+	/**
+	 * Allowed browser origin, e.g. "*" or "https://app.example.com". Omit to
+	 * send no CORS headers at all, which is right for same-origin clients.
+	 */
+	cors?: string;
+};
+
+/**
+ * Serves a contract over HTTP. Its whole surface is `fetch`, the shape every
+ * fetch-style runtime already takes:
+ *
+ *     Bun.serve(server)                 // Bun takes { fetch }
+ *     export default server             // Workers, Deno
+ *     app.mount("/rpc", server.fetch)   // Hono
+ */
 export class Server<C extends Contract> {
-	private server?: ReturnType<typeof Bun.serve>;
-
 	constructor(
 		private contract: C,
 		private handlers: Handlers<C>,
+		private options: ServerOptions = {},
 	) {}
 
-	/** Starts listening and returns the actual port; pass 0 to pick a free one. */
-	listen(port = 0): number {
-		this.server = Bun.serve({ port, fetch: (req) => this.handle(req) });
-		// port is undefined only for unix-socket servers, which this never creates
-		return this.server.port as number;
-	}
+	/** Bound, so it survives being passed around detached from the instance. */
+	readonly fetch = async (req: Request): Promise<Response> => {
+		const res = await this.dispatch(req);
+		const { cors } = this.options;
+		if (cors !== undefined) {
+			// without this a cross-origin caller cannot read the headers handlers set
+			res.headers.set(
+				"access-control-expose-headers",
+				[...res.headers.keys()].join(", "),
+			);
+			res.headers.set("access-control-allow-origin", cors);
+			if (cors !== "*") {
+				// "*" is incompatible with credentials, so only a real origin gets them
+				res.headers.set("access-control-allow-credentials", "true");
+				res.headers.set("vary", "origin");
+			}
+		}
+		return res;
+	};
 
-	stop(): void {
-		this.server?.stop(true);
-	}
-
-	private async handle(req: Request): Promise<Response> {
+	private async dispatch(req: Request): Promise<Response> {
+		if (this.options.cors !== undefined && req.method === "OPTIONS") {
+			return new Response(null, {
+				status: 204,
+				headers: {
+					"access-control-allow-methods": "GET, POST, OPTIONS",
+					"access-control-allow-headers":
+						req.headers.get("access-control-request-headers") ?? "content-type",
+					"access-control-max-age": "86400",
+				},
+			});
+		}
 		const url = new URL(req.url);
-		const name = url.pathname.slice(1);
+		// the last segment only, so this can be mounted under any path prefix
+		const name = url.pathname.split("/").pop() ?? "";
 		const method = this.contract[name];
 		if (method === undefined) {
 			return new Response("unknown method", { status: 404 });
@@ -54,8 +91,12 @@ export class Server<C extends Contract> {
 			});
 			return Response.json(output, { headers });
 		} catch (e) {
-			const message = e instanceof Error ? e.message : "handler failed";
-			return new Response(message, { status: 500 });
+			if (e instanceof RpcError) {
+				return new Response(e.message, { status: e.status });
+			}
+			// an unplanned throw may name a table or a file, so it stays server-side
+			console.error(`rpc ${name}:`, e);
+			return new Response("internal error", { status: 500 });
 		}
 	}
 }

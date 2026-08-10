@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,135 +13,128 @@ import { FileLock } from "./file-lock";
  * in-memory Map cannot prove it. Processes are faked so signals and pid
  * liveness can be driven from the test.
  */
-async function scratch() {
-	const dir = await mkdtemp(join(tmpdir(), "file-lock-"));
-	const fs = new NodeFs();
-	const ps = new FakePs();
-	const log = new MemoryLogger();
-	const path = join(dir, "some.lock");
-	return {
-		fs,
-		ps,
-		log,
-		path,
-		lock: () => new FileLock(fs, ps, log, path, { pollMs: 10 }),
-		out: () => log.entries.map((e) => String(e.message)).join("\n"),
-		cleanup: () => rm(dir, { recursive: true, force: true }),
-	};
-}
+describe("FileLock", () => {
+	let dir: string;
+	let path: string;
+	let fs: NodeFs;
+	let ps: FakePs;
+	let log: MemoryLogger;
 
-test("a second acquire blocks until the first releases", async () => {
-	const s = await scratch();
-	const order: string[] = [];
-	const first = s.lock();
-	const second = s.lock();
-
-	await first.acquire();
-	order.push("first-in");
-
-	const waiting = second.acquire().then(async () => {
-		order.push("second-in");
-		await second.release();
+	beforeEach(async () => {
+		dir = await mkdtemp(join(tmpdir(), "file-lock-"));
+		path = join(dir, "some.lock");
+		fs = new NodeFs();
+		ps = new FakePs();
+		log = new MemoryLogger();
 	});
 
-	await sleep(Duration.ms(50));
-	expect(order).toEqual(["first-in"]); // still waiting on the mutex
-
-	order.push("first-out");
-	await first.release();
-	await waiting;
-
-	expect(order).toEqual(["first-in", "first-out", "second-in"]);
-	expect(await s.fs.exists(s.path)).toBe(false);
-	await s.cleanup();
-});
-
-test("a lock held by a dead pid is stolen, loudly", async () => {
-	const s = await scratch();
-	const dead = 999_001;
-	await s.fs.mkdir(s.path, { recursive: false });
-	await s.fs.write(
-		`${s.path}/holder.json`,
-		JSON.stringify({
-			pid: dead,
-			hostname: s.ps.hostname,
-			at: new Date().toISOString(), // fresh: only the dead pid gives it away
-		}),
-	);
-	s.ps.kill(dead);
-
-	const lock = s.lock();
-	await lock.acquire();
-
-	expect(s.out()).toContain("stealing stale lock");
-	const holder = JSON.parse(await s.fs.read(`${s.path}/holder.json`));
-	expect(holder.pid).toBe(s.ps.pid);
-	await lock.release();
-	await s.cleanup();
-});
-
-test("a lock older than the staleness window is stolen even if the pid lives", async () => {
-	const s = await scratch();
-	await s.fs.mkdir(s.path, { recursive: false });
-	await s.fs.write(
-		`${s.path}/holder.json`,
-		JSON.stringify({
-			pid: s.ps.pid,
-			hostname: s.ps.hostname,
-			at: new Date(Date.now() - 10_000).toISOString(),
-		}),
-	);
-
-	const lock = new FileLock(s.fs, s.ps, s.log, s.path, {
-		stalenessMs: 50,
-		pollMs: 10,
+	afterEach(async () => {
+		await rm(dir, { recursive: true, force: true });
 	});
-	await lock.acquire();
 
-	expect(s.out()).toContain("stealing stale lock");
-	await lock.release();
-	await s.cleanup();
-});
+	it("a second acquire blocks until the first releases", async () => {
+		const order: string[] = [];
+		const first = new FileLock(fs, ps, log, path, { pollMs: 10 });
+		const second = new FileLock(fs, ps, log, path, { pollMs: 10 });
 
-test("a crash releases the lock — SIGINT removes it and exits", async () => {
-	const s = await scratch();
+		await first.acquire();
+		order.push("first-in");
 
-	await s.lock().acquire();
-	expect(await s.fs.exists(s.path)).toBe(true);
+		const waiting = second.acquire().then(async () => {
+			order.push("second-in");
+			await second.release();
+		});
 
-	s.ps.dispatch("SIGINT");
+		await sleep(Duration.ms(50));
+		expect(order).toEqual(["first-in"]); // still waiting on the mutex
 
-	expect(await s.fs.exists(s.path)).toBe(false);
-	expect(s.ps.getExitCode()).toBe(130);
-	await s.cleanup();
-});
+		order.push("first-out");
+		await first.release();
+		await waiting;
 
-test("process exit removes a lock nobody released", async () => {
-	const s = await scratch();
+		expect(order).toEqual(["first-in", "first-out", "second-in"]);
+		expect(await fs.exists(path)).toBe(false);
+	});
 
-	await s.lock().acquire();
-	s.ps.dispatch("exit");
+	it("a lock held by a dead pid is stolen, loudly", async () => {
+		const dead = 999_001;
+		await fs.mkdir(path, { recursive: false });
+		await fs.write(
+			`${path}/holder.json`,
+			JSON.stringify({
+				pid: dead,
+				hostname: ps.hostname,
+				at: new Date().toISOString(), // fresh: only the dead pid gives it away
+			}),
+		);
+		ps.kill(dead);
 
-	expect(await s.fs.exists(s.path)).toBe(false);
-	await s.cleanup();
-});
+		const lock = new FileLock(fs, ps, log, path, { pollMs: 10 });
+		await lock.acquire();
 
-test("releaseIfOurs leaves a lock held by another process alone", async () => {
-	const s = await scratch();
-	const other = s.lock();
-	await other.acquire();
-	await s.fs.write(
-		`${s.path}/holder.json`,
-		JSON.stringify({
-			pid: 999_002,
-			hostname: s.ps.hostname,
-			at: new Date().toISOString(),
-		}),
-	);
+		expect(log.entries.map((e) => String(e.message)).join("\n")).toContain(
+			"stealing stale lock",
+		);
+		const holder = JSON.parse(await fs.read(`${path}/holder.json`));
+		expect(holder.pid).toBe(ps.pid);
+		await lock.release();
+	});
 
-	await s.lock().releaseIfOurs();
+	it("a lock older than the staleness window is stolen even if the pid lives", async () => {
+		await fs.mkdir(path, { recursive: false });
+		await fs.write(
+			`${path}/holder.json`,
+			JSON.stringify({
+				pid: ps.pid,
+				hostname: ps.hostname,
+				at: new Date(Date.now() - 10_000).toISOString(),
+			}),
+		);
 
-	expect(await s.fs.exists(s.path)).toBe(true);
-	await other.release();
-	await s.cleanup();
+		const lock = new FileLock(fs, ps, log, path, {
+			stalenessMs: 50,
+			pollMs: 10,
+		});
+		await lock.acquire();
+
+		expect(log.entries.map((e) => String(e.message)).join("\n")).toContain(
+			"stealing stale lock",
+		);
+		await lock.release();
+	});
+
+	it("a crash releases the lock — SIGINT removes it and exits", async () => {
+		await new FileLock(fs, ps, log, path, { pollMs: 10 }).acquire();
+		expect(await fs.exists(path)).toBe(true);
+
+		ps.dispatch("SIGINT");
+
+		expect(await fs.exists(path)).toBe(false);
+		expect(ps.getExitCode()).toBe(130);
+	});
+
+	it("process exit removes a lock nobody released", async () => {
+		await new FileLock(fs, ps, log, path, { pollMs: 10 }).acquire();
+		ps.dispatch("exit");
+
+		expect(await fs.exists(path)).toBe(false);
+	});
+
+	it("releaseIfOurs leaves a lock held by another process alone", async () => {
+		const other = new FileLock(fs, ps, log, path, { pollMs: 10 });
+		await other.acquire();
+		await fs.write(
+			`${path}/holder.json`,
+			JSON.stringify({
+				pid: 999_002,
+				hostname: ps.hostname,
+				at: new Date().toISOString(),
+			}),
+		);
+
+		await new FileLock(fs, ps, log, path, { pollMs: 10 }).releaseIfOurs();
+
+		expect(await fs.exists(path)).toBe(true);
+		await other.release();
+	});
 });

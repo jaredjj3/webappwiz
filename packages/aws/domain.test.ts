@@ -1,36 +1,33 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Domain } from "./domain";
 
-function testStack(): cdk.Stack {
-	return new cdk.Stack(new cdk.App(), "TestStack", {
-		env: { account: "123456789012", region: "us-east-1" },
-	});
-}
-
-function fakeLoadBalancer(
-	stack: cdk.Stack,
-	id: string,
-): elbv2.IApplicationLoadBalancer {
-	return elbv2.ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(
-		stack,
-		id,
-		{
-			loadBalancerArn: `arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/${id}/50dc6c495c0c9188`,
-			loadBalancerDnsName: `${id}.us-east-1.elb.amazonaws.com`,
-			securityGroupId: "sg-12345678",
-		},
-	);
-}
-
 describe("Domain", () => {
+	let stack: cdk.Stack;
+	let originLoadBalancer: elbv2.IApplicationLoadBalancer;
+
+	beforeEach(() => {
+		stack = new cdk.Stack(new cdk.App(), "TestStack", {
+			env: { account: "123456789012", region: "us-east-1" },
+		});
+		originLoadBalancer =
+			elbv2.ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(
+				stack,
+				"Lb",
+				{
+					loadBalancerArn:
+						"arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/Lb/50dc6c495c0c9188",
+					loadBalancerDnsName: "Lb.us-east-1.elb.amazonaws.com",
+					securityGroupId: "sg-12345678",
+				},
+			);
+	});
+
 	it("redirects www and any extra domains to the apex", () => {
-		const stack = testStack();
-		const loadBalancer = fakeLoadBalancer(stack, "Lb");
 		new Domain(stack, "Domain", {
-			originLoadBalancer: loadBalancer,
+			originLoadBalancer,
 			domainName: "example.com",
 			redirectDomains: [{ domainName: "example.net" }],
 		});
@@ -57,10 +54,8 @@ describe("Domain", () => {
 	});
 
 	it("skips the redirect distribution when there's nothing to redirect", () => {
-		const stack = testStack();
-		const loadBalancer = fakeLoadBalancer(stack, "Lb2");
 		new Domain(stack, "Domain", {
-			originLoadBalancer: loadBalancer,
+			originLoadBalancer,
 			domainName: "example.com",
 			includeWww: false,
 		});
