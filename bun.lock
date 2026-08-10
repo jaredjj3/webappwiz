@@ -36,6 +36,19 @@
         "@types/bun": "^1.3.0",
       },
     },
+    "packages/cli": {
+      "name": "@webappwiz/cli",
+      "version": "0.0.0",
+      "bin": {
+        "webappwiz": "./index.ts",
+      },
+      "dependencies": {
+        "@webappwiz/cmd": "workspace:*",
+        "@webappwiz/log": "workspace:*",
+        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/t": "workspace:*",
+      },
+    },
     "packages/cmd": {
       "name": "@webappwiz/cmd",
       "version": "0.0.0",
@@ -175,6 +188,8 @@
     "@webappwiz/arbor": ["@webappwiz/arbor@workspace:packages/arbor"],
 
     "@webappwiz/aws": ["@webappwiz/aws@workspace:packages/aws"],
+
+    "@webappwiz/cli": ["@webappwiz/cli@workspace:packages/cli"],
 
     "@webappwiz/cmd": ["@webappwiz/cmd@workspace:packages/cmd"],
 

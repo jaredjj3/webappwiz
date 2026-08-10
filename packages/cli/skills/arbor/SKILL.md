@@ -1,6 +1,7 @@
 ---
 name: arbor
 description: Use the @webappwiz/arbor CLI to land your work on trunk from an isolated git worktree without pull requests. Use this whenever you are an AI coding agent working on a task in an arbor worktree and need to create, claim, graft, prune, list, locate, or escalate a workstream.
+version: 0.0.0
 ---
 
 # Using arbor
