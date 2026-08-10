@@ -15,12 +15,13 @@ export const count = (n: number, word: string): string =>
 
 /**
  * Compiles a guide into agent tasks — one per rule × chunk of matching files —
- * and renders them as instructions to whatever agent asked. One rule per task
- * is the point: an agent applying a single rule to a bounded slice of files
- * stays reliable where a whole guide over a whole repo does not. Nothing here
- * runs an agent; the caller does.
+ * and renders them as instructions to whatever agent asked. Nothing here runs
+ * an agent; the caller does.
  */
 export class Planner {
+	// One rule per task is the point: an agent applying a single rule to a
+	// bounded slice of files stays reliable where a whole guide over a whole repo
+	// does not.
 	constructor(
 		private log: Logger,
 		private fs: Fs,

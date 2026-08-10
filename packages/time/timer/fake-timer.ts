@@ -11,11 +11,11 @@ interface Entry {
 /**
  * A {@link Timer} whose callbacks fire only when the test drives them, so tests
  * about scheduled work do not have to wait for real time to pass.
- *
- * ponytail: callbacks are fired explicitly rather than by advancing a fake
- * clock — swap in a scheduling queue if a test ever needs delays to be ordered.
  */
 export class FakeTimer implements Timer {
+	// ponytail: callbacks are fired explicitly rather than by advancing a fake
+	// clock — swap in a scheduling queue if a test ever needs delays to be
+	// ordered.
 	readonly timeouts: Entry[] = [];
 	readonly intervals: Entry[] = [];
 

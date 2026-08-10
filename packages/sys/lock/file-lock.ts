@@ -19,13 +19,9 @@ export interface FileLockOptions {
 }
 
 /**
- * A mutex between processes, held by a directory on disk. `mkdir` is the whole
- * mechanism: it is atomic on every filesystem and either creates the directory
- * or fails, so there is no check-then-write window to lose.
- *
- * `acquire` blocks until the lock is free — there is deliberately no "busy"
- * return, so callers cannot wander off and do work they are not holding the
- * lock for.
+ * A mutex between processes, held by a directory on disk. `acquire` blocks
+ * until the lock is free — there is deliberately no "busy" return, so callers
+ * cannot wander off and do work they are not holding the lock for.
  */
 export class FileLock implements Lock {
 	private held = false;
@@ -45,6 +41,9 @@ export class FileLock implements Lock {
 	}
 
 	async acquire(): Promise<void> {
+		// `mkdir` is the whole mechanism: it is atomic on every filesystem and
+		// either creates the directory or fails, so there is no check-then-write
+		// window to lose.
 		let unreadableSince: number | null = null;
 		// Short first waits so a lock freed quickly is picked up quickly, backing
 		// off to `pollMs` for a holder that is settling in for a long test run.

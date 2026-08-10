@@ -39,10 +39,11 @@ export class color {
 	}
 
 	/**
-	 * Undoes `wrap`, for output that is read rather than displayed: a test
-	 * assertion, a log file, a pipe. Only the sequences `wrap` writes.
+	 * Removes the color from a value, for output that is read rather than
+	 * displayed: a test assertion, a log file, a pipe.
 	 */
 	static strip(value: unknown): string {
+		// Only the sequences `wrap` writes.
 		return String(value).replaceAll(new RegExp(`${ESC}\\[\\d+m`, "g"), "");
 	}
 

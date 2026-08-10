@@ -8,12 +8,15 @@ import { StyleCommands } from "./style";
 import { update } from "./update";
 
 /**
- * Hangs the commands off whatever it is given — the program itself when run as
- * `webappwiz`, or a group when another cli mounts it (`wiz cli`). Nothing here
- * knows which, so both spellings stay the same commands rather than one of them
- * shelling out to the other.
+ * Adds webappwiz's commands to `app`, which can be a program or a command
+ * group.
  */
 export async function commands(app: Cli, log: Logger, fs: Fs): Promise<void> {
+	// Hangs the commands off whatever it is given — the program itself when run
+	// as `webappwiz`, or a group when another cli mounts it (`wiz cli`). Nothing
+	// here knows which, so both spellings stay the same commands rather than one
+	// of them shelling out to the other.
+
 	// Every @webappwiz package is released in lockstep, so this one's version is
 	// the version — of the packages to pin, and of the skills bundled here.
 	const { version } = JSON.parse(
