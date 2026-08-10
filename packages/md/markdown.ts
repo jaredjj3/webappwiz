@@ -140,7 +140,6 @@ function frontmatter(text: string): {
 
 function sections(body: string, offset: number): Section[] {
 	const lines = body.split("\n");
-	// find every heading outside a fence first, then scope bodies off the list
 	const heads: { heading: string; level: number; index: number }[] = [];
 	let fence: string | null = null;
 	for (const [index, line] of lines.entries()) {

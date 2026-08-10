@@ -33,7 +33,7 @@ describe("Command", () => {
 		expect(n).toBe(42);
 	});
 
-	it("a flag followed by another flag is a bare true", () => {
+	it("parses a bare boolean flag as true and --flag=false as false", () => {
 		let got: { loud: boolean; name: string } | undefined;
 		const cmd = new Command("f")
 			.option("loud", t.boolean())
@@ -58,7 +58,7 @@ describe("Command", () => {
 		expect(name).toBe("ada");
 	});
 
-	it("defaults fill in absent flags and are overridden when present", () => {
+	it("uses defaults for absent flags and the given value when present", () => {
 		let got: { add: boolean; name: string } | undefined;
 		const cmd = new Command("d")
 			.option("add", t.boolean(), { default: false })
@@ -72,37 +72,37 @@ describe("Command", () => {
 		expect(got).toEqual({ add: true, name: "ada" });
 	});
 
-	it("a description-only meta does not make the option optional", () => {
+	it("still requires an option whose meta only has a description", () => {
 		const cmd = new Command("r")
 			.option("must", t.string(), { description: "required" })
 			.action(() => {});
 		expect(() => cmd.exec([])).toThrow("missing required option --must");
 	});
 
-	it("schema parse errors propagate to the caller", () => {
+	it("propagates schema parse errors to the caller", () => {
 		const cmd = new Command("n").option("x", t.number()).action(() => {});
 		expect(() => cmd.exec(["--x", "abc"])).toThrow(/number/);
 	});
 
-	it("exec returns the action's value, including a promise", async () => {
+	it("returns the action's value from exec, including a promise", async () => {
 		expect(new Command("v").action(() => 7).exec([])).toBe(7);
 		await expect(
 			new Command("a").action(async () => "done").exec([]),
 		).resolves.toBe("done");
 	});
 
-	it("a command with no action is a no-op", () => {
+	it("returns undefined when the command has no action", () => {
 		expect(new Command("noop").exec([])).toBeUndefined();
 	});
 
-	it("helpLine pads the name and omits an unset description", () => {
+	it("pads the name and omits an unset description in helpLine", () => {
 		expect(new Command("c").description("does a thing").helpLine("c", 4)).toBe(
 			"  c     does a thing",
 		);
 		expect(new Command("c").helpLine("c", 4)).toBe("  c   ");
 	});
 
-	it("--help prints usage, options and defaults, and skips the action", () => {
+	it("prints usage, options, and defaults and skips the action on --help", () => {
 		let ran = false;
 		new Command("greet", log, "wiz")
 			.description("greet someone")
@@ -126,7 +126,7 @@ describe("Command", () => {
 		expect(text).toContain("-h, --help");
 	});
 
-	it("-h works the same as --help", () => {
+	it("prints help for -h just as for --help", () => {
 		let ran = false;
 		new Command("x", log)
 			.option("n", t.number())
@@ -140,7 +140,7 @@ describe("Command", () => {
 		);
 	});
 
-	it("action opts are statically typed", () => {
+	it("types the action's opts statically", () => {
 		new Command("typed")
 			.option("name", t.string())
 			.option("count", t.number())
@@ -155,7 +155,7 @@ describe("Command", () => {
 			});
 	});
 
-	it("positional args bind by declaration order, alongside options", () => {
+	it("binds positional args by declaration order, alongside options", () => {
 		let got: { task: string; force: boolean } | undefined;
 		new Command("prune")
 			.arg("task", t.string())
@@ -167,7 +167,7 @@ describe("Command", () => {
 		expect(got).toEqual({ task: "alpha", force: true });
 	});
 
-	it("a missing positional is an error unless it has a default", () => {
+	it("throws when a positional is missing, unless it has a default", () => {
 		expect(() =>
 			new Command("prune")
 				.arg("task", t.string())
@@ -185,7 +185,7 @@ describe("Command", () => {
 		expect(got).toEqual({ task: "all" });
 	});
 
-	it("help shows arguments in the usage line and its own section", () => {
+	it("shows arguments in the usage line and their own section in help", () => {
 		new Command("escalate", log, "arbor")
 			.arg("reason", t.string(), { description: "why this needs a human" })
 			.arg("note", t.string(), { default: "" })

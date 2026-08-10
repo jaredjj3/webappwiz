@@ -11,8 +11,6 @@ import { count, Planner } from "./analyze";
 import { type GuideLoader, ModuleGuideLoader } from "./guide-loader";
 import { table } from "./table";
 
-/** The `style` command group: check a guide, show it, compile it into an
- * analysis plan. */
 export class StyleCommands {
 	constructor(
 		private log: Logger,
@@ -26,7 +24,6 @@ export class StyleCommands {
 		this.report(rules.length, diagnostics, opts.strict);
 	}
 
-	/** One table row per rule: what it is called and what it applies to. */
 	async show(opts: { rules: string }): Promise<void> {
 		const { rules, diagnostics } = await this.compile(opts.rules);
 		if (diagnostics.some((d) => d.severity === "error")) {

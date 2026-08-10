@@ -9,7 +9,7 @@ describe("Duration", () => {
 		expect(Duration.mins(2).ms).toBe(120_000);
 	});
 
-	it("arithmetic returns new durations", () => {
+	it("returns new durations from arithmetic, leaving the original unchanged", () => {
 		const one = Duration.secs(1);
 		const two = one.add(one);
 
@@ -20,7 +20,7 @@ describe("Duration", () => {
 		expect(one.negate().isLessThan(Duration.zero())).toBe(true);
 	});
 
-	it("clamp holds a value between bounds", () => {
+	it("holds a value between bounds when clamping", () => {
 		const bounds = [Duration.secs(1), Duration.secs(3)] as const;
 
 		expect(Duration.zero().clamp(...bounds).secs).toBe(1);
@@ -28,7 +28,7 @@ describe("Duration", () => {
 		expect(Duration.secs(9).clamp(...bounds).secs).toBe(3);
 	});
 
-	it("min and max pick the extremes", () => {
+	it("picks the extremes with min and max", () => {
 		const durations = [Duration.secs(5), Duration.secs(1), Duration.secs(3)];
 
 		expect(Duration.min(...durations).secs).toBe(1);

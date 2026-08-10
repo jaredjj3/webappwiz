@@ -32,7 +32,7 @@ describe("AsyncDisposer", () => {
 		expect(disposer.disposed).toBe(true);
 	});
 
-	it("disposing twice releases each resource once", async () => {
+	it("releases each resource once when disposed twice", async () => {
 		disposer.defer(async () => {
 			released.push("once");
 		});
@@ -43,7 +43,7 @@ describe("AsyncDisposer", () => {
 		expect(released).toEqual(["once"]);
 	});
 
-	it("registering on a disposed disposer throws", async () => {
+	it("throws when registering on a disposed disposer", async () => {
 		await disposer.disposeAsync();
 
 		expect(() => disposer.defer(async () => {})).toThrow(
@@ -51,7 +51,7 @@ describe("AsyncDisposer", () => {
 		);
 	});
 
-	it("disposeAsync survives being passed as a bare callback", async () => {
+	it("releases resources when disposeAsync is called as a bare callback", async () => {
 		disposer.defer(async () => {
 			released.push("released");
 		});

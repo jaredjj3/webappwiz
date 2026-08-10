@@ -16,27 +16,27 @@ describe("IpProvider", () => {
 		ps = new FakePs();
 	});
 
-	it("darwin provider reads the trimmed address from ipconfig", async () => {
+	it("reads the trimmed address from ipconfig on darwin", async () => {
 		ps.setCaptureOutput("192.168.1.42\n", "");
 
 		expect(await new DarwinIpProvider(ps).get()).toBe("192.168.1.42");
 		expect(ps.getCalls()).toEqual(["ipconfig getifaddr en0"]);
 	});
 
-	it("linux provider takes the first address hostname -I prints", async () => {
+	it("takes the first address hostname -I prints on linux", async () => {
 		ps.platform = "linux";
 		ps.setCaptureOutput("10.0.0.5 10.0.0.6 \n", "");
 
 		expect(await new LinuxIpProvider(ps).get()).toBe("10.0.0.5");
 	});
 
-	it("platform-specific providers reject the wrong platform", () => {
+	it("throws when constructed on the wrong platform", () => {
 		expect(() => new LinuxIpProvider(ps)).toThrow("only supported on Linux");
 		ps.platform = "freebsd";
 		expect(() => new PlatformIpProvider(ps)).toThrow("Unsupported platform");
 	});
 
-	it("empty output is an error, not an empty address", async () => {
+	it("rejects instead of returning an empty address when the output is blank", async () => {
 		ps.setCaptureOutput("  \n", "");
 
 		expect(new DarwinIpProvider(ps).get()).rejects.toThrow(
@@ -44,14 +44,14 @@ describe("IpProvider", () => {
 		);
 	});
 
-	it("non-zero exit is an error", async () => {
+	it("rejects when the command exits non-zero", async () => {
 		ps.exit(1);
 		ps.setCaptureOutput("192.168.1.42", "");
 
 		expect(new DarwinIpProvider(ps).get()).rejects.toThrow("failed to get");
 	});
 
-	it("sequential provider skips throwing and empty providers, then gives up", async () => {
+	it("skips throwing and empty providers, then returns empty when none answer", async () => {
 		const throwing = {
 			get: () => Promise.reject(new Error("boom")),
 		};

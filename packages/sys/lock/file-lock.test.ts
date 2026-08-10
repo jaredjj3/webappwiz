@@ -32,7 +32,7 @@ describe("FileLock", () => {
 		await rm(dir, { recursive: true, force: true });
 	});
 
-	it("a second acquire blocks until the first releases", async () => {
+	it("blocks a second acquire until the first releases", async () => {
 		const order: string[] = [];
 		const first = new FileLock(fs, ps, log, path, { pollMs: 10 });
 		const second = new FileLock(fs, ps, log, path, { pollMs: 10 });
@@ -56,7 +56,7 @@ describe("FileLock", () => {
 		expect(await fs.exists(path)).toBe(false);
 	});
 
-	it("a lock held by a dead pid is stolen, loudly", async () => {
+	it("steals a lock held by a dead pid, loudly", async () => {
 		const dead = 999_001;
 		await fs.mkdir(path, { recursive: false });
 		await fs.write(
@@ -80,7 +80,7 @@ describe("FileLock", () => {
 		await lock.release();
 	});
 
-	it("a lock older than the staleness window is stolen even if the pid lives", async () => {
+	it("steals a lock older than the staleness window even when the pid lives", async () => {
 		await fs.mkdir(path, { recursive: false });
 		await fs.write(
 			`${path}/holder.json`,
@@ -103,7 +103,7 @@ describe("FileLock", () => {
 		await lock.release();
 	});
 
-	it("a crash releases the lock — SIGINT removes it and exits", async () => {
+	it("removes the lock and exits on SIGINT", async () => {
 		await new FileLock(fs, ps, log, path, { pollMs: 10 }).acquire();
 		expect(await fs.exists(path)).toBe(true);
 
@@ -113,14 +113,14 @@ describe("FileLock", () => {
 		expect(ps.getExitCode()).toBe(130);
 	});
 
-	it("process exit removes a lock nobody released", async () => {
+	it("removes a lock nobody released on process exit", async () => {
 		await new FileLock(fs, ps, log, path, { pollMs: 10 }).acquire();
 		ps.dispatch("exit");
 
 		expect(await fs.exists(path)).toBe(false);
 	});
 
-	it("releaseIfOurs leaves a lock held by another process alone", async () => {
+	it("leaves a lock held by another process alone when calling releaseIfOurs", async () => {
 		const other = new FileLock(fs, ps, log, path, { pollMs: 10 });
 		await other.acquire();
 		await fs.write(

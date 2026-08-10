@@ -35,7 +35,7 @@ describe("MdcLogger", () => {
 		]);
 	});
 
-	it("withContext overrides existing keys", () => {
+	it("overrides existing keys when calling withContext", () => {
 		const logger = new MdcLogger(
 			{ foo: "bar", baz: "bam" },
 			memoryLogger,

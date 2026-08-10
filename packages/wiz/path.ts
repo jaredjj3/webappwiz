@@ -7,7 +7,7 @@ const TAG = "# webappwiz";
 
 function profilePath(ps: Ps): string {
 	const shellName = (ps.env("SHELL") ?? "/bin/bash").split("/").pop();
-	return resolve(ps.env("HOME") ?? "~", `.${shellName}rc`); // ~/.zshrc, ~/.bashrc, etc.
+	return resolve(ps.env("HOME") ?? "~", `.${shellName}rc`);
 }
 
 const binDir = resolve(import.meta.dir, "../../bin");

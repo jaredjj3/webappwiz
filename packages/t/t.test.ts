@@ -3,40 +3,40 @@ import { describe, expect, it } from "bun:test";
 import { t } from "./t";
 
 describe("t", () => {
-	it("string passes the raw arg through", () => {
+	it("returns the raw arg when parsing a string", () => {
 		expect(t.string().parse("ada")).toBe("ada");
 		expect(t.string().parse("")).toBe("");
 	});
 
-	it("number parses numeric forms", () => {
+	it("converts decimal, negative, and hex forms when parsing a number", () => {
 		expect(t.number().parse("42")).toBe(42);
 		expect(t.number().parse("-1.5")).toBe(-1.5);
 		expect(t.number().parse("0x10")).toBe(16);
 	});
 
-	it("number rejects non-numbers with a readable message", () => {
+	it("throws a readable message when a number arg is not numeric", () => {
 		expect(() => t.number().parse("abc")).toThrow(
 			'expected a number, got "abc"',
 		);
 	});
 
-	it("boolean is a presence flag: --loud is true, --loud=false is false", () => {
+	it("treats a bare boolean flag as true and --loud=false as false", () => {
 		expect(t.boolean().parse("")).toBe(true);
 		expect(t.boolean().parse("true")).toBe(true);
 		expect(t.boolean().parse("false")).toBe(false);
 	});
 
-	it("each call yields an independent schema instance", () => {
+	it("returns an independent schema instance on every call", () => {
 		expect(t.string()).not.toBe(t.string());
 	});
 
-	it("check accepts values of the right type", () => {
+	it("returns the value when check gets the right type", () => {
 		expect(t.string().check("ada")).toBe("ada");
 		expect(t.number().check(42)).toBe(42);
 		expect(t.boolean().check(false)).toBe(false);
 	});
 
-	it("check rejects wrong types", () => {
+	it("throws when check gets the wrong type", () => {
 		expect(() => t.string().check(42)).toThrow("expected string");
 		expect(() => t.number().check("42")).toThrow("expected number");
 		expect(() => t.number().check(Number.NaN)).toThrow("expected number");
@@ -45,7 +45,7 @@ describe("t", () => {
 		expect(() => t.string().check(undefined)).toThrow("expected string");
 	});
 
-	it("object checks each property", () => {
+	it("returns the object when every property checks out", () => {
 		const todo = t.object({ title: t.string(), done: t.boolean() });
 		expect(todo.check({ title: "milk", done: false })).toEqual({
 			title: "milk",
@@ -53,7 +53,7 @@ describe("t", () => {
 		});
 	});
 
-	it("object rejects non-objects and reports field paths", () => {
+	it("throws with the failing field path when a value is not a valid object", () => {
 		const todo = t.object({ title: t.string() });
 		expect(() => todo.check(null)).toThrow("expected object");
 		expect(() => todo.check([])).toThrow("expected object");
@@ -61,19 +61,19 @@ describe("t", () => {
 		expect(() => todo.check({})).toThrow("title: expected string");
 	});
 
-	it("nested objects report dotted paths", () => {
+	it("throws with a dotted path when a nested object field is wrong", () => {
 		const wrapper = t.object({ todo: t.object({ title: t.string() }) });
 		expect(() => wrapper.check({ todo: { title: 42 } })).toThrow(
 			"todo.title: expected string",
 		);
 	});
 
-	it("object drops extra keys", () => {
+	it("drops extra keys when checking an object", () => {
 		const todo = t.object({ title: t.string() });
 		expect(todo.check({ title: "milk", extra: 1 })).toEqual({ title: "milk" });
 	});
 
-	it("array checks items and reports the index", () => {
+	it("passes matching arrays through and throws with the index of a bad item", () => {
 		const nums = t.array(t.number());
 		expect(nums.check([1, 2])).toEqual([1, 2]);
 		expect(nums.check([])).toEqual([]);
@@ -81,14 +81,14 @@ describe("t", () => {
 		expect(() => nums.check([1, "x"])).toThrow("1: expected number");
 	});
 
-	it("optional allows undefined but still checks present values", () => {
+	it("accepts undefined but still checks present values when optional", () => {
 		const maybe = t.optional(t.string());
 		expect(maybe.check(undefined)).toBeUndefined();
 		expect(maybe.check("ada")).toBe("ada");
 		expect(() => maybe.check(null)).toThrow("expected string");
 	});
 
-	it("object and array parse decode JSON strings", () => {
+	it("decodes JSON strings when parsing objects and arrays", () => {
 		const todo = t.object({ title: t.string() });
 		expect(todo.parse('{"title":"milk"}')).toEqual({ title: "milk" });
 		expect(t.array(t.number()).parse("[1,2]")).toEqual([1, 2]);

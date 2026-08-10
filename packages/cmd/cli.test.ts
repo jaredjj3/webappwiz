@@ -43,7 +43,7 @@ describe("cli", () => {
 		expect(wiz.run(["v"])).toBe(7);
 	});
 
-	it("no args, --help, -h, and unknown commands all print program help", () => {
+	it("prints program help for no args, --help, -h, and an unknown command", () => {
 		const wiz = cli("wiz", log);
 		wiz
 			.command("a")
@@ -61,7 +61,7 @@ describe("cli", () => {
 		);
 	});
 
-	it("command help goes to the injected logger, not the console", () => {
+	it("writes command help to the injected logger, not the console", () => {
 		const wiz = cli("wiz", log);
 		wiz
 			.command("greet")
@@ -73,7 +73,7 @@ describe("cli", () => {
 		);
 	});
 
-	it("a bad option value is reported as an error and exits 1", () => {
+	it("reports an error and exits 1 when an option value is bad", () => {
 		const wiz = cli("wiz", log, ps);
 		wiz
 			.command("n")
@@ -84,7 +84,7 @@ describe("cli", () => {
 		expect(ps.getExitCode()).toBe(1);
 	});
 
-	it("missing required option prints a readable error and exits 1", () => {
+	it("prints a readable error and exits 1 when a required option is missing", () => {
 		const wiz = cli("wiz", log, ps);
 		wiz
 			.command("r")
@@ -97,7 +97,7 @@ describe("cli", () => {
 		expect(ps.getExitCode()).toBe(1);
 	});
 
-	it("a throwing sync action is reported and exits 1", () => {
+	it("reports the error and exits 1 when a sync action throws", () => {
 		const wiz = cli("wiz", log, ps);
 		wiz.command("boom").action(() => {
 			throw new Error("nope");
@@ -107,7 +107,7 @@ describe("cli", () => {
 		expect(ps.getExitCode()).toBe(1);
 	});
 
-	it("a rejecting async action is reported the same way", async () => {
+	it("reports the error and exits 1 when an async action rejects", async () => {
 		const wiz = cli("wiz", log, ps);
 		wiz.command("boom").action(async () => {
 			throw new Error("nope");
@@ -117,7 +117,7 @@ describe("cli", () => {
 		expect(ps.getExitCode()).toBe(1);
 	});
 
-	it("non-Error throws are still reported", () => {
+	it("reports the value when the action throws a non-Error", () => {
 		const wiz = cli("wiz", log, ps);
 		wiz.command("boom").action(() => {
 			throw "plain string";
@@ -168,7 +168,7 @@ describe("cli", () => {
 		}
 	});
 
-	it("a subcommand's own help names its full path", () => {
+	it("names the full path in a subcommand's own help", () => {
 		const wiz = cli("wiz", log);
 		wiz
 			.group("skills")
@@ -181,7 +181,7 @@ describe("cli", () => {
 		);
 	});
 
-	it("a subcommand's failure exits once, at the root", () => {
+	it("exits once, at the root, when a subcommand fails", () => {
 		const wiz = cli("wiz", log, ps);
 		wiz
 			.group("skills")
@@ -194,7 +194,7 @@ describe("cli", () => {
 		expect(ps.getExitCode()).toBe(1);
 	});
 
-	it("group middleware runs inside the program's", () => {
+	it("runs group middleware inside the program's", () => {
 		const order: string[] = [];
 		const wiz = cli("wiz", log).use<{ n: number }>(async (ctx, next) => {
 			order.push("outer");

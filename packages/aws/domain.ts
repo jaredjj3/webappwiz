@@ -124,7 +124,6 @@ export class Domain extends Construct {
 			minTtl: Duration.seconds(0),
 			defaultTtl: Duration.seconds(0),
 			maxTtl: Duration.days(365),
-			// Every query string is part of the cache key, so distinct params serve distinct cache entries.
 			queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
 			enableAcceptEncodingGzip: true,
 			enableAcceptEncodingBrotli: true,
@@ -164,8 +163,6 @@ export class Domain extends Construct {
 			],
 		});
 
-		// Main CloudFront distribution. Serves the app from the internal ALB via a VPC origin, so the
-		// CloudFront -> origin hop never leaves AWS's network and the ALB stays private.
 		this.distribution = new cloudfront.Distribution(
 			this,
 			"CloudFrontDistribution",

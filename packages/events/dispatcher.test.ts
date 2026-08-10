@@ -26,7 +26,7 @@ describe("Dispatcher", () => {
 		expect(stopped).not.toHaveBeenCalled();
 	});
 
-	it("unlistening stops delivery", () => {
+	it("stops delivery after unlistening", () => {
 		const listener = mock(() => {});
 		const off = dispatcher.on("greeted", listener);
 
@@ -36,7 +36,7 @@ describe("Dispatcher", () => {
 		expect(listener).not.toHaveBeenCalled();
 	});
 
-	it("a once listener hears the first event and no more", () => {
+	it("delivers only the first event to a once listener", () => {
 		const listener = mock(() => {});
 		dispatcher.on("greeted", listener, { once: true });
 
@@ -47,7 +47,7 @@ describe("Dispatcher", () => {
 		expect(listener).toHaveBeenCalledWith({ message: "hello" });
 	});
 
-	it("all() hears every type, with the type as its first argument", () => {
+	it("delivers every type to an all() listener, with the type as its first argument", () => {
 		const listener = mock((_type: keyof TestEvents, _event: unknown) => {});
 		dispatcher.all(listener);
 
@@ -61,7 +61,7 @@ describe("Dispatcher", () => {
 		expect(listener).toHaveBeenNthCalledWith(2, "stopped", undefined);
 	});
 
-	it("listeners run in registration order, scoped and universal alike", () => {
+	it("runs listeners in registration order, scoped and universal alike", () => {
 		const heard: string[] = [];
 		dispatcher.all(() => heard.push("universal"));
 		dispatcher.on("greeted", () => heard.push("scoped"));
@@ -71,7 +71,7 @@ describe("Dispatcher", () => {
 		expect(heard).toEqual(["universal", "scoped"]);
 	});
 
-	it("dispose drops every listener", () => {
+	it("drops every listener when disposed", () => {
 		const scoped = mock(() => {});
 		const universal = mock(() => {});
 		dispatcher.on("greeted", scoped);

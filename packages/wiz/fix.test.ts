@@ -22,7 +22,7 @@ describe("fix", () => {
 		]);
 	});
 
-	it("--check leaves the tree alone", async () => {
+	it("leaves the tree alone when given --check", async () => {
 		await fix({ check: true }, log, ps);
 
 		expect(ps.getCalls()).toEqual(["bunx biome check .", "bunx tsc --noEmit"]);

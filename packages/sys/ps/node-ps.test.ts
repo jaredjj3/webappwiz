@@ -11,7 +11,7 @@ describe("NodePs", () => {
 		proc = new FakeProcess();
 	});
 
-	it("env adds to the environment rather than replacing it", async () => {
+	it("adds to the environment rather than replacing it when given env", async () => {
 		proc.env = { INHERITED: "kept" };
 
 		const { stdout } = await new NodePs(proc).spawnCapture(SHOW, {
@@ -21,7 +21,7 @@ describe("NodePs", () => {
 		expect(stdout).toBe("kept|new");
 	});
 
-	it("a caller's value wins over the one it inherits", async () => {
+	it("prefers the caller's value over the inherited one", async () => {
 		proc.env = { INHERITED: "kept", ADDED: "old" };
 
 		const { stdout } = await new NodePs(proc).spawnCapture(SHOW, {
@@ -31,7 +31,7 @@ describe("NodePs", () => {
 		expect(stdout).toBe("kept|new");
 	});
 
-	it("passing no env inherits the whole environment", async () => {
+	it("inherits the whole environment when no env is passed", async () => {
 		proc.env = { INHERITED: "kept" };
 
 		const { stdout } = await new NodePs(proc).spawnCapture(SHOW);
@@ -39,7 +39,7 @@ describe("NodePs", () => {
 		expect(stdout).toBe("kept|");
 	});
 
-	it("a command killed by a signal does not report success", async () => {
+	it("reports 128 plus the signal when a command is killed", async () => {
 		proc.env = {};
 
 		const { exitCode } = await new NodePs(proc).spawnCapture([

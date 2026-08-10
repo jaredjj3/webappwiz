@@ -24,7 +24,7 @@ describe("FakeFs", () => {
 		expect((await fs.stat("/app/a.txt")).isDirectory()).toBe(false);
 	});
 
-	it("rm requires the path to exist unless forced, and recurses when asked", async () => {
+	it("rejects removing a missing path unless forced, and recurses when asked", async () => {
 		await fs.write("/app/a.txt", "a");
 		await fs.write("/app/b/c.txt", "c");
 
@@ -36,7 +36,7 @@ describe("FakeFs", () => {
 		expect(await fs.exists("/app/b/c.txt")).toBe(false);
 	});
 
-	it("read fails on a missing file and on a directory", async () => {
+	it("rejects when reading a missing file or a directory", async () => {
 		await fs.mkdir("/app");
 
 		expect(fs.read("/app")).rejects.toThrow("File does not exist");

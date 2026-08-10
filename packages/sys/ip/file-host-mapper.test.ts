@@ -68,7 +68,7 @@ describe("FileHostMapper", () => {
 		).toThrow("Unsupported platform");
 	});
 
-	it("a failed sudo copy is an error", async () => {
+	it("rejects when the sudo copy fails", async () => {
 		ps.exit(1);
 
 		expect(mapper.map("new.test", "10.0.0.9")).rejects.toThrow(

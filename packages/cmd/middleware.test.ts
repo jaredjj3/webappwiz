@@ -8,7 +8,6 @@ import type { Middleware } from "./middleware";
 describe("middleware", () => {
 	let trace: string[];
 
-	/** Appends to `trace` on the way in and on the way back out. */
 	const mark =
 		(name: string): Middleware<object> =>
 		async (ctx, next) => {
@@ -33,7 +32,7 @@ describe("middleware", () => {
 	// Inline middleware states its output context: TypeScript will not infer a
 	// type argument from how a callback parameter gets used. Factories that
 	// declare a `Middleware<C, Out>` return type — the usual shape — infer fine.
-	it("what a middleware hands to next is what the action receives", async () => {
+	it("hands the action the context a middleware passed to next", async () => {
 		const seen: unknown[] = [];
 		const app = cli("app", new MemoryLogger())
 			.use<{ user: string }>(async (_ctx, next) => next({ user: "ada" }))
@@ -50,7 +49,7 @@ describe("middleware", () => {
 		expect(seen).toEqual(["hi ada 7"]);
 	});
 
-	it("a command's own middleware runs inside the cli's", async () => {
+	it("runs a command's own middleware inside the cli's", async () => {
 		const app = cli("app", new MemoryLogger()).use(mark("cli"));
 		app
 			.command("go")
@@ -77,14 +76,14 @@ describe("middleware", () => {
 		expect(await app.run(["boom"])).toBeUndefined();
 	});
 
-	it("the action's return value survives the chain", async () => {
+	it("returns the action's value back through the chain", async () => {
 		const app = cli("app", new MemoryLogger()).use(mark("a"));
 		app.command("v").action(() => 7);
 
 		expect(await app.run(["v"])).toBe(7);
 	});
 
-	it("asking for help never runs the middleware", async () => {
+	it("never runs the middleware when asking for help", async () => {
 		const app = cli("app", new MemoryLogger()).use(mark("a"));
 		app.command("go").action(() => trace.push("action"));
 
@@ -93,7 +92,7 @@ describe("middleware", () => {
 		expect(trace).toEqual([]);
 	});
 
-	it("use must come before the things it wraps", () => {
+	it("throws when use comes after the things it wraps", () => {
 		const app = cli("app", new MemoryLogger());
 		app.command("go").action(() => {});
 		expect(() => app.use(mark("late"))).toThrow("before command()");
@@ -102,7 +101,7 @@ describe("middleware", () => {
 		expect(() => cmd.use(mark("late"))).toThrow("before action()");
 	});
 
-	it("without middleware a sync action stays sync", () => {
+	it("keeps a sync action sync when there is no middleware", () => {
 		const app = cli("app", new MemoryLogger());
 		app.command("v").action(() => 7);
 

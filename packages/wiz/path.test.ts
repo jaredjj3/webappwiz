@@ -29,7 +29,7 @@ describe("path", () => {
 		);
 	});
 
-	it("adding twice is a no-op", async () => {
+	it("leaves the profile unchanged when adding twice", async () => {
 		await path({ add: true, remove: false }, log, fs, ps);
 		const once = await fs.read(profile);
 		await path({ add: true, remove: false }, log, fs, ps);
@@ -37,7 +37,7 @@ describe("path", () => {
 		expect(await fs.read(profile)).toBe(once);
 	});
 
-	it("remove deletes only our tagged lines", async () => {
+	it("deletes only our tagged lines when removing", async () => {
 		await fs.write(profile, "keep me");
 		await path({ add: true, remove: false }, log, fs, ps);
 
