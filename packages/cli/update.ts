@@ -25,8 +25,8 @@ export async function update(
 		if (basename(path) !== "package.json") {
 			continue;
 		}
-		// ponytail: substitution, not parse-and-stringify — rewriting the JSON
-		// would reflow manifests we have no business reformatting.
+		// substitution, not parse-and-stringify — rewriting the JSON would
+		// reflow manifests we have no business reformatting.
 		const before = await fs.read(path);
 		const after = before.replace(DEPENDENCY, `$1${opts.version}$2`);
 		if (after === before) {

@@ -94,7 +94,7 @@ export class Cli<C extends object = object> implements Node {
 		return `  ${name.padEnd(pad)}${this._description ? `  ${this._description}` : ""}`;
 	}
 
-	// ponytail: message only, no stack — a bad flag is a user error, not a crash
+	// message only, no stack — a bad flag is a user error, not a crash
 	private fail(e: unknown): void {
 		this.log.error(`error: ${e instanceof Error ? e.message : e}`);
 		this.ps.exit(1);

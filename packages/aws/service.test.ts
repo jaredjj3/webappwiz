@@ -21,7 +21,6 @@ describe("Service", () => {
 		const network = new Network(stack, "Network", { maxAzs: 2 });
 		cluster = new ecs.Cluster(stack, "Cluster", { vpc: network.vpc });
 		cluster.addDefaultCloudMapNamespace({ name: "app.internal" });
-		// ponytail: a throwaway build context beats keeping a Dockerfile fixture in the repo
 		const buildContext = mkdtempSync(join(tmpdir(), "aws-service-"));
 		writeFileSync(join(buildContext, "Dockerfile"), "FROM scratch\n");
 		image = new DockerImage(stack, "Image", {

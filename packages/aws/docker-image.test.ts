@@ -13,7 +13,6 @@ describe("DockerImage", () => {
 		stack = new cdk.Stack(new cdk.App(), "TestStack", {
 			env: { account: "123456789012", region: "us-east-1" },
 		});
-		// ponytail: a throwaway build context beats keeping a Dockerfile fixture in the repo
 		buildContext = mkdtempSync(join(tmpdir(), "aws-docker-image-"));
 		writeFileSync(join(buildContext, "Dockerfile"), "FROM scratch\n");
 	});

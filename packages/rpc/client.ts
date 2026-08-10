@@ -39,8 +39,8 @@ export class Client<C extends Contract> {
 		};
 		let res: Response;
 		if (method.type === "query") {
-			// ponytail: input rides in the query string, which proxies cut off near
-			// 8k; POST-fallback for oversized queries is the fix, at the cost of
+			// input rides in the query string, which proxies cut off near 8k; a
+			// POST fallback for oversized queries is the fix, at the cost of
 			// making them uncacheable
 			res = await fetch(
 				`${this.baseUrl}/${name}?input=${encodeURIComponent(JSON.stringify(input))}`,

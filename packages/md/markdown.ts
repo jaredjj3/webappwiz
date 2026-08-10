@@ -122,8 +122,8 @@ function frontmatter(text: string): {
 		return { fields: {}, body: text, offset: 0 };
 	}
 	const fields: Record<string, string> = {};
-	// ponytail: flat `key: value` scalars only, not YAML — nested data belongs
-	// in the body. Swap in a YAML parser if a real document ever needs more.
+	// flat `key: value` scalars only, not YAML — nested data belongs in the
+	// body. Swap in a YAML parser if a real document ever needs more.
 	for (const line of (match[1] ?? "").split("\n")) {
 		const kv = line.match(/^(\S+):\s*(.*)$/);
 		if (kv?.[1]) {

@@ -41,8 +41,8 @@ export class Planner {
 				// stderr, so a plan on stdout stays parseable
 				this.log.error(`rule "${rule.name}" matches no files under ${dir}`);
 			}
-			// ponytail: chunks are counted in files, not tokens — switch to a byte
-			// budget when repos with a few huge files start overflowing a task.
+			// chunks are counted in files, not tokens — switch to a byte budget
+			// when repos with a few huge files start overflowing a task.
 			for (let i = 0; i < files.length; i += chunk) {
 				const slice = files.slice(i, i + chunk);
 				tasks.push({

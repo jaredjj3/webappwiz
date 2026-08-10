@@ -13,9 +13,6 @@ interface Entry {
  * about scheduled work do not have to wait for real time to pass.
  */
 export class FakeTimer implements Timer {
-	// ponytail: callbacks are fired explicitly rather than by advancing a fake
-	// clock — swap in a scheduling queue if a test ever needs delays to be
-	// ordered.
 	readonly timeouts: Entry[] = [];
 	readonly intervals: Entry[] = [];
 

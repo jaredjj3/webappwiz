@@ -130,8 +130,8 @@ export class Command<O, C extends object = object> {
 			}
 		}
 		const out: Record<string, unknown> = {};
-		// ponytail: positionals bind by order, so a bare flag before them steals
-		// one (`cmd --force task`). Put flags last, or add arity to option().
+		// positionals bind by order, so a bare flag before them steals one
+		// (`cmd --force task`). Put flags last, or add arity to option().
 		this.args.forEach((arg, i) => {
 			const value = positional[i];
 			if (value === undefined) {
