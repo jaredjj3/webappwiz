@@ -30,11 +30,11 @@ app
 	})
 	.action((opts) => update(opts, log, fs));
 
-const group = app
+const skillsGroup = app
 	.group("skills")
 	.description("manage webappwiz agent skills in .agents/skills");
 
-group
+skillsGroup
 	.command("add")
 	.description("add a skill to a project")
 	.arg("skill", t.string(), { description: "skill name" })
@@ -44,7 +44,7 @@ group
 	})
 	.action((opts) => skills.add(opts, log, fs));
 
-group
+skillsGroup
 	.command("update")
 	.description("refresh the skills a project already has")
 	.arg("dir", t.string(), {
