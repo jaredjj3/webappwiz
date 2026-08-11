@@ -46,22 +46,29 @@ describe("StyleCommands", () => {
 
 	// the answer an agent gives about a rule nothing but an agent could enforce
 	const needsAgent = { rules: config, strict: false, agent: "haiku" };
+	const soundly = { rules: config, strict: false, sound: true };
 
 	it("declares a sound guide sound", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
-		ps.setCaptureOutput('{"tool": null}', "");
 
-		await commands(oneRule).audit(needsAgent);
+		await commands(oneRule).audit(soundly);
 
 		expect(printed()).toBe("sound: 1 rule, 0 errors, 0 warnings");
 	});
 
+	it("asks nothing of an agent when checking soundness alone", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+
+		await commands(oneRule).audit(soundly);
+
+		expect(ps.getCalls()).toEqual([]);
+	});
+
 	it("resolves rule paths relative to the guide module", async () => {
 		await fs.write("/g/rules/one.md", ruleDoc("One"));
-		ps.setCaptureOutput('{"tool": null}', "");
 		const guide = defineStyleGuide([rule("./rules/one.md")]);
 
-		await commands(guide).audit(needsAgent);
+		await commands(guide).audit(soundly);
 
 		expect(printed()).toContain("sound");
 	});
@@ -81,14 +88,14 @@ describe("StyleCommands", () => {
 		await fs.write("/g/two.md", ruleDoc("One"));
 		const guide = defineStyleGuide([rule("./one.md"), rule("./two.md")]);
 
-		expect(commands(guide).audit(needsAgent)).rejects.toThrow("1 error");
+		expect(commands(guide).audit(soundly)).rejects.toThrow("1 error");
 		expect(printed()).toContain('duplicate rule name "One" (also ./one.md)');
 	});
 
 	it("prints diagnostics compiler-style and throws when there are errors", async () => {
 		await fs.write("/g/one.md", "just prose\n");
 
-		expect(commands(oneRule).audit(needsAgent)).rejects.toThrow(
+		expect(commands(oneRule).audit(soundly)).rejects.toThrow(
 			"3 errors, 1 warning",
 		);
 		expect(printed()).toContain(
@@ -100,13 +107,12 @@ describe("StyleCommands", () => {
 	it("promotes warnings to failures under strict", async () => {
 		const noBad = ruleDoc("One").split("\n## Bad")[0] ?? "";
 		await fs.write("/g/one.md", noBad);
-		ps.setCaptureOutput('{"tool": null}', "");
 
-		await commands(oneRule).audit(needsAgent);
+		await commands(oneRule).audit(soundly);
 		expect(printed()).toContain("sound: 1 rule, 0 errors, 1 warning");
 
 		expect(
-			commands(oneRule).audit({ ...needsAgent, strict: true }),
+			commands(oneRule).audit({ ...soundly, strict: true }),
 		).rejects.toThrow("0 errors, 1 warning");
 	});
 
@@ -133,6 +139,14 @@ describe("StyleCommands", () => {
 			commands(oneRule).audit({ rules: config, strict: false }),
 		).rejects.toThrow("audit asks an agent, so name one");
 		expect(ps.getCalls()).toEqual([]);
+	});
+
+	it("names no agent under sound, having none to run", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+
+		expect(
+			commands(oneRule).audit({ ...soundly, agent: "haiku" }),
+		).rejects.toThrow("--sound checks the guide compiles and runs no agent");
 	});
 
 	it("shows each rule as a table row when showing", async () => {

@@ -61,9 +61,13 @@ export async function commands(
 			default: false,
 			description: "treat warnings as errors",
 		})
+		.option("sound", t.boolean(), {
+			default: false,
+			description: "only check the guide compiles, running no agent at all",
+		})
 		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
 			default: undefined,
-			description: "model to ask with; required unless --exec",
+			description: "model to ask with; required unless --exec or --sound",
 		})
 		.option("exec", t.optional(t.string()), {
 			default: undefined,

@@ -55,20 +55,38 @@ export class StyleCommands {
 	 * could enforce instead. Exits 1 on errors, and on warnings only under
 	 * `strict`: moving a rule out of the guide is a decision to make once, not a
 	 * build failure by surprise.
+	 *
+	 * Under `sound` it stops after the compile diagnostics, spawning nothing,
+	 * which is the check worth running on every commit: it costs nothing, and
+	 * which rules a tool could take over does not change between them.
 	 */
 	async audit(opts: {
 		rules: string;
 		strict: boolean;
+		sound?: boolean;
 		agent?: string;
 		exec?: string;
 	}): Promise<void> {
-		if (opts.agent === undefined && opts.exec === undefined) {
+		if (opts.sound && (opts.agent !== undefined || opts.exec !== undefined)) {
+			// Both say what the run is, and --sound is already saying it runs no
+			// agent. Letting one quietly win would leave a caller unsure which of
+			// the two things they asked for they got.
+			throw new Error(
+				"--sound checks the guide compiles and runs no agent, so it takes " +
+					"no --agent or --exec",
+			);
+		}
+		if (!opts.sound && opts.agent === undefined && opts.exec === undefined) {
 			throw new Error(
 				"audit asks an agent, so name one: --agent " +
 					`<${Object.keys(AGENTS).join("|")}> or --exec <command>`,
 			);
 		}
 		const { rules, diagnostics } = await this.guide(opts.rules);
+		if (opts.sound) {
+			this.report(rules.length, diagnostics, opts.strict);
+			return;
+		}
 		if (diagnostics.some((d) => d.severity === "error")) {
 			// Before any agent runs: a guide that will not compile is not worth
 			// spending calls on, and the errors are the more urgent report.

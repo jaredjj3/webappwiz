@@ -133,7 +133,16 @@ surprise: `--strict` is how you make it fail once you have decided.
 
 Audit also validates the guide itself, the way analyze does before running:
 a rule that will not compile is an error, printed before any agent spends
-anything.
+anything. `--sound` is that half on its own, spawning nothing:
+
+```bash
+webappwiz style audit --sound
+# sound: 7 rules, 0 errors, 0 warnings
+```
+
+That is the one to run on every commit. It is free, and which rules a tool
+could take over changes when you write a rule, not when you write code. Since
+it runs no agent it takes no `--agent` or `--exec`.
 
 ## API
 
