@@ -4,6 +4,6 @@ import type { Rule } from "./rule";
 export class OneDirPerInterface implements Rule {
 	readonly id = "one-dir-per-interface";
 	readonly files = "**/*.ts";
-	readonly level = "error";
+	readonly level = "warning";
 	readonly document = doc;
 }
