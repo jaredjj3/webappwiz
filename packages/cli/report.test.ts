@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { color } from "@webappwiz/log";
 import type { Violation } from "@webappwiz/style";
 import { Duration } from "@webappwiz/time";
-import { finding, finished, summary } from "./report";
+import { finding, finished, planned, summary } from "./report";
 
 describe("report", () => {
 	const violation = (over: Partial<Violation> = {}): Violation => ({
@@ -93,5 +93,18 @@ describe("report", () => {
 		expect(color.strip(tally)).toBe(
 			"✖ 2 problems (1 error, 1 warning) in 1m 30s",
 		);
+	});
+
+	it("counts the agent calls a run is about to make, not its tasks", () => {
+		expect(color.strip(planned(203, 7, 52, "claude -p --model haiku"))).toBe(
+			"checking 203 files against 7 rules in 52 agent calls, using: claude -p --model haiku",
+		);
+	});
+
+	it("sets the counts and the command apart from the prose around them", () => {
+		const line = planned(203, 7, 52, "claude -p --model haiku");
+
+		expect(line).toContain(color.bold("52 agent calls"));
+		expect(line).toContain(color.blue("claude -p --model haiku"));
 	});
 });

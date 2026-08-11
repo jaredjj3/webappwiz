@@ -9,7 +9,7 @@ import {
 } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
-import { count, finished, summary } from "./report";
+import { count, finished, planned, summary } from "./report";
 import { table } from "./table";
 
 export class StyleCommands {
@@ -101,9 +101,7 @@ export class StyleCommands {
 		const violations = await analyzer.analyze(rules, dir, opts.chunk, agent, {
 			planned: (tasks) => {
 				const files = new Set(tasks.flatMap((t) => t.files)).size;
-				this.log.info(
-					`checking ${count(files, "file")} against ${count(rules.length, "rule")} in ${count(tasks.length, "task")}, using: ${agent.label}`,
-				);
+				this.log.info(planned(files, rules.length, tasks.length, agent.label));
 			},
 			finished: (task) => {
 				for (const line of finished(task)) {

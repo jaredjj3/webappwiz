@@ -6,6 +6,27 @@ export const count = (n: number, word: string): string =>
 	`${n} ${word}${n === 1 ? "" : "s"}`;
 
 /**
+ * The plan, before the first agent starts. Counts calls rather than tasks
+ * because a call is what a run is billed for, and it is the denominator of the
+ * `[n/total]` headings below.
+ */
+export function planned(
+	files: number,
+	rules: number,
+	calls: number,
+	agent: string,
+): string {
+	// blue last: it resets the foreground to default rather than to the
+	// surrounding gray, so nothing may follow it
+	return color.gray(
+		`checking ${color.bold(count(files, "file"))} against ` +
+			`${color.bold(count(rules, "rule"))} in ` +
+			`${color.bold(count(calls, "agent call"))}, using: ` +
+			color.blue(agent),
+	);
+}
+
+/**
  * A finished task, as it should print the moment its agent returns: a status
  * line naming the rule, then one finding per violation.
  */
