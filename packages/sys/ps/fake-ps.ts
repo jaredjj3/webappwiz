@@ -1,4 +1,4 @@
-import type { Ps, SpawnCaptureResult, SpawnResult } from "./ps";
+import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 
 export class FakePs implements Ps {
 	platform: NodeJS.Platform = "darwin";
@@ -9,6 +9,7 @@ export class FakePs implements Ps {
 	private path = "/";
 	private vars: Record<string, string> = {};
 	private calls: string[] = [];
+	private dirs: string[] = [];
 	private handlers = new Map<string, Array<() => void>>();
 	private exitCode = 0;
 	private exited = false;
@@ -24,17 +25,20 @@ export class FakePs implements Ps {
 		this.dead.add(pid);
 	}
 
-	async spawn(argv: string[]): Promise<SpawnResult> {
+	async spawn(argv: string[], opts?: SpawnOptions): Promise<SpawnResult> {
 		if (!this.exited) {
-			this.calls.push(argv.join(" "));
+			this.record(argv, opts);
 			await this.simulation();
 		}
 		return { exitCode: this.exitCode };
 	}
 
-	async spawnCapture(argv: string[]): Promise<SpawnCaptureResult> {
+	async spawnCapture(
+		argv: string[],
+		opts?: SpawnOptions,
+	): Promise<SpawnCaptureResult> {
 		if (!this.exited) {
-			this.calls.push(argv.join(" "));
+			this.record(argv, opts);
 			await this.simulation();
 		}
 		return {
@@ -104,6 +108,11 @@ export class FakePs implements Ps {
 		return this.calls;
 	}
 
+	/** Where each of `getCalls()` was spawned, defaulting to the fake's cwd. */
+	getCallDirs(): string[] {
+		return this.dirs;
+	}
+
 	getExitCode(): number {
 		return this.exitCode;
 	}
@@ -118,5 +127,10 @@ export class FakePs implements Ps {
 
 	isExited(): boolean {
 		return this.exited;
+	}
+
+	private record(argv: string[], opts?: SpawnOptions): void {
+		this.calls.push(argv.join(" "));
+		this.dirs.push(opts?.cwd ?? this.path);
 	}
 }
