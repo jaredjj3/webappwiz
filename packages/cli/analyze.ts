@@ -50,13 +50,10 @@ export const AGENTS: Record<string, string[]> = {
 	opus: ["claude", "-p", "--model", "opus"],
 };
 
-/** The model a run uses when it names neither an agent nor a command. */
-export const DEFAULT_AGENT = "sonnet";
-
 /**
  * Resolves `--agent` and `--exec`, which are alternatives: name a model, or
- * give a command to run it yourself. Throws if you give both, or a model that
- * is not one of `AGENTS`.
+ * give a command to run it yourself. Throws if you give both, neither, or a
+ * model that is not one of `AGENTS`.
  */
 export const agentCommand = (opts: {
 	agent?: string;
@@ -70,7 +67,16 @@ export const agentCommand = (opts: {
 		// prompt as "$@" rather than spliced into the text of the command
 		return { argv: ["sh", "-c", `${opts.exec} "$@"`, "sh"], label: opts.exec };
 	}
-	const name = opts.agent ?? DEFAULT_AGENT;
+	if (opts.agent === undefined) {
+		// No default model: a run costs the caller's tokens, so who spends them is
+		// theirs to say.
+		throw new Error(
+			"analyze runs an agent, so say which: --agent " +
+				`<${Object.keys(AGENTS).join("|")}>, --exec <command>, ` +
+				"or --prompt to print the prompts and run nothing",
+		);
+	}
+	const name = opts.agent;
 	const argv = AGENTS[name];
 	if (!argv) {
 		throw new Error(

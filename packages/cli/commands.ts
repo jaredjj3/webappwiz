@@ -4,7 +4,7 @@ import { DEFAULT_GUIDE } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import { SystemClock } from "@webappwiz/time";
-import { AGENTS, DEFAULT_AGENT } from "./analyze";
+import { AGENTS } from "./analyze";
 import { Skills } from "./skills";
 import { StyleCommands } from "./style";
 import { update } from "./update";
@@ -85,7 +85,7 @@ export async function commands(
 		})
 		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
 			default: undefined,
-			description: `model to check with (default: ${DEFAULT_AGENT})`,
+			description: "model to check with; required unless --exec or --prompt",
 		})
 		.option("exec", t.optional(t.string()), {
 			default: undefined,

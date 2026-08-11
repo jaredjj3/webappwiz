@@ -282,8 +282,11 @@ describe("agentCommand", () => {
 		});
 	});
 
-	it("falls back to the default model when nothing names one", () => {
-		expect(agentCommand({}).label).toBe("claude -p --model sonnet");
+	it("refuses to pick an agent when nothing names one", () => {
+		expect(() => agentCommand({})).toThrow(
+			"analyze runs an agent, so say which: --agent <haiku|sonnet|opus>, " +
+				"--exec <command>, or --prompt to print the prompts and run nothing",
+		);
 	});
 
 	it("keeps the quoting in a command by running it through a shell", () => {

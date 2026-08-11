@@ -57,7 +57,7 @@ The guide lives in `style.config.ts` unless a command is told otherwise.
 <id>` prints one in full, and `style analyze [dir]` checks the code, handing
 one rule at a time to an agent and printing what comes back as lint output.
 
-Which agent is three flags:
+Which agent is three flags, one of which you must pass:
 
 ```bash
 webappwiz style analyze --agent opus          # claude -p --model <haiku|sonnet|opus>
@@ -65,7 +65,9 @@ webappwiz style analyze --exec "codex exec"   # any command, run by a shell
 webappwiz style analyze --prompt              # print the prompts, run nothing
 ```
 
-`--agent` defaults to `sonnet`. `--exec` takes the whole command, quoting and
+There is no default: a run spends your tokens, so it will not choose for you
+and exits with a usage error when given none of the three. `--exec` takes the
+whole command, quoting and
 all, and is handed the prompt as one trailing argument. `--prompt` is for an
 agent running the guide itself: it prints each task's prompt under a
 `=== <id> <rule> (<n> files) ===` header, to hand to subagents of its own.

@@ -78,9 +78,10 @@ export class StyleCommands {
 	}
 
 	/**
-	 * Runs the guide over a directory with an agent. Exits 1 on any error.
-	 * Under `prompt` it spawns nothing and prints the prompts instead, for an
-	 * agent that would rather hand them to subagents of its own.
+	 * Runs the guide over a directory with the agent you name, as `agent` or
+	 * `exec`; there is no default. Exits 1 on any error. Under `prompt` it
+	 * spawns nothing and prints the prompts instead, for an agent that would
+	 * rather hand them to subagents of its own.
 	 */
 	async analyze(opts: {
 		rules: string;
