@@ -75,13 +75,13 @@ changes, external services, destructive migrations, anything you can't confirm
 mechanically — do not graft. Instead:
 
 1. `arbor escalate <reason>`.
-2. In `TODO.md`, state exactly what needs verifying and the question the
-   human must answer — specific enough that a yes/no or a short answer
-   unblocks the task.
+2. Under `## Blocked` in `TODO.md`, state exactly what needs verifying and the
+   question the human must answer — specific enough that a yes/no or a short
+   answer unblocks the task.
 3. Print the output of `arbor path <task>` so the human can find the worktree
    and view the work.
 
-If you claim a tree whose `TODO.md` records an escalation that has not been
+If you claim a tree whose `TODO.md` has a `## Blocked` section that has not been
 answered, do not resume work or graft: ask the user the open question and
 wait for their answer first.
 
@@ -100,6 +100,8 @@ anything you learned that is not obvious from the diff (files that matter,
 decisions made, dead ends, commands to verify). Update it as you finish steps,
 not just at the end — an unupdated TODO.md is worse than none.
 
+The shape is fixed, so anyone reading it knows where to look:
+
 ```markdown
 # <task>
 
@@ -115,7 +117,22 @@ One or two lines: what "done" means.
 
 ## Notes
 - Where the relevant code lives, decisions, dead ends, how to verify.
+
+## Blocked
+What needs verifying, and the one question a human has to answer?
 ```
+
+- The title is `# <task>`: the task name, exactly as `arbor create` took it.
+- `## Goal` and `## Next` are required. `Done`, `Notes` and `Blocked` are there
+  when they have something in them. Nothing else: put it under `Notes`.
+- Work is checkboxes, `- [ ]` and `- [x]`. `## Next` always has at least one
+  unchecked item, since a task with nothing left grafts and disappears. Move a
+  finished item to `## Done` rather than deleting it: what you have already
+  tried is context a stranger needs.
+- `## Blocked` only when you `arbor escalate`, and it ends in a real question.
+
+`arbor show <task>` prints the file and every way it departs from that shape.
+Run it on your own task once you have written the file.
 
 ## Committing
 
