@@ -72,6 +72,38 @@ all, and is handed the prompt as one trailing argument. `--prompt` is for an
 agent running the guide itself: it prints each task's prompt under a
 `=== <id> <rule> (<n> files) ===` header, to hand to subagents of its own.
 
+## What a run costs
+
+A run says what it is about to read before it reads any of it:
+
+```
+checking 211 files against 7 rules in 52 agent calls, reading 641K+ tokens
+```
+
+The number is the prompts plus every file they name, at four bytes to the token.
+It is a floor, not a price. The same file is read once per rule whose glob
+matches it, which is where a run's cost actually comes from: seven rules over
+360 KB of source is 2.4 MB of reading. On top of that each call pays for the
+agent's own system prompt and for whatever it re-reads as it works, neither of
+which is knowable from here.
+
+Over `--budget` (200,000 tokens by default) the run asks before spending, and
+answers itself with no on a terminal nobody is watching, so a scripted run stops
+and says the number rather than hanging or quietly running up a bill. Passing a
+budget the estimate fits under is how you say yes in advance.
+
+`--since <ref>` checks only what git says was added or changed since that ref,
+staged, unstaged or untracked alike, which is usually the cheaper answer:
+
+```bash
+webappwiz style analyze --since main --agent sonnet
+```
+
+Deletions are left out, since a violation quotes its line from disk and a file
+that is gone has none. Rules that judge a directory's shape rather than a file's
+contents get weaker under `--since`, because the files it hides are still part of
+what they are meant to look at.
+
 ## API
 
 Those commands are a thin shell over this package. `loadGuide` compiles a guide

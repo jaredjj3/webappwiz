@@ -5,6 +5,30 @@ import type { Duration } from "@webappwiz/time";
 export const count = (n: number, word: string): string =>
 	`${n} ${word}${n === 1 ? "" : "s"}`;
 
+const compact = new Intl.NumberFormat("en", { notation: "compact" });
+
+/**
+ * What a plan costs to read, at the four-bytes-a-token rule of thumb. Rough on
+ * purpose: an estimate that needed a tokenizer, or an API call to count, would
+ * be one more thing to install and one more thing to be wrong about, and the
+ * decision it informs is only ever "is this the order of magnitude I meant".
+ */
+export const tokens = (bytes: number): number => Math.ceil(bytes / 4);
+
+/**
+ * Why the estimate is a floor: the same file is read once per rule that globs
+ * it, and on top of that each call pays for the agent's own system prompt and
+ * for whatever it re-reads as it works, none of which is knowable from here.
+ */
+export function overBudget(estimate: number, budget: number): string {
+	return (
+		`${color.yellow("!")} this run reads at least ` +
+		`${color.bold(compact.format(estimate))} tokens, over the ` +
+		`${color.bold(compact.format(budget))} budget, and the real cost will be higher. ` +
+		`Raise it with ${color.bold("--budget")}.`
+	);
+}
+
 /**
  * The plan, before the first agent starts. Counts calls rather than tasks
  * because a call is what a run is billed for, and it is the denominator of the
@@ -14,6 +38,7 @@ export function planned(
 	files: number,
 	rules: number,
 	calls: number,
+	estimate: number,
 	agent: string,
 ): string {
 	// blue last: it resets the foreground to default rather than to the
@@ -21,7 +46,8 @@ export function planned(
 	return color.gray(
 		`checking ${color.bold(count(files, "file"))} against ` +
 			`${color.bold(count(rules, "rule"))} in ` +
-			`${color.bold(count(calls, "agent call"))}, using: ` +
+			`${color.bold(count(calls, "agent call"))}, reading ` +
+			`${color.bold(`${compact.format(estimate)}+ tokens`)}, using: ` +
 			color.blue(agent),
 	);
 }

@@ -10,6 +10,12 @@ export interface Task {
 	rule: Rule;
 	files: string[];
 	prompt: string;
+	/**
+	 * The prompt plus every file it tells the agent to read. A floor on what the
+	 * call costs, and the only part of the cost that can be known before paying
+	 * it: the agent's own system prompt and whatever it re-reads are not in here.
+	 */
+	bytes: number;
 }
 
 /** One rule broken in one place, as the report prints it. */
@@ -88,8 +94,12 @@ export const agentCommand = (opts: {
 
 /** What a run reports as it goes, for a caller that prints as findings land. */
 export interface Events {
-	/** The whole plan, before the first agent starts. */
-	planned?: (tasks: Task[]) => void;
+	/**
+	 * The whole plan, before the first agent starts. Throwing from here cancels
+	 * the run without spawning anything, which is how a caller refuses a plan it
+	 * decides is too expensive.
+	 */
+	planned?: (tasks: Task[]) => void | Promise<void>;
 	/** One task, the moment its agent returns. */
 	finished?: (finished: Finished) => void;
 }
@@ -125,9 +135,10 @@ export class Analyzer {
 		chunk: number,
 		agent: Agent,
 		on: Events = {},
+		only?: Set<string>,
 	): Promise<Violation[]> {
-		const tasks = await this.plan(rules, dir, chunk);
-		on.planned?.(tasks);
+		const tasks = await this.plan(rules, dir, chunk, only);
+		await on.planned?.(tasks);
 		let done = 0;
 		// Every task at once: a guide's tasks number in the tens, and an agent
 		// call is minutes of latency and no local work. Add a cap if that changes.
@@ -150,10 +161,26 @@ export class Analyzer {
 		return found.flat();
 	}
 
-	async plan(rules: Rule[], dir: string, chunk: number): Promise<Task[]> {
+	/**
+	 * The tasks a run would spawn. `only` narrows it to those files, named the
+	 * way the globs are, for a caller checking a subset of the tree rather than
+	 * all of it; a rule matching nothing left in it is still worth saying so.
+	 */
+	async plan(
+		rules: Rule[],
+		dir: string,
+		chunk: number,
+		only?: Set<string>,
+	): Promise<Task[]> {
 		const all: string[] = [];
+		const size = new Map<string, number>();
 		for await (const path of walk(this.fs, dir)) {
-			all.push(path.slice(dir.length + 1)); // dir-relative, like the globs
+			const file = path.slice(dir.length + 1); // dir-relative, like the globs
+			if (only && !only.has(file)) {
+				continue;
+			}
+			all.push(file);
+			size.set(file, (await this.fs.stat(path)).size);
 		}
 		all.sort();
 		const tasks: Task[] = [];
@@ -168,7 +195,16 @@ export class Analyzer {
 			// repos with a few huge files start overflowing a task.
 			for (let i = 0; i < files.length; i += chunk) {
 				const slice = files.slice(i, i + chunk);
-				tasks.push({ rule, files: slice, prompt: this.prompt(rule, slice) });
+				const prompt = this.prompt(rule, slice);
+				tasks.push({
+					rule,
+					files: slice,
+					prompt,
+					bytes: slice.reduce(
+						(n, f) => n + (size.get(f) ?? 0),
+						Buffer.byteLength(prompt),
+					),
+				});
 			}
 		}
 		return tasks;

@@ -98,6 +98,14 @@ export async function commands(
 			default: 25,
 			description: "files per task",
 		})
+		.option("since", t.optional(t.string()), {
+			default: undefined,
+			description: "only check files added or changed since this git ref",
+		})
+		.option("budget", t.number(), {
+			default: 200_000,
+			description: "confirm before reading more than this many tokens",
+		})
 		.action((opts) => styleCommands.analyze(opts));
 
 	const skillsGroup = app

@@ -2,7 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { color } from "@webappwiz/log";
 import type { Violation } from "@webappwiz/style";
 import { Duration } from "@webappwiz/time";
-import { finding, finished, planned, summary } from "./report";
+import {
+	finding,
+	finished,
+	overBudget,
+	planned,
+	summary,
+	tokens,
+} from "./report";
 
 describe("report", () => {
 	const violation = (over: Partial<Violation> = {}): Violation => ({
@@ -96,15 +103,31 @@ describe("report", () => {
 	});
 
 	it("counts the agent calls a run is about to make, not its tasks", () => {
-		expect(color.strip(planned(203, 7, 52, "claude -p --model haiku"))).toBe(
-			"checking 203 files against 7 rules in 52 agent calls, using: claude -p --model haiku",
+		expect(
+			color.strip(planned(203, 7, 52, 589_000, "claude -p --model haiku")),
+		).toBe(
+			"checking 203 files against 7 rules in 52 agent calls, " +
+				"reading 589K+ tokens, using: claude -p --model haiku",
 		);
 	});
 
 	it("sets the counts and the command apart from the prose around them", () => {
-		const line = planned(203, 7, 52, "claude -p --model haiku");
+		const line = planned(203, 7, 52, 589_000, "claude -p --model haiku");
 
 		expect(line).toContain(color.bold("52 agent calls"));
 		expect(line).toContain(color.blue("claude -p --model haiku"));
+	});
+
+	it("counts four bytes to the token, rounding a partial token up", () => {
+		expect(tokens(4000)).toBe(1000);
+		expect(tokens(1)).toBe(1);
+		expect(tokens(0)).toBe(0);
+	});
+
+	it("says both numbers and the flag when a run is over budget", () => {
+		expect(color.strip(overBudget(589_000, 200_000))).toBe(
+			"! this run reads at least 589K tokens, over the 200K budget, " +
+				"and the real cost will be higher. Raise it with --budget.",
+		);
 	});
 });

@@ -5,7 +5,7 @@ import { ruleDoc } from "@webappwiz/style/testing";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
-import { StyleCommands } from "./style";
+import { type Confirm, StyleCommands } from "./style";
 
 describe("StyleCommands", () => {
 	let fs: FakeFs;
@@ -15,13 +15,25 @@ describe("StyleCommands", () => {
 
 	const printed = () =>
 		color.strip(log.entries.map((e) => String(e.message)).join("\n"));
-	const commands = (guide: StyleGuide, dir = "/g") =>
-		new StyleCommands(log, fs, ps, clock, {
-			load: async () => ({ guide, dir }),
-		});
+	const commands = (guide: StyleGuide, dir = "/g", confirm?: Confirm) =>
+		new StyleCommands(
+			log,
+			fs,
+			ps,
+			clock,
+			{ load: async () => ({ guide, dir }) },
+			confirm,
+		);
 	const oneRule = defineStyleGuide([rule("./one.md")]);
 	const config = "style.config.ts";
-	const analyzing = { rules: config, dir: "/p", agent: "haiku", chunk: 25 };
+	// budget high enough that only the tests about budgets ever meet it
+	const analyzing = {
+		rules: config,
+		dir: "/p",
+		agent: "haiku",
+		chunk: 25,
+		budget: 1_000_000,
+	};
 
 	beforeEach(async () => {
 		fs = new FakeFs();
@@ -219,5 +231,72 @@ describe("StyleCommands", () => {
 		await fs.write("/g/one.md", "just prose\n");
 
 		expect(commands(oneRule).analyze(analyzing)).rejects.toThrow("3 errors");
+	});
+
+	it("says what the run will read before it reads any of it", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		await commands(oneRule).analyze(analyzing);
+
+		expect(printed()).toMatch(/reading \d[\d.]*K?\+ tokens/);
+	});
+
+	it("spawns nothing when the estimate is over budget and nobody says go", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		expect(
+			commands(oneRule, "/g", () => false).analyze({
+				...analyzing,
+				budget: 10,
+			}),
+		).rejects.toThrow("over budget");
+		expect(printed()).toContain("over the 10 budget");
+		expect(ps.getCalls()).toEqual([]);
+	});
+
+	it("runs over budget once the caller says go", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		await commands(oneRule, "/g", () => true).analyze({
+			...analyzing,
+			budget: 10,
+		});
+
+		expect(ps.getCalls()).toHaveLength(1);
+		expect(printed()).toContain("no style violations");
+	});
+
+	it("checks only what changed when --since names a ref", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		await fs.write("/p/b.ts", "class B {}");
+		ps.setCaptureOutput("a.ts\n", "");
+
+		await commands(oneRule).analyze({
+			...analyzing,
+			since: "main",
+			prompt: true,
+		});
+
+		expect(printed()).toContain("=== one One (1 file) ===");
+		expect(printed()).toContain("- a.ts");
+		expect(printed()).not.toContain("- b.ts");
+	});
+
+	it("says so and stops when nothing has changed since the ref", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("", "");
+
+		await commands(oneRule).analyze({ ...analyzing, since: "main" });
+
+		expect(printed()).toContain("nothing has changed since main");
+		expect(ps.getCalls()).not.toContain("claude -p --model haiku");
 	});
 });

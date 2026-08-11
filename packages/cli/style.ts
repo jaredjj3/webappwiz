@@ -9,8 +9,28 @@ import {
 } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
-import { count, finished, planned, summary } from "./report";
+import { changed } from "./changed";
+import {
+	count,
+	finished,
+	overBudget,
+	planned,
+	summary,
+	tokens,
+} from "./report";
 import { table } from "./table";
+
+/** Asked before a run spends more than it was allowed to. */
+export type Confirm = (question: string) => boolean | Promise<boolean>;
+
+/**
+ * Answers on the terminal, and answers no without one: a run nobody is watching
+ * should stop and say the number rather than block forever waiting to be told
+ * to go ahead.
+ */
+export const ask: Confirm = (question) =>
+	process.stdin.isTTY === true &&
+	/^y(es)?$/i.test((prompt(`${question} [y/N]`) ?? "").trim());
 
 export class StyleCommands {
 	constructor(
@@ -19,6 +39,7 @@ export class StyleCommands {
 		private ps: Ps,
 		private clock: Clock,
 		private loader?: GuideLoader,
+		private confirm: Confirm = ask,
 	) {}
 
 	/** Is the guide sound enough to analyze with? Exits 1 when it is not. */
@@ -75,6 +96,9 @@ export class StyleCommands {
 	 * `exec`; there is no default. Exits 1 on any error. Under `prompt` it
 	 * spawns nothing and prints the prompts instead, for an agent that would
 	 * rather hand them to subagents of its own.
+	 *
+	 * `since` narrows the run to what git says has changed, and `budget` caps
+	 * what it may read before asking whether you meant it.
 	 */
 	async analyze(opts: {
 		rules: string;
@@ -83,12 +107,24 @@ export class StyleCommands {
 		exec?: string;
 		prompt?: boolean;
 		chunk: number;
+		since?: string;
+		budget: number;
 	}): Promise<void> {
 		const { rules } = await this.sound(opts.rules);
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
+		const only =
+			opts.since === undefined
+				? undefined
+				: await changed(this.ps, dir, opts.since);
+		if (only?.size === 0) {
+			// Ahead of planning, so a no-op run says one clear thing rather than
+			// one "matches no files" per rule.
+			this.log.info(`nothing has changed since ${opts.since}`);
+			return;
+		}
 		const analyzer = new Analyzer(this.log, this.fs, this.ps, this.clock);
 		if (opts.prompt) {
-			for (const task of await analyzer.plan(rules, dir, opts.chunk)) {
+			for (const task of await analyzer.plan(rules, dir, opts.chunk, only)) {
 				this.log.info(
 					`=== ${task.rule.id} ${task.rule.name} (${count(task.files.length, "file")}) ===`,
 				);
@@ -98,17 +134,34 @@ export class StyleCommands {
 		}
 		const agent = agentCommand(opts);
 		const started = this.clock.now();
-		const violations = await analyzer.analyze(rules, dir, opts.chunk, agent, {
-			planned: (tasks) => {
-				const files = new Set(tasks.flatMap((t) => t.files)).size;
-				this.log.info(planned(files, rules.length, tasks.length, agent.label));
+		const violations = await analyzer.analyze(
+			rules,
+			dir,
+			opts.chunk,
+			agent,
+			{
+				planned: async (tasks) => {
+					const files = new Set(tasks.flatMap((t) => t.files)).size;
+					const estimate = tokens(tasks.reduce((n, t) => n + t.bytes, 0));
+					this.log.info(
+						planned(files, rules.length, tasks.length, estimate, agent.label),
+					);
+					if (estimate > opts.budget) {
+						this.log.info(overBudget(estimate, opts.budget));
+						if (!(await this.confirm("Run anyway?"))) {
+							// Throwing here is what cancels: analyze has spawned nothing yet.
+							throw new Error("over budget");
+						}
+					}
+				},
+				finished: (task) => {
+					for (const line of finished(task)) {
+						this.log.info(line);
+					}
+				},
 			},
-			finished: (task) => {
-				for (const line of finished(task)) {
-					this.log.info(line);
-				}
-			},
-		});
+			only,
+		);
 		this.log.info("");
 		this.log.info(summary(violations, this.clock.now().subtract(started)));
 		const errors = violations.filter((v) => v.level === "error").length;

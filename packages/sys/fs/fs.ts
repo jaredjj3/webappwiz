@@ -27,4 +27,6 @@ export interface RmOptions {
 
 export interface StatResult {
 	isDirectory(): boolean;
+	/** Bytes on disk. Zero for a directory. */
+	size: number;
 }

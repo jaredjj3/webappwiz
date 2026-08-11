@@ -53,7 +53,10 @@ export class FakeFs implements Fs {
 		if (entry === undefined) {
 			throw new Error(`Path does not exist: ${path}`);
 		}
-		return { isDirectory: () => entry === DIRECTORY };
+		return {
+			isDirectory: () => entry === DIRECTORY,
+			size: entry === DIRECTORY ? 0 : Buffer.byteLength(entry),
+		};
 	}
 
 	async rm(path: string, options?: RmOptions): Promise<void> {
