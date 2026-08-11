@@ -6,3 +6,5 @@ After making code changes:
 After adding a new package:
 
 - `bun install` to add the package to the project.
+
+Don't use em dashes.
