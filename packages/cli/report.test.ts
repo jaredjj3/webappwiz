@@ -111,11 +111,14 @@ describe("report", () => {
 		);
 	});
 
-	it("sets the counts and the command apart from the prose around them", () => {
+	it("gives each count its own color, and the command another", () => {
 		const line = planned(203, 7, 52, 589_000, "claude -p --model haiku");
 
-		expect(line).toContain(color.bold("52 agent calls"));
-		expect(line).toContain(color.blue("claude -p --model haiku"));
+		expect(line).toContain(color.blue("203 files"));
+		expect(line).toContain(color.green("7 rules"));
+		expect(line).toContain(color.yellow("52 agent calls"));
+		expect(line).toContain(color.red("589K+ tokens"));
+		expect(line).toContain(color.bold("claude -p --model haiku"));
 	});
 
 	it("names no command when there is no agent to name", () => {

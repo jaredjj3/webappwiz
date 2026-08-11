@@ -42,16 +42,21 @@ export function planned(
 	estimate: number,
 	agent?: string,
 ): string {
+	// Each stat gets its own color, so the prose between them is grayed piece by
+	// piece: a foreground color resets to the default rather than to whatever it
+	// was nested in, so one gray around the whole line would not survive them.
 	const plan =
-		`checking ${color.bold(count(files, "file"))} against ` +
-		`${color.bold(count(rules, "rule"))} in ` +
-		`${color.bold(count(calls, "agent call"))}, reading ` +
-		`${color.bold(`${compact.format(estimate)}+ tokens`)}`;
-	// blue last: it resets the foreground to default rather than to the
-	// surrounding gray, so nothing may follow it
-	return color.gray(
-		agent === undefined ? plan : `${plan}, using: ${color.blue(agent)}`,
-	);
+		color.gray("checking ") +
+		color.blue(count(files, "file")) +
+		color.gray(" against ") +
+		color.green(count(rules, "rule")) +
+		color.gray(" in ") +
+		color.yellow(count(calls, "agent call")) +
+		color.gray(", reading ") +
+		color.red(`${compact.format(estimate)}+ tokens`);
+	return agent === undefined
+		? plan
+		: `${plan}${color.gray(", using: ")}${color.bold(agent)}`;
 }
 
 /**
