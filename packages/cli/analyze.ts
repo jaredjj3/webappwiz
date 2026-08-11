@@ -37,8 +37,48 @@ export interface Finished {
 	total: number;
 }
 
-/** The agent command a run uses unless `--agent` says otherwise. */
-export const DEFAULT_AGENT = "claude -p --model sonnet";
+/** What one task is handed to: the argv to spawn, and how reports name it. */
+export interface Agent {
+	argv: string[];
+	label: string;
+}
+
+/** The models `--agent` names, so a run can pick one without a command. */
+export const AGENTS: Record<string, string[]> = {
+	haiku: ["claude", "-p", "--model", "haiku"],
+	sonnet: ["claude", "-p", "--model", "sonnet"],
+	opus: ["claude", "-p", "--model", "opus"],
+};
+
+/** The model a run uses when it names neither an agent nor a command. */
+export const DEFAULT_AGENT = "sonnet";
+
+/**
+ * Resolves `--agent` and `--exec`, which are alternatives: name a model, or
+ * give a command to run it yourself. Throws if you give both, or a model that
+ * is not one of `AGENTS`.
+ */
+export const agentCommand = (opts: {
+	agent?: string;
+	exec?: string;
+}): Agent => {
+	if (opts.exec !== undefined) {
+		if (opts.agent !== undefined) {
+			throw new Error("--agent and --exec both name an agent, so pass one");
+		}
+		// through a shell, so quoting and pipes in the command survive, with the
+		// prompt as "$@" rather than spliced into the text of the command
+		return { argv: ["sh", "-c", `${opts.exec} "$@"`, "sh"], label: opts.exec };
+	}
+	const name = opts.agent ?? DEFAULT_AGENT;
+	const argv = AGENTS[name];
+	if (!argv) {
+		throw new Error(
+			`no agent "${name}". Known agents: ${Object.keys(AGENTS).join(", ")}`,
+		);
+	}
+	return { argv, label: argv.join(" ") };
+};
 
 export const count = (n: number, word: string): string =>
 	`${n} ${word}${n === 1 ? "" : "s"}`;
@@ -72,13 +112,13 @@ export class Analyzer {
 		rules: Rule[],
 		dir: string,
 		chunk: number,
-		agent: string,
+		agent: Agent,
 		onFinished: (finished: Finished) => void = () => {},
 	): Promise<Violation[]> {
 		const tasks = await this.plan(rules, dir, chunk);
 		const files = new Set(tasks.flatMap((t) => t.files)).size;
 		this.log.info(
-			`checking ${count(files, "file")} against ${count(rules.length, "rule")} in ${count(tasks.length, "task")}, using: ${agent}`,
+			`checking ${count(files, "file")} against ${count(rules.length, "rule")} in ${count(tasks.length, "task")}, using: ${agent.label}`,
 		);
 		let done = 0;
 		// Every task at once: a guide's tasks number in the tens, and an agent
@@ -129,9 +169,9 @@ export class Analyzer {
 	private async run(
 		task: Task,
 		dir: string,
-		agent: string,
+		agent: Agent,
 	): Promise<Violation[]> {
-		const argv = [...agent.split(/\s+/).filter(Boolean), task.prompt];
+		const argv = [...agent.argv, task.prompt];
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(argv, {
 			cwd: dir,
 		});

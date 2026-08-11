@@ -21,7 +21,7 @@ describe("StyleCommands", () => {
 		});
 	const oneRule = defineStyleGuide([rule("./one.md")]);
 	const config = "style.config.ts";
-	const analyzing = { rules: config, dir: "/p", agent: "agent", chunk: 25 };
+	const analyzing = { rules: config, dir: "/p", agent: "haiku", chunk: 25 };
 
 	beforeEach(async () => {
 		fs = new FakeFs();
@@ -176,6 +176,43 @@ describe("StyleCommands", () => {
 		await commands(oneRule).analyze(analyzing);
 
 		expect(printed()).toContain("/p/a.ts:1  warning  the class has no doc");
+	});
+
+	it("runs the model an --agent shorthand names", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		await commands(oneRule).analyze(analyzing);
+
+		expect(ps.getCalls()[0]).toStartWith("claude -p --model haiku ");
+		expect(printed()).toContain("using: claude -p --model haiku");
+	});
+
+	it("runs an --exec command through a shell instead", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		await commands(oneRule).analyze({
+			...analyzing,
+			agent: undefined,
+			exec: "codex exec",
+		});
+
+		expect(ps.getCalls()[0]).toStartWith('sh -c codex exec "$@" sh ');
+	});
+
+	it("prints the prompts and spawns nothing under --prompt", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+
+		await commands(oneRule).analyze({ ...analyzing, prompt: true });
+
+		expect(printed()).toContain("=== one One (1 file) ===");
+		expect(printed()).toContain("exactly one style rule");
+		expect(printed()).toContain("- a.ts");
+		expect(ps.getCalls()).toEqual([]);
 	});
 
 	it("refuses to analyze with an unsound guide", async () => {

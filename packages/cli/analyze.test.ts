@@ -4,8 +4,10 @@ import { compile, type Rule } from "@webappwiz/style";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
-import { Analyzer } from "./analyze";
+import { Analyzer, agentCommand } from "./analyze";
 import { ruleDoc } from "./testing";
+
+const agent = { argv: ["agent"], label: "agent" };
 
 const compiled = (name: string, files = "**/*.ts"): Rule => {
 	const out = compile(ruleDoc(name, files), `${name}.md`);
@@ -79,7 +81,10 @@ describe("Analyzer", () => {
 	it("passes the prompt to the agent command as its last argument", async () => {
 		ps.setCaptureOutput("[]", "");
 
-		await analyzer.analyze([compiled("Classes")], "/p", 25, "claude -p");
+		await analyzer.analyze([compiled("Classes")], "/p", 25, {
+			argv: ["claude", "-p"],
+			label: "claude -p",
+		});
 
 		const call = ps.getCalls()[0] ?? "";
 		expect(call.startsWith("claude -p ")).toBe(true);
@@ -96,7 +101,7 @@ describe("Analyzer", () => {
 			[compiled("Classes")],
 			"/p",
 			25,
-			"agent",
+			agent,
 		);
 
 		expect(violations).toEqual([
@@ -126,7 +131,7 @@ describe("Analyzer", () => {
 			[compiled("Classes")],
 			"/p",
 			25,
-			"agent",
+			agent,
 		);
 
 		expect(violations.map((v) => v.line)).toEqual([3]);
@@ -143,7 +148,7 @@ describe("Analyzer", () => {
 			[compiled("Classes")],
 			"/p",
 			25,
-			"agent",
+			agent,
 		);
 
 		expect(found?.code).toBe("class B {}");
@@ -159,7 +164,7 @@ describe("Analyzer", () => {
 			[compiled("Classes")],
 			"/p",
 			25,
-			"agent",
+			agent,
 		);
 
 		expect(found?.code).toBe("");
@@ -172,7 +177,7 @@ describe("Analyzer", () => {
 		);
 
 		const finished: string[] = [];
-		await analyzer.analyze([compiled("Classes")], "/p", 1, "agent", (task) =>
+		await analyzer.analyze([compiled("Classes")], "/p", 1, agent, (task) =>
 			finished.push(`${task.id} ${task.done}/${task.total}`),
 		);
 
@@ -187,7 +192,7 @@ describe("Analyzer", () => {
 		});
 
 		const took: string[] = [];
-		await analyzer.analyze([compiled("Classes")], "/p", 25, "agent", (task) =>
+		await analyzer.analyze([compiled("Classes")], "/p", 25, agent, (task) =>
 			took.push(task.took.human()),
 		);
 
@@ -204,7 +209,7 @@ describe("Analyzer", () => {
 			[compiled("Classes")],
 			"/p",
 			25,
-			"agent",
+			agent,
 		);
 
 		expect(violations.map((v) => v.message)).toEqual(["nope"]);
@@ -217,7 +222,7 @@ describe("Analyzer", () => {
 			[compiled("Classes")],
 			"/p",
 			25,
-			"agent",
+			agent,
 		);
 
 		expect(violations).toEqual([]);
@@ -230,7 +235,7 @@ describe("Analyzer", () => {
 			[compiled("Classes")],
 			"/p",
 			25,
-			"agent",
+			agent,
 		);
 
 		expect(violations).toEqual([]);
@@ -241,12 +246,10 @@ describe("Analyzer", () => {
 		ps.exit(127);
 		ps.setCaptureOutput("", "command not found: claude");
 
-		const violations = await analyzer.analyze(
-			[compiled("Classes")],
-			"/p",
-			25,
-			"claude",
-		);
+		const violations = await analyzer.analyze([compiled("Classes")], "/p", 25, {
+			argv: ["claude"],
+			label: "claude",
+		});
 
 		expect(violations).toEqual([]);
 		expect(errors()[0]).toBe(
@@ -264,9 +267,41 @@ describe("Analyzer", () => {
 			[compiled("Classes")],
 			"/p",
 			25,
-			"agent",
+			agent,
 		);
 
 		expect(violations.map((v) => v.message)).toEqual(["earlier", "later"]);
+	});
+});
+
+describe("agentCommand", () => {
+	it("spawns claude directly for a model shorthand", () => {
+		expect(agentCommand({ agent: "haiku" })).toEqual({
+			argv: ["claude", "-p", "--model", "haiku"],
+			label: "claude -p --model haiku",
+		});
+	});
+
+	it("falls back to the default model when nothing names one", () => {
+		expect(agentCommand({}).label).toBe("claude -p --model sonnet");
+	});
+
+	it("keeps the quoting in a command by running it through a shell", () => {
+		expect(agentCommand({ exec: 'my-agent --system "be terse"' })).toEqual({
+			argv: ["sh", "-c", 'my-agent --system "be terse" "$@"', "sh"],
+			label: 'my-agent --system "be terse"',
+		});
+	});
+
+	it("refuses a model and a command at once", () => {
+		expect(() => agentCommand({ agent: "haiku", exec: "codex exec" })).toThrow(
+			"--agent and --exec both name an agent, so pass one",
+		);
+	});
+
+	it("lists the models it knows when named one it does not", () => {
+		expect(() => agentCommand({ agent: "gpt" })).toThrow(
+			'no agent "gpt". Known agents: haiku, sonnet, opus',
+		);
 	});
 });

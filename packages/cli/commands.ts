@@ -4,7 +4,7 @@ import { DEFAULT_GUIDE } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import { SystemClock } from "@webappwiz/time";
-import { DEFAULT_AGENT } from "./analyze";
+import { AGENTS, DEFAULT_AGENT } from "./analyze";
 import { Skills } from "./skills";
 import { StyleCommands } from "./style";
 import { update } from "./update";
@@ -83,9 +83,17 @@ export async function commands(
 			default: ".",
 			description: "directory to analyze (default: .)",
 		})
-		.option("agent", t.string(), {
-			default: DEFAULT_AGENT,
-			description: `command the prompt is passed to (default: ${DEFAULT_AGENT})`,
+		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
+			default: undefined,
+			description: `model to check with (default: ${DEFAULT_AGENT})`,
+		})
+		.option("exec", t.optional(t.string()), {
+			default: undefined,
+			description: "command the prompt is passed to, instead of --agent",
+		})
+		.option("prompt", t.boolean(), {
+			default: false,
+			description: "print the prompts and run no agent at all",
 		})
 		.option("chunk", t.number(), {
 			default: 25,

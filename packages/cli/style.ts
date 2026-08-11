@@ -8,7 +8,7 @@ import {
 } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
-import { Analyzer, count } from "./analyze";
+import { Analyzer, agentCommand, count } from "./analyze";
 import { type GuideLoader, ModuleGuideLoader } from "./guide-loader";
 import { finished, summary } from "./report";
 import { table } from "./table";
@@ -77,11 +77,17 @@ export class StyleCommands {
 		this.log.info(rule.text.trim());
 	}
 
-	/** Runs the guide over a directory with an agent. Exits 1 on any error. */
+	/**
+	 * Runs the guide over a directory with an agent. Exits 1 on any error.
+	 * Under `prompt` it spawns nothing and prints the prompts instead, for an
+	 * agent that would rather hand them to subagents of its own.
+	 */
 	async analyze(opts: {
 		rules: string;
 		dir: string;
-		agent: string;
+		agent?: string;
+		exec?: string;
+		prompt?: boolean;
 		chunk: number;
 	}): Promise<void> {
 		const { rules, diagnostics } = await this.compile(opts.rules);
@@ -89,13 +95,22 @@ export class StyleCommands {
 			this.report(rules.length, diagnostics, false);
 		}
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
-		const started = this.clock.now();
 		const analyzer = new Analyzer(this.log, this.fs, this.ps, this.clock);
+		if (opts.prompt) {
+			for (const task of await analyzer.plan(rules, dir, opts.chunk)) {
+				this.log.info(
+					`=== ${task.rule.id} ${task.rule.name} (${count(task.files.length, "file")}) ===`,
+				);
+				this.log.info(task.prompt);
+			}
+			return;
+		}
+		const started = this.clock.now();
 		const violations = await analyzer.analyze(
 			rules,
 			dir,
 			opts.chunk,
-			opts.agent,
+			agentCommand(opts),
 			(task) => {
 				for (const line of finished(task)) {
 					this.log.info(line);
