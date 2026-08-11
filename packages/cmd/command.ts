@@ -1,4 +1,4 @@
-import { ConsoleLogger, type Logger } from "@webappwiz/log";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import type { Schema } from "@webappwiz/t";
 import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 
@@ -31,8 +31,10 @@ export class Command<O, C extends object = object> {
 		return this;
 	}
 
+	// padded before it is coloured: the trailing spaces land inside the escape
+	// sequence, where they are invisible, so the column still lines up
 	helpLine(name: string, pad: number): string {
-		return `  ${name.padEnd(pad)}${this._description ? `  ${this._description}` : ""}`;
+		return `  ${color.bold(color.blue(name.padEnd(pad)))}${this._description ? `  ${this._description}` : ""}`;
 	}
 
 	option<K extends string, T>(
@@ -160,7 +162,7 @@ export class Command<O, C extends object = object> {
 	// a [flag, text] pair for the help table, e.g. ["--count", "how many (default: 1)"]
 	private optionRow(o: OptionMeta): readonly [string, string] {
 		const defaultDescription = o.hasDefault
-			? ` (default: ${JSON.stringify(o.default)})`
+			? color.dim(` (default: ${JSON.stringify(o.default)})`)
 			: "";
 		return [`--${o.name}`, `${o.description ?? ""}${defaultDescription}`];
 	}
@@ -169,28 +171,32 @@ export class Command<O, C extends object = object> {
 		const args = this.args.map((a) =>
 			a.hasDefault ? `[${a.name}]` : `<${a.name}>`,
 		);
-		const usage = [this.program, this.name, ...args, "[options]"]
-			.filter(Boolean)
-			.join(" ");
-		const lines = [`Usage: ${usage}`];
+		// the invocation is bold, what the user fills in is dim
+		const usage = [
+			color.bold([this.program, this.name].filter(Boolean).join(" ")),
+			color.dim([...args, "[options]"].join(" ")),
+		].join(" ");
+		const lines = [`${color.bold("Usage:")} ${usage}`];
 		if (this._description) {
 			lines.push("", this._description);
 		}
 		if (this.args.length > 0) {
-			lines.push("", "Arguments:");
+			lines.push("", color.bold("Arguments:"));
 			const pad = Math.max(...this.args.map((a) => a.name.length));
 			for (const a of this.args) {
-				lines.push(`  ${a.name.padEnd(pad)}  ${a.description ?? ""}`.trimEnd());
+				lines.push(
+					`  ${color.blue(a.name.padEnd(pad))}  ${a.description ?? ""}`.trimEnd(),
+				);
 			}
 		}
-		lines.push("", "Options:");
+		lines.push("", color.bold("Options:"));
 		const rows = [
 			...this.options.map((o) => this.optionRow(o)),
 			["-h, --help", "show this help"] as const,
 		];
 		const pad = Math.max(...rows.map(([flag]) => flag.length));
 		for (const [flag, text] of rows) {
-			lines.push(`  ${flag.padEnd(pad)}  ${text}`.trimEnd());
+			lines.push(`  ${color.blue(flag.padEnd(pad))}  ${text}`.trimEnd());
 		}
 		this.log.info(lines.join("\n"));
 	}

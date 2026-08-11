@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MemoryLogger } from "@webappwiz/log";
+import { color, MemoryLogger } from "@webappwiz/log";
 import { FakePs } from "@webappwiz/sys/testing";
 import { t } from "@webappwiz/t";
 import { cli } from "./cli";
@@ -52,7 +52,7 @@ describe("cli", () => {
 		for (const argv of [[], ["--help"], ["-h"], ["nope"]]) {
 			expect(() => wiz.run(argv)).not.toThrow();
 		}
-		const text = log.entries.map((e) => String(e.message)).join("\n");
+		const text = log.entries.map((e) => color.strip(e.message)).join("\n");
 		expect(log.entries).toHaveLength(4);
 		expect(text).toContain("Usage: wiz <command> [options]");
 		expect(text).toContain("a  does a");
@@ -68,7 +68,7 @@ describe("cli", () => {
 			.description("greet someone")
 			.action(() => {});
 		wiz.run(["greet", "--help"]);
-		expect(log.entries.map((e) => String(e.message)).join("\n")).toContain(
+		expect(log.entries.map((e) => color.strip(e.message)).join("\n")).toContain(
 			"Usage: wiz greet [options]",
 		);
 	});
@@ -156,7 +156,7 @@ describe("cli", () => {
 		]) {
 			wiz.run(argv);
 		}
-		const [program, ...group] = log.entries.map((e) => String(e.message));
+		const [program, ...group] = log.entries.map((e) => color.strip(e.message));
 		expect(program).toContain("skills  manage skills");
 		expect(group).toHaveLength(3);
 		for (const text of group) {
@@ -176,7 +176,7 @@ describe("cli", () => {
 			.arg("skill", t.string())
 			.action(() => {});
 		wiz.run(["skills", "add", "--help"]);
-		expect(String(log.entries.at(-1)?.message)).toContain(
+		expect(color.strip(log.entries.at(-1)?.message)).toContain(
 			"Usage: wiz skills add <skill> [options]",
 		);
 	});
@@ -215,6 +215,6 @@ describe("cli", () => {
 		cli("wiz").run([]);
 		const printed = spy.mock.calls.flat().join("\n");
 		spy.mockRestore();
-		expect(printed).toContain("Usage: wiz <command> [options]");
+		expect(color.strip(printed)).toContain("Usage: wiz <command> [options]");
 	});
 });

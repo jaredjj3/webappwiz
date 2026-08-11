@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { MemoryLogger } from "@webappwiz/log";
+import { color, MemoryLogger } from "@webappwiz/log";
 import { t } from "@webappwiz/t";
 import { Command } from "./command";
 
@@ -96,10 +96,12 @@ describe("Command", () => {
 	});
 
 	it("pads the name and omits an unset description in helpLine", () => {
-		expect(new Command("c").description("does a thing").helpLine("c", 4)).toBe(
-			"  c     does a thing",
-		);
-		expect(new Command("c").helpLine("c", 4)).toBe("  c   ");
+		expect(
+			color.strip(
+				new Command("c").description("does a thing").helpLine("c", 4),
+			),
+		).toBe("  c     does a thing");
+		expect(color.strip(new Command("c").helpLine("c", 4))).toBe("  c   ");
 	});
 
 	it("prints usage, options, and defaults and skips the action on --help", () => {
@@ -117,7 +119,7 @@ describe("Command", () => {
 			.exec(["--help"]);
 
 		expect(ran).toBe(false); // required --name is not enforced when asking for help
-		const text = log.entries.map((e) => String(e.message)).join("\n");
+		const text = log.entries.map((e) => color.strip(e.message)).join("\n");
 		expect(text).toContain("Usage: wiz greet [options]");
 		expect(text).toContain("greet someone");
 		expect(text).toContain("--name");
@@ -135,7 +137,7 @@ describe("Command", () => {
 			})
 			.exec(["-h"]);
 		expect(ran).toBe(false);
-		expect(log.entries.map((e) => String(e.message)).join("\n")).toContain(
+		expect(log.entries.map((e) => color.strip(e.message)).join("\n")).toContain(
 			"Usage: x [options]", // no prog prefix
 		);
 	});
@@ -192,7 +194,7 @@ describe("Command", () => {
 			.action(() => {})
 			.exec(["--help"]);
 
-		const text = log.entries.map((e) => String(e.message)).join("\n");
+		const text = log.entries.map((e) => color.strip(e.message)).join("\n");
 		expect(text).toContain("Usage: arbor escalate <reason> [note] [options]");
 		expect(text).toContain("why this needs a human");
 	});

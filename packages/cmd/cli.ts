@@ -1,4 +1,4 @@
-import { ConsoleLogger, type Logger } from "@webappwiz/log";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import { NodePs, type Ps } from "@webappwiz/sys";
 import { Command } from "./command";
 import type { AnyMiddleware, Middleware } from "./middleware";
@@ -90,8 +90,10 @@ export class Cli<C extends object = object> implements Node {
 		return cmd.exec(rest, [...outer, ...this.middleware]);
 	}
 
+	// padded before it is coloured: the trailing spaces land inside the escape
+	// sequence, where they are invisible, so the column still lines up
 	helpLine(name: string, pad: number): string {
-		return `  ${name.padEnd(pad)}${this._description ? `  ${this._description}` : ""}`;
+		return `  ${color.bold(color.blue(name.padEnd(pad)))}${this._description ? `  ${this._description}` : ""}`;
 	}
 
 	// message only, no stack — a bad flag is a user error, not a crash
@@ -104,12 +106,14 @@ export class Cli<C extends object = object> implements Node {
 		const entries = [...this.cmds];
 		const pad = Math.max(0, ...entries.map(([name]) => name.length));
 		const lines = [
-			`Usage: ${this.name} <command> [options]`,
+			`${color.bold("Usage:")} ${color.bold(this.name)} ${color.dim("<command> [options]")}`,
 			"",
-			"Commands:",
+			color.bold("Commands:"),
 			...entries.map(([name, c]) => c.helpLine(name, pad)),
 			"",
-			`Run \`${this.name} <command> --help\` for a command's options.`,
+			color.dim(
+				`Run \`${this.name} <command> --help\` for a command's options.`,
+			),
 		];
 		this.log.info(lines.join("\n"));
 	}
