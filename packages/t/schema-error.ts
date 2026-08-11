@@ -6,7 +6,7 @@ export class SchemaError extends Error {
 		super(path.length ? `${path.join(".")}: ${reason}` : reason);
 	}
 
-	/** Returns a copy with `key` prepended to the path, for container schemas. */
+	/** For container schemas, naming which member failed. */
 	at(key: string): SchemaError {
 		return new SchemaError([key, ...this.path], this.reason);
 	}

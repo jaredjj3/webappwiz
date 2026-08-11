@@ -99,7 +99,7 @@ export class FakePs implements Ps {
 		this.vars = { ...this.vars, ...vars };
 	}
 
-	/** Starts the fake somewhere other than `/`, as if launched there. */
+	/** The fake starts at `/` unless a test says otherwise. */
 	setCwd(path: string): void {
 		this.path = path;
 	}
@@ -108,7 +108,7 @@ export class FakePs implements Ps {
 		return this.calls;
 	}
 
-	/** Where each of `getCalls()` was spawned, defaulting to the fake's cwd. */
+	/** Positionally matched to `getCalls()`. */
 	getCallDirs(): string[] {
 		return this.dirs;
 	}

@@ -1,6 +1,4 @@
-/**
- * Logger maintains a log of messages. Typically, this is assigned the variable name `log`.
- */
+/** The logging seam. Typically assigned the variable name `log`. */
 export interface Logger {
 	info(message: unknown, ...optionalParams: unknown[]): void;
 	error(message: unknown, ...optionalParams: unknown[]): void;

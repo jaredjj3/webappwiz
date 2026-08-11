@@ -106,7 +106,6 @@ export class Duration {
 	}
 
 	/**
-	 * The duration as a reader wants it in output: `840ms`, `4.2s`, `2m 05s`.
 	 * Precision drops as the number grows, because nobody reading minutes cares
 	 * about the milliseconds.
 	 */

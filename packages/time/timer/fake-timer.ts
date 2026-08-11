@@ -24,7 +24,6 @@ export class FakeTimer implements Timer {
 		return this.add(this.intervals, callback, interval);
 	}
 
-	/** Fires and clears every pending timeout. */
 	fireTimeouts(): void {
 		const pending = this.timeouts.filter((entry) => !entry.disposed);
 		this.timeouts.length = 0;
@@ -45,7 +44,6 @@ export class FakeTimer implements Timer {
 		}
 	}
 
-	/** Fires every live interval callback once, as one tick would. */
 	fireIntervals(): void {
 		for (const entry of [...this.intervals]) {
 			if (!entry.disposed) {

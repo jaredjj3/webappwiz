@@ -32,10 +32,6 @@ export async function test(
 	}
 }
 
-/**
- * The nearest directory at or above `from` whose package.json declares
- * workspaces, or `from` itself when there is none.
- */
 async function workspaceRoot(fs: Fs, from: string): Promise<string> {
 	for (let dir = from; ; dir = dirname(dir)) {
 		let pkg: { workspaces?: unknown } = {};

@@ -3,7 +3,6 @@ import { FakeProcess } from "../testing";
 import { NodePs } from "./node-ps";
 
 describe("NodePs", () => {
-	/** Echoes the variables a spawned command can actually see. */
 	const SHOW = ["sh", "-c", 'printf \'%s|%s\' "$INHERITED" "$ADDED"'];
 	let proc: FakeProcess;
 

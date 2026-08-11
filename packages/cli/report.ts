@@ -7,8 +7,7 @@ export const count = (n: number, word: string): string =>
 
 /**
  * A finished task, as it should print the moment its agent returns: a status
- * line naming the rule, then one finding per violation. Returns lines, so a
- * caller that logs and a test that asserts see the same thing.
+ * line naming the rule, then one finding per violation.
  */
 export function finished({
 	rule,
@@ -46,7 +45,6 @@ export function finding(v: Violation): string[] {
 	return lines;
 }
 
-/** The closing tally, with what the whole run cost. Green when it found nothing. */
 export function summary(violations: Violation[], took: Duration): string {
 	const elapsed = color.gray(`in ${took.human()}`);
 	if (violations.length === 0) {

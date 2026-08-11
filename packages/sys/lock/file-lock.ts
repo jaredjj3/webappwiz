@@ -96,7 +96,6 @@ export class FileLock implements Lock {
 		}
 	}
 
-	/** Releases only a lock this process recorded itself as holding. */
 	async releaseIfOurs(): Promise<void> {
 		const holder = await this.holder();
 		if (holder?.pid === this.ps.pid && holder.hostname === this.ps.hostname) {

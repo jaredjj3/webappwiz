@@ -6,7 +6,6 @@ import { table } from "./table";
 /** The directory holding the skills this package ships. */
 export const source = `${import.meta.dir}/skills`;
 
-/** The release a skill came from. Null when the file does not carry one. */
 export function versionOf(md: string): string | null {
 	// frontmatter only, so a `version:` inside a fenced example in the body is
 	// not mistaken for the real one

@@ -1,4 +1,4 @@
-/** Pads rows into aligned columns, two spaces apart. Row one is the header. */
+/** Row one is the header. */
 export const table = (rows: string[][]): string[] => {
 	const widths = rows[0]?.map((_, i) =>
 		Math.max(...rows.map((r) => (r[i] ?? "").length)),

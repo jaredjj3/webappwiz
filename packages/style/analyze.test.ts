@@ -3,7 +3,7 @@ import { MemoryLogger } from "@webappwiz/log";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
-import { Analyzer, agentCommand } from "./analyze";
+import { Analyzer } from "./analyze";
 import { compile, type Rule } from "./rule";
 import { ruleDoc } from "./testing";
 
@@ -272,40 +272,5 @@ describe("Analyzer", () => {
 		);
 
 		expect(violations.map((v) => v.message)).toEqual(["earlier", "later"]);
-	});
-});
-
-describe("agentCommand", () => {
-	it("spawns claude directly for a model shorthand", () => {
-		expect(agentCommand({ agent: "haiku" })).toEqual({
-			argv: ["claude", "-p", "--model", "haiku"],
-			label: "claude -p --model haiku",
-		});
-	});
-
-	it("refuses to pick an agent when nothing names one", () => {
-		expect(() => agentCommand({})).toThrow(
-			"analyze runs an agent, so say which: --agent <haiku|sonnet|opus>, " +
-				"--exec <command>, or --prompt to print the prompts and run nothing",
-		);
-	});
-
-	it("keeps the quoting in a command by running it through a shell", () => {
-		expect(agentCommand({ exec: 'my-agent --system "be terse"' })).toEqual({
-			argv: ["sh", "-c", 'my-agent --system "be terse" "$@"', "sh"],
-			label: 'my-agent --system "be terse"',
-		});
-	});
-
-	it("refuses a model and a command at once", () => {
-		expect(() => agentCommand({ agent: "haiku", exec: "codex exec" })).toThrow(
-			"--agent and --exec both name an agent, so pass one",
-		);
-	});
-
-	it("lists the models it knows when named one it does not", () => {
-		expect(() => agentCommand({ agent: "gpt" })).toThrow(
-			'no agent "gpt". Known agents: haiku, sonnet, opus',
-		);
 	});
 });

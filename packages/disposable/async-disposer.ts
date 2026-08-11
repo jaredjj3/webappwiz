@@ -28,7 +28,7 @@ export class AsyncDisposer implements AsyncDisposableStack {
 		this.resources.push({ disposeAsync: onDispose });
 	}
 
-	/** Disposes everything registered, most recent first. Safe to call twice. */
+	/** Safe to call twice. */
 	disposeAsync = async (): Promise<void> => {
 		// An arrow so it survives being passed as a callback: this is usually
 		// handed straight to a shutdown hook.

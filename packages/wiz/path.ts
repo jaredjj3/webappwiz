@@ -7,7 +7,6 @@ const TAG = "# webappwiz";
 
 const binDir = resolve(import.meta.dir, "../../bin");
 
-/** Puts `bin/` on your shell PATH, or takes it back off. */
 export class Path {
 	constructor(
 		private readonly log: Logger,
@@ -15,10 +14,7 @@ export class Path {
 		private readonly ps: Ps,
 	) {}
 
-	/**
-	 * Edits your shell profile. Exactly one of `add` or `remove` must be set;
-	 * anything else throws.
-	 */
+	/** Exactly one of `add` or `remove` must be set; anything else throws. */
 	async run(opts: { add: boolean; remove: boolean }): Promise<void> {
 		if (opts.add === opts.remove) {
 			throw new Error("must specify one of --add or --remove");

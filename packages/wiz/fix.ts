@@ -1,17 +1,13 @@
 import { color, type Logger } from "@webappwiz/log";
 import type { Ps } from "@webappwiz/sys";
 
-/** Formats, lints and typechecks the workspace. */
 export class Fix {
 	constructor(
 		private readonly log: Logger,
 		private readonly ps: Ps,
 	) {}
 
-	/**
-	 * Runs biome then tsc, and throws on the first that fails. Pass
-	 * `check: true` to report problems without writing fixes.
-	 */
+	/** Pass `check: true` to report problems without writing fixes. */
 	async run(opts: { check: boolean }): Promise<void> {
 		await this.biome(opts.check);
 		await this.typecheck();

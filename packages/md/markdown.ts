@@ -78,7 +78,7 @@ export class Markdown {
 		return this.sections.find((s) => s.level === 1)?.heading ?? null;
 	}
 
-	/** A frontmatter value. Throws when the field is absent. */
+	/** Throws when the field is absent. */
 	field(name: string): string {
 		const value = this.fields[name];
 		if (value === undefined) {

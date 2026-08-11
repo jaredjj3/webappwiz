@@ -173,7 +173,6 @@ export class Command<O, C extends object = object> {
 		const args = this.args.map((a) =>
 			a.hasDefault ? `[${a.name}]` : `<${a.name}>`,
 		);
-		// the invocation is bold, what the user fills in is dim
 		const usage = [
 			color.bold([this.program, this.name].filter(Boolean).join(" ")),
 			color.dim([...args, "[options]"].join(" ")),

@@ -29,7 +29,7 @@ export class FakeProcess implements ProcessLike {
 		return process.kill(pid, signal);
 	}
 
-	/** Makes a pid report as gone, whatever the OS thinks. */
+	/** Reports a pid as gone whatever the OS thinks. */
 	markDead(pid: number): void {
 		this.dead.add(pid);
 	}
@@ -58,7 +58,7 @@ export class FakeProcess implements ProcessLike {
 		this.on(event, handler);
 	}
 
-	/** Runs the handlers a signal or `exit` would have run. */
+	/** Stands in for the OS, which never delivers anything to a fake. */
 	dispatch(event: string): void {
 		for (const handler of this.handlers.get(event) ?? []) {
 			handler();
