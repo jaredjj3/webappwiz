@@ -47,7 +47,16 @@ export class color {
 		return String(value).replaceAll(new RegExp(`${ESC}\\[\\d+m`, "g"), "");
 	}
 
+	/**
+	 * Read per call rather than once at import, so setting `NO_COLOR` takes
+	 * effect wherever it is set — a test, a `--` wrapper — without caring
+	 * whether this module was loaded first.
+	 */
 	private static wrap(code: string, reset: string, value: unknown): string {
+		// any non-empty value counts as set (no-color.org)
+		if (process.env.NO_COLOR) {
+			return String(value);
+		}
 		return `${ESC}[${code}m${String(value)}${ESC}[${reset}m`;
 	}
 }
