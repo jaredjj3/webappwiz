@@ -35,7 +35,7 @@ export class FakeTimer implements Timer {
 
 	/**
 	 * Fires a single pending timeout by registration order, leaving the rest
-	 * pending — for when nested deadlines race and only the outer one should go.
+	 * pending, for when nested deadlines race and only the outer one should go.
 	 */
 	fireTimeout(index: number): void {
 		const entry = this.timeouts[index];

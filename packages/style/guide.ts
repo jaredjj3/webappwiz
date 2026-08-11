@@ -3,8 +3,8 @@
  * default-exports `defineStyleGuide([...])`.
  */
 export interface StyleGuide {
-	// The data lives in one markdown file per rule — readable by humans
-	// rendered, by agents verbatim — so TypeScript's job here is only
+	// The data lives in one markdown file per rule, readable by humans
+	// rendered and by agents verbatim, so TypeScript's job here is only
 	// composition: the guide is a typed array, and spreading shared rule sets
 	// stays statically checked.
 	rules: RuleRef[];

@@ -18,13 +18,13 @@ export async function commands(
 	fs: Fs,
 	ps: Ps,
 ): Promise<void> {
-	// Hangs the commands off whatever it is given — the program itself when run
+	// Hangs the commands off whatever it is given: the program itself when run
 	// as `webappwiz`, or a group when another cli mounts it (`wiz cli`). Nothing
 	// here knows which, so both spellings stay the same commands rather than one
 	// of them shelling out to the other.
 
 	// Every @webappwiz package is released in lockstep, so this one's version is
-	// the version — of the packages to pin, and of the skills bundled here.
+	// the version of the packages to pin and of the skills bundled here.
 	const { version } = JSON.parse(
 		await fs.read(`${import.meta.dir}/package.json`),
 	);

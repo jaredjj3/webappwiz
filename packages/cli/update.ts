@@ -4,7 +4,7 @@ import { type Fs, walk } from "@webappwiz/sys";
 
 /**
  * A `"@webappwiz/x": "1.2.3"` dependency entry, captured either side of the
- * version so a replace can swap it. `workspace:` ranges are left alone — inside
+ * version so a replace can swap it. `workspace:` ranges are left alone: inside
  * a monorepo they already resolve in lockstep, and pinning them would break it.
  */
 const DEPENDENCY = /("@webappwiz\/[^"]+"\s*:\s*")(?!workspace:)[^"]*(")/g;
@@ -24,7 +24,7 @@ export async function update(
 		if (basename(path) !== "package.json") {
 			continue;
 		}
-		// substitution, not parse-and-stringify — rewriting the JSON would
+		// substitution, not parse-and-stringify: rewriting the JSON would
 		// reflow manifests we have no business reformatting.
 		const before = await fs.read(path);
 		const after = before.replace(DEPENDENCY, `$1${opts.version}$2`);

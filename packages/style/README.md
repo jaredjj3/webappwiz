@@ -50,7 +50,7 @@ The marker covers itself, the line under it, and everything indented under
 that line, so above a declaration it covers the whole declaration.
 `style-ignore-file <id>: <reason>` covers the file instead. It is matched
 anywhere in a line, so `#` and `<!-- -->` comments carry it too, and the
-reason is required — without one the marker excuses nothing.
+reason is required: without one the marker excuses nothing.
 
 The guide lives in `style.config.ts` unless a command is told otherwise.
 `webappwiz style check` validates it, `style ls` lists its rules, `style show

@@ -36,7 +36,7 @@ export class Path {
 		}
 		await this.fs.write(profile, `${current}\n${line}\n`);
 		this.log.info(
-			`Added ${binDir} to ${profile} — restart your shell to pick it up.`,
+			`Added ${binDir} to ${profile}. Restart your shell to pick it up.`,
 		);
 	}
 
@@ -46,7 +46,7 @@ export class Path {
 		const kept = current.split("\n").filter((l) => !l.endsWith(TAG));
 		await this.fs.write(profile, kept.join("\n"));
 		this.log.info(
-			`Removed ${binDir} from ${profile} — restart your shell to pick it up.`,
+			`Removed ${binDir} from ${profile}. Restart your shell to pick it up.`,
 		);
 	}
 

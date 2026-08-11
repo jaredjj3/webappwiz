@@ -12,7 +12,7 @@ const MARKER = /style-ignore(-file)?\s+([\w-]+)\s*:\s*\S/;
  * ```
  *
  * A marker covers itself, the next line, and everything indented under that
- * line — one statement when it sits above a statement, a whole declaration
+ * line: one statement when it sits above a statement, a whole declaration
  * when it sits above one. `style-ignore-file` covers the file instead.
  */
 export function exemptions(

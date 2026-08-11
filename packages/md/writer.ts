@@ -1,7 +1,7 @@
 import { Markdown } from "./markdown";
 
 /**
- * Composes a markdown document block by block — the write half of `Markdown`.
+ * Composes a markdown document block by block: the write half of `Markdown`.
  * Fields render as frontmatter at the top no matter when they are set, so call
  * order carries no traps; everything else appends in order.
  */
@@ -40,7 +40,7 @@ export class MarkdownWriter {
 		return [...front, this.blocks.join("\n\n"), ""].join("\n");
 	}
 
-	/** The document, parsed back — handy when the caller wants accessors. */
+	/** The document, parsed back, handy when the caller wants accessors. */
 	toMarkdown(): Markdown {
 		return Markdown.parse(this.toString());
 	}

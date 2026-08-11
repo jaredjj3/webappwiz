@@ -1,8 +1,8 @@
 import type { ProcessLike } from "./node-ps";
 
 /**
- * A `process` for tests that need `NodePs` to really spawn — real git, real
- * exit codes — but must not really exit. `exit` and `chdir` are recorded
+ * A `process` for tests that need `NodePs` to really spawn (real git, real
+ * exit codes) but must not really exit. `exit` and `chdir` are recorded
  * instead of taken, and signal handlers are dispatched by hand rather than by
  * the OS, so nothing leaks into the test runner.
  */

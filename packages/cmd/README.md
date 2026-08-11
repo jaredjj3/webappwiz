@@ -30,7 +30,7 @@ flags after them: `app greet --loud ada` reads `ada` as the value of `--loud`.
 ## Groups
 
 `group` nests a set of subcommands under one name. A group is a cli itself, so
-it takes `use` and `command` the same way and prints the same help — only its
+it takes `use` and `command` the same way and prints the same help. Only its
 name is longer.
 
 ```ts
@@ -48,7 +48,7 @@ app skills --help      # lists add and update
 A failure anywhere in the tree is reported and exits once, at the root.
 
 Since `cli()` and `group()` hand back the same thing, a function that takes a
-`Cli` can register commands on either — which is how one program mounts
+`Cli` can register commands on either, which is how one program mounts
 another's commands as a subcommand instead of shelling out to it.
 
 ```ts
@@ -87,7 +87,7 @@ app
 ```
 
 Middleware runs after `--help` and after options are parsed, so it only ever
-wraps the action — `app users --help` never opens the connection, and a bad
+wraps the action: `app users --help` never opens the connection, and a bad
 flag still fails before any setup happens.
 
 `use` must come before the things it wraps: `cli.use` before `command`, and
@@ -96,7 +96,7 @@ they are called. Either one throws if called late. A command's own middleware
 runs inside the cli's.
 
 Middleware factories that declare a `Middleware<C, Out>` return type infer at
-the call site. Inline middleware needs its output context spelled out —
+the call site. Inline middleware needs its output context spelled out, since
 TypeScript will not infer a type argument from how a callback parameter is
 used:
 

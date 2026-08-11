@@ -56,7 +56,7 @@ export type ServiceProps = {
  * Application Load Balancer, ready to be fronted by a `Domain`'s CloudFront VPC origin; without
  * one it is reachable only from inside the VPC, typically by Cloud Map DNS from another service.
  *
- * Ingress is closed by default — wire it explicitly, e.g.
+ * Ingress is closed by default: wire it explicitly, e.g.
  * `api.connections.allowFrom(web, ec2.Port.tcp(3000))`.
  */
 export class Service extends Construct implements Cacheable, ec2.IConnectable {
@@ -114,7 +114,7 @@ export class Service extends Construct implements Cacheable, ec2.IConnectable {
 		});
 
 		if (props.loadBalancer) {
-			// Internal ALB — reachable only from within the VPC and from CloudFront's VPC origin. The
+			// Internal ALB, reachable only from within the VPC and from CloudFront's VPC origin. The
 			// listener allows 0.0.0.0/0 on port 80, which (being internal) scopes to in-VPC traffic and
 			// is what lets the VPC origin connect.
 			this.loadBalancer = new elbv2.ApplicationLoadBalancer(

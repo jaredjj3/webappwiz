@@ -24,7 +24,7 @@ export type RedirectDomain = {
 export type DomainProps = {
 	/**
 	 * Internal ALB the apex distribution serves from, reached privately via a CloudFront VPC origin
-	 * (plain HTTP — the hop stays on AWS's network).
+	 * (plain HTTP, since the hop stays on AWS's network).
 	 */
 	originLoadBalancer: elbv2.IApplicationLoadBalancer;
 	/** Apex domain the app is served from, e.g. 'example.com'. Gets its own hosted zone. */
@@ -83,7 +83,7 @@ export class Domain extends Construct {
 			}),
 		}));
 
-		// Every hostname other than the apex, each mapped to the hosted zone that owns it — needed
+		// Every hostname other than the apex, each mapped to the hosted zone that owns it. Needed
 		// both for certificate DNS validation and for the redirect distribution's alternate names.
 		const redirectNames: Array<{ name: string; zone: route53.HostedZone }> = [];
 		if (includeWww) {
@@ -119,7 +119,7 @@ export class Domain extends Construct {
 		const cachePolicy = new cloudfront.CachePolicy(this, "CachePolicy", {
 			// Allowlist model: a response is edge-cached only when the origin opts in with a
 			// Cache-Control max-age (e.g. static assets). A defaultTtl of 0 means responses with no
-			// cache headers — typically per-user SSR HTML — are never cached, so one visitor's page
+			// cache headers (typically per-user SSR HTML) are never cached, so one visitor's page
 			// can never be served to another. min/maxTtl still bound the opt-ins.
 			minTtl: Duration.seconds(0),
 			defaultTtl: Duration.seconds(0),
@@ -130,10 +130,10 @@ export class Domain extends Construct {
 		});
 
 		// Per-IP rate limit, enforced at the edge before requests reach the origin. The scope must be
-		// CLOUDFRONT and the WebACL must live in us-east-1 — both hold here, since the plain ACM
+		// CLOUDFRONT and the WebACL must live in us-east-1. Both hold here, since the plain ACM
 		// certificate above already pins this whole stack to us-east-1. Blocks (not just counts) any
-		// IP exceeding the threshold. WAF counts every viewer request per IP — including cached static
-		// assets — so the limit should sit well above an active human session.
+		// IP exceeding the threshold. WAF counts every viewer request per IP, cached static assets
+		// included, so the limit should sit well above an active human session.
 		const webAcl = new wafv2.CfnWebACL(this, "WebAcl", {
 			scope: "CLOUDFRONT",
 			defaultAction: { allow: {} },
@@ -187,7 +187,7 @@ export class Domain extends Construct {
 				webAclId: webAcl.attrArn,
 				domainNames: [props.domainName],
 				certificate: this.certificate,
-				comment: `${props.domainName} — serves the application from the origin.`,
+				comment: `${props.domainName}: serves the application from the origin.`,
 			},
 		);
 

@@ -1,6 +1,6 @@
 # @webappwiz/rules
 
-The default style guide for webappwiz projects — one markdown file per rule,
+The default style guide for webappwiz projects: one markdown file per rule,
 plus a typed index so guides compose with spreads and opt out by identity:
 
 ```ts

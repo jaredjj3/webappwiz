@@ -6,8 +6,8 @@ files: "**/*.ts"
 
 A doc comment on an exported class, method, function, or type is read by
 external users through their editor. It must speak to them: what the thing is
-for and how to use it. Internal development details — implementation notes,
-TODOs, refactoring history, caveats only a maintainer cares about — do not
+for and how to use it. Internal development details (implementation notes,
+TODOs, refactoring history, caveats only a maintainer cares about) do not
 belong there. Put those inside the body as regular comments.
 
 ## Good
@@ -24,7 +24,7 @@ export function parse(raw: string): Value {
 
 ```ts
 /**
- * Parses a raw CLI string. Uses a Map internally instead of a switch —
+ * Parses a raw CLI string. Uses a Map internally instead of a switch.
  * TODO: revisit after the flag-parsing refactor lands.
  */
 export function parse(raw: string): Value {

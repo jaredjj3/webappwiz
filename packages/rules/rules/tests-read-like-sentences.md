@@ -4,7 +4,7 @@ files: "**/*.test.ts"
 
 # Tests read like sentences
 
-Tests use bun:test. A test file makes exactly one `describe` call — never
+Tests use bun:test. A test file makes exactly one `describe` call: never
 nested, never several side by side. Every test is an `it` whose string
 completes the sentence "it …" naturally: the behavior comes first, the
 condition after. If a title leads with the action under test instead of the

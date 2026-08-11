@@ -49,7 +49,7 @@ export class color {
 
 	/**
 	 * Read per call rather than once at import, so setting `NO_COLOR` takes
-	 * effect wherever it is set — a test, a `--` wrapper — without caring
+	 * effect wherever it is set (a test, a `--` wrapper) without caring
 	 * whether this module was loaded first.
 	 */
 	private static wrap(code: string, reset: string, value: unknown): string {

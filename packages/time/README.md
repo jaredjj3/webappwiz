@@ -2,7 +2,7 @@
 
 Time as a seam, in terms every runtime already provides: `Duration` (a length of
 time, so no call site has to ask "millis or seconds?"), `Clock` (a source of
-now), and `Timer` (future work). Nothing here imports `node:` or `Bun` — the
+now), and `Timer` (future work). Nothing here imports `node:` or `Bun`: the
 implementations use `performance` and `setTimeout`, which are globals in Node,
 Bun, Deno, workers and browsers alike.
 

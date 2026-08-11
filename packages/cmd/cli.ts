@@ -53,7 +53,7 @@ export class Cli<C extends object = object> implements Node {
 	}
 
 	/**
-	 * A subcommand that is itself a set of subcommands — `skills add`, `skills
+	 * A subcommand that is itself a set of subcommands: `skills add`, `skills
 	 * update`. The group is a `Cli` too, so it groups, takes middleware and
 	 * prints help exactly the way the root does; only its name is longer.
 	 */
@@ -96,7 +96,7 @@ export class Cli<C extends object = object> implements Node {
 		return `  ${color.bold(color.blue(name.padEnd(pad)))}${this._description ? `  ${this._description}` : ""}`;
 	}
 
-	// message only, no stack — a bad flag is a user error, not a crash
+	// message only, no stack: a bad flag is a user error, not a crash
 	private fail(e: unknown): void {
 		this.log.error(`error: ${e instanceof Error ? e.message : e}`);
 		this.ps.exit(1);

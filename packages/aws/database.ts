@@ -8,7 +8,7 @@ export type DatabaseProps = {
 	vpc: ec2.IVpc;
 	/** Name of the database and of the master user. */
 	databaseName: string;
-	/** Defaults to a single small burstable instance — bump when load warrants it. */
+	/** Defaults to a single small burstable instance. Bump when load warrants it. */
 	instanceType?: ec2.InstanceType;
 	multiAz?: boolean;
 	/** Defaults to 20 (GiB). */
@@ -20,7 +20,7 @@ export type DatabaseProps = {
 };
 
 /**
- * RDS Postgres for an internal service. Not publicly accessible — reachable only from
+ * RDS Postgres for an internal service. Not publicly accessible, reachable only from
  * whatever security group the caller wires up (e.g. an api task's).
  */
 export class Database extends Construct {

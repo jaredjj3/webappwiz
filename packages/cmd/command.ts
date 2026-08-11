@@ -95,7 +95,7 @@ export class Command<O, C extends object = object> {
 		const opts = this.parse(argv);
 		const chain = [...outer, ...this.middleware];
 		// Without middleware there is nothing to await, and a sync action stays
-		// sync — parse errors included.
+		// sync, parse errors included.
 		if (chain.length === 0) {
 			return this._action(opts, {} as C);
 		}

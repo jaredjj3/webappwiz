@@ -5,12 +5,12 @@ files: "**/*.ts"
 # Classes over function exports
 
 A file should not export several functions that each take their dependencies
-as parameters — injecting those dependencies in tests is awkward, and the
+as parameters: injecting those dependencies in tests is awkward, and the
 dependency list repeats at every call site. Group that behavior into a class
 that receives its dependencies once, through its constructor. Depend on
 interfaces, not concrete classes, so a test can hand in a fake.
 
-There is no prescriptive mapping from functions to classes — one class may
+There is no prescriptive mapping from functions to classes: one class may
 absorb several related functions. A file exporting a single function is
 acceptable, and pure helpers that take no dependencies may share a file
 freely; the rule targets dependency-taking functions.

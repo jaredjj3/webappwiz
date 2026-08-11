@@ -4,7 +4,7 @@ import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 
 /**
  * The parts of `process` that NodePs touches. Injecting it is what lets a test
- * keep real spawning — real subprocesses, real exit codes — without a real
+ * keep real spawning (real subprocesses, real exit codes) without a real
  * `process.exit` killing the runner or signal handlers leaking between tests.
  */
 export interface ProcessLike {

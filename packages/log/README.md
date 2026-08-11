@@ -22,7 +22,7 @@ log.info(`biome: ${color.green("success")}`);
 
 Setting `NO_COLOR` to anything non-empty makes every wrapper return its value
 untouched, [as agreed across the ecosystem](https://no-color.org). Color is
-otherwise always on — output is not sniffed for a terminal, so a pipe still
+otherwise always on: output is not sniffed for a terminal, so a pipe still
 carries escape sequences unless the variable is set.
 
 ```bash

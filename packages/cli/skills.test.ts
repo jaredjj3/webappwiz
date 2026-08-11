@@ -45,7 +45,7 @@ describe("skills", () => {
 		await skills.ls({ dir: "/p" });
 
 		expect(printed()).toContain("arbor  1.0.0  0.9.0");
-		expect(printed()).toContain("1 out of date — run `skills update`");
+		expect(printed()).toContain("1 out of date: run `skills update`");
 	});
 
 	it("says nothing about updating when what is installed is current", async () => {

@@ -5,7 +5,7 @@ RDS Postgres), a `Service` (a container on Fargate, optionally behind an interna
 `Domain` (CloudFront + Route53 + ACM + a rate-limiting WAF in front of an internal ALB),
 and the building blocks (`DockerImage`, `SERVICE_INSTANCES`) the services are built from.
 
-This package ships constructs, not a stack — each app composes them into its own.
+This package ships constructs, not a stack. Each app composes them into its own.
 
 ```ts
 import * as cdk from "aws-cdk-lib";

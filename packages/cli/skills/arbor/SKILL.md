@@ -1,6 +1,6 @@
 ---
 name: arbor
-description: Use the @webappwiz/arbor CLI to land your work on trunk from an isolated git worktree without pull requests. Read this before making any code change in an arbor repository — it decides where the work happens — and whenever you need to create, claim, graft, prune, list, show, locate, wait for, or escalate a workstream.
+description: Use the @webappwiz/arbor CLI to land your work on trunk from an isolated git worktree without pull requests. Read this before making any code change in an arbor repository, since it decides where the work happens, and whenever you need to create, claim, graft, prune, list, show, locate, wait for, or escalate a workstream.
 version: 0.0.0
 ---
 
@@ -10,7 +10,7 @@ version: 0.0.0
 trunk without pull requests. Run it with `bunx @webappwiz/arbor <command>` (or
 `arbor` if on PATH).
 
-**Rule:** never use raw git for state transitions arbor covers — every landing
+**Rule:** never use raw git for state transitions arbor covers. Every landing
 goes through `arbor graft`. The only exception is finishing an in-progress
 rebase (`git add` / `git rebase --continue`), then grafting again.
 
@@ -23,13 +23,13 @@ Work happens in a worktree, and other agents may already be in one. Before
 creating anything:
 
 1. List the files and directories you expect to touch.
-2. `arbor ls`. For each task in flight, `arbor show <task>` — it prints that
+2. `arbor ls`. For each task in flight, `arbor show <task>`: it prints that
    task's state and its `TODO.md` without taking the lease, so looking cannot
    disturb the agent driving it. For the files it has actually changed:
    `git -C "$(arbor path <task>)" diff --name-only main...task/<task>`.
 3. Compare with your list. If nothing overlaps, carry on.
 
-If something does overlap, wait for it — the overlap disappears once the other
+If something does overlap, wait for it: the overlap disappears once the other
 task grafts, and starting now buys a rebase conflict instead. Do not ask
 permission to wait; say one line about what you are doing, then block on it:
 
@@ -40,23 +40,23 @@ permission to wait; say one line about what you are doing, then block on it:
 arbor wait alpha --timeout 20   # minutes; default 30
 ```
 
-Pick the timeout for how long the human is likely to be happy hearing nothing —
+Pick the timeout for how long the human is likely to be happy hearing nothing:
 shorter when they are watching, longer for work that will obviously take a
 while. Then act on how it returns:
 
-- `gone` — the overlap has cleared. Redo the checks above (trunk has moved) and
+- `gone`: the overlap has cleared. Redo the checks above (trunk has moved) and
   carry on.
-- `escalated` — that task is stuck on a person, so yours is too. Tell the human
+- `escalated`: that task is stuck on a person, so yours is too. Tell the human
   what it is blocked on and what you were going to do, and wait for an answer.
 - anything else it reports resting (`orphaned`, `stray`, `unrecorded`,
-  `unknown`) — that tree is broken and nobody is driving it. Say so and ask.
-- exit 14 `timed_out` — it is still going. Go back to the human with the choice,
+  `unknown`): that tree is broken and nobody is driving it. Say so and ask.
+- exit 14 `timed_out`: it is still going. Go back to the human with the choice,
   and say what you have not done:
 
   > Still waiting on `alpha` after 20 minutes. I have not started anything.
   > Keep waiting, work alongside it, or pick up something else?
 
-Only ask before waiting if the wait itself is the problem — the task has been
+Only ask before waiting if the wait itself is the problem: the task has been
 sitting for hours, or you were told this was urgent.
 
 ## Workflow
@@ -70,13 +70,13 @@ sitting for hours, or you were told this was urgent.
 
 ### Escalation
 
-If the work needs verification that tests alone can't provide — visual or UX
+If the work needs verification that tests alone can't provide (visual or UX
 changes, external services, destructive migrations, anything you can't confirm
-mechanically — do not graft. Instead:
+mechanically) do not graft. Instead:
 
 1. `arbor escalate <reason>`.
 2. Under `## Blocked` in `TODO.md`, state exactly what needs verifying and the
-   question the human must answer — specific enough that a yes/no or a short
+   question the human must answer, specific enough that a yes/no or a short
    answer unblocks the task.
 3. Print the output of `arbor path <task>` so the human can find the worktree
    and view the work.
@@ -85,7 +85,7 @@ If you claim a tree whose `TODO.md` has a `## Blocked` section that has not been
 answered, do not resume work or graft: ask the user the open question and
 wait for their answer first.
 
-A successful graft discards the worktree, branch and record — the task is done
+A successful graft discards the worktree, branch and record: the task is done
 and disappears from `arbor ls`. Your working directory is deleted with it, so
 `cd` to the main tree (the path graft prints) before running anything else.
 
@@ -93,12 +93,12 @@ and disappears from `arbor ls`. Your working directory is deleted with it, so
 
 Your session can die at any moment. Keep a `TODO.md` at the worktree root so
 another agent with zero context can `arbor claim` the task and continue. It is
-gitignored — never commit it, and never mention it in a commit message.
+gitignored: never commit it, and never mention it in a commit message.
 
 Write it for a stranger: the task, what you have done, what is left, and
 anything you learned that is not obvious from the diff (files that matter,
 decisions made, dead ends, commands to verify). Update it as you finish steps,
-not just at the end — an unupdated TODO.md is worse than none.
+not just at the end. An unupdated TODO.md is worse than none.
 
 The shape is fixed, so anyone reading it knows where to look:
 
@@ -144,25 +144,25 @@ Write it as a normal human-authored commit describing the change.
 
 Failures print JSON on stdout and an explanation on stderr.
 
-- 0 — success.
-- 1 `usage` — fix the invocation.
-- 2 `conflict` — rebase left in progress. Resolve markers, `git add`,
+- 0: success.
+- 1 `usage`: fix the invocation.
+- 2 `conflict`: rebase left in progress. Resolve markers, `git add`,
   `git rebase --continue`, then graft again.
-- 3 `tests_failed` — branch rolled back, trunk untouched. Fix the code and
+- 3 `tests_failed`: branch rolled back, trunk untouched. Fix the code and
   graft again.
-- 4 `lease_lost` — another agent took the tree mid-graft. **Stop. Do not
+- 4 `lease_lost`: another agent took the tree mid-graft. **Stop. Do not
   retry.**
-- 5 `budget_exhausted` — out of graft attempts. Escalate, or prune and redo
+- 5 `budget_exhausted`: out of graft attempts. Escalate, or prune and redo
   against current trunk.
-- 6 `lease_live` — another agent is driving this tree.
-- 7 `dirty` — uncommitted changes. Commit, then graft.
-- 8 `not_found` — no such task, or not run from a task worktree.
-- 9 `hook_failed` — `postCreate` failed; worktree exists. Fix and re-run the
+- 6 `lease_live`: another agent is driving this tree.
+- 7 `dirty`: uncommitted changes. Commit, then graft.
+- 8 `not_found`: no such task, or not run from a task worktree.
+- 9 `hook_failed`: `postCreate` failed; worktree exists. Fix and re-run the
   hook by hand.
-- 10 `exists` — task already exists: claim it, or prune first.
-- 11 `orphaned` — record with no worktree. Prune it.
-- 12 `merge_failed` — trunk could not fast-forward (usually a dirty main
+- 10 `exists`: task already exists. Claim it, or prune first.
+- 11 `orphaned`: record with no worktree. Prune it.
+- 12 `merge_failed`: trunk could not fast-forward (usually a dirty main
   worktree).
-- 13 `already_pruned` — nothing left to remove.
-- 14 `timed_out` — `arbor wait` gave up; the task is still going. Ask the human
+- 13 `already_pruned`: nothing left to remove.
+- 14 `timed_out`: `arbor wait` gave up; the task is still going. Ask the human
   whether to keep waiting.

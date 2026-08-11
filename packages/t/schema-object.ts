@@ -22,7 +22,7 @@ export class SchemaObject<P extends Record<string, Schema<unknown>>>
 				throw e instanceof SchemaError ? e.at(key) : e;
 			}
 		}
-		// extra keys are dropped, not rejected — add a strict mode if someone
+		// extra keys are dropped, not rejected. Add a strict mode if someone
 		// needs one
 		return out as { [K in keyof P]: Infer<P[K]> };
 	}

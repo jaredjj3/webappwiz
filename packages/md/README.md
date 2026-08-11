@@ -1,7 +1,7 @@
 # @webappwiz/md
 
 A markdown document as a data source: frontmatter fields, sections by heading,
-fenced code blocks. Accessors are strict — a missing field or section throws.
+fenced code blocks. Accessors are strict: a missing field or section throws.
 
 ```ts
 import { Markdown } from "@webappwiz/md";
@@ -14,7 +14,7 @@ doc.section("Good").lead; // prose before the first subsection
 doc.section("Good").body; // everything, subsections included
 ```
 
-`MarkdownWriter` is the write half — frontmatter always lands on top, and
+`MarkdownWriter` is the write half: frontmatter always lands on top, and
 fences stretch past any backticks in the code they hold:
 
 ```ts

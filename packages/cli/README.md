@@ -11,8 +11,8 @@ bunx @webappwiz/cli skills update      # refresh the ones already installed
 
 ## update
 
-Walks a directory for every `package.json` — workspaces, nested apps, anything
-— and rewrites each `@webappwiz/*` dependency to one version. They are released
+Walks a directory for every `package.json` (workspaces, nested apps, anything)
+and rewrites each `@webappwiz/*` dependency to one version. They are released
 together, so a project running two of them at different versions is running a
 combination nobody tested.
 
@@ -44,7 +44,7 @@ other  1.4.0  -
 ```
 
 `add` installs one skill by name. `update` refreshes the ones a project already
-has and never installs a new one — which skills a project uses is its own
+has and never installs a new one: which skills a project uses is its own
 business, and a skill nobody chose should not arrive by way of an update. `ls`
 answers the one thing neither can: which version a project is actually holding.
 

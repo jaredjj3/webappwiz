@@ -20,7 +20,7 @@ export interface FileLockOptions {
 
 /**
  * A mutex between processes, held by a directory on disk. `acquire` blocks
- * until the lock is free — there is deliberately no "busy" return, so callers
+ * until the lock is free: there is deliberately no "busy" return, so callers
  * cannot wander off and do work they are not holding the lock for.
  */
 export class FileLock implements Lock {

@@ -31,7 +31,7 @@ describe("middleware", () => {
 
 	// Inline middleware states its output context: TypeScript will not infer a
 	// type argument from how a callback parameter gets used. Factories that
-	// declare a `Middleware<C, Out>` return type — the usual shape — infer fine.
+	// declare a `Middleware<C, Out>` return type (the usual shape) infer fine.
 	it("hands the action the context a middleware passed to next", async () => {
 		const seen: unknown[] = [];
 		const app = cli("app", new MemoryLogger())

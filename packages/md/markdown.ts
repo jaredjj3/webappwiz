@@ -23,7 +23,7 @@ export class Section {
 	) {}
 
 	/**
-	 * Fenced code blocks — in `body` (subsections included, the default), or
+	 * Fenced code blocks, in `body` (subsections included, the default) or
 	 * just this section's own `lead`.
 	 */
 	codeBlocks(scope: "body" | "lead" = "body"): CodeBlock[] {
@@ -52,7 +52,7 @@ export class Section {
 /**
  * A markdown document you can pull data out of: frontmatter fields, sections
  * by heading, fenced code. Markdown is the glue language between humans and
- * agents, so the accessors are strict — asking for a field or section that is
+ * agents, so the accessors are strict: asking for a field or section that is
  * not there throws rather than returning undefined, which is what lets a
  * caller treat a document as a data source instead of hand-rolling regexes.
  */
@@ -122,7 +122,7 @@ function frontmatter(text: string): {
 		return { fields: {}, body: text, offset: 0 };
 	}
 	const fields: Record<string, string> = {};
-	// flat `key: value` scalars only, not YAML — nested data belongs in the
+	// flat `key: value` scalars only, not YAML. Nested data belongs in the
 	// body. Swap in a YAML parser if a real document ever needs more.
 	for (const line of (match[1] ?? "").split("\n")) {
 		const kv = line.match(/^(\S+):\s*(.*)$/);

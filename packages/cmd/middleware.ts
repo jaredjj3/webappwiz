@@ -7,7 +7,7 @@ export type Next<C> = (ctx: C) => Promise<void>;
  * contributes to the context widens its type as well as its value.
  *
  * Middleware runs after `--help` and after options are parsed, so it only ever
- * wraps the action itself — asking for help never pays for the setup.
+ * wraps the action itself: asking for help never pays for the setup.
  */
 export type Middleware<In, Out = In> = (
 	ctx: In,

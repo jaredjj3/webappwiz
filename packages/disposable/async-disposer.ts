@@ -30,7 +30,7 @@ export class AsyncDisposer implements AsyncDisposableStack {
 
 	/** Disposes everything registered, most recent first. Safe to call twice. */
 	disposeAsync = async (): Promise<void> => {
-		// An arrow so it survives being passed as a callback — this is usually
+		// An arrow so it survives being passed as a callback: this is usually
 		// handed straight to a shutdown hook.
 		if (this._disposed) {
 			return;

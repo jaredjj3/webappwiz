@@ -36,7 +36,7 @@ export class Skills {
 			const installed = await this.fs
 				.read(`${opts.dir}/.agents/skills/${name}/SKILL.md`)
 				.then(versionOf)
-				.catch((): null => null); // not installed, or not readable — same answer here
+				.catch((): null => null); // not installed, or not readable: same answer here
 			if (installed !== null && installed !== ships) {
 				stale++;
 			}
@@ -45,7 +45,7 @@ export class Skills {
 
 		const lines = table(rows);
 		if (stale > 0) {
-			lines.push("", `${stale} out of date — run \`skills update\``);
+			lines.push("", `${stale} out of date: run \`skills update\``);
 		}
 		this.log.info(lines.join("\n"));
 	}
@@ -63,7 +63,7 @@ export class Skills {
 
 	/**
 	 * Refreshes the skills a project already has. Which skills those are is the
-	 * project's business, so this never adds one — a skill someone chose not to
+	 * project's business, so this never adds one: a skill someone chose not to
 	 * install should not arrive by way of an update.
 	 */
 	async update(opts: { dir: string }): Promise<void> {
@@ -75,7 +75,7 @@ export class Skills {
 		);
 		if (ours.length === 0) {
 			this.log.info(
-				`no webappwiz skills in ${opts.dir} — add one with \`skills add\``,
+				`no webappwiz skills in ${opts.dir}: add one with \`skills add\``,
 			);
 			return;
 		}

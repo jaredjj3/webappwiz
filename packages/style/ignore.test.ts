@@ -1,3 +1,4 @@
+// style-ignore-file no-em-dashes: the fixtures are source text about that rule
 import { describe, expect, it } from "bun:test";
 import { exemptions } from "./ignore";
 

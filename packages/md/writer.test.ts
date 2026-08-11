@@ -6,7 +6,7 @@ describe("MarkdownWriter", () => {
 		const text = new MarkdownWriter()
 			.heading(1, "T")
 			.text("prose")
-			.field("a", "1") // late — still lands in the frontmatter
+			.field("a", "1") // late, but still lands in the frontmatter
 			.toString();
 
 		expect(text).toBe("---\na: 1\n---\n\n# T\n\nprose\n");
