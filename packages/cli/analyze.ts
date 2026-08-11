@@ -1,31 +1,106 @@
+import { join } from "node:path";
 import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
-import type { Rule } from "@webappwiz/style";
-import type { Fs } from "@webappwiz/sys";
+import type { Level, Rule } from "@webappwiz/style";
+import type { Fs, Ps } from "@webappwiz/sys";
+import type { Clock, Duration } from "@webappwiz/time";
 import { walk } from "./walk";
 
 export interface Task {
-	rule: string;
+	rule: Rule;
 	files: string[];
 	prompt: string;
 }
+
+/** One rule broken in one place, as the report prints it. */
+export interface Violation {
+	/** The rule's referenceable id, as `style show` lists it. */
+	id: string;
+	level: Level;
+	/** Path as the caller would type it: the analyzed dir plus the file. */
+	file: string;
+	line: number;
+	/** How this code breaks the rule. Never what to do about it. */
+	message: string;
+	/** That line of the file, read from disk rather than from the agent. */
+	code: string;
+}
+
+/** One task's worth of findings, handed over the moment its agent returns. */
+export interface Finished {
+	rule: string;
+	id: string;
+	violations: Violation[];
+	/** How long this task's agent took. */
+	took: Duration;
+	done: number;
+	total: number;
+}
+
+/** The agent command a run uses unless `--agent` says otherwise. */
+export const DEFAULT_AGENT = "claude -p --model sonnet";
 
 export const count = (n: number, word: string): string =>
 	`${n} ${word}${n === 1 ? "" : "s"}`;
 
 /**
- * Compiles a guide into agent tasks — one per rule × chunk of matching files —
- * and renders them as instructions to whatever agent asked. Nothing here runs
- * an agent; the caller does.
+ * Checks a directory against a style guide by handing each rule to an agent of
+ * the caller's choosing, one task per rule and chunk of matching files, and
+ * collecting what comes back as violations.
  */
-export class Planner {
+export class Analyzer {
 	// One rule per task is the point: an agent applying a single rule to a
 	// bounded slice of files stays reliable where a whole guide over a whole repo
 	// does not.
+
+	// A file matched by several rules is read once, not once per finding.
+	private lines = new Map<string, Promise<string[]>>();
+
 	constructor(
 		private log: Logger,
 		private fs: Fs,
+		private ps: Ps,
+		private clock: Clock,
 	) {}
+
+	/**
+	 * Checks `dir` against `rules`, calling `onFinished` each time an agent
+	 * returns so a caller can print findings as they land. Resolves with every
+	 * violation once the last agent is done.
+	 */
+	async analyze(
+		rules: Rule[],
+		dir: string,
+		chunk: number,
+		agent: string,
+		onFinished: (finished: Finished) => void = () => {},
+	): Promise<Violation[]> {
+		const tasks = await this.plan(rules, dir, chunk);
+		const files = new Set(tasks.flatMap((t) => t.files)).size;
+		this.log.info(
+			`checking ${count(files, "file")} against ${count(rules.length, "rule")} in ${count(tasks.length, "task")}, using: ${agent}`,
+		);
+		let done = 0;
+		// Every task at once: a guide's tasks number in the tens, and an agent
+		// call is minutes of latency and no local work. Add a cap if that changes.
+		const found = await Promise.all(
+			tasks.map(async (task) => {
+				const started = this.clock.now();
+				const violations = await this.run(task, dir, agent);
+				done += 1;
+				onFinished({
+					rule: task.rule.name,
+					id: task.rule.id,
+					violations,
+					took: this.clock.now().subtract(started),
+					done,
+					total: tasks.length,
+				});
+				return violations;
+			}),
+		);
+		return found.flat();
+	}
 
 	async plan(rules: Rule[], dir: string, chunk: number): Promise<Task[]> {
 		const all: string[] = [];
@@ -38,48 +113,71 @@ export class Planner {
 			const glob = new Bun.Glob(rule.files);
 			const files = all.filter((f) => glob.match(f));
 			if (files.length === 0) {
-				// stderr, so a plan on stdout stays parseable
+				// stderr, so the report on stdout stays parseable
 				this.log.error(`rule "${rule.name}" matches no files under ${dir}`);
 			}
-			// chunks are counted in files, not tokens — switch to a byte budget
-			// when repos with a few huge files start overflowing a task.
+			// chunks are counted in files, not tokens: switch to a byte budget when
+			// repos with a few huge files start overflowing a task.
 			for (let i = 0; i < files.length; i += chunk) {
 				const slice = files.slice(i, i + chunk);
-				tasks.push({
-					rule: rule.name,
-					files: slice,
-					prompt: this.prompt(rule, dir, slice),
-				});
+				tasks.push({ rule, files: slice, prompt: this.prompt(rule, slice) });
 			}
 		}
 		return tasks;
 	}
 
-	render(tasks: Task[], rules: number): string {
-		const files = new Set(tasks.flatMap((t) => t.files)).size;
-		const writer = new MarkdownWriter()
-			.heading(
-				1,
-				`Style analysis plan: ${count(rules, "rule")}, ${count(files, "file")}, ${count(tasks.length, "task")}`,
-			)
-			.text(
-				[
-					"Execute every task below and merge their findings.",
-					"",
-					"- By default, spawn one subagent per task, all in parallel, giving each subagent its task's prompt verbatim.",
-					"- If you cannot spawn subagents, perform each task yourself, one at a time, following its prompt exactly.",
-					"- Merge the findings, dedupe by (rule, file, line), and report the result. An empty result means the code conforms.",
-				].join("\n"),
-			);
-		tasks.forEach((task, i) => {
-			writer
-				.heading(2, `Task ${i + 1} of ${tasks.length}: ${task.rule}`)
-				.code("", task.prompt);
+	private async run(
+		task: Task,
+		dir: string,
+		agent: string,
+	): Promise<Violation[]> {
+		const argv = [...agent.split(/\s+/).filter(Boolean), task.prompt];
+		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(argv, {
+			cwd: dir,
 		});
-		return writer.toString();
+		if (exitCode !== 0) {
+			this.log.error(
+				`agent exited ${exitCode} on rule "${task.rule.name}": ${stderr.trim() || "no stderr"}`,
+			);
+			return [];
+		}
+		const reported = parse(stdout);
+		if (reported === null) {
+			this.log.error(
+				`agent returned no JSON array on rule "${task.rule.name}": ${stdout.trim().slice(0, 200)}`,
+			);
+			return [];
+		}
+		const violations: Violation[] = [];
+		for (const r of reported) {
+			const file = join(dir, r.file);
+			violations.push({
+				id: task.rule.id,
+				level: task.rule.level,
+				file,
+				line: r.line,
+				message: r.message,
+				// From disk, not from the agent: the quoted line is the reader's
+				// evidence, and evidence a model wrote is no evidence at all.
+				code: (await this.source(file))[r.line - 1]?.trim() ?? "",
+			});
+		}
+		return violations.sort(cmp);
 	}
 
-	private prompt(rule: Rule, dir: string, files: string[]): string {
+	private source(file: string): Promise<string[]> {
+		let lines = this.lines.get(file);
+		if (!lines) {
+			lines = this.fs
+				.read(file)
+				.then((text) => text.split("\n"))
+				.catch(() => []);
+			this.lines.set(file, lines);
+		}
+		return lines;
+	}
+
+	private prompt(rule: Rule, files: string[]): string {
 		return new MarkdownWriter()
 			.text(
 				"You are checking code against exactly one style rule. " +
@@ -87,17 +185,62 @@ export class Planner {
 			)
 			.text("The rule, verbatim:")
 			.code("markdown", rule.text)
-			.text(`Check each of these files (paths relative to ${dir}):`)
+			.text("Check each of these files, relative to your working directory:")
 			.text(files.map((f) => `- ${f}`).join("\n"))
 			.text(
 				[
 					"Read the files yourself. Report every violation of the rule as an element of one JSON array:",
 					"",
-					`[{"rule": ${JSON.stringify(rule.name)}, "file": "<path>", "line": <number>, "excerpt": "<the offending code>", "why": "<one sentence>"}]`,
+					'[{"file": "<path as listed above>", "line": <1-based line number>, "message": "<how this code breaks the rule>"}]',
 					"",
-					"Output only the JSON array. No violations means [].",
+					'"message" states what the code does that the rule forbids, naming the ' +
+						"construct it applies to. One clause, lowercase, no trailing period.",
+					"",
+					"Never say what to do about it. Deciding the fix belongs to the reader, " +
+						"who knows things you do not. " +
+						'Write "greet and greetAll each take a clock parameter", not ' +
+						'"give them a constructor". Write "the comment restates the increment ' +
+						'below it", not "delete the comment".',
+					"",
+					"Output only the JSON array and nothing else. No violations means [].",
 				].join("\n"),
 			)
 			.toString();
 	}
 }
+
+/**
+ * The agent's array, or null when there isn't one. Agents wrap their answer in
+ * prose or a fence often enough that finding the outermost brackets beats
+ * insisting the whole of stdout parse.
+ */
+function parse(
+	stdout: string,
+): Array<{ file: string; line: number; message: string }> | null {
+	const start = stdout.indexOf("[");
+	const end = stdout.lastIndexOf("]");
+	if (start === -1 || end < start) {
+		return null;
+	}
+	let value: unknown;
+	try {
+		value = JSON.parse(stdout.slice(start, end + 1));
+	} catch {
+		return null;
+	}
+	if (!Array.isArray(value)) {
+		return null;
+	}
+	// A malformed element is dropped rather than printed as "undefined:NaN".
+	return value.filter(
+		(v): v is { file: string; line: number; message: string } =>
+			typeof v === "object" &&
+			v !== null &&
+			typeof v.file === "string" &&
+			typeof v.line === "number" &&
+			typeof v.message === "string",
+	);
+}
+
+const cmp = (a: Violation, b: Violation): number =>
+	a.file.localeCompare(b.file) || a.line - b.line;

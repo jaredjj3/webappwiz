@@ -14,8 +14,10 @@ const good = new MarkdownWriter()
 
 const stub = (name: string, path: string): Rule => ({
 	name,
+	id: path.replace(".md", ""),
 	path,
 	files: "**",
+	level: "error",
 	description: "",
 	good: [],
 	bad: [],
@@ -29,8 +31,10 @@ describe("rule", () => {
 		expect(diagnostics).toEqual([]);
 		expect(rule).toEqual({
 			name: "Single class per file",
+			id: "r",
 			path: "r.md",
 			files: "**/*.ts",
+			level: "error",
 			description: "Each file exports at most one class.",
 			good: ["class Foo {}"],
 			bad: ["class Foo {}\nclass Bar {}"],
@@ -95,6 +99,29 @@ describe("rule", () => {
 			'19: unrecognized section "## Notes"',
 			'7: fenced block in "Good" has no language tag',
 		]);
+	});
+
+	it("takes the id from the file name, so a report can cite it", () => {
+		expect(compile(good, "rules/single-class-per-file.md").rule?.id).toBe(
+			"single-class-per-file",
+		);
+	});
+
+	it("takes the level from frontmatter when the rule sets one", () => {
+		const text = good.replace("files:", "level: warning\nfiles:");
+
+		expect(compile(text, "r.md").rule?.level).toBe("warning");
+	});
+
+	it("errors on a level that is neither error nor warning", () => {
+		const text = good.replace("files:", "level: nit\nfiles:");
+
+		const { rule, diagnostics } = compile(text, "r.md");
+
+		expect(rule).toBeNull();
+		expect(diagnostics[0]?.message).toBe(
+			'level must be "error" or "warning", not "nit"',
+		);
 	});
 
 	it("finds duplicate rule names across a guide, pointing at both files", () => {

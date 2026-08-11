@@ -1,8 +1,8 @@
 /**
  * A length of time, held as milliseconds. Durations are values: every operation
  * returns a new one, so passing one around cannot change it under the caller.
- * Taking a `Duration` rather than a bare number also stops the unit question —
- * seconds? millis? — from being asked at every call site.
+ * Taking a `Duration` rather than a bare number also stops the unit question
+ * (seconds? millis?) from being asked at every call site.
  */
 export class Duration {
 	private constructor(private readonly _ms: number) {}
@@ -103,5 +103,21 @@ export class Duration {
 
 	toString(): string {
 		return `${this._ms}ms`;
+	}
+
+	/**
+	 * The duration as a reader wants it in output: `840ms`, `4.2s`, `2m 05s`.
+	 * Precision drops as the number grows, because nobody reading minutes cares
+	 * about the milliseconds.
+	 */
+	human(): string {
+		if (this._ms < 1000) {
+			return `${Math.round(this._ms)}ms`;
+		}
+		if (this.secs < 60) {
+			return `${this.secs.toFixed(1)}s`;
+		}
+		const mins = Math.floor(this.mins);
+		return `${mins}m ${String(Math.round(this.secs - mins * 60)).padStart(2, "0")}s`;
 	}
 }

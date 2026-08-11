@@ -1,8 +1,9 @@
 # @webappwiz/style
 
-Style rules agents can check. One markdown file is one rule — title is the
-name, the prose under it the description, a `files` frontmatter glob picks the
-files, and `## Good` / `## Bad` hold fenced examples:
+Style rules agents can check. One markdown file is one rule: the file name is
+the id a report cites, the title is the human name, the prose under it the
+description, a `files` frontmatter glob picks the files, and `## Good` /
+`## Bad` hold fenced examples:
 
 ```markdown
 ---
@@ -28,6 +29,7 @@ class Bar {}
 A guide is a TypeScript module so composition stays typed:
 
 ```ts
+// style.config.ts
 import { defineStyleGuide, rule } from "@webappwiz/style";
 
 export default defineStyleGuide([
@@ -35,5 +37,10 @@ export default defineStyleGuide([
 ]);
 ```
 
-`webappwiz style check guide.ts` validates the guide; `webappwiz analyze
-guide.ts [dir]` compiles it into per-rule agent tasks.
+A rule reports as an error unless its frontmatter says `level: warning`.
+
+The guide lives in `style.config.ts` unless a command is told otherwise.
+`webappwiz style check` validates it, `style ls` lists its rules, `style show
+<id>` prints one in full, and `style analyze [dir]` checks the code, handing
+one rule at a time to the agent command in `--agent` and printing what comes
+back as lint output.

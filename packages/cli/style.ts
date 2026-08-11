@@ -6,15 +6,19 @@ import {
 	type Diagnostic,
 	type Rule,
 } from "@webappwiz/style";
-import type { Fs } from "@webappwiz/sys";
-import { count, Planner } from "./analyze";
+import type { Fs, Ps } from "@webappwiz/sys";
+import type { Clock } from "@webappwiz/time";
+import { Analyzer, count } from "./analyze";
 import { type GuideLoader, ModuleGuideLoader } from "./guide-loader";
+import { finished, summary } from "./report";
 import { table } from "./table";
 
 export class StyleCommands {
 	constructor(
 		private log: Logger,
 		private fs: Fs,
+		private ps: Ps,
+		private clock: Clock,
 		private loader: GuideLoader = new ModuleGuideLoader(),
 	) {}
 
@@ -24,15 +28,18 @@ export class StyleCommands {
 		this.report(rules.length, diagnostics, opts.strict);
 	}
 
-	async show(opts: { rules: string }): Promise<void> {
+	/** Lists a guide's rules, one row each, ids first for citing. */
+	async ls(opts: { rules: string }): Promise<void> {
 		const { rules, diagnostics } = await this.compile(opts.rules);
 		if (diagnostics.some((d) => d.severity === "error")) {
 			this.report(rules.length, diagnostics, false);
 		}
-		const rows = [["RULE", "FILES", "GOOD", "BAD", "PATH"]];
+		const rows = [["ID", "RULE", "LEVEL", "FILES", "GOOD", "BAD", "PATH"]];
 		for (const r of rules) {
 			rows.push([
+				r.id,
 				r.name,
+				r.level,
 				r.files,
 				String(r.good.length),
 				String(r.bad.length),
@@ -42,11 +49,39 @@ export class StyleCommands {
 		this.log.info(table(rows).join("\n"));
 	}
 
-	/** Prints the analysis plan for the calling agent to execute. */
+	/**
+	 * Prints one rule in full: what it covers, and the document an analysis
+	 * agent is given, verbatim. Take the id from `style ls` or from a finding.
+	 */
+	async show(opts: { id: string; rules: string }): Promise<void> {
+		const { rules, diagnostics } = await this.compile(opts.rules);
+		if (diagnostics.some((d) => d.severity === "error")) {
+			this.report(rules.length, diagnostics, false);
+		}
+		const rule = rules.find((r) => r.id === opts.id);
+		if (!rule) {
+			throw new Error(
+				`no rule "${opts.id}" in ${opts.rules}. Known ids: ${rules.map((r) => r.id).join(", ")}`,
+			);
+		}
+		this.log.info(
+			table([
+				["ID", rule.id],
+				["RULE", rule.name],
+				["LEVEL", rule.level],
+				["FILES", rule.files],
+				["PATH", rule.path],
+			]).join("\n"),
+		);
+		this.log.info("");
+		this.log.info(rule.text.trim());
+	}
+
+	/** Runs the guide over a directory with an agent. Exits 1 on any error. */
 	async analyze(opts: {
 		rules: string;
 		dir: string;
-		json: boolean;
+		agent: string;
 		chunk: number;
 	}): Promise<void> {
 		const { rules, diagnostics } = await this.compile(opts.rules);
@@ -54,17 +89,25 @@ export class StyleCommands {
 			this.report(rules.length, diagnostics, false);
 		}
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
-		const planner = new Planner(this.log, this.fs);
-		const tasks = await planner.plan(rules, dir, opts.chunk);
-		this.log.info(
-			opts.json
-				? JSON.stringify(
-						{ dir, rules: rules.map((r) => r.name), tasks },
-						null,
-						2,
-					)
-				: planner.render(tasks, rules.length),
+		const started = this.clock.now();
+		const analyzer = new Analyzer(this.log, this.fs, this.ps, this.clock);
+		const violations = await analyzer.analyze(
+			rules,
+			dir,
+			opts.chunk,
+			opts.agent,
+			(task) => {
+				for (const line of finished(task)) {
+					this.log.info(line);
+				}
+			},
 		);
+		this.log.info("");
+		this.log.info(summary(violations, this.clock.now().subtract(started)));
+		const errors = violations.filter((v) => v.level === "error").length;
+		if (errors > 0) {
+			throw new Error(count(errors, "style error"));
+		}
 	}
 
 	private async compile(

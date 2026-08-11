@@ -16,6 +16,7 @@
 		"@webappwiz/md": "workspace:*",
 		"@webappwiz/style": "workspace:*",
 		"@webappwiz/sys": "workspace:*",
-		"@webappwiz/t": "workspace:*"
+		"@webappwiz/t": "workspace:*",
+		"@webappwiz/time": "workspace:*"
 	}
 }

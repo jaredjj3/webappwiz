@@ -18,7 +18,7 @@ export interface RuleRef {
 export const rule = (path: string): RuleRef => ({ path });
 
 /** Where a project keeps its guide unless it says otherwise. */
-export const DEFAULT_GUIDE = "style.ts";
+export const DEFAULT_GUIDE = "style.config.ts";
 
 export const defineStyleGuide = (rules: RuleRef[]): StyleGuide => ({ rules });
 

@@ -1,27 +1,34 @@
 import { Markdown } from "@webappwiz/md";
 
 /**
- * A rule compiled out of its markdown file. `text` is the whole document —
- * what an analysis agent receives verbatim, so the structured fields never
- * drift from what the agent reads.
+ * A rule compiled out of its markdown file. `text` is the whole document, what
+ * an analysis agent receives verbatim, so the structured fields never drift
+ * from what the agent reads.
  */
 export interface Rule {
-	/** The document's title. Also the key findings report against. */
+	/** The document's title, for a human to read. */
 	name: string;
+	/** The rule's file name without its extension: what a report cites. */
+	id: string;
 	path: string;
 	/** Glob (frontmatter `files`) choosing which files the rule applies to. */
 	files: string;
+	/** How loudly a violation reports (frontmatter `level`, default error). */
+	level: Level;
 	description: string;
 	good: string[];
 	bad: string[];
 	text: string;
 }
 
+/** What a violation of a rule counts as, and what a diagnostic counts as. */
+export type Level = "error" | "warning";
+
 export interface Diagnostic {
 	path: string;
 	/** 1-based source line, when the problem has one. */
 	line?: number;
-	severity: "error" | "warning";
+	severity: Level;
 	message: string;
 }
 
@@ -44,6 +51,10 @@ export function compile(
 	const files = md.fields.files;
 	if (files === undefined || files === "") {
 		error('missing "files" glob in frontmatter');
+	}
+	const level = md.fields.level ?? "error";
+	if (level !== "error" && level !== "warning") {
+		error(`level must be "error" or "warning", not "${level}"`);
 	}
 	const title = md.title;
 	if (title === null) {
@@ -83,9 +94,11 @@ export function compile(
 		rule: {
 			// biome-ignore lint/style/noNonNullAssertion: errors above guarantee both
 			name: title!,
+			id: path.split("/").pop()?.replace(/\.md$/, "") ?? path,
 			path,
 			// biome-ignore lint/style/noNonNullAssertion: errors above guarantee both
 			files: files!,
+			level: level as Level,
 			description: md.section(title ?? "").lead,
 			good: md
 				.section("Good")

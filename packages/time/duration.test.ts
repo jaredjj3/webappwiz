@@ -28,6 +28,14 @@ describe("Duration", () => {
 		expect(Duration.secs(9).clamp(...bounds).secs).toBe(3);
 	});
 
+	it("reads out in the largest unit that still says something", () => {
+		expect(Duration.ms(840).human()).toBe("840ms");
+		expect(Duration.ms(999.6).human()).toBe("1000ms");
+		expect(Duration.secs(4.23).human()).toBe("4.2s");
+		expect(Duration.secs(59.9).human()).toBe("59.9s");
+		expect(Duration.secs(125).human()).toBe("2m 05s");
+	});
+
 	it("picks the extremes with min and max", () => {
 		const durations = [Duration.secs(5), Duration.secs(1), Duration.secs(3)];
 

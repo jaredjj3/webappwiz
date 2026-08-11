@@ -1,22 +1,33 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { MemoryLogger } from "@webappwiz/log";
+import { color, MemoryLogger } from "@webappwiz/log";
 import { defineStyleGuide, rule, type StyleGuide } from "@webappwiz/style";
-import { FakeFs } from "@webappwiz/sys/testing";
+import { FakeFs, FakePs } from "@webappwiz/sys/testing";
+import { Duration } from "@webappwiz/time";
+import { FakeClock } from "@webappwiz/time/testing";
 import { StyleCommands } from "./style";
 import { ruleDoc } from "./testing";
 
 describe("StyleCommands", () => {
 	let fs: FakeFs;
+	let ps: FakePs;
 	let log: MemoryLogger;
+	let clock: FakeClock;
 
-	const printed = () => log.entries.map((e) => String(e.message)).join("\n");
+	const printed = () =>
+		color.strip(log.entries.map((e) => String(e.message)).join("\n"));
 	const commands = (guide: StyleGuide, dir = "/g") =>
-		new StyleCommands(log, fs, { load: async () => ({ guide, dir }) });
+		new StyleCommands(log, fs, ps, clock, {
+			load: async () => ({ guide, dir }),
+		});
 	const oneRule = defineStyleGuide([rule("./one.md")]);
+	const config = "style.config.ts";
+	const analyzing = { rules: config, dir: "/p", agent: "agent", chunk: 25 };
 
 	beforeEach(async () => {
 		fs = new FakeFs();
+		ps = new FakePs();
 		log = new MemoryLogger();
+		clock = new FakeClock();
 		await fs.mkdir("/g/rules");
 		await fs.mkdir("/p");
 	});
@@ -24,7 +35,7 @@ describe("StyleCommands", () => {
 	it("declares a sound guide sound", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
 
-		await commands(oneRule).check({ rules: "style.ts", strict: false });
+		await commands(oneRule).check({ rules: config, strict: false });
 
 		expect(printed()).toBe("sound: 1 rule, 0 errors, 0 warnings");
 	});
@@ -33,7 +44,7 @@ describe("StyleCommands", () => {
 		await fs.write("/g/rules/one.md", ruleDoc("One"));
 		const guide = defineStyleGuide([rule("./rules/one.md")]);
 
-		await commands(guide).check({ rules: "style.ts", strict: false });
+		await commands(guide).check({ rules: config, strict: false });
 
 		expect(printed()).toContain("sound");
 	});
@@ -42,7 +53,7 @@ describe("StyleCommands", () => {
 		const guide = defineStyleGuide([rule("./gone.md")]);
 
 		expect(
-			commands(guide).check({ rules: "style.ts", strict: false }),
+			commands(guide).check({ rules: config, strict: false }),
 		).rejects.toThrow("1 error, 0 warnings");
 		expect(printed()).toContain("./gone.md  error  cannot read rule file");
 	});
@@ -53,7 +64,7 @@ describe("StyleCommands", () => {
 		const guide = defineStyleGuide([rule("./one.md"), rule("./two.md")]);
 
 		expect(
-			commands(guide).check({ rules: "style.ts", strict: false }),
+			commands(guide).check({ rules: config, strict: false }),
 		).rejects.toThrow("1 error");
 		expect(printed()).toContain('duplicate rule name "One" (also ./one.md)');
 	});
@@ -62,7 +73,7 @@ describe("StyleCommands", () => {
 		await fs.write("/g/one.md", "just prose\n");
 
 		expect(
-			commands(oneRule).check({ rules: "style.ts", strict: false }),
+			commands(oneRule).check({ rules: config, strict: false }),
 		).rejects.toThrow("3 errors, 1 warning");
 		expect(printed()).toContain(
 			'./one.md  error    missing "files" glob in frontmatter',
@@ -74,64 +85,102 @@ describe("StyleCommands", () => {
 		const noBad = ruleDoc("One").split("\n## Bad")[0] ?? "";
 		await fs.write("/g/one.md", noBad);
 
-		await commands(oneRule).check({ rules: "style.ts", strict: false });
+		await commands(oneRule).check({ rules: config, strict: false });
 		expect(printed()).toContain("sound: 1 rule, 0 errors, 1 warning");
 
 		expect(
-			commands(oneRule).check({ rules: "style.ts", strict: true }),
+			commands(oneRule).check({ rules: config, strict: true }),
 		).rejects.toThrow("0 errors, 1 warning");
 	});
 
 	it("shows each rule as a table row when showing", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
 
-		await commands(oneRule).show({ rules: "style.ts" });
+		await commands(oneRule).ls({ rules: config });
 
-		expect(printed()).toContain("RULE  FILES");
-		expect(printed()).toContain("One");
+		expect(printed()).toContain("ID   RULE  LEVEL  FILES");
+		expect(printed()).toContain("one  One   error");
 		expect(printed()).toContain("./one.md");
 	});
 
-	it("prints the analysis plan for a sound guide", async () => {
+	it("prints one rule in full when shown its id", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
-		await fs.write("/p/a.ts", "class A {}");
 
-		await commands(oneRule).analyze({
-			rules: "style.ts",
-			dir: "/p",
-			json: false,
-			chunk: 25,
-		});
+		await commands(oneRule).show({ id: "one", rules: config });
 
-		expect(printed()).toContain("## Task 1 of 1: One");
+		expect(printed()).toContain("ID     one");
+		expect(printed()).toContain("LEVEL  error");
+		expect(printed()).toContain("# One"); // the document itself, verbatim
+		expect(printed()).toContain("## Bad");
 	});
 
-	it("prints a machine-readable plan when asked for json", async () => {
+	it("lists the ids it does know when shown one it does not", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+
+		expect(
+			commands(oneRule).show({ id: "two", rules: config }),
+		).rejects.toThrow('no rule "two" in style.config.ts. Known ids: one');
+	});
+
+	it("prints what the agent found as lint output", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}\nclass B {}");
+		ps.setCaptureOutput(
+			'[{"file": "a.ts", "line": 2, "message": "the file declares a second class"}]',
+			"",
+		);
+
+		expect(commands(oneRule).analyze(analyzing)).rejects.toThrow(
+			"1 style error",
+		);
+		expect(printed()).toContain("✗ [1/1] One (one): 1 problem");
+		expect(printed()).toContain(
+			"/p/a.ts:2  error  the file declares a second class",
+		);
+		expect(printed()).toContain("│ class B {}");
+	});
+
+	it("says the code conforms when the agent finds nothing", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
 
-		await commands(oneRule).analyze({
-			rules: "style.ts",
-			dir: "/p",
-			json: true,
-			chunk: 25,
+		await commands(oneRule).analyze(analyzing);
+
+		expect(printed()).toContain("no style violations");
+	});
+
+	it("times each rule and the run as a whole", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+		ps.simulate(async () => {
+			clock.advance(Duration.secs(12.5));
+			return 0;
 		});
 
-		const out = JSON.parse(String(log.entries[0]?.message));
-		expect(out.rules).toEqual(["One"]);
-		expect(out.tasks[0].files).toEqual(["a.ts"]);
+		await commands(oneRule).analyze(analyzing);
+
+		expect(printed()).toContain("clean in 12.5s");
+		expect(printed()).toContain("no style violations in 12.5s");
+	});
+
+	it("reports warnings without failing the run", async () => {
+		await fs.write("/g/one.md", ruleDoc("One", "**/*.ts", "warning"));
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput(
+			'[{"file": "a.ts", "line": 1, "message": "the class has no doc comment"}]',
+			"",
+		);
+
+		await commands(oneRule).analyze(analyzing);
+
+		expect(printed()).toContain("/p/a.ts:1  warning  the class has no doc");
 	});
 
 	it("refuses to analyze with an unsound guide", async () => {
 		await fs.write("/g/one.md", "just prose\n");
 
-		expect(
-			commands(oneRule).analyze({
-				rules: "style.ts",
-				dir: "/p",
-				json: false,
-				chunk: 25,
-			}),
-		).rejects.toThrow("3 errors");
+		expect(commands(oneRule).analyze(analyzing)).rejects.toThrow("3 errors");
 	});
 });

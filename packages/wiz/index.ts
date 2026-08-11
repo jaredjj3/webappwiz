@@ -48,6 +48,7 @@ await commands(
 	wiz.group("cli").description("run @webappwiz/cli against a project"),
 	log,
 	fs,
+	ps,
 );
 
 await wiz.run();

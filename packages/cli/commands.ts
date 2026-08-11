@@ -1,8 +1,10 @@
 import type { Cli } from "@webappwiz/cmd";
 import type { Logger } from "@webappwiz/log";
 import { DEFAULT_GUIDE } from "@webappwiz/style";
-import type { Fs } from "@webappwiz/sys";
+import type { Fs, Ps } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
+import { SystemClock } from "@webappwiz/time";
+import { DEFAULT_AGENT } from "./analyze";
 import { Skills } from "./skills";
 import { StyleCommands } from "./style";
 import { update } from "./update";
@@ -11,7 +13,12 @@ import { update } from "./update";
  * Adds webappwiz's commands to `app`, which can be a program or a command
  * group.
  */
-export async function commands(app: Cli, log: Logger, fs: Fs): Promise<void> {
+export async function commands(
+	app: Cli,
+	log: Logger,
+	fs: Fs,
+	ps: Ps,
+): Promise<void> {
 	// Hangs the commands off whatever it is given — the program itself when run
 	// as `webappwiz`, or a group when another cli mounts it (`wiz cli`). Nothing
 	// here knows which, so both spellings stay the same commands rather than one
@@ -39,7 +46,7 @@ export async function commands(app: Cli, log: Logger, fs: Fs): Promise<void> {
 	const style = app
 		.group("style")
 		.description("author, check, and run agent style guides");
-	const styleCommands = new StyleCommands(log, fs);
+	const styleCommands = new StyleCommands(log, fs, ps, new SystemClock());
 	const rulesArg = {
 		default: DEFAULT_GUIDE,
 		description: `style guide module (default: ${DEFAULT_GUIDE})`,
@@ -56,24 +63,29 @@ export async function commands(app: Cli, log: Logger, fs: Fs): Promise<void> {
 		.action((opts) => styleCommands.check(opts));
 
 	style
-		.command("show")
+		.command("ls")
 		.description("list a style guide's rules")
+		.arg("rules", t.string(), rulesArg)
+		.action((opts) => styleCommands.ls(opts));
+
+	style
+		.command("show")
+		.description("print one rule in full, by the id `style ls` gives it")
+		.arg("id", t.string(), { description: "rule id" })
 		.arg("rules", t.string(), rulesArg)
 		.action((opts) => styleCommands.show(opts));
 
 	style
 		.command("analyze")
-		.description(
-			"compile a style guide into per-rule analysis tasks for agents",
-		)
+		.description("check a directory against a style guide, one agent per rule")
 		.arg("rules", t.string(), rulesArg)
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "directory to analyze (default: .)",
 		})
-		.option("json", t.boolean(), {
-			default: false,
-			description: "print a machine-readable plan",
+		.option("agent", t.string(), {
+			default: DEFAULT_AGENT,
+			description: `command the prompt is passed to (default: ${DEFAULT_AGENT})`,
 		})
 		.option("chunk", t.number(), {
 			default: 25,
