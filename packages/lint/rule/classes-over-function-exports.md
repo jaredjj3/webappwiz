@@ -1,7 +1,3 @@
----
-files: "**/*.ts"
----
-
 # Classes over function exports
 
 A file should not export several functions that each take their dependencies
@@ -35,6 +31,15 @@ Pure, dependency-free helpers are fine alongside it:
 
 ```ts
 export const trimmed = (message: string): string => message.trim();
+```
+
+One function taking a dependency is fine on its own: the rule is about a file
+full of them.
+
+```ts
+export function stamp(message: string, now: () => Date): string {
+	return `${now().toISOString()} ${message}`;
+}
 ```
 
 ## Bad

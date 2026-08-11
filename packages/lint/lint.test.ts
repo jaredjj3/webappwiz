@@ -2,19 +2,9 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Lint } from "./lint";
-import { compile, type Rule } from "./rule";
-import { oneClassPerFile } from "./rules/one-class-per-file";
-import { ruleDoc } from "./testing";
+import { OneClassPerFile } from "./rule/one-class-per-file";
 
-const oneClass = ((): Rule => {
-	const out = compile(ruleDoc("One class"), "one-class.md", {
-		check: oneClassPerFile,
-	});
-	if (!out.rule) {
-		throw new Error("fixture rule failed to compile");
-	}
-	return out.rule;
-})();
+const oneClass = new OneClassPerFile();
 
 describe("lint", () => {
 	let log: MemoryLogger;
@@ -59,10 +49,13 @@ describe("lint", () => {
 		);
 	});
 
-	it("fails reporting the guide when its rules will not load", async () => {
-		// No lint.config.ts in this fake fs, and the recommended rules' files
-		// are not in it either: the fallback guide cannot compile.
+	it("falls back to the recommended rules with no guide to read", async () => {
+		ps.setCaptureOutput("a.ts\n", "");
+		await fs.write("a.ts", "class A {}\nclass B {}\n");
+
+		// No lint.config.ts in this fake fs, so the recommended rules run: they
+		// carry their own documents and need nothing read to load.
 		expect(await new Lint(log, fs, ps).run()).toBe(false);
-		expect(String(log.entries[0]?.message)).toContain("cannot read rule file");
+		expect(String(log.entries[0]?.message)).toContain("one-class-per-file");
 	});
 });

@@ -1,7 +1,3 @@
----
-files: "**/*.ts"
----
-
 # No ponytail prefixes on comments
 
 A `ponytail:` prefix marks a comment as an agent's note to itself. It means

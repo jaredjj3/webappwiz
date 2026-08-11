@@ -1,16 +1,34 @@
 # @webappwiz/lint
 
 One rule format for the checks a tool can make and the ones only an agent
-can. A rule is one markdown file: the file name is the id a report cites, the
-title is the human name, the prose under it the description, a `files`
-frontmatter glob picks the files, and `## Good` / `## Bad` hold fenced
-examples:
+can. A rule is a class beside its markdown: the class says what the rule
+applies to and how, if at all, a linter decides it; the document says what the
+rule is, to a human and to an agent, in `## Good` and `## Bad` examples.
+
+```ts
+// rule/one-class-per-file.ts
+import doc from "./one-class-per-file.md" with { type: "text" };
+import type { Rule } from "./rule";
+
+export class OneClassPerFile implements Rule {
+	private static readonly MESSAGE =
+		"more than one class in this file: give each its own file";
+
+	readonly id = "one-class-per-file";
+	readonly files = "**/*.ts";
+	readonly level = "error";
+	readonly document = doc;
+
+	check(text: string): Finding[] {
+		...
+	}
+}
+```
+
+The document holds the prose and nothing configurable, so a rule states each
+thing once:
 
 ```markdown
----
-files: "**/*.ts"
----
-
 # One class per file
 
 A class is a file's whole idea; a second one wants a file of its own.
@@ -27,15 +45,13 @@ class Bar {}
 ​```
 ```
 
-A rule reports as an error unless its frontmatter says `level: warning`.
-
-A rule may carry a deterministic `check`, a `(text) => Finding[]` the linter
-runs for free on every `wiz fix`. A rule without one is judged by an agent,
-on demand, through `lint analyze`. A `partial` check is both: the linter
-decides the cases a token scan can see and the agent reads the rest. The
-rule's examples keep the two halves honest: a check must pass every `## Good`
-block, and a full check must catch every `## Bad` block, so the document and
-the implementation cannot drift apart.
+A rule that implements `check` is enforced by the linter for free on every
+`wiz fix`. A rule without one is judged by an agent, on demand, through `lint
+analyze`. `partial = true` is both: the linter decides the cases a token scan
+can see and the agent reads the rest. The rule's examples keep the two halves
+honest: a check must pass every `## Good` block, and a full check must catch
+every `## Bad` block, so the document and the implementation cannot drift
+apart.
 
 ## The guide
 
@@ -45,19 +61,19 @@ one gets `recommended`:
 
 ```ts
 // lint.config.ts
-import { classesOverFunctionExports, defineGuide, recommended, rule } from "@webappwiz/lint";
+import { defineGuide, recommended } from "@webappwiz/lint";
+import { NoFixme } from "./rules/no-fixme";
 
 export default defineGuide([
-	...recommended.filter((r) => r !== classesOverFunctionExports),
-	rule("./rules/project-specific.md"),
-	rule("./rules/no-fixme.md", { check: noFixme }), // yours, deterministic
+	...recommended.filter((r) => r.id !== "classes-over-function-exports"),
+	new NoFixme(),
 ]);
 ```
 
-A check is a plain `(text: string) => Finding[]`, and `partial: true` beside
-it says the agent still reads what the check cannot see.
+Your own rule is the same class and the same markdown import, wherever it
+lives.
 
-The recommended rules, exported one by one so guides opt out by identity:
+The recommended rules, each exported as its class so a guide can name one:
 
 - `no-em-dashes` (checked): no em dashes in code, comments, or prose; an en
   dash survives only between digits, as a range.
@@ -164,8 +180,8 @@ and `--exec` flags analyze takes, asks that question of every agent rule and
 warns about the ones that answer with a tool:
 
 ```
-rules/no-fixme.md  warning  a linter could enforce this without an agent:
-                            a regex for FIXME anywhere in a line
+no-fixme  warning  a linter could enforce this without an agent:
+                   a regex for FIXME anywhere in a line
 ```
 
 A tool only wins if it decides every case the rule covers, exceptions
@@ -176,7 +192,7 @@ a build on by surprise: `--strict` is how you make it fail once you have
 decided. Rules already carrying a full check are not asked about at all.
 
 Audit also validates the guide itself, the way analyze does before running:
-a rule that will not compile is an error, printed before any agent spends
+a rule whose document is broken is an error, printed before any agent spends
 anything. `--sound` is that half on its own, spawning nothing:
 
 ```bash
@@ -190,9 +206,11 @@ it runs no agent it takes no `--agent` or `--exec`.
 
 ## API
 
-Those commands are a thin shell over this package. `loadGuide` compiles a
-guide module's rules and reports what is wrong with it, and
-`loadProjectGuide` is the `lint.config.ts`-or-`recommended` default; `Linter`
+Those commands are a thin shell over this package. `Guides` reads a guide
+module and reports what is wrong with its rules, `load` for a named module and
+`project` for the `lint.config.ts`-or-`recommended` default; `RuleDocument`
+parses one rule's markdown, for a report that wants its title or its examples;
+`Linter`
 runs the checks over in-memory files and `Lint` over the git-tracked tree;
 `Mechanizer` asks an agent which agent rules a tool could enforce instead,
 and answers in the same `GuideDiagnostic` shape, so the two print as one
@@ -203,7 +221,7 @@ caller's: a violation carries the rule's id and level, the file and line, the
 message, and that line of source read from disk.
 
 ```ts
-const { rules, diagnostics } = await loadProjectGuide(fs);
+const { rules, diagnostics } = await new Guides(fs).project();
 const analyzer = new Analyzer(log, fs, ps, clock);
 const violations = await analyzer.analyze(
 	rules.filter((r) => !r.check || r.partial),

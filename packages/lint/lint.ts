@@ -1,9 +1,9 @@
 import { color, type Logger } from "@webappwiz/log";
 import type { Fs, Ps } from "@webappwiz/sys";
 import { DEFAULT_GUIDE } from "./guide";
+import { Guides } from "./guides";
 import { Linter } from "./linter";
-import { loadProjectGuide } from "./loader";
-import type { Rule } from "./rule";
+import type { Rule } from "./rule/rule";
 
 /**
  * Lints every git-tracked file a rule's glob wants and reports one line per
@@ -48,11 +48,11 @@ export class Lint {
 	/** The project's rules, or null after reporting a guide that will not
 	 * compile: broken rules failing the run is how their author finds out. */
 	private async guide(): Promise<Rule[] | null> {
-		const { rules, diagnostics } = await loadProjectGuide(this.fs);
+		const { rules, diagnostics } = await new Guides(this.fs).project();
 		let errors = false;
 		for (const d of diagnostics.filter((d) => d.severity === "error")) {
 			errors = true;
-			const at = d.line === undefined ? d.path : `${d.path}:${d.line}`;
+			const at = d.line === undefined ? d.rule : `${d.rule}:${d.line}`;
 			this.log.info(`${at} ${color.red(DEFAULT_GUIDE)} ${d.message}`);
 		}
 		return errors ? null : rules;

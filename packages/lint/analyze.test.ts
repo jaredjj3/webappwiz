@@ -4,18 +4,11 @@ import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
 import { Analyzer } from "./analyze";
-import { compile, type Rule } from "./rule";
-import { ruleDoc } from "./testing";
+import { testRule } from "./testing";
 
 const agent = { argv: ["agent"], label: "agent" };
 
-const compiled = (name: string, files = "**/*.ts"): Rule => {
-	const out = compile(ruleDoc(name, files), `${name}.md`);
-	if (!out.rule) {
-		throw new Error("fixture rule failed to compile");
-	}
-	return out.rule;
-};
+const rule = (name: string, files = "**/*.ts") => testRule(name, { files });
 
 describe("Analyzer", () => {
 	let fs: FakeFs;
@@ -43,31 +36,31 @@ describe("Analyzer", () => {
 
 	it("matches each rule's glob against dir-relative paths", async () => {
 		const tasks = await analyzer.plan(
-			[compiled("Classes"), compiled("Docs", "**/*.md")],
+			[rule("Classes"), rule("Docs", "**/*.md")],
 			"/p",
 			25,
 		);
 
-		expect(tasks.map((t) => [t.rule.name, t.files])).toEqual([
+		expect(tasks.map((t) => [t.rule.id, t.files])).toEqual([
 			["Classes", ["src/a.ts", "src/b.ts"]],
 			["Docs", ["README.md"]],
 		]);
 	});
 
 	it("chunks a rule's files into several tasks", async () => {
-		const tasks = await analyzer.plan([compiled("Classes")], "/p", 1);
+		const tasks = await analyzer.plan([rule("Classes")], "/p", 1);
 
 		expect(tasks.map((t) => t.files)).toEqual([["src/a.ts"], ["src/b.ts"]]);
 	});
 
 	it("warns on stderr when a rule matches nothing", async () => {
-		await analyzer.plan([compiled("Python", "**/*.py")], "/p", 25);
+		await analyzer.plan([rule("Python", "**/*.py")], "/p", 25);
 
 		expect(errors()[0]).toBe('rule "Python" matches no files under /p');
 	});
 
 	it("gives each task a prompt holding the whole rule and only its files", async () => {
-		const [task] = await analyzer.plan([compiled("Classes")], "/p", 1);
+		const [task] = await analyzer.plan([rule("Classes")], "/p", 1);
 
 		expect(task?.prompt).toContain("exactly one style rule");
 		expect(task?.prompt).toContain("# Classes"); // the rule md, verbatim
@@ -81,7 +74,7 @@ describe("Analyzer", () => {
 	it("passes the prompt to the agent command as its last argument", async () => {
 		ps.setCaptureOutput("[]", "");
 
-		await analyzer.analyze([compiled("Classes")], "/p", 25, {
+		await analyzer.analyze([rule("Classes")], "/p", 25, {
 			argv: ["claude", "-p"],
 			label: "claude -p",
 		});
@@ -98,7 +91,7 @@ describe("Analyzer", () => {
 		);
 
 		const violations = await analyzer.analyze(
-			[compiled("Classes")],
+			[rule("Classes")],
 			"/p",
 			25,
 			agent,
@@ -128,7 +121,7 @@ describe("Analyzer", () => {
 		);
 
 		const violations = await analyzer.analyze(
-			[compiled("Classes")],
+			[rule("Classes")],
 			"/p",
 			25,
 			agent,
@@ -144,12 +137,7 @@ describe("Analyzer", () => {
 			"",
 		);
 
-		const [found] = await analyzer.analyze(
-			[compiled("Classes")],
-			"/p",
-			25,
-			agent,
-		);
+		const [found] = await analyzer.analyze([rule("Classes")], "/p", 25, agent);
 
 		expect(found?.code).toBe("class B {}");
 	});
@@ -160,12 +148,7 @@ describe("Analyzer", () => {
 			"",
 		);
 
-		const [found] = await analyzer.analyze(
-			[compiled("Classes")],
-			"/p",
-			25,
-			agent,
-		);
+		const [found] = await analyzer.analyze([rule("Classes")], "/p", 25, agent);
 
 		expect(found?.code).toBe("");
 	});
@@ -177,7 +160,7 @@ describe("Analyzer", () => {
 		);
 
 		const finished: string[] = [];
-		await analyzer.analyze([compiled("Classes")], "/p", 1, agent, {
+		await analyzer.analyze([rule("Classes")], "/p", 1, agent, {
 			finished: (task) =>
 				finished.push(`${task.id} ${task.done}/${task.total}`),
 		});
@@ -193,7 +176,7 @@ describe("Analyzer", () => {
 		});
 
 		const took: string[] = [];
-		await analyzer.analyze([compiled("Classes")], "/p", 25, agent, {
+		await analyzer.analyze([rule("Classes")], "/p", 25, agent, {
 			finished: (task) => took.push(task.took.human()),
 		});
 
@@ -207,7 +190,7 @@ describe("Analyzer", () => {
 		);
 
 		const violations = await analyzer.analyze(
-			[compiled("Classes")],
+			[rule("Classes")],
 			"/p",
 			25,
 			agent,
@@ -220,7 +203,7 @@ describe("Analyzer", () => {
 		ps.setCaptureOutput('[{"file": "src/a.ts"}, "nonsense"]', "");
 
 		const violations = await analyzer.analyze(
-			[compiled("Classes")],
+			[rule("Classes")],
 			"/p",
 			25,
 			agent,
@@ -233,7 +216,7 @@ describe("Analyzer", () => {
 		ps.setCaptureOutput("I could not read the files.", "");
 
 		const violations = await analyzer.analyze(
-			[compiled("Classes")],
+			[rule("Classes")],
 			"/p",
 			25,
 			agent,
@@ -247,7 +230,7 @@ describe("Analyzer", () => {
 		ps.exit(127);
 		ps.setCaptureOutput("", "command not found: claude");
 
-		const violations = await analyzer.analyze([compiled("Classes")], "/p", 25, {
+		const violations = await analyzer.analyze([rule("Classes")], "/p", 25, {
 			argv: ["claude"],
 			label: "claude",
 		});
@@ -265,7 +248,7 @@ describe("Analyzer", () => {
 		);
 
 		const violations = await analyzer.analyze(
-			[compiled("Classes")],
+			[rule("Classes")],
 			"/p",
 			25,
 			agent,

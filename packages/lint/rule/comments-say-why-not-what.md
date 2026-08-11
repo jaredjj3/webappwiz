@@ -1,7 +1,3 @@
----
-files: "**/*.ts"
----
-
 # Comments say why, not what
 
 Comments are sparse. A comment that describes what the code directly under it

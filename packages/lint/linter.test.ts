@@ -1,22 +1,18 @@
 import { describe, expect, it } from "bun:test";
+import { Finding } from "./finding";
 import { Linter } from "./linter";
-import type { Rule } from "./rule";
+import type { Rule } from "./rule/rule";
 
 const noX: Rule = {
-	name: "No x",
 	id: "no-x",
-	path: "no-x.md",
 	files: "**/*.md",
 	level: "warning",
-	description: "",
-	good: [],
-	bad: [],
-	text: "",
+	document: "",
 	check: (text) =>
 		text
 			.split("\n")
 			.flatMap((line, i) =>
-				line.includes("x") ? [{ line: i + 1, column: 1, message: "an x" }] : [],
+				line.includes("x") ? [new Finding(i + 1, 1, "an x")] : [],
 			),
 };
 
@@ -61,6 +57,16 @@ describe("linter", () => {
 		expect(linter.matches("src/a.ts")).toBe(false);
 	});
 
+	it("keeps a check's own helpers reachable", () => {
+		// The linter holds the rule, never a function pulled off it, so a check
+		// written as a method still has its class around it.
+		const diagnostics = new Linter([new Counting()]).lint([
+			{ path: "a.md", text: "one\ntwo" },
+		]);
+
+		expect(diagnostics.map((d) => d.message)).toEqual(["line 1 of 2"]);
+	});
+
 	it("drops findings a lint-ignore excuses", () => {
 		const diagnostics = new Linter([noX]).lint([
 			{
@@ -80,3 +86,18 @@ describe("linter", () => {
 		expect(diagnostics).toEqual([]);
 	});
 });
+
+class Counting implements Rule {
+	readonly id = "counting";
+	readonly files = "**/*.md";
+	readonly level = "error";
+	readonly document = "";
+
+	check(text: string): Finding[] {
+		return [new Finding(1, 1, `line 1 of ${this.lines(text)}`)];
+	}
+
+	private lines(text: string): number {
+		return text.split("\n").length;
+	}
+}

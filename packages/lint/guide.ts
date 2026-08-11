@@ -1,34 +1,20 @@
-import type { Check } from "./rule";
+import type { Rule } from "./rule/rule";
 
 /**
  * The rules a project checks its code against. A guide module default-exports
  * `defineGuide([...])`.
  */
 export interface Guide {
-	// The data lives in one markdown file per rule, readable by humans
-	// rendered and by agents verbatim, so TypeScript's job here is only
-	// composition: the guide is a typed array, and spreading shared rule sets
-	// stays statically checked.
-	rules: RuleRef[];
+	// Each rule is a class that owns its glob, its level and its document, so
+	// TypeScript's job here is only composition: the guide is a typed array,
+	// and spreading shared rule sets stays statically checked.
+	rules: Rule[];
 }
-
-/** A pointer to a rule's markdown file, relative to the guide module, and the
- * check enforcing it deterministically when it has one. */
-export interface RuleRef {
-	path: string;
-	check?: Check;
-	partial?: boolean;
-}
-
-export const rule = (
-	path: string,
-	opts: { check?: Check; partial?: boolean } = {},
-): RuleRef => ({ path, ...opts });
 
 /** Where a project keeps its guide unless it says otherwise. */
 export const DEFAULT_GUIDE = "lint.config.ts";
 
-export const defineGuide = (rules: RuleRef[]): Guide => ({ rules });
+export const defineGuide = (rules: Rule[]): Guide => ({ rules });
 
 /**
  * Guards a dynamically imported guide module's default export. Types cannot
@@ -41,7 +27,12 @@ export function isGuide(value: unknown): value is Guide {
 		"rules" in value &&
 		Array.isArray(value.rules) &&
 		value.rules.every(
-			(r) => typeof r === "object" && r !== null && typeof r.path === "string",
+			(r) =>
+				typeof r === "object" &&
+				r !== null &&
+				typeof r.id === "string" &&
+				typeof r.files === "string" &&
+				typeof r.document === "string",
 		)
 	);
 }

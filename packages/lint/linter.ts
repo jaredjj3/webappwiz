@@ -1,6 +1,7 @@
 import { Glob } from "bun";
+import type { Diagnostic } from "./diagnostic";
 import { exemptions } from "./ignore";
-import type { Check, Diagnostic, Rule } from "./rule";
+import type { Rule } from "./rule/rule";
 
 export interface FileText {
 	path: string;
@@ -13,13 +14,11 @@ export interface FileText {
  * skipped.
  */
 export class Linter {
-	private readonly matchers: Array<{ rule: Rule; check: Check; glob: Glob }>;
+	private readonly matchers: Array<{ rule: Rule; glob: Glob }>;
 
 	constructor(rules: Rule[]) {
 		this.matchers = rules.flatMap((rule) =>
-			rule.check
-				? [{ rule, check: rule.check, glob: new Glob(rule.files) }]
-				: [],
+			rule.check ? [{ rule, glob: new Glob(rule.files) }] : [],
 		);
 	}
 
@@ -31,11 +30,11 @@ export class Linter {
 	lint(files: FileText[]): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 		for (const { path, text } of files) {
-			for (const { rule, check, glob } of this.matchers) {
+			for (const { rule, glob } of this.matchers) {
 				if (!glob.match(path)) {
 					continue;
 				}
-				const findings = check(text);
+				const findings = rule.check?.(text) ?? [];
 				if (findings.length === 0) {
 					continue;
 				}

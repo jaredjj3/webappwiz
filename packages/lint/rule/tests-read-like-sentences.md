@@ -1,7 +1,3 @@
----
-files: "**/*.test.ts"
----
-
 # Tests read like sentences
 
 Tests use bun:test. A test file makes exactly one `describe` call: never

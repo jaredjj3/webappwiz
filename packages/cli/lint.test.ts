@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { defineGuide, type Guide, rule } from "@webappwiz/lint";
-import { ruleDoc } from "@webappwiz/lint/testing";
+import { defineGuide, type Guide } from "@webappwiz/lint";
+import { ruleDoc, testRule } from "@webappwiz/lint/testing";
 import { color, MemoryLogger } from "@webappwiz/log";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
@@ -15,16 +15,10 @@ describe("LintCommands", () => {
 
 	const printed = () =>
 		color.strip(log.entries.map((e) => String(e.message)).join("\n"));
-	const commands = (guide: Guide, dir = "/g", confirm?: Confirm) =>
-		new LintCommands(
-			log,
-			fs,
-			ps,
-			clock,
-			{ load: async () => ({ guide, dir }) },
-			confirm,
-		);
-	const oneRule = defineGuide([rule("./one.md")]);
+	const commands = (guide: Guide, confirm?: Confirm) =>
+		new LintCommands(log, fs, ps, clock, { load: async () => guide }, confirm);
+	const one = (document = ruleDoc("One")) => testRule("one", { document });
+	const oneRule = defineGuide([one()]);
 	const config = "lint.config.ts";
 	// budget high enough that only the tests about budgets ever meet it
 	const analyzing = {
@@ -40,7 +34,6 @@ describe("LintCommands", () => {
 		ps = new FakePs();
 		log = new MemoryLogger();
 		clock = new FakeClock();
-		await fs.mkdir("/g/rules");
 		await fs.mkdir("/p");
 	});
 
@@ -49,75 +42,46 @@ describe("LintCommands", () => {
 	const soundly = { rules: config, strict: false, sound: true };
 
 	it("declares a sound guide sound", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-
 		await commands(oneRule).audit(soundly);
 
 		expect(printed()).toBe("sound: 1 rule, 0 errors, 0 warnings");
 	});
 
 	it("asks nothing of an agent when checking soundness alone", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-
 		await commands(oneRule).audit(soundly);
 
 		expect(ps.getCalls()).toEqual([]);
 	});
 
-	it("resolves rule paths relative to the guide module", async () => {
-		await fs.write("/g/rules/one.md", ruleDoc("One"));
-		const guide = defineGuide([rule("./rules/one.md")]);
-
-		await commands(guide).audit(soundly);
-
-		expect(printed()).toContain("sound");
-	});
-
-	it("turns an unreadable rule file into an error instead of a crash", async () => {
-		const guide = defineGuide([rule("./gone.md")]);
-
-		expect(commands(guide).audit(needsAgent)).rejects.toThrow(
-			"1 error, 0 warnings",
-		);
-		expect(printed()).toContain("./gone.md  error  cannot read rule file");
-		expect(ps.getCalls()).toEqual([]);
-	});
-
-	it("catches duplicate rule names across files", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-		await fs.write("/g/two.md", ruleDoc("One"));
-		const guide = defineGuide([rule("./one.md"), rule("./two.md")]);
+	it("catches two rules answering to the same id", async () => {
+		const guide = defineGuide([one(), one()]);
 
 		expect(commands(guide).audit(soundly)).rejects.toThrow("1 error");
-		expect(printed()).toContain('duplicate rule name "One" (also ./one.md)');
+		expect(printed()).toContain('duplicate rule id "one"');
 	});
 
 	it("prints diagnostics compiler-style and throws when there are errors", async () => {
-		await fs.write("/g/one.md", "just prose\n");
+		const guide = defineGuide([one("just prose\n")]);
 
-		expect(commands(oneRule).audit(soundly)).rejects.toThrow(
-			"3 errors, 1 warning",
+		expect(commands(guide).audit(soundly)).rejects.toThrow(
+			"2 errors, 1 warning",
 		);
-		expect(printed()).toContain(
-			'./one.md  error    missing "files" glob in frontmatter',
-		);
-		expect(printed()).toContain("./one.md  warning  no ## Bad section");
+		expect(printed()).toContain("one  error    missing title (# heading)");
+		expect(printed()).toContain("one  warning  no ## Bad section");
 	});
 
 	it("promotes warnings to failures under strict", async () => {
-		const noBad = ruleDoc("One").split("\n## Bad")[0] ?? "";
-		await fs.write("/g/one.md", noBad);
+		const guide = defineGuide([one(ruleDoc("One").split("\n## Bad")[0] ?? "")]);
 
-		await commands(oneRule).audit(soundly);
+		await commands(guide).audit(soundly);
 		expect(printed()).toContain("sound: 1 rule, 0 errors, 1 warning");
 
-		expect(
-			commands(oneRule).audit({ ...soundly, strict: true }),
-		).rejects.toThrow("0 errors, 1 warning");
+		expect(commands(guide).audit({ ...soundly, strict: true })).rejects.toThrow(
+			"0 errors, 1 warning",
+		);
 	});
 
 	it("audits rules and warns about the ones a tool could enforce", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		ps.setCaptureOutput('{"tool": "biome", "reason": "a regex"}', "");
 
 		await commands(oneRule).audit({
@@ -133,8 +97,6 @@ describe("LintCommands", () => {
 	});
 
 	it("refuses to audit without an agent to ask", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-
 		expect(
 			commands(oneRule).audit({ rules: config, strict: false }),
 		).rejects.toThrow("audit asks an agent, so name one");
@@ -142,26 +104,19 @@ describe("LintCommands", () => {
 	});
 
 	it("names no agent under sound, having none to run", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-
 		expect(
 			commands(oneRule).audit({ ...soundly, agent: "haiku" }),
 		).rejects.toThrow("--sound checks the guide compiles and runs no agent");
 	});
 
 	it("shows each rule as a table row when showing", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-
 		await commands(oneRule).ls({ rules: config });
 
 		expect(printed()).toContain("ID   RULE  LEVEL  FILES");
 		expect(printed()).toContain("one  One   error");
-		expect(printed()).toContain("./one.md");
 	});
 
 	it("prints one rule in full when shown its id", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-
 		await commands(oneRule).show({ id: "one", rules: config });
 
 		expect(printed()).toContain("ID     one");
@@ -171,15 +126,12 @@ describe("LintCommands", () => {
 	});
 
 	it("lists the ids it does know when shown one it does not", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-
 		expect(
 			commands(oneRule).show({ id: "two", rules: config }),
 		).rejects.toThrow('no rule "two" in lint.config.ts. Known ids: one');
 	});
 
 	it("prints what the agent found as lint output", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}\nclass B {}");
 		ps.setCaptureOutput(
 			'[{"file": "a.ts", "line": 2, "message": "the file declares a second class"}]',
@@ -197,7 +149,6 @@ describe("LintCommands", () => {
 	});
 
 	it("says the code conforms when the agent finds nothing", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
@@ -207,7 +158,6 @@ describe("LintCommands", () => {
 	});
 
 	it("times each rule and the run as a whole", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 		ps.simulate(async () => {
@@ -222,20 +172,21 @@ describe("LintCommands", () => {
 	});
 
 	it("reports warnings without failing the run", async () => {
-		await fs.write("/g/one.md", ruleDoc("One", "**/*.ts", "warning"));
+		const guide = defineGuide([
+			testRule("one", { document: ruleDoc("One"), level: "warning" }),
+		]);
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput(
 			'[{"file": "a.ts", "line": 1, "message": "the class has no doc comment"}]',
 			"",
 		);
 
-		await commands(oneRule).analyze(analyzing);
+		await commands(guide).analyze(analyzing);
 
 		expect(printed()).toContain("/p/a.ts:1  warning  the class has no doc");
 	});
 
 	it("runs the model an --agent shorthand names", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
@@ -246,7 +197,6 @@ describe("LintCommands", () => {
 	});
 
 	it("runs an --exec command through a shell instead", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
@@ -260,7 +210,6 @@ describe("LintCommands", () => {
 	});
 
 	it("prints the prompts and spawns nothing under --prompt", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 
 		await commands(oneRule).analyze({ ...analyzing, prompt: true });
@@ -272,14 +221,15 @@ describe("LintCommands", () => {
 	});
 
 	it("leaves fully checked rules to the linter, analyzing the rest", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-		await fs.write("/g/two.md", ruleDoc("Two"));
-		await fs.write("/g/three.md", ruleDoc("Three"));
 		await fs.write("/p/a.ts", "class A {}");
 		const guide = defineGuide([
-			rule("./one.md", { check: () => [] }),
-			rule("./two.md", { check: () => [], partial: true }),
-			rule("./three.md"),
+			testRule("one", { document: ruleDoc("One"), check: () => [] }),
+			testRule("two", {
+				document: ruleDoc("Two"),
+				check: () => [],
+				partial: true,
+			}),
+			testRule("three", { document: ruleDoc("Three") }),
 		]);
 
 		await commands(guide).analyze({ ...analyzing, prompt: true });
@@ -291,8 +241,9 @@ describe("LintCommands", () => {
 	});
 
 	it("audits only the rules no check enforces", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
-		const guide = defineGuide([rule("./one.md", { check: () => [] })]);
+		const guide = defineGuide([
+			testRule("one", { document: ruleDoc("One"), check: () => [] }),
+		]);
 
 		await commands(guide).audit(needsAgent);
 
@@ -301,13 +252,12 @@ describe("LintCommands", () => {
 	});
 
 	it("refuses to analyze with an unsound guide", async () => {
-		await fs.write("/g/one.md", "just prose\n");
+		const guide = defineGuide([one("just prose\n")]);
 
-		expect(commands(oneRule).analyze(analyzing)).rejects.toThrow("3 errors");
+		expect(commands(guide).analyze(analyzing)).rejects.toThrow("2 errors");
 	});
 
 	it("says what the run will read before it reads any of it", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
@@ -317,12 +267,11 @@ describe("LintCommands", () => {
 	});
 
 	it("spawns nothing when the estimate is over budget and nobody says go", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
 		expect(
-			commands(oneRule, "/g", () => false).analyze({
+			commands(oneRule, () => false).analyze({
 				...analyzing,
 				budget: 10,
 			}),
@@ -332,11 +281,10 @@ describe("LintCommands", () => {
 	});
 
 	it("runs over budget once the caller says go", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
-		await commands(oneRule, "/g", () => true).analyze({
+		await commands(oneRule, () => true).analyze({
 			...analyzing,
 			budget: 10,
 		});
@@ -346,7 +294,6 @@ describe("LintCommands", () => {
 	});
 
 	it("checks only what changed when --since names a ref", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		await fs.write("/p/b.ts", "class B {}");
 		ps.setCaptureOutput("a.ts\n", "");
@@ -363,7 +310,6 @@ describe("LintCommands", () => {
 	});
 
 	it("prints what a run would read and spawns nothing under --estimate", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 
 		await commands(oneRule).analyze({
@@ -379,7 +325,6 @@ describe("LintCommands", () => {
 	});
 
 	it("names no agent under --estimate, having none to run", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 
 		await commands(oneRule).analyze({
@@ -392,7 +337,6 @@ describe("LintCommands", () => {
 	});
 
 	it("measures only what changed when --estimate is given a --since", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		await fs.write("/p/b.ts", "class B {}");
 		ps.setCaptureOutput("a.ts\n", "");
@@ -408,7 +352,6 @@ describe("LintCommands", () => {
 	});
 
 	it("refuses --estimate together with a flag naming something to run", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		const commanded = commands(oneRule);
 
 		for (const naming of [
@@ -423,7 +366,6 @@ describe("LintCommands", () => {
 	});
 
 	it("says so and stops when nothing has changed since the ref", async () => {
-		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("", "");
 

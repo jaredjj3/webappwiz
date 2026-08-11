@@ -4,10 +4,10 @@ import {
 	agentCommand,
 	type GuideDiagnostic,
 	type GuideLoader,
-	loadGuide,
-	loadProjectGuide,
+	Guides,
 	Mechanizer,
 	type Rule,
+	RuleDocument,
 	type Task,
 } from "@webappwiz/lint";
 import type { Logger } from "@webappwiz/log";
@@ -108,20 +108,18 @@ export class LintCommands {
 	/** Lists a guide's rules, one row each, ids first for citing. */
 	async ls(opts: { rules: string }): Promise<void> {
 		const { rules } = await this.sound(opts.rules);
-		const rows = [
-			["ID", "RULE", "LEVEL", "FILES", "CHECK", "GOOD", "BAD", "PATH"],
-		];
+		const rows = [["ID", "RULE", "LEVEL", "FILES", "CHECK", "GOOD", "BAD"]];
 		for (const r of rules) {
+			const doc = new RuleDocument(r);
 			rows.push([
 				r.id,
-				r.name,
+				doc.title,
 				r.level,
 				r.files,
 				// which rules cost tokens: a checked rule is the linter's, free
 				r.check ? (r.partial ? "partial" : "full") : "",
-				String(r.good.length),
-				String(r.bad.length),
-				r.path,
+				String(doc.good.length),
+				String(doc.bad.length),
 			]);
 		}
 		this.log.info(table(rows).join("\n"));
@@ -142,14 +140,13 @@ export class LintCommands {
 		this.log.info(
 			table([
 				["ID", rule.id],
-				["RULE", rule.name],
+				["RULE", new RuleDocument(rule).title],
 				["LEVEL", rule.level],
 				["FILES", rule.files],
-				["PATH", rule.path],
 			]).join("\n"),
 		);
 		this.log.info("");
-		this.log.info(rule.text.trim());
+		this.log.info(rule.document.trim());
 	}
 
 	/**
@@ -205,7 +202,8 @@ export class LintCommands {
 		if (opts.prompt) {
 			for (const task of await analyzer.plan(rules, dir, opts.chunk, only)) {
 				this.log.info(
-					`=== ${task.rule.id} ${task.rule.name} (${count(task.files.length, "file")}) ===`,
+					`=== ${task.rule.id} ${new RuleDocument(task.rule).title} ` +
+						`(${count(task.files.length, "file")}) ===`,
 				);
 				this.log.info(task.prompt);
 			}
@@ -265,8 +263,8 @@ export class LintCommands {
 		// An injected loader is its own module system, so the missing-config
 		// fallback to the recommended rules is only for real runs.
 		return this.loader
-			? loadGuide(this.fs, path, this.loader)
-			: loadProjectGuide(this.fs, path);
+			? new Guides(this.fs, this.loader).load(path)
+			: new Guides(this.fs).project(path);
 	}
 
 	/** The guide's rules, for a command that has no business running without
@@ -285,7 +283,7 @@ export class LintCommands {
 		strict: boolean,
 	): void {
 		const rows = diagnostics.map((d) => [
-			d.line === undefined ? d.path : `${d.path}:${d.line}`,
+			d.line === undefined ? d.rule : `${d.rule}:${d.line}`,
 			d.severity,
 			d.message,
 		]);

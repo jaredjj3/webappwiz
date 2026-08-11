@@ -3,8 +3,10 @@ import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
 import { type Fs, type Ps, walk } from "@webappwiz/sys";
 import type { Clock, Duration } from "@webappwiz/time";
+import type { Level } from "./diagnostic";
 import { exemptions } from "./ignore";
-import type { Level, Rule } from "./rule";
+import type { Rule } from "./rule/rule";
+import { RuleDocument } from "./rule-document";
 
 export interface Task {
 	rule: Rule;
@@ -148,7 +150,7 @@ export class Analyzer {
 				const violations = await this.run(task, dir, agent);
 				done += 1;
 				on.finished?.({
-					rule: task.rule.name,
+					rule: new RuleDocument(task.rule).title,
 					id: task.rule.id,
 					violations,
 					took: this.clock.now().subtract(started),
@@ -189,7 +191,7 @@ export class Analyzer {
 			const files = all.filter((f) => glob.match(f));
 			if (files.length === 0) {
 				// stderr, so the report on stdout stays parseable
-				this.log.error(`rule "${rule.name}" matches no files under ${dir}`);
+				this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
 			}
 			// chunks are counted in files, not tokens: switch to a byte budget when
 			// repos with a few huge files start overflowing a task.
@@ -221,14 +223,14 @@ export class Analyzer {
 		});
 		if (exitCode !== 0) {
 			this.log.error(
-				`agent exited ${exitCode} on rule "${task.rule.name}": ${stderr.trim() || "no stderr"}`,
+				`agent exited ${exitCode} on rule "${task.rule.id}": ${stderr.trim() || "no stderr"}`,
 			);
 			return [];
 		}
 		const reported = parse(stdout);
 		if (reported === null) {
 			this.log.error(
-				`agent returned no JSON array on rule "${task.rule.name}": ${stdout.trim().slice(0, 200)}`,
+				`agent returned no JSON array on rule "${task.rule.id}": ${stdout.trim().slice(0, 200)}`,
 			);
 			return [];
 		}
@@ -272,7 +274,7 @@ export class Analyzer {
 					"Apply only this rule; ignore every other style concern you notice.",
 			)
 			.text("The rule, verbatim:")
-			.code("markdown", rule.text)
+			.code("markdown", rule.document)
 			.text("Check each of these files, relative to your working directory:")
 			.text(files.map((f) => `- ${f}`).join("\n"))
 			.text(

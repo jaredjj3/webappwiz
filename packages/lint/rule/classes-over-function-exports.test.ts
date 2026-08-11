@@ -1,28 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { classesOverFunctionExports } from "./classes-over-function-exports";
+import { ClassesOverFunctionExports } from "./classes-over-function-exports";
 
+// The document's examples are the rest of this rule's suite: recommended.test.ts
+// runs every Good block through the check. What is left here is where a finding
+// points, and the token edges no document should have to teach.
 describe("classes-over-function-exports", () => {
-	it("accepts pure helpers sharing a file", () => {
-		const text = [
-			"export function a(s: string): string { return s; }",
-			"export function b(n: number): number { return n; }",
-		].join("\n");
-
-		expect(classesOverFunctionExports(text)).toEqual([]);
-	});
-
-	it("accepts one function that injects, next to pure helpers", () => {
-		const text = [
-			"export function stamp(m: string, now: () => Date): string {",
-			"\treturn now().toISOString() + m;",
-			"}",
-			"export function trimmed(m: string): string { return m.trim(); }",
-		].join("\n");
-
-		expect(classesOverFunctionExports(text)).toEqual([]);
-	});
-
-	it("flags the second exported function that injects", () => {
+	it("points at the second exported function that injects", () => {
 		const text = [
 			"export function stamp(m: string, now: () => Date): string {",
 			"\treturn now().toISOString() + m;",
@@ -32,7 +15,7 @@ describe("classes-over-function-exports", () => {
 			"}",
 		].join("\n");
 
-		expect(classesOverFunctionExports(text)).toEqual([
+		expect(new ClassesOverFunctionExports().check(text)).toEqual([
 			{
 				line: 4,
 				column: 14,
@@ -51,7 +34,7 @@ describe("classes-over-function-exports", () => {
 			"}",
 		].join("\n");
 
-		expect(classesOverFunctionExports(text)).toEqual([]);
+		expect(new ClassesOverFunctionExports().check(text)).toEqual([]);
 	});
 
 	it("leaves non-exported functions alone", () => {
@@ -60,6 +43,6 @@ describe("classes-over-function-exports", () => {
 			"function b(now: () => Date) { return now(); }",
 		].join("\n");
 
-		expect(classesOverFunctionExports(text)).toEqual([]);
+		expect(new ClassesOverFunctionExports().check(text)).toEqual([]);
 	});
 });

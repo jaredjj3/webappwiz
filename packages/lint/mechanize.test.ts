@@ -2,18 +2,11 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakePs } from "@webappwiz/sys/testing";
 import { Mechanizer } from "./mechanize";
-import { compile, type Rule } from "./rule";
-import { ruleDoc } from "./testing";
+import { testRule } from "./testing";
 
 const agent = { argv: ["agent"], label: "agent" };
 
-const compiled = (name: string): Rule => {
-	const out = compile(ruleDoc(name), `${name}.md`);
-	if (!out.rule) {
-		throw new Error("fixture rule failed to compile");
-	}
-	return out.rule;
-};
+const rule = (name: string) => testRule(name);
 
 describe("Mechanizer", () => {
 	let ps: FakePs;
@@ -37,9 +30,9 @@ describe("Mechanizer", () => {
 			"",
 		);
 
-		expect(await mechanizer.check([compiled("Dashes")], agent)).toEqual([
+		expect(await mechanizer.check([rule("Dashes")], agent)).toEqual([
 			{
-				path: "Dashes.md",
+				rule: "Dashes",
 				severity: "warning",
 				message:
 					"biome could enforce this without an agent: " +
@@ -51,13 +44,13 @@ describe("Mechanizer", () => {
 	it("says nothing about a rule that needs an agent to read the code", async () => {
 		ps.setCaptureOutput('{"tool": null}', "");
 
-		expect(await mechanizer.check([compiled("Comments")], agent)).toEqual([]);
+		expect(await mechanizer.check([rule("Comments")], agent)).toEqual([]);
 	});
 
 	it("asks about every rule in the guide", async () => {
 		ps.setCaptureOutput('{"tool": null}', "");
 
-		await mechanizer.check([compiled("Dashes"), compiled("Comments")], agent);
+		await mechanizer.check([rule("Dashes"), rule("Comments")], agent);
 
 		expect(ps.getCalls().length).toBe(2);
 	});
@@ -65,7 +58,7 @@ describe("Mechanizer", () => {
 	it("passes the prompt to the agent command as its last argument", async () => {
 		ps.setCaptureOutput('{"tool": null}', "");
 
-		await mechanizer.check([compiled("Dashes")], {
+		await mechanizer.check([rule("Dashes")], {
 			argv: ["claude", "-p"],
 			label: "claude -p",
 		});
@@ -81,30 +74,28 @@ describe("Mechanizer", () => {
 			"",
 		);
 
-		expect((await mechanizer.check([compiled("Dashes")], agent)).length).toBe(
-			1,
-		);
+		expect((await mechanizer.check([rule("Dashes")], agent)).length).toBe(1);
 	});
 
 	it("reports an agent that exits non-zero and warns about nothing", async () => {
 		ps.setCaptureOutput("", "no api key");
 		ps.exit(1);
 
-		expect(await mechanizer.check([compiled("Dashes")], agent)).toEqual([]);
+		expect(await mechanizer.check([rule("Dashes")], agent)).toEqual([]);
 		expect(errors()[0]).toBe('agent exited 1 on rule "Dashes": no api key');
 	});
 
 	it("reports an agent that answers with no JSON object at all", async () => {
 		ps.setCaptureOutput("I could not decide", "");
 
-		expect(await mechanizer.check([compiled("Dashes")], agent)).toEqual([]);
+		expect(await mechanizer.check([rule("Dashes")], agent)).toEqual([]);
 		expect(errors()[0]).toBe(
 			'agent returned no JSON object on rule "Dashes": I could not decide',
 		);
 	});
 
 	it("tells the agent that an exception a tool would miss rules it out", async () => {
-		const prompt = mechanizer.prompt(compiled("Dashes"));
+		const prompt = mechanizer.prompt(rule("Dashes"));
 
 		expect(prompt).toContain("the exceptions the rule carves out");
 		expect(prompt).toContain('{"tool": null}');

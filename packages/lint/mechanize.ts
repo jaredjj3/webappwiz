@@ -2,7 +2,8 @@ import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
 import type { Ps } from "@webappwiz/sys";
 import type { Agent } from "./analyze";
-import type { GuideDiagnostic, Rule } from "./rule";
+import type { GuideDiagnostic } from "./diagnostic";
+import type { Rule } from "./rule/rule";
 
 /**
  * Finds the rules in a guide that do not need an agent, because a formatter,
@@ -36,14 +37,14 @@ export class Mechanizer {
 		]);
 		if (exitCode !== 0) {
 			this.log.error(
-				`agent exited ${exitCode} on rule "${rule.name}": ${stderr.trim() || "no stderr"}`,
+				`agent exited ${exitCode} on rule "${rule.id}": ${stderr.trim() || "no stderr"}`,
 			);
 			return null;
 		}
 		const answer = parse(stdout);
 		if (answer === null) {
 			this.log.error(
-				`agent returned no JSON object on rule "${rule.name}": ${stdout.trim().slice(0, 200)}`,
+				`agent returned no JSON object on rule "${rule.id}": ${stdout.trim().slice(0, 200)}`,
 			);
 			return null;
 		}
@@ -51,7 +52,7 @@ export class Mechanizer {
 			return null;
 		}
 		return {
-			path: rule.path,
+			rule: rule.id,
 			severity: "warning",
 			message:
 				`${answer.tool} could enforce this without an agent` +
@@ -68,7 +69,7 @@ export class Mechanizer {
 					"agent's job at all. Decide which this rule is.",
 			)
 			.text("The rule, verbatim:")
-			.code("markdown", rule.text)
+			.code("markdown", rule.document)
 			.text(
 				[
 					"A tool can take this rule over only if it decides every case the " +

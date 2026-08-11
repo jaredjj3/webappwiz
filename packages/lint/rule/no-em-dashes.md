@@ -1,7 +1,3 @@
----
-files: "**/*.{ts,md}"
----
-
 <!-- lint-ignore-file no-em-dashes: the Bad examples have to show one -->
 
 # No em dashes
@@ -50,4 +46,11 @@ this.log.error(message);
 export function parse(raw: string): Value {
 	return table.get(raw) ?? fail(raw);
 }
+```
+
+Between words, an en dash is the same mistake:
+
+```ts
+// the report – parseable or not – is what matters
+this.log.error(message);
 ```

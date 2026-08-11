@@ -1,7 +1,3 @@
----
-files: "**/*.ts"
----
-
 # Doc comments address users
 
 A doc comment on an exported class, method, function, or type is read by

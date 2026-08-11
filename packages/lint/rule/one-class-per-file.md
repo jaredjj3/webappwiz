@@ -1,7 +1,3 @@
----
-files: "**/*.ts"
----
-
 # One class per file
 
 A class is a file's whole idea; a second top-level class wants a file of its
@@ -19,6 +15,14 @@ export class Stamper {
 }
 
 const pad = (n: number): string => String(n).padStart(2, "0");
+```
+
+A class expression is not a second declaration:
+
+```ts
+const Anonymous = class {};
+
+export class Registry {}
 ```
 
 ## Bad

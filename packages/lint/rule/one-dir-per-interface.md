@@ -1,7 +1,3 @@
----
-files: "**/*.ts"
----
-
 # One directory per interface
 
 When an interface has more than one implementation, give it its own directory,
