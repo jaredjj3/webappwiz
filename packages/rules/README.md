@@ -13,5 +13,5 @@ export default defineStyleGuide([
 ]);
 ```
 
-Check and run a guide with `webappwiz style check` and `webappwiz style
+Audit and run a guide with `webappwiz style audit` and `webappwiz style
 analyze`.

@@ -97,8 +97,9 @@ export class Mechanizer {
 					'Use {"tool": null} when the rule needs an agent.',
 					"",
 					'"reason" is one clause, lowercase, no trailing period. Name the ' +
-						'check, not the outcome: write "a regex for U+2014 outside code ' +
-						'fences", not "it would find the em dashes".',
+						"check, not the outcome, in words a reader can say aloud: " +
+						'write "a regex for em dashes outside code fences", never a ' +
+						'codepoint like "U+2014", and not "it would find the em dashes".',
 				].join("\n"),
 			)
 			.toString();

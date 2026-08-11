@@ -49,17 +49,12 @@ export class StyleCommands {
 		private confirm: Confirm = ask,
 	) {}
 
-	/** Is the guide sound enough to analyze with? Exits 1 when it is not. */
-	async check(opts: { rules: string; strict: boolean }): Promise<void> {
-		const { rules, diagnostics } = await this.guide(opts.rules);
-		this.report(rules.length, diagnostics, opts.strict);
-	}
-
 	/**
-	 * Asks an agent which of the guide's rules a linter, formatter, type checker
-	 * or grep could enforce instead, and warns about each one. Exits 1 on
-	 * warnings only under `strict`: moving a rule out of the guide is a decision
-	 * to make once, not a build failure by surprise.
+	 * Everything wrong with the guide itself: compile diagnostics, and a warning
+	 * for each rule an agent says a linter, formatter, type checker or grep
+	 * could enforce instead. Exits 1 on errors, and on warnings only under
+	 * `strict`: moving a rule out of the guide is a decision to make once, not a
+	 * build failure by surprise.
 	 */
 	async audit(opts: {
 		rules: string;
@@ -73,9 +68,14 @@ export class StyleCommands {
 					`<${Object.keys(AGENTS).join("|")}> or --exec <command>`,
 			);
 		}
-		const { rules } = await this.sound(opts.rules);
+		const { rules, diagnostics } = await this.guide(opts.rules);
+		if (diagnostics.some((d) => d.severity === "error")) {
+			// Before any agent runs: a guide that will not compile is not worth
+			// spending calls on, and the errors are the more urgent report.
+			this.report(rules.length, diagnostics, opts.strict);
+		}
 		const mechanizer = new Mechanizer(this.log, this.ps);
-		const diagnostics = await mechanizer.check(rules, agentCommand(opts));
+		diagnostics.push(...(await mechanizer.check(rules, agentCommand(opts))));
 		this.report(rules.length, diagnostics, opts.strict);
 	}
 

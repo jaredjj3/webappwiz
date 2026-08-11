@@ -53,9 +53,10 @@ anywhere in a line, so `#` and `<!-- -->` comments carry it too, and the
 reason is required: without one the marker excuses nothing.
 
 The guide lives in `style.config.ts` unless a command is told otherwise.
-`webappwiz style check` validates it, `style ls` lists its rules, `style show
-<id>` prints one in full, and `style analyze [dir]` checks the code, handing
-one rule at a time to an agent and printing what comes back as lint output.
+`webappwiz style audit` checks the guide itself, `style ls` lists its rules,
+`style show <id>` prints one in full, and `style analyze [dir]` checks the
+code, handing one rule at a time to an agent and printing what comes back as
+lint output.
 
 Which agent is three flags, one of which you must pass:
 
@@ -120,8 +121,8 @@ about the ones that answer with a tool:
 
 ```
 rules/no-em-dashes.md  warning  a linter could enforce this without an agent:
-                                regex for em dashes (U+2014) and en dashes
-                                (U+2013) not surrounded by digits on both sides
+                                a regex for em dashes anywhere, and for en
+                                dashes not flanked by digits on both sides
 ```
 
 A tool only wins if it decides every case the rule covers, exceptions
@@ -130,8 +131,9 @@ finding is a warning rather than an error because moving a rule out of the
 guide is a judgment you make once, not something to fail a build on by
 surprise: `--strict` is how you make it fail once you have decided.
 
-Auditing is deliberate and costs an agent call per rule, so it is its own
-command: `style check` stays free, spawning nothing.
+Audit also validates the guide itself, the way analyze does before running:
+a rule that will not compile is an error, printed before any agent spends
+anything.
 
 ## API
 

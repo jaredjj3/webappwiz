@@ -44,19 +44,24 @@ describe("StyleCommands", () => {
 		await fs.mkdir("/p");
 	});
 
+	// the answer an agent gives about a rule nothing but an agent could enforce
+	const needsAgent = { rules: config, strict: false, agent: "haiku" };
+
 	it("declares a sound guide sound", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
+		ps.setCaptureOutput('{"tool": null}', "");
 
-		await commands(oneRule).check({ rules: config, strict: false });
+		await commands(oneRule).audit(needsAgent);
 
 		expect(printed()).toBe("sound: 1 rule, 0 errors, 0 warnings");
 	});
 
 	it("resolves rule paths relative to the guide module", async () => {
 		await fs.write("/g/rules/one.md", ruleDoc("One"));
+		ps.setCaptureOutput('{"tool": null}', "");
 		const guide = defineStyleGuide([rule("./rules/one.md")]);
 
-		await commands(guide).check({ rules: config, strict: false });
+		await commands(guide).audit(needsAgent);
 
 		expect(printed()).toContain("sound");
 	});
@@ -64,10 +69,11 @@ describe("StyleCommands", () => {
 	it("turns an unreadable rule file into an error instead of a crash", async () => {
 		const guide = defineStyleGuide([rule("./gone.md")]);
 
-		expect(
-			commands(guide).check({ rules: config, strict: false }),
-		).rejects.toThrow("1 error, 0 warnings");
+		expect(commands(guide).audit(needsAgent)).rejects.toThrow(
+			"1 error, 0 warnings",
+		);
 		expect(printed()).toContain("./gone.md  error  cannot read rule file");
+		expect(ps.getCalls()).toEqual([]);
 	});
 
 	it("catches duplicate rule names across files", async () => {
@@ -75,18 +81,16 @@ describe("StyleCommands", () => {
 		await fs.write("/g/two.md", ruleDoc("One"));
 		const guide = defineStyleGuide([rule("./one.md"), rule("./two.md")]);
 
-		expect(
-			commands(guide).check({ rules: config, strict: false }),
-		).rejects.toThrow("1 error");
+		expect(commands(guide).audit(needsAgent)).rejects.toThrow("1 error");
 		expect(printed()).toContain('duplicate rule name "One" (also ./one.md)');
 	});
 
 	it("prints diagnostics compiler-style and throws when there are errors", async () => {
 		await fs.write("/g/one.md", "just prose\n");
 
-		expect(
-			commands(oneRule).check({ rules: config, strict: false }),
-		).rejects.toThrow("3 errors, 1 warning");
+		expect(commands(oneRule).audit(needsAgent)).rejects.toThrow(
+			"3 errors, 1 warning",
+		);
 		expect(printed()).toContain(
 			'./one.md  error    missing "files" glob in frontmatter',
 		);
@@ -96,12 +100,13 @@ describe("StyleCommands", () => {
 	it("promotes warnings to failures under strict", async () => {
 		const noBad = ruleDoc("One").split("\n## Bad")[0] ?? "";
 		await fs.write("/g/one.md", noBad);
+		ps.setCaptureOutput('{"tool": null}', "");
 
-		await commands(oneRule).check({ rules: config, strict: false });
+		await commands(oneRule).audit(needsAgent);
 		expect(printed()).toContain("sound: 1 rule, 0 errors, 1 warning");
 
 		expect(
-			commands(oneRule).check({ rules: config, strict: true }),
+			commands(oneRule).audit({ ...needsAgent, strict: true }),
 		).rejects.toThrow("0 errors, 1 warning");
 	});
 

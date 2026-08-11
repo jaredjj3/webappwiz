@@ -44,7 +44,7 @@ export async function commands(
 
 	const style = app
 		.group("style")
-		.description("author, check, and run agent style guides");
+		.description("author, audit, and run agent style guides");
 	const styleCommands = new StyleCommands(log, fs, ps, new SystemClock());
 	const rulesArg = {
 		default: DEFAULT_GUIDE,
@@ -52,18 +52,10 @@ export async function commands(
 	};
 
 	style
-		.command("check")
-		.description("check that a style guide is sound")
-		.arg("rules", t.string(), rulesArg)
-		.option("strict", t.boolean(), {
-			default: false,
-			description: "treat warnings as errors",
-		})
-		.action((opts) => styleCommands.check(opts));
-
-	style
 		.command("audit")
-		.description("ask an agent which rules a tool could enforce instead")
+		.description(
+			"check the guide: is it sound, and which rules need no agent at all",
+		)
 		.arg("rules", t.string(), rulesArg)
 		.option("strict", t.boolean(), {
 			default: false,
