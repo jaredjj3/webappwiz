@@ -59,6 +59,27 @@ while. Then act on how it returns:
 Only ask before waiting if the wait itself is the problem: the task has been
 sitting for hours, or you were told this was urgent.
 
+## Leases
+
+A lease records who is driving a tree. `arbor create` and `arbor claim` take
+one; `graft` and `prune` release it. `arbor ls` prints it in the `LEASE` column
+and `arbor show` as `lease:`, with three values:
+
+- `live`: an agent is on this tree right now. The heartbeat is under 90 seconds
+  old and, when the holder is on this host, its process is still alive. Taking
+  it fails with exit 6 `lease_live`. Leave the tree alone.
+- `cold`: a lease is recorded but has gone quiet, because the agent exited or
+  because it has not run an arbor command inside the staleness window. Arbor
+  only heartbeats while a command runs, so an agent busy doing the actual work
+  reads cold too. `claim` will take a cold lease, so read `arbor show <task>`
+  before you assume the tree was abandoned.
+- `none`: no lease recorded. Nobody has held this tree since it was created or
+  last released.
+
+The lease says who is on the tree, not how the work is going: a `cold` lease on
+a `working` task is the normal state of a task mid-edit. `arbor wait` blocks on
+the status for that reason, never on the lease.
+
 ## Workflow
 
 1. `arbor create <task>` (or `arbor claim <task>` to resume; `arbor show
