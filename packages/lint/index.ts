@@ -3,9 +3,9 @@ export { Lint } from "./lint";
 export { type FileText, Linter } from "./linter";
 export type { Diagnostic, Finding, Level, Rule } from "./rule";
 export {
-	classesOverFunctionExports,
-	noEmDashes,
-	oneClassPerFile,
+	ClassesOverFunctionExports,
+	NoEmDashes,
+	OneClassPerFile,
 	recommended,
 } from "./rules";
 export { SyntaxKind, type Token, tokens } from "./scan";

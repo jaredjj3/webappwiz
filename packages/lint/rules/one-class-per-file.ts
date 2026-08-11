@@ -1,4 +1,4 @@
-import type { Rule } from "../rule";
+import type { Finding, Level, Rule } from "../rule";
 import { SyntaxKind, tokens } from "../scan";
 
 // `class` after one of these is a class expression, not a declaration.
@@ -12,11 +12,12 @@ const EXPRESSION_LEAD = new Set<SyntaxKind>([
 ]);
 
 /** A class is a file's whole idea; a second one wants a file of its own. */
-export const oneClassPerFile: Rule = {
-	id: "one-class-per-file",
-	files: "**/*.ts",
-	level: "error",
-	check(text) {
+export class OneClassPerFile implements Rule {
+	readonly id = "one-class-per-file";
+	readonly files = "**/*.ts";
+	readonly level: Level = "error";
+
+	check(text: string): Finding[] {
 		const all = tokens(text);
 		const classes = all.filter(
 			(t, i) =>
@@ -29,5 +30,5 @@ export const oneClassPerFile: Rule = {
 			column: t.column,
 			message: "more than one class in this file: give each its own file",
 		}));
-	},
-};
+	}
+}

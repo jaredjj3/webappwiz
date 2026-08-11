@@ -28,27 +28,31 @@ excuses the whole file.
 
 ## Sharing and writing rules
 
-A rule set is an array of `Rule` values, shared like any other export. A
-`lint.config.ts` at the repository root replaces the recommended set:
+A rule is a class implementing `Rule`, one per file, so a check too long for
+one method can break itself up privately. A rule set is an array of them,
+shared like any other export. A `lint.config.ts` at the repository root
+replaces the recommended set:
 
 ```ts
-import { type Rule, recommended, tokens } from "@webappwiz/lint";
+import { type Finding, type Level, type Rule, recommended } from "@webappwiz/lint";
 
-const noFixme: Rule = {
-	id: "no-fixme",
-	files: "**/*.ts",
-	level: "warning",
-	check: (text) =>
-		text
+class NoFixme implements Rule {
+	readonly id = "no-fixme";
+	readonly files = "**/*.ts";
+	readonly level: Level = "warning";
+
+	check(text: string): Finding[] {
+		return text
 			.split("\n")
 			.flatMap((line, i) =>
 				line.includes("FIXME")
 					? [{ line: i + 1, column: 1, message: "FIXME left behind" }]
 					: [],
-			),
-};
+			);
+	}
+}
 
-export default [...recommended, noFixme];
+export default [...recommended, new NoFixme()];
 ```
 
 `tokens()` hands a rule TypeScript's token stream (comment- and string-safe,

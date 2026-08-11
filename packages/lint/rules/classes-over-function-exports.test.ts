@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { classesOverFunctionExports } from "./classes-over-function-exports";
+import { ClassesOverFunctionExports } from "./classes-over-function-exports";
+
+const classesOverFunctionExports = new ClassesOverFunctionExports();
 
 describe("classes-over-function-exports", () => {
 	it("accepts pure helpers sharing a file", () => {

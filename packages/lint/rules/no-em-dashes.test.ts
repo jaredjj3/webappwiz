@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { noEmDashes } from "./no-em-dashes";
+import { NoEmDashes } from "./no-em-dashes";
+
+const noEmDashes = new NoEmDashes();
 
 describe("no-em-dashes", () => {
 	it("flags an em dash where it sits", () => {

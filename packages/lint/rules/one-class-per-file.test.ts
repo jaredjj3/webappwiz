@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { oneClassPerFile } from "./one-class-per-file";
+import { OneClassPerFile } from "./one-class-per-file";
+
+const oneClassPerFile = new OneClassPerFile();
 
 describe("one-class-per-file", () => {
 	it("accepts a lone class", () => {
