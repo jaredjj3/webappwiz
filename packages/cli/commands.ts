@@ -94,6 +94,10 @@ export async function commands(
 			default: false,
 			description: "print the prompts and run no agent at all",
 		})
+		.option("estimate", t.boolean(), {
+			default: false,
+			description: "print what a run would read, and run nothing",
+		})
 		.option("chunk", t.number(), {
 			default: 25,
 			description: "files per task",

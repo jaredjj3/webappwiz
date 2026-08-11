@@ -289,6 +289,66 @@ describe("StyleCommands", () => {
 		expect(printed()).not.toContain("- b.ts");
 	});
 
+	it("prints what a run would read and spawns nothing under --estimate", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+
+		await commands(oneRule).analyze({
+			...analyzing,
+			agent: undefined,
+			estimate: true,
+		});
+
+		expect(printed()).toMatch(
+			/^checking 1 file against 1 rule in 1 agent call, reading \d[\d.]*K?\+ tokens$/m,
+		);
+		expect(ps.getCalls()).toEqual([]);
+	});
+
+	it("names no agent under --estimate, having none to run", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+
+		await commands(oneRule).analyze({
+			...analyzing,
+			agent: undefined,
+			estimate: true,
+		});
+
+		expect(printed()).not.toContain("using:");
+	});
+
+	it("measures only what changed when --estimate is given a --since", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/p/a.ts", "class A {}");
+		await fs.write("/p/b.ts", "class B {}");
+		ps.setCaptureOutput("a.ts\n", "");
+
+		await commands(oneRule).analyze({
+			...analyzing,
+			agent: undefined,
+			estimate: true,
+			since: "main",
+		});
+
+		expect(printed()).toContain("checking 1 file against 1 rule");
+	});
+
+	it("refuses --estimate together with a flag naming something to run", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		const commanded = commands(oneRule);
+
+		for (const naming of [
+			{ agent: "haiku" },
+			{ agent: undefined, exec: "codex exec" },
+			{ agent: undefined, prompt: true },
+		]) {
+			expect(
+				commanded.analyze({ ...analyzing, estimate: true, ...naming }),
+			).rejects.toThrow("--estimate measures a run instead of making one");
+		}
+	});
+
 	it("says so and stops when nothing has changed since the ref", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/p/a.ts", "class A {}");

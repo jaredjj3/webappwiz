@@ -74,11 +74,17 @@ agent running the guide itself: it prints each task's prompt under a
 
 ## What a run costs
 
-A run says what it is about to read before it reads any of it:
+A run says what it is about to read before it reads any of it, and `--estimate`
+prints that line and stops, spawning nothing:
 
+```bash
+webappwiz style analyze --estimate
+# checking 211 files against 7 rules in 52 agent calls, reading 641K+ tokens
 ```
-checking 211 files against 7 rules in 52 agent calls, reading 641K+ tokens
-```
+
+Because it runs nothing, `--estimate` takes no `--agent`, `--exec` or
+`--prompt`, and is not subject to `--budget`: being asked to approve a number is
+what you run it instead of.
 
 The number is the prompts plus every file they name, at four bytes to the token.
 It is a floor, not a price. The same file is read once per rule whose glob

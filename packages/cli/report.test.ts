@@ -118,6 +118,12 @@ describe("report", () => {
 		expect(line).toContain(color.blue("claude -p --model haiku"));
 	});
 
+	it("names no command when there is no agent to name", () => {
+		expect(color.strip(planned(203, 7, 52, 589_000))).toBe(
+			"checking 203 files against 7 rules in 52 agent calls, reading 589K+ tokens",
+		);
+	});
+
 	it("counts four bytes to the token, rounding a partial token up", () => {
 		expect(tokens(4000)).toBe(1000);
 		expect(tokens(1)).toBe(1);

@@ -32,23 +32,25 @@ export function overBudget(estimate: number, budget: number): string {
 /**
  * The plan, before the first agent starts. Counts calls rather than tasks
  * because a call is what a run is billed for, and it is the denominator of the
- * `[n/total]` headings below.
+ * `[n/total]` headings below. Without an `agent` it is the whole of what
+ * `--estimate` prints, so it names no command it is not going to run.
  */
 export function planned(
 	files: number,
 	rules: number,
 	calls: number,
 	estimate: number,
-	agent: string,
+	agent?: string,
 ): string {
+	const plan =
+		`checking ${color.bold(count(files, "file"))} against ` +
+		`${color.bold(count(rules, "rule"))} in ` +
+		`${color.bold(count(calls, "agent call"))}, reading ` +
+		`${color.bold(`${compact.format(estimate)}+ tokens`)}`;
 	// blue last: it resets the foreground to default rather than to the
 	// surrounding gray, so nothing may follow it
 	return color.gray(
-		`checking ${color.bold(count(files, "file"))} against ` +
-			`${color.bold(count(rules, "rule"))} in ` +
-			`${color.bold(count(calls, "agent call"))}, reading ` +
-			`${color.bold(`${compact.format(estimate)}+ tokens`)}, using: ` +
-			color.blue(agent),
+		agent === undefined ? plan : `${plan}, using: ${color.blue(agent)}`,
 	);
 }
 

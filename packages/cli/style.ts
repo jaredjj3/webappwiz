@@ -6,6 +6,7 @@ import {
 	type GuideLoader,
 	loadGuide,
 	type Rule,
+	type Task,
 } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
@@ -22,6 +23,10 @@ import { table } from "./table";
 
 /** Asked before a run spends more than it was allowed to. */
 export type Confirm = (question: string) => boolean | Promise<boolean>;
+
+/** What a whole plan reads: every task's prompt and the files it names. */
+const estimated = (tasks: Task[]): number =>
+	tokens(tasks.reduce((n, t) => n + t.bytes, 0));
 
 /**
  * Answers on the terminal, and answers no without one: a run nobody is watching
@@ -98,7 +103,9 @@ export class StyleCommands {
 	 * rather hand them to subagents of its own.
 	 *
 	 * `since` narrows the run to what git says has changed, and `budget` caps
-	 * what it may read before asking whether you meant it.
+	 * what it may read before asking whether you meant it. Under `estimate` it
+	 * prints that size and stops, which is the answer to "what would this cost"
+	 * without having to guess a budget low enough to be refused.
 	 */
 	async analyze(opts: {
 		rules: string;
@@ -106,10 +113,23 @@ export class StyleCommands {
 		agent?: string;
 		exec?: string;
 		prompt?: boolean;
+		estimate?: boolean;
 		chunk: number;
 		since?: string;
 		budget: number;
 	}): Promise<void> {
+		if (
+			opts.estimate &&
+			(opts.agent !== undefined || opts.exec !== undefined || opts.prompt)
+		) {
+			// All three say what to do with the plan, and --estimate is already
+			// doing something else with it. Letting one quietly win would leave a
+			// caller unsure which of the two things they asked for they got.
+			throw new Error(
+				"--estimate measures a run instead of making one, so it takes no " +
+					"--agent, --exec or --prompt",
+			);
+		}
 		const { rules } = await this.sound(opts.rules);
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
 		const only =
@@ -132,6 +152,16 @@ export class StyleCommands {
 			}
 			return;
 		}
+		if (opts.estimate) {
+			const tasks = await analyzer.plan(rules, dir, opts.chunk, only);
+			const files = new Set(tasks.flatMap((t) => t.files)).size;
+			// No budget check: being asked to approve a number is what running
+			// --estimate is instead of.
+			this.log.info(
+				planned(files, rules.length, tasks.length, estimated(tasks)),
+			);
+			return;
+		}
 		const agent = agentCommand(opts);
 		const started = this.clock.now();
 		const violations = await analyzer.analyze(
@@ -142,7 +172,7 @@ export class StyleCommands {
 			{
 				planned: async (tasks) => {
 					const files = new Set(tasks.flatMap((t) => t.files)).size;
-					const estimate = tokens(tasks.reduce((n, t) => n + t.bytes, 0));
+					const estimate = estimated(tasks);
 					this.log.info(
 						planned(files, rules.length, tasks.length, estimate, agent.label),
 					);
