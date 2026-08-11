@@ -1,24 +1,29 @@
 import { Glob } from "bun";
 import { exemptions } from "./ignore";
-import type { Diagnostic, Rule } from "./rule";
+import type { Check, Diagnostic, Rule } from "./rule";
 
 export interface FileText {
 	path: string;
 	text: string;
 }
 
-/** Runs rules over in-memory files; listing and reading stay with the caller. */
+/**
+ * Runs rules' checks over in-memory files; listing and reading stay with the
+ * caller. Rules without a check are an agent's job, not this one's, and are
+ * skipped.
+ */
 export class Linter {
-	private readonly matchers: Array<{ rule: Rule; glob: Glob }>;
+	private readonly matchers: Array<{ rule: Rule; check: Check; glob: Glob }>;
 
 	constructor(rules: Rule[]) {
-		this.matchers = rules.map((rule) => ({
-			rule,
-			glob: new Glob(rule.files),
-		}));
+		this.matchers = rules.flatMap((rule) =>
+			rule.check
+				? [{ rule, check: rule.check, glob: new Glob(rule.files) }]
+				: [],
+		);
 	}
 
-	/** Whether any rule wants this file: lets a caller skip reading the rest. */
+	/** Whether any check wants this file: lets a caller skip reading the rest. */
 	matches(path: string): boolean {
 		return this.matchers.some(({ glob }) => glob.match(path));
 	}
@@ -26,11 +31,11 @@ export class Linter {
 	lint(files: FileText[]): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 		for (const { path, text } of files) {
-			for (const { rule, glob } of this.matchers) {
+			for (const { rule, check, glob } of this.matchers) {
 				if (!glob.match(path)) {
 					continue;
 				}
-				const findings = rule.check(text);
+				const findings = check(text);
 				if (findings.length === 0) {
 					continue;
 				}

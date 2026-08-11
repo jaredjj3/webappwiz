@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import type { Violation } from "@webappwiz/lint";
 import { color } from "@webappwiz/log";
-import type { Violation } from "@webappwiz/style";
 import { Duration } from "@webappwiz/time";
 import {
 	finding,
@@ -87,7 +87,7 @@ describe("report", () => {
 
 	it("says so plainly when the whole run is clean", () => {
 		expect(color.strip(summary([], Duration.secs(3)))).toBe(
-			"✓ no style violations in 3.0s",
+			"✓ no violations in 3.0s",
 		);
 	});
 

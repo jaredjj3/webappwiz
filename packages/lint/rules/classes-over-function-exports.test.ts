@@ -1,7 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ClassesOverFunctionExports } from "./classes-over-function-exports";
-
-const classesOverFunctionExports = new ClassesOverFunctionExports();
+import { classesOverFunctionExports } from "./classes-over-function-exports";
 
 describe("classes-over-function-exports", () => {
 	it("accepts pure helpers sharing a file", () => {
@@ -10,7 +8,7 @@ describe("classes-over-function-exports", () => {
 			"export function b(n: number): number { return n; }",
 		].join("\n");
 
-		expect(classesOverFunctionExports.check(text)).toEqual([]);
+		expect(classesOverFunctionExports(text)).toEqual([]);
 	});
 
 	it("accepts one function that injects, next to pure helpers", () => {
@@ -21,7 +19,7 @@ describe("classes-over-function-exports", () => {
 			"export function trimmed(m: string): string { return m.trim(); }",
 		].join("\n");
 
-		expect(classesOverFunctionExports.check(text)).toEqual([]);
+		expect(classesOverFunctionExports(text)).toEqual([]);
 	});
 
 	it("flags the second exported function that injects", () => {
@@ -34,7 +32,7 @@ describe("classes-over-function-exports", () => {
 			"}",
 		].join("\n");
 
-		expect(classesOverFunctionExports.check(text)).toEqual([
+		expect(classesOverFunctionExports(text)).toEqual([
 			{
 				line: 4,
 				column: 14,
@@ -53,7 +51,7 @@ describe("classes-over-function-exports", () => {
 			"}",
 		].join("\n");
 
-		expect(classesOverFunctionExports.check(text)).toEqual([]);
+		expect(classesOverFunctionExports(text)).toEqual([]);
 	});
 
 	it("leaves non-exported functions alone", () => {
@@ -62,6 +60,6 @@ describe("classes-over-function-exports", () => {
 			"function b(now: () => Date) { return now(); }",
 		].join("\n");
 
-		expect(classesOverFunctionExports.check(text)).toEqual([]);
+		expect(classesOverFunctionExports(text)).toEqual([]);
 	});
 });

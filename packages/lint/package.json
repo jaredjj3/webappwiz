@@ -7,11 +7,14 @@
 		"lint": "./cli.ts"
 	},
 	"exports": {
-		".": "./index.ts"
+		".": "./index.ts",
+		"./testing": "./testing.ts"
 	},
 	"dependencies": {
 		"@webappwiz/log": "workspace:*",
-		"@webappwiz/sys": "workspace:*"
+		"@webappwiz/md": "workspace:*",
+		"@webappwiz/sys": "workspace:*",
+		"@webappwiz/time": "workspace:*"
 	},
 	"peerDependencies": {
 		"typescript": "^7"

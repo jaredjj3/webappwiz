@@ -3,9 +3,15 @@ import { Linter } from "./linter";
 import type { Rule } from "./rule";
 
 const noX: Rule = {
+	name: "No x",
 	id: "no-x",
+	path: "no-x.md",
 	files: "**/*.md",
 	level: "warning",
+	description: "",
+	good: [],
+	bad: [],
+	text: "",
 	check: (text) =>
 		text
 			.split("\n")
@@ -30,6 +36,14 @@ describe("linter", () => {
 				message: "an x",
 			},
 		]);
+	});
+
+	it("skips a rule with no check: that one is an agent's job", () => {
+		const agentRule: Rule = { ...noX, check: undefined };
+		const linter = new Linter([agentRule]);
+
+		expect(linter.matches("docs/a.md")).toBe(false);
+		expect(linter.lint([{ path: "docs/a.md", text: "x" }])).toEqual([]);
 	});
 
 	it("only runs a rule on files its glob wants", () => {

@@ -1,11 +1,11 @@
 import type { Cli } from "@webappwiz/cmd";
+import { AGENTS, DEFAULT_GUIDE } from "@webappwiz/lint";
 import type { Logger } from "@webappwiz/log";
-import { AGENTS, DEFAULT_GUIDE } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import { SystemClock } from "@webappwiz/time";
+import { LintCommands } from "./lint";
 import { Skills } from "./skills";
-import { StyleCommands } from "./style";
 import { update } from "./update";
 
 /**
@@ -42,16 +42,16 @@ export async function commands(
 		})
 		.action((opts) => update(opts, log, fs));
 
-	const style = app
-		.group("style")
-		.description("author, audit, and run agent style guides");
-	const styleCommands = new StyleCommands(log, fs, ps, new SystemClock());
+	const lint = app
+		.group("lint")
+		.description("author, audit, and run the guide's agent rules");
+	const lintCommands = new LintCommands(log, fs, ps, new SystemClock());
 	const rulesArg = {
 		default: DEFAULT_GUIDE,
-		description: `style guide module (default: ${DEFAULT_GUIDE})`,
+		description: `guide module (default: ${DEFAULT_GUIDE})`,
 	};
 
-	style
+	lint
 		.command("audit")
 		.description(
 			"check the guide: is it sound, and which rules need no agent at all",
@@ -73,24 +73,24 @@ export async function commands(
 			default: undefined,
 			description: "command the prompt is passed to, instead of --agent",
 		})
-		.action((opts) => styleCommands.audit(opts));
+		.action((opts) => lintCommands.audit(opts));
 
-	style
+	lint
 		.command("ls")
-		.description("list a style guide's rules")
+		.description("list the guide rules")
 		.arg("rules", t.string(), rulesArg)
-		.action((opts) => styleCommands.ls(opts));
+		.action((opts) => lintCommands.ls(opts));
 
-	style
+	lint
 		.command("show")
-		.description("print one rule in full, by the id `style ls` gives it")
+		.description("print one rule in full, by the id `lint ls` gives it")
 		.arg("id", t.string(), { description: "rule id" })
 		.arg("rules", t.string(), rulesArg)
-		.action((opts) => styleCommands.show(opts));
+		.action((opts) => lintCommands.show(opts));
 
-	style
+	lint
 		.command("analyze")
-		.description("check a directory against a style guide, one agent per rule")
+		.description("check a directory against the guide, one agent per rule")
 		.arg("rules", t.string(), rulesArg)
 		.arg("dir", t.string(), {
 			default: ".",
@@ -124,7 +124,7 @@ export async function commands(
 			default: 200_000,
 			description: "confirm before reading more than this many tokens",
 		})
-		.action((opts) => styleCommands.analyze(opts));
+		.action((opts) => lintCommands.analyze(opts));
 
 	const skillsGroup = app
 		.group("skills")

@@ -20,7 +20,7 @@ export interface Task {
 
 /** One rule broken in one place, as the report prints it. */
 export interface Violation {
-	/** The rule's referenceable id, as `style show` lists it. */
+	/** The rule's referenceable id, as `lint show` lists it. */
 	id: string;
 	level: Level;
 	/** Path as the caller would type it: the analyzed dir plus the file. */
@@ -105,7 +105,7 @@ export interface Events {
 }
 
 /**
- * Checks a directory against a style guide by handing each rule to an agent of
+ * Checks a directory against a guide by handing each rule to an agent of
  * the caller's choosing, one task per rule and chunk of matching files, and
  * collecting what comes back as violations.
  */
@@ -279,9 +279,9 @@ export class Analyzer {
 				[
 					`This rule's id is \`${rule.id}\`. Code excuses itself from it with a comment:`,
 					"",
-					`- \`style-ignore ${rule.id}: <reason>\` excuses the line it sits above, ` +
+					`- \`lint-ignore ${rule.id}: <reason>\` excuses the line it sits above, ` +
 						"and everything indented under that line.",
-					`- \`style-ignore-file ${rule.id}: <reason>\` excuses the whole file.`,
+					`- \`lint-ignore-file ${rule.id}: <reason>\` excuses the whole file.`,
 					"",
 					"Report nothing an excused line does. A marker naming another rule's id " +
 						"excuses nothing here.",

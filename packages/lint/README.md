@@ -1,59 +1,215 @@
 # @webappwiz/lint
 
-Deterministic lint rules for the checks an agent used to make. Lints every
-git-tracked file a rule's glob wants and reports like a compiler:
-`path:line:column rule message`. Errors fail the run; warnings only print.
+One rule format for the checks a tool can make and the ones only an agent
+can. A rule is one markdown file: the file name is the id a report cites, the
+title is the human name, the prose under it the description, a `files`
+frontmatter glob picks the files, and `## Good` / `## Bad` hold fenced
+examples:
 
-`wiz fix` runs it. Standalone: `bunx @webappwiz/lint`.
+```markdown
+---
+files: "**/*.ts"
+---
 
-## Rules
+# One class per file
 
-- `no-em-dashes`: no em dashes in code, comments, or prose; an en dash
-  survives only between digits, as a range.
-- `one-class-per-file`: a second top-level class wants its own file.
-- `classes-over-function-exports`: a file may export one function that takes
-  a function-typed parameter; several should become a class that receives
-  those dependencies once, through its constructor.
+A class is a file's whole idea; a second one wants a file of its own.
+
+## Good
+​```ts
+class Foo {}
+​```
+
+## Bad
+​```ts
+class Foo {}
+class Bar {}
+​```
+```
+
+A rule reports as an error unless its frontmatter says `level: warning`.
+
+A rule may carry a deterministic `check`, a `(text) => Finding[]` the linter
+runs for free on every `wiz fix`. A rule without one is judged by an agent,
+on demand, through `lint analyze`. A `partial` check is both: the linter
+decides the cases a token scan can see and the agent reads the rest. The
+rule's examples keep the two halves honest: a check must pass every `## Good`
+block, and a full check must catch every `## Bad` block, so the document and
+the implementation cannot drift apart.
+
+## The guide
+
+A guide is a TypeScript module so composition stays typed. It lives in
+`lint.config.ts` unless a command is told otherwise, and a project without
+one gets `recommended`:
+
+```ts
+// lint.config.ts
+import { classesOverFunctionExports, defineGuide, recommended, rule } from "@webappwiz/lint";
+
+export default defineGuide([
+	...recommended.filter((r) => r !== classesOverFunctionExports),
+	rule("./rules/project-specific.md"),
+	rule("./rules/no-fixme.md", { check: noFixme }), // yours, deterministic
+]);
+```
+
+A check is a plain `(text: string) => Finding[]`, and `partial: true` beside
+it says the agent still reads what the check cannot see.
+
+The recommended rules, exported one by one so guides opt out by identity:
+
+- `no-em-dashes` (checked): no em dashes in code, comments, or prose; an en
+  dash survives only between digits, as a range.
+- `one-class-per-file` (checked): a second top-level class wants its own
+  file.
+- `classes-over-function-exports` (partially checked): several exported
+  functions injecting dependencies should become a class; the check sees
+  function-typed parameters, the agent judges interface-typed ones.
+- `tests-read-like-sentences`, `comments-say-why-not-what`,
+  `doc-comments-address-users`, `no-ponytail-prefixes`,
+  `one-dir-per-interface`: agent rules.
+
+`tokens()` hands a check TypeScript's token stream (comment- and string-safe,
+with line, column, and brace depth) when text alone is not enough.
 
 ## Ignoring a finding
 
-The marker works from any comment syntax and the reason is required:
+The marker works from any comment syntax and the reason is required: without
+one the marker excuses nothing.
 
 ```ts
 // lint-ignore one-class-per-file: local fakes for this suite
 ```
 
-A marker excuses the statement or declaration under it. `lint-ignore-file`
-excuses the whole file.
+A marker covers itself, the line under it, and everything indented under that
+line, so above a declaration it covers the whole declaration.
+`lint-ignore-file <id>: <reason>` covers the file instead. The linter and the
+analysis agents honor the same markers.
 
-## Sharing and writing rules
+## Linting
 
-A rule is a class implementing `Rule`, one per file, so a check too long for
-one method can break itself up privately. A rule set is an array of them,
-shared like any other export. A `lint.config.ts` at the repository root
-replaces the recommended set:
+`wiz fix` runs the checks; standalone, `bunx @webappwiz/lint`. Every
+git-tracked file a checked rule's glob wants is linted, reporting like a
+compiler: `path:line:column rule message`. Errors fail the run; warnings only
+print.
 
-```ts
-import { type Finding, type Level, type Rule, recommended } from "@webappwiz/lint";
+## Analyzing
 
-class NoFixme implements Rule {
-	readonly id = "no-fixme";
-	readonly files = "**/*.ts";
-	readonly level: Level = "warning";
+`webappwiz lint analyze [dir]` checks the code against the guide's agent
+rules, handing one rule at a time to an agent and printing what comes back as
+lint output. Which agent is three flags, one of which you must pass:
 
-	check(text: string): Finding[] {
-		return text
-			.split("\n")
-			.flatMap((line, i) =>
-				line.includes("FIXME")
-					? [{ line: i + 1, column: 1, message: "FIXME left behind" }]
-					: [],
-			);
-	}
-}
-
-export default [...recommended, new NoFixme()];
+```bash
+webappwiz lint analyze --agent opus          # claude -p --model <haiku|sonnet|opus>
+webappwiz lint analyze --exec "codex exec"   # any command, run by a shell
+webappwiz lint analyze --prompt              # print the prompts, run nothing
 ```
 
-`tokens()` hands a rule TypeScript's token stream (comment- and string-safe,
-with line, column, and brace depth) when text alone is not enough.
+There is no default: a run spends your tokens, so it will not choose for you
+and exits with a usage error when given none of the three. `--exec` takes the
+whole command, quoting and all, and is handed the prompt as one trailing
+argument. `--prompt` is for an agent running the guide itself: it prints each
+task's prompt under a `=== <id> <rule> (<n> files) ===` header, to hand to
+subagents of its own.
+
+`lint ls` lists the guide's rules, with which are checked and which cost an
+agent; `lint show <id>` prints one in full.
+
+## What a run costs
+
+A run says what it is about to read before it reads any of it, and
+`--estimate` prints that line and stops, spawning nothing:
+
+```bash
+webappwiz lint analyze --estimate
+# checking 211 files against 7 rules in 52 agent calls, reading 641K+ tokens
+```
+
+Because it runs nothing, `--estimate` takes no `--agent`, `--exec` or
+`--prompt`, and is not subject to `--budget`: being asked to approve a number
+is what you run it instead of.
+
+The number is the prompts plus every file they name, at four bytes to the
+token. It is a floor, not a price. The same file is read once per rule whose
+glob matches it, which is where a run's cost actually comes from: seven rules
+over 360 KB of source is 2.4 MB of reading. On top of that each call pays for
+the agent's own system prompt and for whatever it re-reads as it works,
+neither of which is knowable from here.
+
+Over `--budget` (200,000 tokens by default) the run asks before spending, and
+answers itself with no on a terminal nobody is watching, so a scripted run
+stops and says the number rather than hanging or quietly running up a bill.
+Passing a budget the estimate fits under is how you say yes in advance.
+
+`--since <ref>` checks only what git says was added or changed since that
+ref, staged, unstaged or untracked alike, which is usually the cheaper
+answer:
+
+```bash
+webappwiz lint analyze --since main --agent sonnet
+```
+
+Deletions are left out, since a violation quotes its line from disk and a
+file that is gone has none. Rules that judge a directory's shape rather than
+a file's contents get weaker under `--since`, because the files it hides are
+still part of what they are meant to look at.
+
+## Rules that do not need an agent
+
+An agent is the last resort. It costs minutes and tokens every run and only
+ever judges, so a rule a formatter, linter, type checker or grep could decide
+outright belongs to a check instead. `lint audit`, with the same `--agent`
+and `--exec` flags analyze takes, asks that question of every agent rule and
+warns about the ones that answer with a tool:
+
+```
+rules/no-fixme.md  warning  a linter could enforce this without an agent:
+                            a regex for FIXME anywhere in a line
+```
+
+A tool only wins if it decides every case the rule covers, exceptions
+included, so a rule a check would half-enforce stays with the agent, as a
+`partial` check at most. The finding is a warning rather than an error
+because writing the check is a judgment you make once, not something to fail
+a build on by surprise: `--strict` is how you make it fail once you have
+decided. Rules already carrying a full check are not asked about at all.
+
+Audit also validates the guide itself, the way analyze does before running:
+a rule that will not compile is an error, printed before any agent spends
+anything. `--sound` is that half on its own, spawning nothing:
+
+```bash
+webappwiz lint audit --sound
+# sound: 8 rules, 0 errors, 0 warnings
+```
+
+That is the one to run on every commit. It is free, and which rules a tool
+could take over changes when you write a rule, not when you write code. Since
+it runs no agent it takes no `--agent` or `--exec`.
+
+## API
+
+Those commands are a thin shell over this package. `loadGuide` compiles a
+guide module's rules and reports what is wrong with it, and
+`loadProjectGuide` is the `lint.config.ts`-or-`recommended` default; `Linter`
+runs the checks over in-memory files and `Lint` over the git-tracked tree;
+`Mechanizer` asks an agent which agent rules a tool could enforce instead,
+and answers in the same `GuideDiagnostic` shape, so the two print as one
+report; `Analyzer` plans one task per agent rule and chunk of matching files,
+hands each to an agent, and returns what came back, calling you as each task
+lands so a caller can print findings as they arrive. Rendering is the
+caller's: a violation carries the rule's id and level, the file and line, the
+message, and that line of source read from disk.
+
+```ts
+const { rules, diagnostics } = await loadProjectGuide(fs);
+const analyzer = new Analyzer(log, fs, ps, clock);
+const violations = await analyzer.analyze(
+	rules.filter((r) => !r.check || r.partial),
+	".",
+	25,
+	agentCommand({ agent: "sonnet" }),
+	{ finished: (task) => console.log(task.id, task.violations.length) },
+);
+```

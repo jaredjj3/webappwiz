@@ -1,15 +1,16 @@
-import type { Logger } from "@webappwiz/log";
 import {
 	AGENTS,
 	Analyzer,
 	agentCommand,
-	type Diagnostic,
+	type GuideDiagnostic,
 	type GuideLoader,
 	loadGuide,
+	loadProjectGuide,
 	Mechanizer,
 	type Rule,
 	type Task,
-} from "@webappwiz/style";
+} from "@webappwiz/lint";
+import type { Logger } from "@webappwiz/log";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
 import { changed } from "./changed";
@@ -39,7 +40,7 @@ export const ask: Confirm = (question) =>
 	process.stdin.isTTY === true &&
 	/^y(es)?$/i.test((prompt(`${question} [y/N]`) ?? "").trim());
 
-export class StyleCommands {
+export class LintCommands {
 	constructor(
 		private log: Logger,
 		private fs: Fs,
@@ -93,20 +94,31 @@ export class StyleCommands {
 			this.report(rules.length, diagnostics, opts.strict);
 		}
 		const mechanizer = new Mechanizer(this.log, this.ps);
-		diagnostics.push(...(await mechanizer.check(rules, agentCommand(opts))));
+		// Rules carrying a check are already mechanized: only the agent-judged
+		// ones are worth asking about.
+		diagnostics.push(
+			...(await mechanizer.check(
+				rules.filter((r) => !r.check),
+				agentCommand(opts),
+			)),
+		);
 		this.report(rules.length, diagnostics, opts.strict);
 	}
 
 	/** Lists a guide's rules, one row each, ids first for citing. */
 	async ls(opts: { rules: string }): Promise<void> {
 		const { rules } = await this.sound(opts.rules);
-		const rows = [["ID", "RULE", "LEVEL", "FILES", "GOOD", "BAD", "PATH"]];
+		const rows = [
+			["ID", "RULE", "LEVEL", "FILES", "CHECK", "GOOD", "BAD", "PATH"],
+		];
 		for (const r of rules) {
 			rows.push([
 				r.id,
 				r.name,
 				r.level,
 				r.files,
+				// which rules cost tokens: a checked rule is the linter's, free
+				r.check ? (r.partial ? "partial" : "full") : "",
 				String(r.good.length),
 				String(r.bad.length),
 				r.path,
@@ -117,7 +129,7 @@ export class StyleCommands {
 
 	/**
 	 * Prints one rule in full: what it covers, and the document an analysis
-	 * agent is given, verbatim. Take the id from `style ls` or from a finding.
+	 * agent is given, verbatim. Take the id from `lint ls` or from a finding.
 	 */
 	async show(opts: { id: string; rules: string }): Promise<void> {
 		const { rules } = await this.sound(opts.rules);
@@ -174,7 +186,10 @@ export class StyleCommands {
 					"--agent, --exec or --prompt",
 			);
 		}
-		const { rules } = await this.sound(opts.rules);
+		const { rules: all } = await this.sound(opts.rules);
+		// A rule with a full check is the linter's, already enforced for free;
+		// an agent reads only the rules, or the parts of them, no check decides.
+		const rules = all.filter((r) => !r.check || r.partial);
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
 		const only =
 			opts.since === undefined
@@ -240,14 +255,18 @@ export class StyleCommands {
 		this.log.info(summary(violations, this.clock.now().subtract(started)));
 		const errors = violations.filter((v) => v.level === "error").length;
 		if (errors > 0) {
-			throw new Error(count(errors, "style error"));
+			throw new Error(count(errors, "lint error"));
 		}
 	}
 
 	private guide(
 		path: string,
-	): Promise<{ rules: Rule[]; diagnostics: Diagnostic[] }> {
-		return loadGuide(this.fs, path, this.loader);
+	): Promise<{ rules: Rule[]; diagnostics: GuideDiagnostic[] }> {
+		// An injected loader is its own module system, so the missing-config
+		// fallback to the recommended rules is only for real runs.
+		return this.loader
+			? loadGuide(this.fs, path, this.loader)
+			: loadProjectGuide(this.fs, path);
 	}
 
 	/** The guide's rules, for a command that has no business running without
@@ -262,7 +281,7 @@ export class StyleCommands {
 
 	private report(
 		rules: number,
-		diagnostics: Diagnostic[],
+		diagnostics: GuideDiagnostic[],
 		strict: boolean,
 	): void {
 		const rows = diagnostics.map((d) => [

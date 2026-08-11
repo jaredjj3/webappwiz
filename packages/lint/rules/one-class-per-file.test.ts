@@ -1,15 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { OneClassPerFile } from "./one-class-per-file";
-
-const oneClassPerFile = new OneClassPerFile();
+import { oneClassPerFile } from "./one-class-per-file";
 
 describe("one-class-per-file", () => {
 	it("accepts a lone class", () => {
-		expect(oneClassPerFile.check("export class A {}\n")).toEqual([]);
+		expect(oneClassPerFile("export class A {}\n")).toEqual([]);
 	});
 
 	it("flags the second top-level class", () => {
-		const findings = oneClassPerFile.check("class A {}\n\nexport class B {}\n");
+		const findings = oneClassPerFile("class A {}\n\nexport class B {}\n");
 
 		expect(findings).toEqual([
 			{ line: 3, column: 8, message: expect.stringContaining("own file") },
@@ -26,7 +24,7 @@ describe("one-class-per-file", () => {
 			"}",
 		].join("\n");
 
-		expect(oneClassPerFile.check(text)).toEqual([]);
+		expect(oneClassPerFile(text)).toEqual([]);
 	});
 
 	it("is not fooled by classes in comments or strings", () => {
@@ -38,7 +36,7 @@ describe("one-class-per-file", () => {
 			"export class D {}",
 		].join("\n");
 
-		expect(oneClassPerFile.check(text)).toEqual([]);
+		expect(oneClassPerFile(text)).toEqual([]);
 	});
 
 	it("keeps counting top-level classes after a template substitution", () => {
@@ -49,7 +47,7 @@ describe("one-class-per-file", () => {
 			"class B {}",
 		].join("\n");
 
-		expect(oneClassPerFile.check(text)).toEqual([
+		expect(oneClassPerFile(text)).toEqual([
 			{ line: 3, column: 1, message: expect.stringContaining("own file") },
 		]);
 	});

@@ -101,6 +101,22 @@ describe("rule", () => {
 		]);
 	});
 
+	it("carries an attached check and its partial flag onto the rule", () => {
+		const check = () => [];
+
+		const { rule } = compile(good, "r.md", { check, partial: true });
+
+		expect(rule?.check).toBe(check);
+		expect(rule?.partial).toBe(true);
+	});
+
+	it("errors on partial without a check", () => {
+		const { rule, diagnostics } = compile(good, "r.md", { partial: true });
+
+		expect(rule).toBeNull();
+		expect(diagnostics[0]?.message).toContain("partial without a check");
+	});
+
 	it("takes the id from the file name, so a report can cite it", () => {
 		expect(compile(good, "rules/single-class-per-file.md").rule?.id).toBe(
 			"single-class-per-file",

@@ -2,7 +2,7 @@ import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
 import type { Ps } from "@webappwiz/sys";
 import type { Agent } from "./analyze";
-import type { Diagnostic, Rule } from "./rule";
+import type { GuideDiagnostic, Rule } from "./rule";
 
 /**
  * Finds the rules in a guide that do not need an agent, because a formatter,
@@ -24,12 +24,12 @@ export class Mechanizer {
 	 * One warning per rule a tool could take over, naming the tool. Rules that
 	 * genuinely need reading comprehension produce nothing.
 	 */
-	async check(rules: Rule[], agent: Agent): Promise<Diagnostic[]> {
+	async check(rules: Rule[], agent: Agent): Promise<GuideDiagnostic[]> {
 		const found = await Promise.all(rules.map((r) => this.ask(r, agent)));
 		return found.filter((d) => d !== null);
 	}
 
-	private async ask(rule: Rule, agent: Agent): Promise<Diagnostic | null> {
+	private async ask(rule: Rule, agent: Agent): Promise<GuideDiagnostic | null> {
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture([
 			...agent.argv,
 			this.prompt(rule),
@@ -62,7 +62,7 @@ export class Mechanizer {
 	prompt(rule: Rule): string {
 		return new MarkdownWriter()
 			.text(
-				"You are triaging one rule from a style guide that is checked by AI " +
+				"You are triaging one rule from a lint guide that is checked by AI " +
 					"agents. An agent run is slow and expensive and can only ever " +
 					"judge, so a rule an ordinary tool could enforce should not be an " +
 					"agent's job at all. Decide which this rule is.",

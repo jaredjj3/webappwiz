@@ -1,5 +1,5 @@
+import type { Finished, Violation } from "@webappwiz/lint";
 import { color } from "@webappwiz/log";
-import type { Finished, Violation } from "@webappwiz/style";
 import type { Duration } from "@webappwiz/time";
 
 export const count = (n: number, word: string): string =>
@@ -102,7 +102,7 @@ export function finding(v: Violation): string[] {
 export function summary(violations: Violation[], took: Duration): string {
 	const elapsed = color.gray(`in ${took.human()}`);
 	if (violations.length === 0) {
-		return `${color.green("✓ no style violations")} ${elapsed}`;
+		return `${color.green("✓ no violations")} ${elapsed}`;
 	}
 	const errors = violations.filter((v) => v.level === "error").length;
 	const line = `✖ ${count(violations.length, "problem")} (${count(errors, "error")}, ${count(violations.length - errors, "warning")})`;

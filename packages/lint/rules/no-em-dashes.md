@@ -2,7 +2,6 @@
 files: "**/*.{ts,md}"
 ---
 
-<!-- style-ignore-file no-em-dashes: the Bad examples have to show one -->
 <!-- lint-ignore-file no-em-dashes: the Bad examples have to show one -->
 
 # No em dashes

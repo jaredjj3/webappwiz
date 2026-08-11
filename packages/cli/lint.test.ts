@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import { defineGuide, type Guide, rule } from "@webappwiz/lint";
+import { ruleDoc } from "@webappwiz/lint/testing";
 import { color, MemoryLogger } from "@webappwiz/log";
-import { defineStyleGuide, rule, type StyleGuide } from "@webappwiz/style";
-import { ruleDoc } from "@webappwiz/style/testing";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
-import { type Confirm, StyleCommands } from "./style";
+import { type Confirm, LintCommands } from "./lint";
 
-describe("StyleCommands", () => {
+describe("LintCommands", () => {
 	let fs: FakeFs;
 	let ps: FakePs;
 	let log: MemoryLogger;
@@ -15,8 +15,8 @@ describe("StyleCommands", () => {
 
 	const printed = () =>
 		color.strip(log.entries.map((e) => String(e.message)).join("\n"));
-	const commands = (guide: StyleGuide, dir = "/g", confirm?: Confirm) =>
-		new StyleCommands(
+	const commands = (guide: Guide, dir = "/g", confirm?: Confirm) =>
+		new LintCommands(
 			log,
 			fs,
 			ps,
@@ -24,8 +24,8 @@ describe("StyleCommands", () => {
 			{ load: async () => ({ guide, dir }) },
 			confirm,
 		);
-	const oneRule = defineStyleGuide([rule("./one.md")]);
-	const config = "style.config.ts";
+	const oneRule = defineGuide([rule("./one.md")]);
+	const config = "lint.config.ts";
 	// budget high enough that only the tests about budgets ever meet it
 	const analyzing = {
 		rules: config,
@@ -66,7 +66,7 @@ describe("StyleCommands", () => {
 
 	it("resolves rule paths relative to the guide module", async () => {
 		await fs.write("/g/rules/one.md", ruleDoc("One"));
-		const guide = defineStyleGuide([rule("./rules/one.md")]);
+		const guide = defineGuide([rule("./rules/one.md")]);
 
 		await commands(guide).audit(soundly);
 
@@ -74,7 +74,7 @@ describe("StyleCommands", () => {
 	});
 
 	it("turns an unreadable rule file into an error instead of a crash", async () => {
-		const guide = defineStyleGuide([rule("./gone.md")]);
+		const guide = defineGuide([rule("./gone.md")]);
 
 		expect(commands(guide).audit(needsAgent)).rejects.toThrow(
 			"1 error, 0 warnings",
@@ -86,7 +86,7 @@ describe("StyleCommands", () => {
 	it("catches duplicate rule names across files", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
 		await fs.write("/g/two.md", ruleDoc("One"));
-		const guide = defineStyleGuide([rule("./one.md"), rule("./two.md")]);
+		const guide = defineGuide([rule("./one.md"), rule("./two.md")]);
 
 		expect(commands(guide).audit(soundly)).rejects.toThrow("1 error");
 		expect(printed()).toContain('duplicate rule name "One" (also ./one.md)');
@@ -175,7 +175,7 @@ describe("StyleCommands", () => {
 
 		expect(
 			commands(oneRule).show({ id: "two", rules: config }),
-		).rejects.toThrow('no rule "two" in style.config.ts. Known ids: one');
+		).rejects.toThrow('no rule "two" in lint.config.ts. Known ids: one');
 	});
 
 	it("prints what the agent found as lint output", async () => {
@@ -187,7 +187,7 @@ describe("StyleCommands", () => {
 		);
 
 		expect(commands(oneRule).analyze(analyzing)).rejects.toThrow(
-			"1 style error",
+			"1 lint error",
 		);
 		expect(printed()).toContain("✗ [1/1] One (one): 1 problem");
 		expect(printed()).toContain(
@@ -203,7 +203,7 @@ describe("StyleCommands", () => {
 
 		await commands(oneRule).analyze(analyzing);
 
-		expect(printed()).toContain("no style violations");
+		expect(printed()).toContain("no violations");
 	});
 
 	it("times each rule and the run as a whole", async () => {
@@ -218,7 +218,7 @@ describe("StyleCommands", () => {
 		await commands(oneRule).analyze(analyzing);
 
 		expect(printed()).toContain("clean in 12.5s");
-		expect(printed()).toContain("no style violations in 12.5s");
+		expect(printed()).toContain("no violations in 12.5s");
 	});
 
 	it("reports warnings without failing the run", async () => {
@@ -271,6 +271,35 @@ describe("StyleCommands", () => {
 		expect(ps.getCalls()).toEqual([]);
 	});
 
+	it("leaves fully checked rules to the linter, analyzing the rest", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		await fs.write("/g/two.md", ruleDoc("Two"));
+		await fs.write("/g/three.md", ruleDoc("Three"));
+		await fs.write("/p/a.ts", "class A {}");
+		const guide = defineGuide([
+			rule("./one.md", { check: () => [] }),
+			rule("./two.md", { check: () => [], partial: true }),
+			rule("./three.md"),
+		]);
+
+		await commands(guide).analyze({ ...analyzing, prompt: true });
+
+		// a partial check's rule still needs the agent; a full check's does not
+		expect(printed()).not.toContain("=== one");
+		expect(printed()).toContain("=== two");
+		expect(printed()).toContain("=== three");
+	});
+
+	it("audits only the rules no check enforces", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		const guide = defineGuide([rule("./one.md", { check: () => [] })]);
+
+		await commands(guide).audit(needsAgent);
+
+		expect(ps.getCalls()).toEqual([]);
+		expect(printed()).toContain("sound: 1 rule, 0 errors, 0 warnings");
+	});
+
 	it("refuses to analyze with an unsound guide", async () => {
 		await fs.write("/g/one.md", "just prose\n");
 
@@ -313,7 +342,7 @@ describe("StyleCommands", () => {
 		});
 
 		expect(ps.getCalls()).toHaveLength(1);
-		expect(printed()).toContain("no style violations");
+		expect(printed()).toContain("no violations");
 	});
 
 	it("checks only what changed when --since names a ref", async () => {

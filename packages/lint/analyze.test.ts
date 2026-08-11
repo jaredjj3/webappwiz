@@ -75,7 +75,7 @@ describe("Analyzer", () => {
 		expect(task?.prompt).toContain("- src/a.ts");
 		expect(task?.prompt).not.toContain("b.ts");
 		expect(task?.prompt).toContain('"line"');
-		expect(task?.prompt).toContain("style-ignore Classes: <reason>");
+		expect(task?.prompt).toContain("lint-ignore Classes: <reason>");
 	});
 
 	it("passes the prompt to the agent command as its last argument", async () => {
@@ -116,10 +116,10 @@ describe("Analyzer", () => {
 		]);
 	});
 
-	it("drops a finding the code excuses with a style-ignore comment", async () => {
+	it("drops a finding the code excuses with a lint-ignore comment", async () => {
 		await fs.write(
 			"/p/src/a.ts",
-			"// style-ignore Classes: the second class is a fixture\nclass A {}\nclass B {}\n",
+			"// lint-ignore Classes: the second class is a fixture\nclass A {}\nclass B {}\n",
 		);
 		ps.setCaptureOutput(
 			'[{"file": "src/a.ts", "line": 2, "message": "the file declares a second class"},' +
