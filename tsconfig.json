@@ -1,7 +1,10 @@
 {
 	"compilerOptions": {
 		// Environment setup & latest features
-		"lib": ["ESNext"],
+		// DOM is here rather than in a per-package tsconfig because wiz runs one
+		// tsc pass over the whole workspace. Server-side packages get the DOM
+		// globals in scope as a result; they simply do not use them.
+		"lib": ["ESNext", "DOM"],
 		"target": "ESNext",
 		"module": "Preserve",
 		"moduleDetection": "force",
