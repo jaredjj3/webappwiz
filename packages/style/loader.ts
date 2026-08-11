@@ -3,13 +3,13 @@ import type { Fs } from "@webappwiz/sys";
 import { isStyleGuide, type StyleGuide } from "./guide";
 import { checkGuide, compile, type Diagnostic, type Rule } from "./rule";
 
-/** Turns a guide module path into the guide and the directory it lives in —
+/** Turns a guide module path into the guide and the directory it lives in,
  * the home that relative rule paths resolve against. */
 export interface GuideLoader {
 	load(path: string): Promise<{ guide: StyleGuide; dir: string }>;
 }
 
-/** Imports the module for real — Bun runs the user's TypeScript directly. */
+/** Imports the module for real: Bun runs the user's TypeScript directly. */
 export class ModuleGuideLoader implements GuideLoader {
 	async load(path: string): Promise<{ guide: StyleGuide; dir: string }> {
 		const abs = resolve(path);
