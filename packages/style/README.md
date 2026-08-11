@@ -89,6 +89,6 @@ const violations = await analyzer.analyze(
 	".",
 	25,
 	agentCommand({ agent: "sonnet" }),
-	(task) => console.log(task.id, task.violations.length),
+	{ finished: (task) => console.log(task.id, task.violations.length) },
 );
 ```

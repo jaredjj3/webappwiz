@@ -3,7 +3,7 @@ export {
 	type Agent,
 	Analyzer,
 	agentCommand,
-	count,
+	type Events,
 	type Finished,
 	type Task,
 	type Violation,

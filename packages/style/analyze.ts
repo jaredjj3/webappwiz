@@ -86,8 +86,13 @@ export const agentCommand = (opts: {
 	return { argv, label: argv.join(" ") };
 };
 
-export const count = (n: number, word: string): string =>
-	`${n} ${word}${n === 1 ? "" : "s"}`;
+/** What a run reports as it goes, for a caller that prints as findings land. */
+export interface Events {
+	/** The whole plan, before the first agent starts. */
+	planned?: (tasks: Task[]) => void;
+	/** One task, the moment its agent returns. */
+	finished?: (finished: Finished) => void;
+}
 
 /**
  * Checks a directory against a style guide by handing each rule to an agent of
@@ -110,7 +115,7 @@ export class Analyzer {
 	) {}
 
 	/**
-	 * Checks `dir` against `rules`, calling `onFinished` each time an agent
+	 * Checks `dir` against `rules`, calling `on.finished` each time an agent
 	 * returns so a caller can print findings as they land. Resolves with every
 	 * violation once the last agent is done.
 	 */
@@ -119,13 +124,10 @@ export class Analyzer {
 		dir: string,
 		chunk: number,
 		agent: Agent,
-		onFinished: (finished: Finished) => void = () => {},
+		on: Events = {},
 	): Promise<Violation[]> {
 		const tasks = await this.plan(rules, dir, chunk);
-		const files = new Set(tasks.flatMap((t) => t.files)).size;
-		this.log.info(
-			`checking ${count(files, "file")} against ${count(rules.length, "rule")} in ${count(tasks.length, "task")}, using: ${agent.label}`,
-		);
+		on.planned?.(tasks);
 		let done = 0;
 		// Every task at once: a guide's tasks number in the tens, and an agent
 		// call is minutes of latency and no local work. Add a cap if that changes.
@@ -134,7 +136,7 @@ export class Analyzer {
 				const started = this.clock.now();
 				const violations = await this.run(task, dir, agent);
 				done += 1;
-				onFinished({
+				on.finished?.({
 					rule: task.rule.name,
 					id: task.rule.id,
 					violations,

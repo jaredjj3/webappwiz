@@ -1,6 +1,9 @@
 import { color } from "@webappwiz/log";
-import { count, type Finished, type Violation } from "@webappwiz/style";
+import type { Finished, Violation } from "@webappwiz/style";
 import type { Duration } from "@webappwiz/time";
+
+export const count = (n: number, word: string): string =>
+	`${n} ${word}${n === 1 ? "" : "s"}`;
 
 /**
  * A finished task, as it should print the moment its agent returns: a status

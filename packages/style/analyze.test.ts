@@ -177,9 +177,10 @@ describe("Analyzer", () => {
 		);
 
 		const finished: string[] = [];
-		await analyzer.analyze([compiled("Classes")], "/p", 1, agent, (task) =>
-			finished.push(`${task.id} ${task.done}/${task.total}`),
-		);
+		await analyzer.analyze([compiled("Classes")], "/p", 1, agent, {
+			finished: (task) =>
+				finished.push(`${task.id} ${task.done}/${task.total}`),
+		});
 
 		expect(finished).toEqual(["Classes 1/2", "Classes 2/2"]);
 	});
@@ -192,9 +193,9 @@ describe("Analyzer", () => {
 		});
 
 		const took: string[] = [];
-		await analyzer.analyze([compiled("Classes")], "/p", 25, agent, (task) =>
-			took.push(task.took.human()),
-		);
+		await analyzer.analyze([compiled("Classes")], "/p", 25, agent, {
+			finished: (task) => took.push(task.took.human()),
+		});
 
 		expect(took).toEqual(["3.0s"]);
 	});

@@ -2,7 +2,6 @@ import type { Logger } from "@webappwiz/log";
 import {
 	Analyzer,
 	agentCommand,
-	count,
 	type Diagnostic,
 	type GuideLoader,
 	loadGuide,
@@ -10,7 +9,7 @@ import {
 } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
-import { finished, summary } from "./report";
+import { count, finished, summary } from "./report";
 import { table } from "./table";
 
 export class StyleCommands {
@@ -97,18 +96,21 @@ export class StyleCommands {
 			}
 			return;
 		}
+		const agent = agentCommand(opts);
 		const started = this.clock.now();
-		const violations = await analyzer.analyze(
-			rules,
-			dir,
-			opts.chunk,
-			agentCommand(opts),
-			(task) => {
+		const violations = await analyzer.analyze(rules, dir, opts.chunk, agent, {
+			planned: (tasks) => {
+				const files = new Set(tasks.flatMap((t) => t.files)).size;
+				this.log.info(
+					`checking ${count(files, "file")} against ${count(rules.length, "rule")} in ${count(tasks.length, "task")}, using: ${agent.label}`,
+				);
+			},
+			finished: (task) => {
 				for (const line of finished(task)) {
 					this.log.info(line);
 				}
 			},
-		);
+		});
 		this.log.info("");
 		this.log.info(summary(violations, this.clock.now().subtract(started)));
 		const errors = violations.filter((v) => v.level === "error").length;
