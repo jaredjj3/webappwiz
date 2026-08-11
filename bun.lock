@@ -75,6 +75,20 @@
         "@webappwiz/disposable": "workspace:*",
       },
     },
+    "packages/lint": {
+      "name": "@webappwiz/lint",
+      "version": "0.0.0",
+      "bin": {
+        "lint": "./cli.ts",
+      },
+      "dependencies": {
+        "@webappwiz/log": "workspace:*",
+        "@webappwiz/sys": "workspace:*",
+      },
+      "peerDependencies": {
+        "typescript": "^7",
+      },
+    },
     "packages/log": {
       "name": "@webappwiz/log",
       "version": "0.0.0",
@@ -132,6 +146,7 @@
       "dependencies": {
         "@webappwiz/cli": "workspace:*",
         "@webappwiz/cmd": "workspace:*",
+        "@webappwiz/lint": "workspace:*",
         "@webappwiz/log": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
@@ -224,6 +239,8 @@
     "@webappwiz/disposable": ["@webappwiz/disposable@workspace:packages/disposable"],
 
     "@webappwiz/events": ["@webappwiz/events@workspace:packages/events"],
+
+    "@webappwiz/lint": ["@webappwiz/lint@workspace:packages/lint"],
 
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
 

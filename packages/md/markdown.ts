@@ -1,3 +1,5 @@
+// lint-ignore-file one-class-per-file: Section is a view Markdown hands out;
+// splitting the document model across files would hide that coupling
 /** Thrown when an accessor is asked for something the document does not have. */
 export class MarkdownError extends Error {}
 

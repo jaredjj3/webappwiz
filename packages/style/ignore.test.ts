@@ -1,4 +1,5 @@
 // style-ignore-file no-em-dashes: the fixtures are source text about that rule
+// lint-ignore-file no-em-dashes: same fixtures, seen by the deterministic linter
 import { describe, expect, it } from "bun:test";
 import { exemptions } from "./ignore";
 

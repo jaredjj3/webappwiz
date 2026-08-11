@@ -7,15 +7,17 @@ import { Fix } from "./fix";
 describe("fix", () => {
 	let log: MemoryLogger;
 	let ps: FakePs;
+	let clean: boolean;
 	let fix: Fix;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
-		fix = new Fix(log, ps);
+		clean = true;
+		fix = new Fix(log, ps, { run: async () => clean });
 	});
 
-	it("writes fixes by default, then typechecks", async () => {
+	it("writes fixes by default, then lints and typechecks", async () => {
 		await fix.run({ check: false });
 
 		expect(ps.getCalls()).toEqual([
@@ -36,5 +38,12 @@ describe("fix", () => {
 		await expect(fix.run({ check: false })).rejects.toThrow(
 			"Biome check failed",
 		);
+	});
+
+	it("throws when lint fails, without typechecking", async () => {
+		clean = false;
+
+		await expect(fix.run({ check: false })).rejects.toThrow("Lint failed");
+		expect(ps.getCalls()).toEqual(["bunx biome check --write --unsafe ."]);
 	});
 });

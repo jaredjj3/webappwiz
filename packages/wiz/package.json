@@ -7,6 +7,7 @@
 	"dependencies": {
 		"@webappwiz/cli": "workspace:*",
 		"@webappwiz/cmd": "workspace:*",
+		"@webappwiz/lint": "workspace:*",
 		"@webappwiz/log": "workspace:*",
 		"@webappwiz/sys": "workspace:*",
 		"@webappwiz/t": "workspace:*"

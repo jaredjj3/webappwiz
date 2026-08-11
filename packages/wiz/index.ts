@@ -1,5 +1,6 @@
 import { commands } from "@webappwiz/cli/commands";
 import { cli } from "@webappwiz/cmd";
+import { Lint } from "@webappwiz/lint";
 import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs, NodePs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
@@ -20,7 +21,7 @@ wiz
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action((opts) => new Fix(log, ps).run(opts));
+	.action((opts) => new Fix(log, ps, new Lint(log, fs, ps)).run(opts));
 
 wiz
 	.command("path")

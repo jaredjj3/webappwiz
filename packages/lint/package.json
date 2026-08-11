@@ -1,0 +1,19 @@
+{
+	"name": "@webappwiz/lint",
+	"version": "0.0.0",
+	"type": "module",
+	"module": "index.ts",
+	"bin": {
+		"lint": "./cli.ts"
+	},
+	"exports": {
+		".": "./index.ts"
+	},
+	"dependencies": {
+		"@webappwiz/log": "workspace:*",
+		"@webappwiz/sys": "workspace:*"
+	},
+	"peerDependencies": {
+		"typescript": "^7"
+	}
+}

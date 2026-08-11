@@ -1,3 +1,4 @@
+import type { Lint } from "@webappwiz/lint";
 import { color, type Logger } from "@webappwiz/log";
 import type { Ps } from "@webappwiz/sys";
 
@@ -5,11 +6,13 @@ export class Fix {
 	constructor(
 		private readonly log: Logger,
 		private readonly ps: Ps,
+		private readonly linter: Pick<Lint, "run">,
 	) {}
 
 	/** Pass `check: true` to report problems without writing fixes. */
 	async run(opts: { check: boolean }): Promise<void> {
 		await this.biome(opts.check);
+		await this.lint();
 		await this.typecheck();
 	}
 
@@ -27,6 +30,14 @@ export class Fix {
 		} else {
 			this.log.info(`biome: ${color.red("failed")}`);
 			throw new Error("Biome check failed");
+		}
+	}
+
+	private async lint(): Promise<void> {
+		const ok = await this.linter.run();
+		this.log.info(`lint: ${ok ? color.green("success") : color.red("failed")}`);
+		if (!ok) {
+			throw new Error("Lint failed");
 		}
 	}
 
