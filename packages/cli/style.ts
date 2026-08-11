@@ -5,6 +5,7 @@ import {
 	type Diagnostic,
 	type GuideLoader,
 	loadGuide,
+	Mechanizer,
 	type Rule,
 	type Task,
 } from "@webappwiz/style";
@@ -47,9 +48,23 @@ export class StyleCommands {
 		private confirm: Confirm = ask,
 	) {}
 
-	/** Is the guide sound enough to analyze with? Exits 1 when it is not. */
-	async check(opts: { rules: string; strict: boolean }): Promise<void> {
+	/**
+	 * Is the guide sound enough to analyze with? Exits 1 when it is not. Name an
+	 * agent, as `agent` or `exec`, and it also asks which rules a linter,
+	 * formatter or grep could enforce instead, and warns about each one; without
+	 * one it spawns nothing and costs nothing.
+	 */
+	async check(opts: {
+		rules: string;
+		strict: boolean;
+		agent?: string;
+		exec?: string;
+	}): Promise<void> {
 		const { rules, diagnostics } = await this.guide(opts.rules);
+		if (opts.agent !== undefined || opts.exec !== undefined) {
+			const mechanizer = new Mechanizer(this.log, this.ps);
+			diagnostics.push(...(await mechanizer.check(rules, agentCommand(opts))));
+		}
 		this.report(rules.length, diagnostics, opts.strict);
 	}
 

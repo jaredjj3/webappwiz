@@ -110,11 +110,36 @@ that is gone has none. Rules that judge a directory's shape rather than a file's
 contents get weaker under `--since`, because the files it hides are still part of
 what they are meant to look at.
 
+## Rules that do not need an agent
+
+An agent is the last resort. It costs minutes and tokens every run and only
+ever judges, so a rule a formatter, linter, type checker or grep could decide
+outright belongs to that tool instead. Give `style check` an agent, with the
+same `--agent` and `--exec` flags analyze takes, and it asks that question of
+every rule and warns about the ones that answer with a tool:
+
+```
+rules/no-em-dashes.md  warning  a linter could enforce this without an agent:
+                                regex for em dashes (U+2014) and en dashes
+                                (U+2013) not surrounded by digits on both sides
+```
+
+A tool only wins if it decides every case the rule covers, exceptions
+included, so a rule a linter would half-enforce stays with the agent. The
+finding is a warning rather than an error because moving a rule out of the
+guide is a judgment you make once, not something to fail a build on by
+surprise: `--strict` is how you make it fail once you have decided.
+
+Without `--agent` or `--exec`, `style check` spawns nothing and costs nothing,
+exactly as before.
+
 ## API
 
 Those commands are a thin shell over this package. `loadGuide` compiles a guide
-module's rules and reports what is wrong with it; `Analyzer` plans one task per
-rule and chunk of matching files, hands each to an agent, and returns what came
+module's rules and reports what is wrong with it; `Mechanizer` asks an agent
+which of those rules a tool could enforce instead, and answers in the same
+`Diagnostic` shape, so the two print as one report; `Analyzer` plans one task
+per rule and chunk of matching files, hands each to an agent, and returns what came
 back, calling you as each task lands so a caller can print findings as they
 arrive. Rendering is the caller's: a violation carries the rule's id and level,
 the file and line, the message, and that line of source read from disk.

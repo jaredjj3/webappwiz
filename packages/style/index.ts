@@ -22,6 +22,7 @@ export {
 	loadGuide,
 	ModuleGuideLoader,
 } from "./loader";
+export { Mechanizer } from "./mechanize";
 export {
 	checkGuide,
 	compile,

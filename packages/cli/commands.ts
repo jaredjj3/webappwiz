@@ -59,6 +59,14 @@ export async function commands(
 			default: false,
 			description: "treat warnings as errors",
 		})
+		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
+			default: undefined,
+			description: "model to ask which rules a linter could enforce instead",
+		})
+		.option("exec", t.optional(t.string()), {
+			default: undefined,
+			description: "command the prompt is passed to, instead of --agent",
+		})
 		.action((opts) => styleCommands.check(opts));
 
 	style
