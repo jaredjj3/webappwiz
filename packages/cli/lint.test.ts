@@ -39,31 +39,34 @@ describe("LintCommands", () => {
 
 	// the answer an agent gives about a rule nothing but an agent could enforce
 	const needsAgent = { rules: config, strict: false, agent: "haiku" };
-	const soundly = { rules: config, strict: false, sound: true };
+	const noTool = () => ps.setCaptureOutput('{"tool": null}', "");
 
 	it("declares a sound guide sound", async () => {
-		await commands(oneRule).audit(soundly);
+		noTool();
+
+		await commands(oneRule).audit(needsAgent);
 
 		expect(printed()).toBe("sound: 1 rule, 0 errors, 0 warnings");
 	});
 
-	it("asks nothing of an agent when checking soundness alone", async () => {
-		await commands(oneRule).audit(soundly);
+	it("asks nothing of an agent when the guide will not compile", async () => {
+		const guide = defineGuide([one("just prose\n")]);
 
+		await expect(commands(guide).audit(needsAgent)).rejects.toThrow("2 errors");
 		expect(ps.getCalls()).toEqual([]);
 	});
 
 	it("catches two rules answering to the same id", async () => {
 		const guide = defineGuide([one(), one()]);
 
-		expect(commands(guide).audit(soundly)).rejects.toThrow("1 error");
+		await expect(commands(guide).audit(needsAgent)).rejects.toThrow("1 error");
 		expect(printed()).toContain('duplicate rule id "one"');
 	});
 
 	it("prints diagnostics compiler-style and throws when there are errors", async () => {
 		const guide = defineGuide([one("just prose\n")]);
 
-		expect(commands(guide).audit(soundly)).rejects.toThrow(
+		await expect(commands(guide).audit(needsAgent)).rejects.toThrow(
 			"2 errors, 1 warning",
 		);
 		expect(printed()).toContain("one  error    missing title (# heading)");
@@ -72,23 +75,20 @@ describe("LintCommands", () => {
 
 	it("promotes warnings to failures under strict", async () => {
 		const guide = defineGuide([one(ruleDoc("One").split("\n## Bad")[0] ?? "")]);
+		noTool();
 
-		await commands(guide).audit(soundly);
+		await commands(guide).audit(needsAgent);
 		expect(printed()).toContain("sound: 1 rule, 0 errors, 1 warning");
 
-		expect(commands(guide).audit({ ...soundly, strict: true })).rejects.toThrow(
-			"0 errors, 1 warning",
-		);
+		await expect(
+			commands(guide).audit({ ...needsAgent, strict: true }),
+		).rejects.toThrow("0 errors, 1 warning");
 	});
 
 	it("audits rules and warns about the ones a tool could enforce", async () => {
 		ps.setCaptureOutput('{"tool": "biome", "reason": "a regex"}', "");
 
-		await commands(oneRule).audit({
-			rules: config,
-			strict: false,
-			agent: "haiku",
-		});
+		await commands(oneRule).audit(needsAgent);
 
 		expect(printed()).toContain(
 			"biome could enforce this without an agent: a regex",
@@ -97,16 +97,10 @@ describe("LintCommands", () => {
 	});
 
 	it("refuses to audit without an agent to ask", async () => {
-		expect(
+		await expect(
 			commands(oneRule).audit({ rules: config, strict: false }),
 		).rejects.toThrow("audit asks an agent, so name one");
 		expect(ps.getCalls()).toEqual([]);
-	});
-
-	it("names no agent under sound, having none to run", async () => {
-		expect(
-			commands(oneRule).audit({ ...soundly, agent: "haiku" }),
-		).rejects.toThrow("--sound checks the guide compiles and runs no agent");
 	});
 
 	it("shows each rule as a table row when showing", async () => {

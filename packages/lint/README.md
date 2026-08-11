@@ -193,16 +193,16 @@ decided. Rules already carrying a full check are not asked about at all.
 
 Audit also validates the guide itself, the way analyze does before running:
 a rule whose document is broken is an error, printed before any agent spends
-anything. `--sound` is that half on its own, spawning nothing:
+anything. There is no mode flag and no half of this to run on its own, so
+audit does the same thing every time you call it:
 
 ```bash
-webappwiz lint audit --sound
+webappwiz lint audit --agent sonnet
 # sound: 8 rules, 0 errors, 0 warnings
 ```
 
-That is the one to run on every commit. It is free, and which rules a tool
-could take over changes when you write a rule, not when you write code. Since
-it runs no agent it takes no `--agent` or `--exec`.
+A broken document stops the run before it spends anything, since a guide
+that will not compile is not worth asking an agent about.
 
 ## API
 

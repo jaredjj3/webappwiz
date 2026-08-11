@@ -38,7 +38,7 @@ export class RuleDocument {
 		return this.examples("Bad");
 	}
 
-	/** Everything wrong with the document, as `lint audit --sound` reports it. */
+	/** Everything wrong with the document, as `lint audit` reports it. */
 	diagnostics(): GuideDiagnostic[] {
 		const found: GuideDiagnostic[] = [];
 		const title = this.markdown.title;
