@@ -26,6 +26,17 @@ describe("t", () => {
 		expect(t.boolean().parse("false")).toBe(false);
 	});
 
+	it("accepts a value an enum lists and names the rest when it does not", () => {
+		const color = t.enum(["red", "green"]);
+		expect(color.parse("red")).toBe("red");
+		expect(() => color.parse("blue")).toThrow(
+			'expected one of red, green, got "blue"',
+		);
+		expect(color.check("green")).toBe("green");
+		expect(() => color.check("blue")).toThrow("expected one of red, green");
+		expect(() => color.check(42)).toThrow("expected one of red, green");
+	});
+
 	it("returns an independent schema instance on every call", () => {
 		expect(t.string()).not.toBe(t.string());
 	});

@@ -128,6 +128,20 @@ describe("Command", () => {
 		expect(text).toContain("-h, --help");
 	});
 
+	it("says nothing about the default of an option that defaults to undefined", () => {
+		new Command("greet", log, "wiz")
+			.option("name", t.optional(t.string()), {
+				default: undefined,
+				description: "who to greet",
+			})
+			.action(() => {})
+			.exec(["--help"]);
+
+		const text = log.entries.map((e) => color.strip(e.message)).join("\n");
+		expect(text).toContain("who to greet");
+		expect(text).not.toContain("default");
+	});
+
 	it("prints help for -h just as for --help", () => {
 		let ran = false;
 		new Command("x", log)

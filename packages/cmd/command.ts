@@ -161,9 +161,11 @@ export class Command<O, C extends object = object> {
 
 	// a [flag, text] pair for the help table, e.g. ["--count", "how many (default: 1)"]
 	private optionRow(o: OptionMeta): readonly [string, string] {
-		const defaultDescription = o.hasDefault
-			? color.dim(` (default: ${JSON.stringify(o.default)})`)
-			: "";
+		// an undefined default is the option being absent, which is not news
+		const defaultDescription =
+			o.hasDefault && o.default !== undefined
+				? color.dim(` (default: ${JSON.stringify(o.default)})`)
+				: "";
 		return [`--${o.name}`, `${o.description ?? ""}${defaultDescription}`];
 	}
 
