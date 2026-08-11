@@ -78,6 +78,13 @@ export class Mechanizer {
 						"biome format), a linter (biome, eslint, clippy, ruff), the type " +
 						"checker, and a plain grep or regex.",
 					"",
+					"Deciding a case means finding what to fix, not prescribing the " +
+						"fix. The agent you are replacing reports the code that breaks " +
+						"the rule and stops there, so a rule whose violations a pattern " +
+						"finds outright belongs to the tool even when repairing one takes " +
+						"judgment. Weigh only the part of the document that says what " +
+						"counts as a violation.",
+					"",
 					"Answer with the tool only if you could name the concrete check: the " +
 						"lint rule, the formatter setting, the pattern to grep for. If a " +
 						"tool would handle the common case but miss or misfire on an " +
