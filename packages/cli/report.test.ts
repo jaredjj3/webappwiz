@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { color } from "@webappwiz/log";
+import type { Violation } from "@webappwiz/style";
 import { Duration } from "@webappwiz/time";
-import type { Violation } from "./analyze";
 import { finding, finished, summary } from "./report";
 
 describe("report", () => {

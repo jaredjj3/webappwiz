@@ -5,9 +5,13 @@
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
-		".": "./index.ts"
+		".": "./index.ts",
+		"./testing": "./testing.ts"
 	},
 	"dependencies": {
-		"@webappwiz/md": "workspace:*"
+		"@webappwiz/log": "workspace:*",
+		"@webappwiz/md": "workspace:*",
+		"@webappwiz/sys": "workspace:*",
+		"@webappwiz/time": "workspace:*"
 	}
 }

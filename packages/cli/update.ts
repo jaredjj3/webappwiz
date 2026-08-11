@@ -1,7 +1,6 @@
 import { basename } from "node:path";
 import type { Logger } from "@webappwiz/log";
-import type { Fs } from "@webappwiz/sys";
-import { walk } from "./walk";
+import { type Fs, walk } from "@webappwiz/sys";
 
 /**
  * A `"@webappwiz/x": "1.2.3"` dependency entry, captured either side of the

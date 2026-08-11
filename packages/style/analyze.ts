@@ -1,10 +1,10 @@
 import { join } from "node:path";
 import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
-import { exemptions, type Level, type Rule } from "@webappwiz/style";
-import type { Fs, Ps } from "@webappwiz/sys";
+import { type Fs, type Ps, walk } from "@webappwiz/sys";
 import type { Clock, Duration } from "@webappwiz/time";
-import { walk } from "./walk";
+import { exemptions } from "./ignore";
+import type { Level, Rule } from "./rule";
 
 export interface Task {
 	rule: Rule;

@@ -1,5 +1,6 @@
 export type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs/fs";
 export { NodeFs } from "./fs/node-fs";
+export { walk } from "./fs/walk";
 export { DarwinIpProvider } from "./ip/darwin-ip-provider";
 export { FileHostMapper } from "./ip/file-host-mapper";
 export type { HostMapper } from "./ip/host-mapper";

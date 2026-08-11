@@ -1,8 +1,7 @@
 import { dirname } from "node:path";
 import type { Logger } from "@webappwiz/log";
-import type { Fs } from "@webappwiz/sys";
+import { type Fs, walk } from "@webappwiz/sys";
 import { table } from "./table";
-import { walk } from "./walk";
 
 /** The directory holding the skills this package ships. */
 export const source = `${import.meta.dir}/skills`;

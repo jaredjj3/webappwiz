@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { color, MemoryLogger } from "@webappwiz/log";
 import { defineStyleGuide, rule, type StyleGuide } from "@webappwiz/style";
+import { ruleDoc } from "@webappwiz/style/testing";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
 import { StyleCommands } from "./style";
-import { ruleDoc } from "./testing";
 
 describe("StyleCommands", () => {
 	let fs: FakeFs;

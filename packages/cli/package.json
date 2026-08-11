@@ -13,7 +13,6 @@
 	"dependencies": {
 		"@webappwiz/cmd": "workspace:*",
 		"@webappwiz/log": "workspace:*",
-		"@webappwiz/md": "workspace:*",
 		"@webappwiz/style": "workspace:*",
 		"@webappwiz/sys": "workspace:*",
 		"@webappwiz/t": "workspace:*",

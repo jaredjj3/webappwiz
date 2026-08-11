@@ -49,7 +49,6 @@
       "dependencies": {
         "@webappwiz/cmd": "workspace:*",
         "@webappwiz/log": "workspace:*",
-        "@webappwiz/md": "workspace:*",
         "@webappwiz/style": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
@@ -102,7 +101,10 @@
       "name": "@webappwiz/style",
       "version": "0.0.0",
       "dependencies": {
+        "@webappwiz/log": "workspace:*",
         "@webappwiz/md": "workspace:*",
+        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/time": "workspace:*",
       },
     },
     "packages/sys": {

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
-import { compile, type Rule } from "@webappwiz/style";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
 import { Analyzer, agentCommand } from "./analyze";
+import { compile, type Rule } from "./rule";
 import { ruleDoc } from "./testing";
 
 const agent = { argv: ["agent"], label: "agent" };

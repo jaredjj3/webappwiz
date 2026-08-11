@@ -1,10 +1,9 @@
 import type { Cli } from "@webappwiz/cmd";
 import type { Logger } from "@webappwiz/log";
-import { DEFAULT_GUIDE } from "@webappwiz/style";
+import { AGENTS, DEFAULT_GUIDE } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import { SystemClock } from "@webappwiz/time";
-import { AGENTS } from "./analyze";
 import { Skills } from "./skills";
 import { StyleCommands } from "./style";
 import { update } from "./update";

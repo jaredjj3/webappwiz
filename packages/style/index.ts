@@ -1,4 +1,14 @@
 export {
+	AGENTS,
+	type Agent,
+	Analyzer,
+	agentCommand,
+	count,
+	type Finished,
+	type Task,
+	type Violation,
+} from "./analyze";
+export {
 	DEFAULT_GUIDE,
 	defineStyleGuide,
 	isStyleGuide,
@@ -7,6 +17,11 @@ export {
 	type StyleGuide,
 } from "./guide";
 export { exemptions } from "./ignore";
+export {
+	type GuideLoader,
+	loadGuide,
+	ModuleGuideLoader,
+} from "./loader";
 export {
 	checkGuide,
 	compile,

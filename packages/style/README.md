@@ -71,3 +71,24 @@ whole command, quoting and
 all, and is handed the prompt as one trailing argument. `--prompt` is for an
 agent running the guide itself: it prints each task's prompt under a
 `=== <id> <rule> (<n> files) ===` header, to hand to subagents of its own.
+
+## API
+
+Those commands are a thin shell over this package. `loadGuide` compiles a guide
+module's rules and reports what is wrong with it; `Analyzer` plans one task per
+rule and chunk of matching files, hands each to an agent, and returns what came
+back, calling you as each task lands so a caller can print findings as they
+arrive. Rendering is the caller's: a violation carries the rule's id and level,
+the file and line, the message, and that line of source read from disk.
+
+```ts
+const { rules, diagnostics } = await loadGuide(fs, "style.config.ts");
+const analyzer = new Analyzer(log, fs, ps, clock);
+const violations = await analyzer.analyze(
+	rules,
+	".",
+	25,
+	agentCommand({ agent: "sonnet" }),
+	(task) => console.log(task.id, task.violations.length),
+);
+```

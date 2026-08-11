@@ -1,4 +1,4 @@
-import type { Fs } from "@webappwiz/sys";
+import type { Fs } from "./fs";
 
 /**
  * Every file under `dir`, depth-first. Dotfiles and `node_modules` are skipped.

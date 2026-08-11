@@ -1,15 +1,15 @@
-import { resolve } from "node:path";
 import type { Logger } from "@webappwiz/log";
 import {
-	checkGuide,
-	compile,
+	Analyzer,
+	agentCommand,
+	count,
 	type Diagnostic,
+	type GuideLoader,
+	loadGuide,
 	type Rule,
 } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
-import { Analyzer, agentCommand, count } from "./analyze";
-import { type GuideLoader, ModuleGuideLoader } from "./guide-loader";
 import { finished, summary } from "./report";
 import { table } from "./table";
 
@@ -19,21 +19,18 @@ export class StyleCommands {
 		private fs: Fs,
 		private ps: Ps,
 		private clock: Clock,
-		private loader: GuideLoader = new ModuleGuideLoader(),
+		private loader?: GuideLoader,
 	) {}
 
 	/** Is the guide sound enough to analyze with? Exits 1 when it is not. */
 	async check(opts: { rules: string; strict: boolean }): Promise<void> {
-		const { rules, diagnostics } = await this.compile(opts.rules);
+		const { rules, diagnostics } = await this.guide(opts.rules);
 		this.report(rules.length, diagnostics, opts.strict);
 	}
 
 	/** Lists a guide's rules, one row each, ids first for citing. */
 	async ls(opts: { rules: string }): Promise<void> {
-		const { rules, diagnostics } = await this.compile(opts.rules);
-		if (diagnostics.some((d) => d.severity === "error")) {
-			this.report(rules.length, diagnostics, false);
-		}
+		const { rules } = await this.sound(opts.rules);
 		const rows = [["ID", "RULE", "LEVEL", "FILES", "GOOD", "BAD", "PATH"]];
 		for (const r of rules) {
 			rows.push([
@@ -54,10 +51,7 @@ export class StyleCommands {
 	 * agent is given, verbatim. Take the id from `style ls` or from a finding.
 	 */
 	async show(opts: { id: string; rules: string }): Promise<void> {
-		const { rules, diagnostics } = await this.compile(opts.rules);
-		if (diagnostics.some((d) => d.severity === "error")) {
-			this.report(rules.length, diagnostics, false);
-		}
+		const { rules } = await this.sound(opts.rules);
 		const rule = rules.find((r) => r.id === opts.id);
 		if (!rule) {
 			throw new Error(
@@ -91,10 +85,7 @@ export class StyleCommands {
 		prompt?: boolean;
 		chunk: number;
 	}): Promise<void> {
-		const { rules, diagnostics } = await this.compile(opts.rules);
-		if (diagnostics.some((d) => d.severity === "error")) {
-			this.report(rules.length, diagnostics, false);
-		}
+		const { rules } = await this.sound(opts.rules);
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
 		const analyzer = new Analyzer(this.log, this.fs, this.ps, this.clock);
 		if (opts.prompt) {
@@ -126,33 +117,20 @@ export class StyleCommands {
 		}
 	}
 
-	private async compile(
+	private guide(
 		path: string,
 	): Promise<{ rules: Rule[]; diagnostics: Diagnostic[] }> {
-		const { guide, dir } = await this.loader.load(path);
-		const rules: Rule[] = [];
-		const diagnostics: Diagnostic[] = [];
-		for (const ref of guide.rules) {
-			let text: string;
-			try {
-				text = await this.fs.read(resolve(dir, ref.path));
-			} catch {
-				diagnostics.push({
-					path: ref.path,
-					severity: "error",
-					message: "cannot read rule file",
-				});
-				continue;
-			}
-			// diagnostics name the path as the guide wrote it, which stays short
-			const out = compile(text, ref.path);
-			diagnostics.push(...out.diagnostics);
-			if (out.rule) {
-				rules.push(out.rule);
-			}
+		return loadGuide(this.fs, path, this.loader);
+	}
+
+	/** The guide's rules, for a command that has no business running without
+	 * them: a guide that will not compile prints its diagnostics and exits. */
+	private async sound(path: string): Promise<{ rules: Rule[] }> {
+		const { rules, diagnostics } = await this.guide(path);
+		if (diagnostics.some((d) => d.severity === "error")) {
+			this.report(rules.length, diagnostics, false);
 		}
-		diagnostics.push(...checkGuide(rules));
-		return { rules, diagnostics };
+		return { rules };
 	}
 
 	private report(

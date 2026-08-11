@@ -1,6 +1,6 @@
 import { color } from "@webappwiz/log";
+import { count, type Finished, type Violation } from "@webappwiz/style";
 import type { Duration } from "@webappwiz/time";
-import { count, type Finished, type Violation } from "./analyze";
 
 /**
  * A finished task, as it should print the moment its agent returns: a status
