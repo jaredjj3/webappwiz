@@ -1,5 +1,5 @@
+import { SchemaError } from "../schema-error";
 import type { Infer, Schema } from "./schema";
-import { SchemaError } from "./schema-error";
 
 export class SchemaObject<P extends Record<string, Schema<unknown>>>
 	implements Schema<{ [K in keyof P]: Infer<P[K]> }>

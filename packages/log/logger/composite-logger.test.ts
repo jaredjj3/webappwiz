@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { CompositeLogger, type LogEntry, MemoryLogger } from "./index";
+import { CompositeLogger, type LogEntry, MemoryLogger } from "../index";
 
 describe("CompositeLogger", () => {
 	it("logs to all loggers", () => {

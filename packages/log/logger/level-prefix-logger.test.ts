@@ -1,27 +1,27 @@
 import { describe, expect, it } from "bun:test";
 
-import { MemoryLogger, PrefixLogger } from "./index";
+import { LevelPrefixLogger, MemoryLogger } from "../index";
 
-describe("PrefixLogger", () => {
-	it("prefixes info and error messages", () => {
+describe("LevelPrefixLogger", () => {
+	it("prefixes info and error messages by level", () => {
 		const memoryLogger = new MemoryLogger();
-		const logger = new PrefixLogger("[worker]", memoryLogger);
+		const logger = new LevelPrefixLogger(memoryLogger);
 		const error = new Error("boom");
 
-		logger.info("ready", 1, true);
+		logger.info("ready", 1);
 		logger.error("failed", error);
 
 		expect(memoryLogger.entries).toEqual([
 			{
 				level: "info",
-				message: "[worker] ready",
-				optionalParams: [1, true],
+				message: "[INFO] ready",
+				optionalParams: [1],
 				timestamp: expect.any(Date),
 				callsite: expect.any(String),
 			},
 			{
 				level: "error",
-				message: "[worker] failed",
+				message: "[ERROR] failed",
 				optionalParams: [error],
 				timestamp: expect.any(Date),
 				callsite: expect.any(String),

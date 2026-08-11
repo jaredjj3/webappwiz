@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 
-import { MdcLogger, MemoryLogger } from "./index";
+import { MdcLogger, MemoryLogger } from "../index";
 
 describe("MdcLogger", () => {
 	let memoryLogger: MemoryLogger;

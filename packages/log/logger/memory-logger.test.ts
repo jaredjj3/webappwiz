@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { MemoryLogger } from "./index";
+import { MemoryLogger } from "../index";
 
 describe("MemoryLogger", () => {
 	it("stores info and error entries and can clear them", () => {

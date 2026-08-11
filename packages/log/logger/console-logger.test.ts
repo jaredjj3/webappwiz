@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { ConsoleLogger } from "./index";
+import { ConsoleLogger } from "../index";
 
 describe("ConsoleLogger", () => {
 	it("forwards info to console.log and error to console.error", () => {

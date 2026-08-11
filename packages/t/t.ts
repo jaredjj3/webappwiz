@@ -1,11 +1,11 @@
-import type { Infer, Schema } from "./schema";
-import { SchemaArray } from "./schema-array";
-import { SchemaBoolean } from "./schema-boolean";
-import { SchemaEnum } from "./schema-enum";
-import { SchemaNumber } from "./schema-number";
-import { SchemaObject } from "./schema-object";
-import { SchemaOptional } from "./schema-optional";
-import { SchemaString } from "./schema-string";
+import type { Infer, Schema } from "./schema/schema";
+import { SchemaArray } from "./schema/schema-array";
+import { SchemaBoolean } from "./schema/schema-boolean";
+import { SchemaEnum } from "./schema/schema-enum";
+import { SchemaNumber } from "./schema/schema-number";
+import { SchemaObject } from "./schema/schema-object";
+import { SchemaOptional } from "./schema/schema-optional";
+import { SchemaString } from "./schema/schema-string";
 
 export const t = {
 	string: (): Schema<string> => new SchemaString(),

@@ -1,5 +1,5 @@
+import { SchemaError } from "../schema-error";
 import type { Schema } from "./schema";
-import { SchemaError } from "./schema-error";
 
 export class SchemaEnum<T extends string> implements Schema<T> {
 	constructor(private values: readonly T[]) {}
