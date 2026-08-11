@@ -105,6 +105,31 @@ describe("StyleCommands", () => {
 		).rejects.toThrow("0 errors, 1 warning");
 	});
 
+	it("audits rules and warns about the ones a tool could enforce", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+		ps.setCaptureOutput('{"tool": "biome", "reason": "a regex"}', "");
+
+		await commands(oneRule).audit({
+			rules: config,
+			strict: false,
+			agent: "haiku",
+		});
+
+		expect(printed()).toContain(
+			"biome could enforce this without an agent: a regex",
+		);
+		expect(printed()).toContain("0 errors, 1 warning");
+	});
+
+	it("refuses to audit without an agent to ask", async () => {
+		await fs.write("/g/one.md", ruleDoc("One"));
+
+		expect(
+			commands(oneRule).audit({ rules: config, strict: false }),
+		).rejects.toThrow("audit asks an agent, so name one");
+		expect(ps.getCalls()).toEqual([]);
+	});
+
 	it("shows each rule as a table row when showing", async () => {
 		await fs.write("/g/one.md", ruleDoc("One"));
 

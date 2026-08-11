@@ -12,7 +12,7 @@ import type { Diagnostic, Rule } from "./rule";
  */
 export class Mechanizer {
 	// Asking an agent which rules do not need an agent is not the joke it looks
-	// like: the question is itself a judgment, and answering it once at check
+	// like: the question is itself a judgment, and answering it once at audit
 	// time is far cheaper than a rule that runs an agent over every file forever.
 
 	constructor(

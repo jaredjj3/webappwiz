@@ -59,15 +59,25 @@ export async function commands(
 			default: false,
 			description: "treat warnings as errors",
 		})
+		.action((opts) => styleCommands.check(opts));
+
+	style
+		.command("audit")
+		.description("ask an agent which rules a tool could enforce instead")
+		.arg("rules", t.string(), rulesArg)
+		.option("strict", t.boolean(), {
+			default: false,
+			description: "treat warnings as errors",
+		})
 		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
 			default: undefined,
-			description: "model to ask which rules a linter could enforce instead",
+			description: "model to ask with; required unless --exec",
 		})
 		.option("exec", t.optional(t.string()), {
 			default: undefined,
 			description: "command the prompt is passed to, instead of --agent",
 		})
-		.action((opts) => styleCommands.check(opts));
+		.action((opts) => styleCommands.audit(opts));
 
 	style
 		.command("ls")

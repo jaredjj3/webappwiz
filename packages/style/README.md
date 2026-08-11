@@ -114,9 +114,9 @@ what they are meant to look at.
 
 An agent is the last resort. It costs minutes and tokens every run and only
 ever judges, so a rule a formatter, linter, type checker or grep could decide
-outright belongs to that tool instead. Give `style check` an agent, with the
-same `--agent` and `--exec` flags analyze takes, and it asks that question of
-every rule and warns about the ones that answer with a tool:
+outright belongs to that tool instead. `style audit`, with the same `--agent`
+and `--exec` flags analyze takes, asks that question of every rule and warns
+about the ones that answer with a tool:
 
 ```
 rules/no-em-dashes.md  warning  a linter could enforce this without an agent:
@@ -130,8 +130,8 @@ finding is a warning rather than an error because moving a rule out of the
 guide is a judgment you make once, not something to fail a build on by
 surprise: `--strict` is how you make it fail once you have decided.
 
-Without `--agent` or `--exec`, `style check` spawns nothing and costs nothing,
-exactly as before.
+Auditing is deliberate and costs an agent call per rule, so it is its own
+command: `style check` stays free, spawning nothing.
 
 ## API
 
