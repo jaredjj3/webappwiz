@@ -20,8 +20,8 @@ In tests, swap in the fakes:
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 ```
 
-`Lock` is a mutex between processes: `acquire`, `release`, `releaseIfOurs`.
-`FileLock` is the implementation, held by a directory: `mkdir` is
+`FileLock` is a mutex between processes (`acquire`, `release`,
+`releaseIfOurs`), held by a directory: `mkdir` is
 atomic everywhere, so there is no check-then-write window. `acquire` blocks
 until the lock is free, a holder that died is detected and its lock stolen,
 and the directory is removed on signals and uncaught exceptions.

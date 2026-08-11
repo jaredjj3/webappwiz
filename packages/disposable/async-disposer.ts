@@ -1,9 +1,7 @@
-import type {
-	AsyncDisposable,
-	AsyncDisposableStack,
-} from "./async-disposable-stack";
+import type { AsyncDisposable } from "./async-disposable";
 
-export class AsyncDisposer implements AsyncDisposableStack {
+/** A stack of async disposables, released in reverse order of registration. */
+export class AsyncDisposer implements AsyncDisposable {
 	private resources = [] as AsyncDisposable[];
 	private _disposed = false;
 

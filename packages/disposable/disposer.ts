@@ -1,7 +1,8 @@
-import type { Disposable, DisposableStack } from "./disposable-stack";
+import type { Disposable } from "./disposable";
 import { disposables } from "./disposables";
 
-export class Disposer implements DisposableStack {
+/** A stack of disposables, released in reverse order of registration. */
+export class Disposer implements Disposable {
 	private resources = [] as Disposable[];
 	private _disposed = false;
 

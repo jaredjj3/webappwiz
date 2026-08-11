@@ -1,4 +1,4 @@
-import type { Disposable } from "./disposable-stack";
+import type { Disposable } from "./disposable";
 
 /** Ways of getting a `Disposable` when you do not have an object to hand. */
 export class disposables {

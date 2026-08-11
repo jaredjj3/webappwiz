@@ -1,4 +1,4 @@
-import type { ProcessLike } from "./node-ps";
+import type { ProcessLike } from "./process-like";
 
 /**
  * A `process` for tests that need `NodePs` to really spawn (real git, real

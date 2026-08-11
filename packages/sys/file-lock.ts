@@ -1,9 +1,8 @@
 import { rmSync } from "node:fs";
 import { color, type Logger } from "@webappwiz/log";
 import { Duration, sleep } from "@webappwiz/time";
-import type { Fs } from "../fs/fs";
-import type { Ps } from "../ps/ps";
-import type { Lock } from "./lock";
+import type { Fs } from "./fs/fs";
+import type { Ps } from "./ps/ps";
 
 interface Holder {
 	pid: number;
@@ -23,7 +22,7 @@ export interface FileLockOptions {
  * until the lock is free: there is deliberately no "busy" return, so callers
  * cannot wander off and do work they are not holding the lock for.
  */
-export class FileLock implements Lock {
+export class FileLock {
 	private held = false;
 	private handlersRegistered = false;
 	private readonly stalenessMs: number;

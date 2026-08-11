@@ -42,6 +42,8 @@ export type DomainProps = {
  * change whenever the content changes, so a cache can be invalidated exactly
  * once per update.
  */
+// style-ignore one-dir-per-interface: the parameter type of invalidateOnUpdate, which
+// is what keeps Domain from depending on Service
 export interface Cacheable extends IConstruct {
 	readonly cacheKey: string;
 }
