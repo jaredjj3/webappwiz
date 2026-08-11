@@ -1,6 +1,6 @@
 ---
 name: arbor
-description: Use the @webappwiz/arbor CLI to land your work on trunk from an isolated git worktree without pull requests. Read this before making any code change in an arbor repository — it decides where the work happens — and whenever you need to create, claim, graft, prune, list, show, locate, or escalate a workstream.
+description: Use the @webappwiz/arbor CLI to land your work on trunk from an isolated git worktree without pull requests. Read this before making any code change in an arbor repository — it decides where the work happens — and whenever you need to create, claim, graft, prune, list, show, locate, wait for, or escalate a workstream.
 version: 0.0.0
 ---
 
@@ -29,13 +29,35 @@ creating anything:
    `git -C "$(arbor path <task>)" diff --name-only main...task/<task>`.
 3. Compare with your list. If nothing overlaps, carry on.
 
-If something does overlap, stop and ask. Say what you have not done:
+If something does overlap, wait for it — the overlap disappears once the other
+task grafts, and starting now buys a rebase conflict instead. Do not ask
+permission to wait; say one line about what you are doing, then block on it:
 
-> `alpha` is already changing `packages/arbor/index.ts`. I have not started
-> anything. Wait for it to land, or work alongside it?
+> `alpha` is already changing `packages/arbor/index.ts`. Waiting for it to
+> land (up to 20 minutes) before I start.
 
-Then wait for the answer. Waiting is the usual one — the overlap disappears
-once the other task grafts, and starting now buys a rebase conflict instead.
+```bash
+arbor wait alpha --timeout 20   # minutes; default 30
+```
+
+Pick the timeout for how long the human is likely to be happy hearing nothing —
+shorter when they are watching, longer for work that will obviously take a
+while. Then act on how it returns:
+
+- `gone` — the overlap has cleared. Redo the checks above (trunk has moved) and
+  carry on.
+- `escalated` — that task is stuck on a person, so yours is too. Tell the human
+  what it is blocked on and what you were going to do, and wait for an answer.
+- anything else it reports resting (`orphaned`, `stray`, `unrecorded`,
+  `unknown`) — that tree is broken and nobody is driving it. Say so and ask.
+- exit 14 `timed_out` — it is still going. Go back to the human with the choice,
+  and say what you have not done:
+
+  > Still waiting on `alpha` after 20 minutes. I have not started anything.
+  > Keep waiting, work alongside it, or pick up something else?
+
+Only ask before waiting if the wait itself is the problem — the task has been
+sitting for hours, or you were told this was urgent.
 
 ## Workflow
 
@@ -125,3 +147,5 @@ Failures print JSON on stdout and an explanation on stderr.
 - 12 `merge_failed` — trunk could not fast-forward (usually a dirty main
   worktree).
 - 13 `already_pruned` — nothing left to remove.
+- 14 `timed_out` — `arbor wait` gave up; the task is still going. Ask the human
+  whether to keep waiting.
