@@ -131,6 +131,18 @@ export class Command<O, C extends object = object> {
 				}
 			}
 		}
+		// Before anything binds: a typo is likelier than a missing value, so
+		// `cmd --grep x` reports the flag it does not know rather than the
+		// argument it thinks you left out.
+		for (const name of raw.keys()) {
+			if (!this.options.some((o) => o.name === name)) {
+				throw new Error(`unknown option --${name}`);
+			}
+		}
+		const extra = positional[this.args.length];
+		if (extra !== undefined) {
+			throw new Error(`unexpected argument "${extra}"`);
+		}
 		const out: Record<string, unknown> = {};
 		// positionals bind by order, so a bare flag before them steals one
 		// (`cmd --force task`). Put flags last, or add arity to option().

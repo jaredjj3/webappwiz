@@ -47,15 +47,29 @@ describe("Command", () => {
 		expect(got).toEqual({ loud: false, name: "ada" });
 	});
 
-	it("ignores tokens that are not flags", () => {
-		let name = "";
-		new Command("p")
-			.option("name", t.string())
-			.action((o) => {
-				name = o.name;
-			})
-			.exec(["stray", "--name", "ada", "extra"]);
-		expect(name).toBe("ada");
+	it("throws on a flag it was never given", () => {
+		const cmd = new Command("p").option("name", t.string()).action(() => {});
+
+		expect(() => cmd.exec(["--name", "ada", "--nmae", "bob"])).toThrow(
+			"unknown option --nmae",
+		);
+	});
+
+	it("throws on a positional past the ones it declares", () => {
+		const cmd = new Command("p").arg("task", t.string()).action(() => {});
+
+		expect(() => cmd.exec(["alpha", "extra"])).toThrow(
+			'unexpected argument "extra"',
+		);
+	});
+
+	it("names the unknown flag before an argument it could blame instead", () => {
+		const cmd = new Command("p")
+			.arg("task", t.string())
+			.option("force", t.boolean(), { default: false })
+			.action(() => {});
+
+		expect(() => cmd.exec(["--frce"])).toThrow("unknown option --frce");
 	});
 
 	it("uses defaults for absent flags and the given value when present", () => {

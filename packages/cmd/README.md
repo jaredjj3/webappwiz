@@ -27,6 +27,11 @@ An arg or option without a `default` is required. Their types accumulate, so
 `opts` is fully typed in `action`. Args bind by declaration order, so put
 flags after them: `app greet --loud ada` reads `ada` as the value of `--loud`.
 
+A flag the command never declared is an error, and so is a positional past
+the ones it does, since the alternative is a typo running the command anyway
+with a default the caller thought they had overridden. A reason or message
+that reads as prose has to be quoted to arrive as one argument.
+
 ## Groups
 
 `group` nests a set of subcommands under one name. A group is a cli itself, so
