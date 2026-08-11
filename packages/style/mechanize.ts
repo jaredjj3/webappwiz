@@ -106,9 +106,8 @@ export class Mechanizer {
 }
 
 /**
- * The agent's object, or null when there isn't a usable one. Agents wrap an
- * answer in prose or a fence often enough that finding the outermost braces
- * beats insisting the whole of stdout parse.
+ * Agents wrap an answer in prose or a fence often enough that finding the
+ * outermost braces beats insisting the whole of stdout parse.
  */
 function parse(stdout: string): { tool: string | null; reason: string } | null {
 	const start = stdout.indexOf("{");
