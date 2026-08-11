@@ -6,6 +6,7 @@ export {
 	rule,
 	type StyleGuide,
 } from "./guide";
+export { exemptions } from "./ignore";
 export {
 	checkGuide,
 	compile,

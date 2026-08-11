@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
-import type { Level, Rule } from "@webappwiz/style";
+import { exemptions, type Level, type Rule } from "@webappwiz/style";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock, Duration } from "@webappwiz/time";
 import { walk } from "./walk";
@@ -151,6 +151,10 @@ export class Analyzer {
 		const violations: Violation[] = [];
 		for (const r of reported) {
 			const file = join(dir, r.file);
+			// The prompt asks the agent to honor markers; this is what enforces it.
+			if (exemptions(await this.source(file), task.rule.id)(r.line)) {
+				continue;
+			}
 			violations.push({
 				id: task.rule.id,
 				level: task.rule.level,
@@ -187,6 +191,18 @@ export class Analyzer {
 			.code("markdown", rule.text)
 			.text("Check each of these files, relative to your working directory:")
 			.text(files.map((f) => `- ${f}`).join("\n"))
+			.text(
+				[
+					`This rule's id is \`${rule.id}\`. Code excuses itself from it with a comment:`,
+					"",
+					`- \`style-ignore ${rule.id}: <reason>\` excuses the line it sits above, ` +
+						"and everything indented under that line.",
+					`- \`style-ignore-file ${rule.id}: <reason>\` excuses the whole file.`,
+					"",
+					"Report nothing an excused line does. A marker naming another rule's id " +
+						"excuses nothing here.",
+				].join("\n"),
+			)
 			.text(
 				[
 					"Read the files yourself. Report every violation of the rule as an element of one JSON array:",
