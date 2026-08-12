@@ -120,13 +120,9 @@ describe("Analyzer", () => {
 			"",
 		);
 
-		const violations = await analyzer.analyze(
-			[rule("Classes")],
-			"/p",
-			25,
-			agent,
-			{ finished: (task) => finished.push(task.cost) },
-		);
+		analyzer.events.on("finished", (task) => finished.push(task.cost));
+
+		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
 
 		expect(violations.map((violation) => violation.id)).toEqual(["Classes"]);
 		expect(finished).toEqual([0.056097]);
@@ -142,12 +138,7 @@ describe("Analyzer", () => {
 			"",
 		);
 
-		const violations = await analyzer.analyze(
-			[rule("Classes")],
-			"/p",
-			25,
-			agent,
-		);
+		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
 
 		expect(violations.map((violation) => violation.line)).toEqual([2]);
 	});
@@ -159,9 +150,9 @@ describe("Analyzer", () => {
 			"",
 		);
 
-		await analyzer.analyze([rule("Classes")], "/p", 25, agent, {
-			finished: (task) => finished.push(task.cost),
-		});
+		analyzer.events.on("finished", (task) => finished.push(task.cost));
+
+		await analyzer.analyze([rule("Classes")], "/p", agent);
 
 		expect(finished).toEqual([undefined]);
 	});

@@ -258,9 +258,7 @@ export class LintCommands {
 		const files = new Set(tasks.flatMap((task) => task.files)).size;
 		const predicted = estimated(tasks);
 		const calls = tasks.length;
-		this.log.info(
-			planned(files, rules.length, calls, predicted, agent.label),
-		);
+		this.log.info(planned(files, rules.length, calls, predicted, agent.label));
 		if (predicted > opts.budget) {
 			const cost =
 				opts.agent === undefined
