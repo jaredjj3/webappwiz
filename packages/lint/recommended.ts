@@ -2,6 +2,7 @@ import { ClassesOverFunctionExports } from "./rule/classes-over-function-exports
 import { CommentsSayWhyNotWhat } from "./rule/comments-say-why-not-what";
 import { DocCommentsAddressUsers } from "./rule/doc-comments-address-users";
 import { FakesOverMocks } from "./rule/fakes-over-mocks";
+import { NamedOptionsLast } from "./rule/named-options-last";
 import { NoEmDashes } from "./rule/no-em-dashes";
 import { ObjectsOverCallbacks } from "./rule/objects-over-callbacks";
 import { OneClassPerFile } from "./rule/one-class-per-file";
@@ -19,6 +20,7 @@ export const recommended: Rule[] = [
 	new ParametersDeclareFields(),
 	new ClassesOverFunctionExports(),
 	new ObjectsOverCallbacks(),
+	new NamedOptionsLast(),
 	new TestsReadLikeSentences(),
 	new SimpleTestSetup(),
 	new FakesOverMocks(),

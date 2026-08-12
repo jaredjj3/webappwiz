@@ -25,6 +25,7 @@ export { recommended } from "./recommended";
 export { ClassesOverFunctionExports } from "./rule/classes-over-function-exports";
 export { CommentsSayWhyNotWhat } from "./rule/comments-say-why-not-what";
 export { DocCommentsAddressUsers } from "./rule/doc-comments-address-users";
+export { NamedOptionsLast } from "./rule/named-options-last";
 export { NoEmDashes } from "./rule/no-em-dashes";
 export { ObjectsOverCallbacks } from "./rule/objects-over-callbacks";
 export { OneClassPerFile } from "./rule/one-class-per-file";

@@ -87,6 +87,9 @@ The recommended rules, each exported as its class so a guide can name one:
 - `objects-over-callbacks` (partially checked): inject objects, not
   callbacks; the check sees function types in constructor parameters, the
   agent judges retained method parameters.
+- `named-options-last` (partially checked): an options object goes last and
+  its type is named; the check sees an options parameter that is neither, the
+  agent judges parameters that should have been one.
 - `tests-read-like-sentences` (partially checked): one describe per test
   file, titles completing "it ..."; the check counts the describes, the agent
   reads the titles.
