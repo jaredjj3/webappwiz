@@ -13,6 +13,8 @@ export type DisposerEffectCallback = (disposer: AppendOnlyDisposer) => void;
  * Runs an effect that acquires resources, disposing everything it registered
  * when the effect is torn down.
  */
+// lint-ignore objects-over-callbacks: this is `useEffect` with a disposer
+// threaded through, so the effect function is React's contract, not ours.
 export function useDisposerEffect(
 	effect: DisposerEffectCallback,
 	deps: DependencyList,

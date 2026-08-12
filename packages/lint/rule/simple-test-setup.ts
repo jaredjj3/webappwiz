@@ -24,7 +24,8 @@ export class SimpleTestSetup implements Rule {
 	check(text: string): Finding[] {
 		const all = tokens(text);
 		const found: Finding[] = [];
-		// Brace depth of each loop body currently open.
+		// The token stream is flat, so the only way to know a loop body ended is
+		// the depth its opening brace sat at coming back around.
 		const loops: number[] = [];
 		for (const [i, token] of all.entries()) {
 			if (

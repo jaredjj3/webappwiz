@@ -1,3 +1,4 @@
+import { Dispatcher, type Events } from "@webappwiz/events";
 import type { Contract, In, Out } from "./contract";
 import { RpcError } from "./error";
 
@@ -8,11 +9,19 @@ export type ClientOptions = {
 	signal?: AbortSignal;
 	/** Set to "include" for cookie auth across origins. */
 	credentials?: "omit" | "same-origin" | "include";
-	/** Receives the raw response, for reading its headers or status. */
-	onResponse?: (res: Response) => void;
+};
+
+export type ClientEvents = {
+	/** The raw response, before it is read, for its headers or its status. */
+	response: Response;
 };
 
 export class Client<C extends Contract> {
+	private dispatcher = new Dispatcher<ClientEvents>();
+
+	/** Fires `response` for every call, whether or not the call succeeds. */
+	readonly events: Events<ClientEvents> = this.dispatcher.events;
+
 	constructor(
 		private contract: C,
 		private baseUrl: string,
@@ -54,8 +63,7 @@ export class Client<C extends Contract> {
 				body: JSON.stringify(input),
 			});
 		}
-		options.onResponse?.(res);
-		this.options.onResponse?.(res);
+		this.dispatcher.dispatch("response", res);
 		if (!res.ok) {
 			throw new RpcError(res.status, `${name}: ${await res.text()}`);
 		}

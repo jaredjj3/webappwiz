@@ -1,10 +1,6 @@
 import { resolve } from "node:path";
-import { type Guide, isGuide } from "./guide";
-
-/** Turns a guide module path into the guide it default-exports. */
-export interface GuideLoader {
-	load(path: string): Promise<Guide>;
-}
+import { type Guide, isGuide } from "../guide";
+import type { GuideLoader } from "./guide-loader";
 
 /** Imports the module for real: Bun runs the user's TypeScript directly. */
 export class ModuleGuideLoader implements GuideLoader {

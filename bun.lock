@@ -80,6 +80,7 @@
         "lint": "./cli.ts",
       },
       "dependencies": {
+        "@webappwiz/events": "workspace:*",
         "@webappwiz/log": "workspace:*",
         "@webappwiz/md": "workspace:*",
         "@webappwiz/sys": "workspace:*",
@@ -119,6 +120,7 @@
       "name": "@webappwiz/rpc",
       "version": "0.0.0",
       "dependencies": {
+        "@webappwiz/events": "workspace:*",
         "@webappwiz/t": "workspace:*",
       },
     },

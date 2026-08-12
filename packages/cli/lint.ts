@@ -27,7 +27,9 @@ import {
 import { table } from "./table";
 
 /** Asked before a run spends more than it was allowed to. */
-export type Confirm = (question: string) => boolean | Promise<boolean>;
+export interface Confirm {
+	confirm(question: string): boolean | Promise<boolean>;
+}
 
 /** Which guide to read, which every lint command needs first. */
 export interface GuideOptions {
@@ -74,9 +76,11 @@ const estimated = (tasks: Task[]): number =>
  * should stop and say the number rather than block forever waiting to be told
  * to go ahead.
  */
-export const ask: Confirm = (question) =>
-	process.stdin.isTTY === true &&
-	/^y(es)?$/i.test((prompt(`${question} [y/N]`) ?? "").trim());
+export const ask: Confirm = {
+	confirm: (question) =>
+		process.stdin.isTTY === true &&
+		/^y(es)?$/i.test((prompt(`${question} [y/N]`) ?? "").trim()),
+};
 
 export class LintCommands {
 	constructor(
@@ -85,7 +89,7 @@ export class LintCommands {
 		private ps: Ps,
 		private clock: Clock,
 		private loader?: GuideLoader,
-		private confirm: Confirm = ask,
+		private confirmer: Confirm = ask,
 	) {}
 
 	/**
@@ -94,12 +98,11 @@ export class LintCommands {
 	 * could enforce instead. Exits 1 on errors, and on warnings only under
 	 * `strict`: moving a rule out of the guide is a decision to make once, not a
 	 * build failure by surprise.
-	 *
-	 * There is one audit and it does both halves every time: which rules a tool
-	 * could take over is the question worth asking, and a guide that will not
-	 * compile is the thing that stops it being asked.
 	 */
 	async audit(opts: AuditOptions): Promise<void> {
+		// Both halves every time, rather than a flag: which rules a tool could
+		// take over is the question worth asking, and a guide that will not
+		// compile is the thing that stops it being asked.
 		if (opts.agent === undefined && opts.exec === undefined) {
 			throw new Error(
 				"audit asks an agent, so name one: --agent " +
@@ -242,49 +245,40 @@ export class LintCommands {
 		const root = this.ps.cwd();
 		const measured = await overheads(this.fs, root);
 		const started = this.clock.now();
+
+		const tasks = await analyzer.plan(rules, dir, { chunk: opts.chunk, only });
 		// What the plan predicted and what the agents were billed, which together
 		// are the calibration this run leaves behind for the next --estimate.
-		let predicted = 0;
-		let calls = 0;
+		const files = new Set(tasks.flatMap((task) => task.files)).size;
+		const predicted = estimated(tasks);
+		const calls = tasks.length;
+		this.log.info(
+			planned(files, rules.length, calls, predicted, agent.label),
+		);
+		if (predicted > opts.budget) {
+			const cost =
+				opts.agent === undefined
+					? undefined
+					: predict(opts.agent, predicted, calls, measured);
+			this.log.info(overBudget(predicted, opts.budget, cost));
+			if (!(await this.confirmer.confirm("Run anyway?"))) {
+				// Throwing before run is what cancels: nothing has been spawned yet.
+				throw new Error("over budget");
+			}
+		}
+
 		let spent = 0;
 		let billed = false;
-		const violations = await analyzer.analyze(
-			rules,
-			dir,
-			opts.chunk,
-			agent,
-			{
-				planned: async (tasks) => {
-					const files = new Set(tasks.flatMap((task) => task.files)).size;
-					predicted = estimated(tasks);
-					calls = tasks.length;
-					this.log.info(
-						planned(files, rules.length, calls, predicted, agent.label),
-					);
-					if (predicted > opts.budget) {
-						const cost =
-							opts.agent === undefined
-								? undefined
-								: predict(opts.agent, predicted, calls, measured);
-						this.log.info(overBudget(predicted, opts.budget, cost));
-						if (!(await this.confirm("Run anyway?"))) {
-							// Throwing here is what cancels: analyze has spawned nothing yet.
-							throw new Error("over budget");
-						}
-					}
-				},
-				finished: (task) => {
-					if (task.cost !== undefined) {
-						spent += task.cost;
-						billed = true;
-					}
-					for (const line of finished(task)) {
-						this.log.info(line);
-					}
-				},
-			},
-			only,
-		);
+		analyzer.events.on("finished", (task) => {
+			if (task.cost !== undefined) {
+				spent += task.cost;
+				billed = true;
+			}
+			for (const line of finished(task)) {
+				this.log.info(line);
+			}
+		});
+		const violations = await analyzer.run(tasks, dir, agent);
 		this.log.info("");
 		this.log.info(
 			summary(

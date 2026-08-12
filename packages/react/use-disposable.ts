@@ -8,18 +8,10 @@ import { useDisposerEffect } from "./use-disposer-effect";
  * identity changes (a constructor argument changed), at which point a fresh
  * instance is built.
  *
- * Takes a factory rather than a prebuilt instance so a disposed instance is
- * never handed back. Constructing at render but disposing in effect cleanup
- * desyncs when React runs a mount/unmount/mount cycle that reuses the fiber's
- * hook state (route prefetch, offscreen): the unmount disposes the memoized
- * instance and the remount re-adopts that same, now-disposed instance.
- *
- * Construction happens at render, not in the effect. This is load-bearing for
- * deep resource graphs: a dependent resource built later in the same render
- * must read the rebuilt instance immediately. Building in the effect and
- * swapping it in afterwards returns a one-render-stale instance after a
- * dependency change, so a downstream resource gets wired against the previous
- * (disposed) upstream during the rebuild cascade.
+ * Pass a factory, not a prebuilt instance: a factory is what lets the hook
+ * rebuild rather than hand back one it has already disposed. The instance is
+ * built during render, so a dependent resource built later in the same render
+ * reads the rebuilt one straight away.
  *
  * REQUIREMENT: the factory and the disposable's constructor must be
  * render-pure. They may wire up in-memory state and pure helper objects, but
@@ -31,6 +23,10 @@ import { useDisposerEffect } from "./use-disposer-effect";
  * leaks. Acquire such resources after commit, via `useDisposerEffect`.
  */
 export function useDisposable<T extends Disposable>(factory: () => T): T {
+	// Building in the effect instead and swapping the instance in afterwards
+	// would return a one-render-stale instance after a dependency change, so a
+	// downstream resource gets wired against the previous (disposed) upstream
+	// during the rebuild cascade. Hence construction at render.
 	const [generation, setGeneration] = useState(0);
 
 	// Instances disposed by a prior effect cleanup. Checked below so a disposed

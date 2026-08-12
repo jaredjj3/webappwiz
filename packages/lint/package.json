@@ -11,6 +11,7 @@
 		"./testing": "./testing.ts"
 	},
 	"dependencies": {
+		"@webappwiz/events": "workspace:*",
 		"@webappwiz/log": "workspace:*",
 		"@webappwiz/md": "workspace:*",
 		"@webappwiz/sys": "workspace:*",

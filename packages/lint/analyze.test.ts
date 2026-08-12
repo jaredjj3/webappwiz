@@ -242,12 +242,13 @@ describe("Analyzer", () => {
 		);
 
 		const finished: string[] = [];
-		await analyzer.analyze([rule("Classes")], "/p", 1, agent, {
-			finished: (task) =>
-				finished.push(
-					`${task.glob} [${task.rules.join(",")}] ${task.done}/${task.total}`,
-				),
-		});
+		analyzer.events.on("finished", (task) =>
+			finished.push(
+				`${task.glob} [${task.rules.join(",")}] ${task.done}/${task.total}`,
+			),
+		);
+
+		await analyzer.analyze([rule("Classes")], "/p", 1, agent);
 
 		expect(finished).toEqual([
 			"**/*.ts [Classes] 1/2",
@@ -280,9 +281,9 @@ describe("Analyzer", () => {
 		});
 
 		const took: string[] = [];
-		await analyzer.analyze([rule("Classes")], "/p", 25, agent, {
-			finished: (task) => took.push(task.took.human()),
-		});
+		analyzer.events.on("finished", (task) => took.push(task.took.human()));
+
+		await analyzer.analyze([rule("Classes")], "/p", 25, agent);
 
 		expect(took).toEqual(["3.0s"]);
 	});

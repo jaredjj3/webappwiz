@@ -1,9 +1,11 @@
+// lint-ignore-file one-dir-per-interface: this is the package entry point named in
+// package.json exports, not a barrel sitting inside an interface's directory
 export {
 	AGENTS,
 	type Agent,
 	Analyzer,
+	type AnalyzerEvents,
 	agentCommand,
-	type Events,
 	type Finished,
 	type Task,
 	type Violation,
@@ -15,11 +17,13 @@ export type {
 } from "./diagnostic";
 export { Finding } from "./finding";
 export { DEFAULT_GUIDE, defineGuide, type Guide, isGuide } from "./guide";
+export { FakeGuideLoader } from "./guide-loader/fake-guide-loader";
+export type { GuideLoader } from "./guide-loader/guide-loader";
+export { ModuleGuideLoader } from "./guide-loader/module-guide-loader";
 export { Guides } from "./guides";
 export { exemptions } from "./ignore";
 export { Lint } from "./lint";
 export { type FileText, Linter } from "./linter";
-export { type GuideLoader, ModuleGuideLoader } from "./loader";
 export { Mechanizer } from "./mechanize";
 export { recommended } from "./recommended";
 export { ClassesOverFunctionExports } from "./rule/classes-over-function-exports";

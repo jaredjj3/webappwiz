@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { FakeFs } from "@webappwiz/sys/testing";
 import { defineGuide } from "./guide";
+import { FakeGuideLoader } from "./guide-loader/fake-guide-loader";
 import { Guides } from "./guides";
 import { recommended } from "./recommended";
 import { testRule } from "./testing";
@@ -22,9 +23,10 @@ describe("Guides", () => {
 	it("reports what is wrong with a rule's document", async () => {
 		const guide = defineGuide([testRule("one", { document: "no title here" })]);
 
-		const { rules, diagnostics } = await new Guides(fs, {
-			load: async () => guide,
-		}).load("guide.ts");
+		const { rules, diagnostics } = await new Guides(
+			fs,
+			new FakeGuideLoader(guide),
+		).load("guide.ts");
 
 		// the rule still checks: only its report suffers
 		expect(rules).toHaveLength(1);
@@ -40,9 +42,10 @@ describe("Guides", () => {
 	it("refuses two rules answering to the same id", async () => {
 		const guide = defineGuide([testRule("one"), testRule("one")]);
 
-		const { diagnostics } = await new Guides(fs, {
-			load: async () => guide,
-		}).load("guide.ts");
+		const { diagnostics } = await new Guides(
+			fs,
+			new FakeGuideLoader(guide),
+		).load("guide.ts");
 
 		expect(diagnostics).toEqual([
 			{

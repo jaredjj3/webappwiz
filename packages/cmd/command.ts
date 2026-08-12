@@ -7,6 +7,14 @@ import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 // so it leads, and the context the middleware built follows it.
 type Action<O, C> = (parsed: O, ctx: C) => unknown;
 
+/** What a caller can say about an option or a positional beyond its schema. */
+export type Meta<T> = {
+	/** Supplying one makes the option or argument optional. */
+	default?: T;
+	/** The line the help output prints beside it. */
+	description?: string;
+};
+
 type OptionMeta = {
 	name: string;
 	schema: Schema<unknown>;
@@ -43,7 +51,7 @@ export class Command<O, C extends object = object> {
 	option<K extends string, T>(
 		name: K,
 		schema: Schema<T>,
-		meta?: { default?: T; description?: string },
+		meta?: Meta<T>,
 	): Command<O & { [P in K]: T }, C> {
 		this.options.push({
 			name,
@@ -59,7 +67,7 @@ export class Command<O, C extends object = object> {
 	arg<K extends string, T>(
 		name: K,
 		schema: Schema<T>,
-		meta?: { default?: T; description?: string },
+		meta?: Meta<T>,
 	): Command<O & { [P in K]: T }, C> {
 		this.args.push({
 			name,

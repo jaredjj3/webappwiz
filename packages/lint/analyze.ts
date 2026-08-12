@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { Dispatcher, type Events } from "@webappwiz/events";
 import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
 import { type Fs, type Ps, walk } from "@webappwiz/sys";
@@ -117,16 +118,10 @@ export const agentCommand = (opts: AgentOptions): Agent => {
 };
 
 /** What a run reports as it goes, for a caller that prints as findings land. */
-export interface Events {
-	/**
-	 * The whole plan, before the first agent starts. Throwing from here cancels
-	 * the run without spawning anything, which is how a caller refuses a plan it
-	 * decides is too expensive.
-	 */
-	planned?: (tasks: Task[]) => void | Promise<void>;
+export type AnalyzerEvents = {
 	/** One task, the moment its agent returns. */
-	finished?: (finished: Finished) => void;
-}
+	finished: Finished;
+};
 
 /**
  * Checks a directory against a guide with an agent of the caller's choosing,
@@ -141,6 +136,10 @@ export class Analyzer {
 
 	// A file matched by several rules is read once, not once per finding.
 	private lines = new Map<string, Promise<string[]>>();
+	private dispatcher = new Dispatcher<AnalyzerEvents>();
+
+	/** Fires `finished` per task, so a caller can print findings as they land. */
+	readonly events: Events<AnalyzerEvents> = this.dispatcher.events;
 
 	constructor(
 		private log: Logger,
@@ -150,29 +149,34 @@ export class Analyzer {
 	) {}
 
 	/**
-	 * Checks `dir` against `rules`, calling `on.finished` each time an agent
-	 * returns so a caller can print findings as they land. Resolves with every
-	 * violation once the last agent is done.
+	 * Plans a run over `dir` and carries it out. A caller that wants to see the
+	 * plan first, and decide whether to pay for it, calls `plan` and `run`
+	 * itself instead.
 	 */
 	async analyze(
 		rules: Rule[],
 		dir: string,
 		chunk: number,
 		agent: Agent,
-		on: Events = {},
 		only?: Set<string>,
 	): Promise<Violation[]> {
-		const tasks = await this.plan(rules, dir, chunk, only);
-		await on.planned?.(tasks);
+		return this.run(await this.plan(rules, dir, chunk, only), dir, agent);
+	}
+
+	/**
+	 * Spawns an agent for each task `plan` produced, dispatching `finished` as
+	 * each returns. Resolves with every violation once the last agent is done.
+	 */
+	async run(tasks: Task[], dir: string, agent: Agent): Promise<Violation[]> {
 		let done = 0;
 		// Every task at once: a guide's tasks number in the tens, and an agent
 		// call is minutes of latency and no local work. Add a cap if that changes.
 		const found = await Promise.all(
 			tasks.map(async (task) => {
 				const started = this.clock.now();
-				const { violations, cost } = await this.run(task, dir, agent);
+				const { violations, cost } = await this.spawn(task, dir, agent);
 				done += 1;
-				on.finished?.({
+				this.dispatcher.dispatch("finished", {
 					glob: task.glob,
 					rules: task.rules.map((rule) => rule.id),
 					violations,
@@ -245,7 +249,7 @@ export class Analyzer {
 		return tasks;
 	}
 
-	private async run(
+	private async spawn(
 		task: Task,
 		dir: string,
 		agent: Agent,

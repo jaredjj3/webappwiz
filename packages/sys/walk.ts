@@ -1,4 +1,4 @@
-import type { Fs } from "./fs";
+import type { Fs } from "./fs/fs";
 
 export async function* walk(fs: Fs, dir: string): AsyncGenerator<string> {
 	for (const entry of await fs.readdir(dir)) {

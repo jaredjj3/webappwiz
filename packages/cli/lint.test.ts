@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { defineGuide, type Guide } from "@webappwiz/lint";
+import { defineGuide, FakeGuideLoader, type Guide } from "@webappwiz/lint";
 import { ruleDoc, testRule } from "@webappwiz/lint/testing";
 import { color, MemoryLogger } from "@webappwiz/log";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
@@ -16,7 +16,7 @@ describe("LintCommands", () => {
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
 	const commands = (guide: Guide, confirm?: Confirm) =>
-		new LintCommands(log, fs, ps, clock, { load: async () => guide }, confirm);
+		new LintCommands(log, fs, ps, clock, new FakeGuideLoader(guide), confirm);
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
 	const oneRule = defineGuide([one()]);
 	const config = "lint.config.ts";
@@ -269,7 +269,7 @@ describe("LintCommands", () => {
 		ps.setCaptureOutput("[]", "");
 
 		expect(
-			commands(oneRule, () => false).analyze({
+			commands(oneRule, { confirm: () => false }).analyze({
 				...analyzing,
 				budget: 10,
 			}),
@@ -282,7 +282,7 @@ describe("LintCommands", () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
-		await commands(oneRule, () => true).analyze({
+		await commands(oneRule, { confirm: () => true }).analyze({
 			...analyzing,
 			budget: 10,
 		});

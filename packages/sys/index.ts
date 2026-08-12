@@ -1,7 +1,6 @@
 export { FileLock, type FileLockOptions } from "./file-lock";
 export type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs/fs";
 export { NodeFs } from "./fs/node-fs";
-export { walk } from "./fs/walk";
 export { FileHostMapper } from "./host-mapper/file-host-mapper";
 export type { HostMapper } from "./host-mapper/host-mapper";
 export { NoopHostMapper } from "./host-mapper/noop-host-mapper";
@@ -19,3 +18,4 @@ export type {
 	SpawnOptions,
 	SpawnResult,
 } from "./ps/ps";
+export { walk } from "./walk";

@@ -87,27 +87,18 @@ describe("rpc", () => {
 			headers: { authorization: "default" },
 		});
 		let seen = "";
-		await authed.call(
-			"getTodo",
-			{ id: 1 },
-			{
-				headers: { authorization: "per-call" },
-				onResponse: (res) => {
-					seen = res.headers.get("x-seen-auth") ?? "";
-				},
-			},
-		);
-		expect(seen).toBe("per-call");
+		authed.events.on("response", (res) => {
+			seen = res.headers.get("x-seen-auth") ?? "";
+		});
 
 		await authed.call(
 			"getTodo",
 			{ id: 1 },
-			{
-				onResponse: (res) => {
-					seen = res.headers.get("x-seen-auth") ?? "";
-				},
-			},
+			{ headers: { authorization: "per-call" } },
 		);
+		expect(seen).toBe("per-call");
+
+		await authed.call("getTodo", { id: 1 });
 		expect(seen).toBe("default");
 	});
 
