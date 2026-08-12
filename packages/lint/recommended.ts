@@ -1,5 +1,6 @@
 import { ClassesOverFunctionExports } from "./rule/classes-over-function-exports";
 import { CommentsSayWhyNotWhat } from "./rule/comments-say-why-not-what";
+import { DevServersFindAPort } from "./rule/dev-servers-find-a-port";
 import { DocCommentsAddressUsers } from "./rule/doc-comments-address-users";
 import { FakesOverMocks } from "./rule/fakes-over-mocks";
 import { NamedOptionsLast } from "./rule/named-options-last";
@@ -28,5 +29,6 @@ export const recommended: Rule[] = [
 	new CommentsSayWhyNotWhat(),
 	new DocCommentsAddressUsers(),
 	new OneDirPerInterface(),
+	new DevServersFindAPort(),
 	new ReactiveOverUseState(),
 ];
