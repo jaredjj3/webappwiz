@@ -84,6 +84,9 @@ the status for that reason, never on the lease.
 
 1. `arbor create <task>` (or `arbor claim <task>` to resume; `arbor show
    <task>` first if you want to see what a tree is before taking its lease).
+   A task lands on trunk by default; `arbor create <task> --base <branch>`
+   makes one destined for another branch instead, starting from it and
+   grafting onto it. `arbor show` prints a task's base.
 2. Write `TODO.md` at the worktree root before starting (see below).
 3. Do the work; commit with git (arbor never commits for you). Keep `TODO.md`
    current as you go.
