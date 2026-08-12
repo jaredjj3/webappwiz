@@ -20,7 +20,7 @@ beforeEach(async () => {
 	});
 });
 
-describe("Workspace.at", () => {
+describe("workspace", () => {
 	it("climbs to the manifest that declares the workspaces", async () => {
 		const workspace = await Workspace.at(fs, "/repo/packages/one");
 		expect(workspace.root).toBe("/repo");
@@ -31,9 +31,7 @@ describe("Workspace.at", () => {
 			"no workspace above /elsewhere",
 		);
 	});
-});
 
-describe("Workspace", () => {
 	it("reads the version off the root manifest", async () => {
 		expect(await new Workspace(fs, "/repo").version()).toBe("1.2.3");
 	});

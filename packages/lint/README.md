@@ -82,7 +82,15 @@ The recommended rules, each exported as its class so a guide can name one:
 - `classes-over-function-exports` (partially checked): several exported
   functions injecting dependencies should become a class; the check sees
   function-typed parameters, the agent judges interface-typed ones.
-- `tests-read-like-sentences`, `comments-say-why-not-what`,
+- `objects-over-callbacks` (partially checked): inject objects, not
+  callbacks; the check sees function types in constructor parameters, the
+  agent judges retained method parameters.
+- `tests-read-like-sentences` (partially checked): one describe per test
+  file, titles completing "it ..."; the check counts the describes, the agent
+  reads the titles.
+- `simple-test-setup` (partially checked): a test file opens on what is
+  tested; the check sees tests a loop generates, the agent judges the rest.
+- `fakes-over-mocks`, `comments-say-why-not-what`,
   `doc-comments-address-users`, `one-dir-per-interface`: agent rules.
 
 `tokens()` hands a check TypeScript's token stream (comment- and string-safe,

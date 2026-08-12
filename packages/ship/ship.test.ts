@@ -120,8 +120,8 @@ beforeEach(() => {
 	ship = new Ship(new MemoryLogger(), workspace, git, registry, github);
 });
 
-describe("Ship.plan", () => {
-	it("moves the whole workspace to the next version", async () => {
+describe("ship", () => {
+	it("plans the whole workspace onto the next version", async () => {
 		const plan = await ship.plan("minor");
 		expect(plan.current).toBe("1.2.3");
 		expect(plan.next).toBe("1.3.0");
@@ -129,7 +129,7 @@ describe("Ship.plan", () => {
 		expect(plan.problems).toEqual([]);
 	});
 
-	it("lists every package, private ones included", async () => {
+	it("plans every package, private ones included", async () => {
 		const plan = await ship.plan("patch");
 		expect(plan.packages.map((pkg) => pkg.name)).toEqual([
 			"@scope/one",
@@ -192,9 +192,7 @@ describe("Ship.plan", () => {
 		expect(plan.resuming).toBe(false);
 		expect(plan.next).toBe("1.2.4");
 	});
-});
 
-describe("Ship.run", () => {
 	it("stamps, commits, publishes, tags, pushes and writes the release", async () => {
 		await ship.run(await ship.plan("patch"));
 		expect(workspace.stamped).toEqual(["1.2.4"]);
