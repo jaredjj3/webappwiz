@@ -96,7 +96,8 @@ The recommended rules, each exported as its class so a guide can name one:
 - `simple-test-setup` (partially checked): a test file opens on what is
   tested; the check sees tests a loop generates, the agent judges the rest.
 - `fakes-over-mocks`, `comments-say-why-not-what`,
-  `doc-comments-address-users`, `one-dir-per-interface`: agent rules.
+  `doc-comments-address-users`, `one-dir-per-interface`,
+  `reactive-over-use-state`: agent rules.
 
 `tokens()` hands a check TypeScript's token stream (comment- and string-safe,
 with line, column, and brace depth) when text alone is not enough.
