@@ -6,8 +6,4 @@ export class DocCommentsAddressUsers implements Rule {
 	readonly files = "**/*.ts";
 	readonly level = "error";
 	readonly document = doc;
-
-	applies(text: string): boolean {
-		return text.includes("/**");
-	}
 }

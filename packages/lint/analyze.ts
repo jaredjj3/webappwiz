@@ -116,9 +116,8 @@ export class Analyzer {
 	// bounded slice of files stays reliable where a whole guide over a whole repo
 	// does not.
 
-	// A file matched by several rules is read once, not once per rule filtering
-	// it or per finding quoting it.
-	private texts = new Map<string, Promise<string>>();
+	// A file matched by several rules is read once, not once per finding.
+	private lines = new Map<string, Promise<string[]>>();
 
 	constructor(
 		private log: Logger,
@@ -189,12 +188,11 @@ export class Analyzer {
 		const tasks: Task[] = [];
 		for (const rule of rules) {
 			const glob = new Bun.Glob(rule.files);
-			const matched = all.filter((file) => glob.match(file));
-			if (matched.length === 0) {
+			const files = all.filter((file) => glob.match(file));
+			if (files.length === 0) {
 				// stderr, so the report on stdout stays parseable
 				this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
 			}
-			const files = await this.candidates(rule, dir, matched);
 			// chunks are counted in files, not tokens: switch to a byte budget when
 			// repos with a few huge files start overflowing a task.
 			for (let i = 0; i < files.length; i += chunk) {
@@ -212,28 +210,6 @@ export class Analyzer {
 			}
 		}
 		return tasks;
-	}
-
-	/**
-	 * The matched files a rule could actually find something in. A rule with no
-	 * `applies` gets all of them; one with it trades a local read for an agent
-	 * reading the file. Keeping nothing is silent, unlike a glob matching
-	 * nothing: an empty glob is a broken guide, an empty filter is a clean tree.
-	 */
-	private async candidates(
-		rule: Rule,
-		dir: string,
-		files: string[],
-	): Promise<string[]> {
-		if (!rule.applies) {
-			return files;
-		}
-		const kept = await Promise.all(
-			files.map(async (file) =>
-				rule.applies?.(await this.text(join(dir, file))) ? file : null,
-			),
-		);
-		return kept.filter((file) => file !== null);
 	}
 
 	private async run(
@@ -279,17 +255,16 @@ export class Analyzer {
 		return violations.sort(cmp);
 	}
 
-	private text(file: string): Promise<string> {
-		let text = this.texts.get(file);
-		if (!text) {
-			text = this.fs.read(file).catch(() => "");
-			this.texts.set(file, text);
+	private source(file: string): Promise<string[]> {
+		let lines = this.lines.get(file);
+		if (!lines) {
+			lines = this.fs
+				.read(file)
+				.then((text) => text.split("\n"))
+				.catch(() => []);
+			this.lines.set(file, lines);
 		}
-		return text;
-	}
-
-	private async source(file: string): Promise<string[]> {
-		return (await this.text(file)).split("\n");
+		return lines;
 	}
 
 	private prompt(rule: Rule, files: string[]): string {

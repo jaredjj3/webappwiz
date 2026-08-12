@@ -24,7 +24,6 @@ export const testRule = (
 		document?: string;
 		check?: (text: string) => Finding[];
 		partial?: boolean;
-		applies?: (text: string) => boolean;
 	} = {},
 ): Rule => ({
 	id,
@@ -33,5 +32,4 @@ export const testRule = (
 	document: opts.document ?? ruleDoc(id),
 	check: opts.check,
 	partial: opts.partial,
-	applies: opts.applies,
 });

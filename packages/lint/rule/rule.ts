@@ -20,17 +20,6 @@ export interface Rule {
 	readonly document: string;
 	/** Every violation in one file's text, for a rule a linter can decide. */
 	check?(text: string): Finding[];
-	/**
-	 * True when this text could break the rule, for an agent rule that would
-	 * otherwise pay to read files with nothing in them to find: `files` picks by
-	 * path, this picks by content.
-	 *
-	 * Soundness runs the other way to `check`. A check finding nothing proves
-	 * nothing, but false here has to mean no violation is possible, or the run
-	 * skips one and says nothing. Match loosely: over-matching costs tokens,
-	 * under-matching costs the finding.
-	 */
-	applies?(text: string): boolean;
 	/** True when the check decides only some of the rule's cases, so the rule
 	 * still needs an agent. A full check takes the rule off the agent's plate. */
 	readonly partial?: boolean;
