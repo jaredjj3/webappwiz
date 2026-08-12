@@ -117,6 +117,21 @@ export const agentCommand = (opts: AgentOptions): Agent => {
 	return { argv, label: argv.join(" ") };
 };
 
+/** How much of the tree a run covers, and how finely it is cut up. */
+export interface AnalyzeOptions {
+	/** Files per task. Chunks are counted in files, not tokens. */
+	chunk?: number;
+	/**
+	 * Narrows the run to these files, named the way the globs are, for a caller
+	 * checking a subset of the tree rather than all of it. A rule matching
+	 * nothing left in it is still worth saying so.
+	 */
+	only?: Set<string>;
+}
+
+/** Files per task when a caller does not say. */
+export const DEFAULT_CHUNK = 25;
+
 /** What a run reports as it goes, for a caller that prints as findings land. */
 export type AnalyzerEvents = {
 	/** One task, the moment its agent returns. */
@@ -156,11 +171,10 @@ export class Analyzer {
 	async analyze(
 		rules: Rule[],
 		dir: string,
-		chunk: number,
 		agent: Agent,
-		only?: Set<string>,
+		options: AnalyzeOptions = {},
 	): Promise<Violation[]> {
-		return this.run(await this.plan(rules, dir, chunk, only), dir, agent);
+		return this.run(await this.plan(rules, dir, options), dir, agent);
 	}
 
 	/**
@@ -191,16 +205,11 @@ export class Analyzer {
 		return found.flat();
 	}
 
-	/**
-	 * The tasks a run would spawn. `only` narrows it to those files, named the
-	 * way the globs are, for a caller checking a subset of the tree rather than
-	 * all of it; a rule matching nothing left in it is still worth saying so.
-	 */
+	/** The tasks a run would spawn, without spawning any of them. */
 	async plan(
 		rules: Rule[],
 		dir: string,
-		chunk: number,
-		only?: Set<string>,
+		{ chunk = DEFAULT_CHUNK, only }: AnalyzeOptions = {},
 	): Promise<Task[]> {
 		const all: string[] = [];
 		const size = new Map<string, number>();

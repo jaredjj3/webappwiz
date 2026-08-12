@@ -3,9 +3,11 @@
 export {
 	AGENTS,
 	type Agent,
+	type AnalyzeOptions,
 	Analyzer,
 	type AnalyzerEvents,
 	agentCommand,
+	DEFAULT_CHUNK,
 	type Finished,
 	type Task,
 	type Violation,

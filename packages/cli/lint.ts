@@ -212,7 +212,10 @@ export class LintCommands {
 		}
 		const analyzer = new Analyzer(this.log, this.fs, this.ps, this.clock);
 		if (opts.prompt) {
-			for (const task of await analyzer.plan(rules, dir, opts.chunk, only)) {
+			for (const task of await analyzer.plan(rules, dir, {
+				chunk: opts.chunk,
+				only,
+			})) {
 				this.log.info(
 					`=== ${task.glob}: ${task.rules.map((rule) => rule.id).join(", ")} ` +
 						`(${count(task.files.length, "file")}) ===`,
@@ -222,7 +225,10 @@ export class LintCommands {
 			return;
 		}
 		if (opts.estimate) {
-			const tasks = await analyzer.plan(rules, dir, opts.chunk, only);
+			const tasks = await analyzer.plan(rules, dir, {
+				chunk: opts.chunk,
+				only,
+			});
 			const files = new Set(tasks.flatMap((task) => task.files)).size;
 			// No budget check: being asked to approve a number is what running
 			// --estimate is instead of.

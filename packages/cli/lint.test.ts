@@ -349,18 +349,36 @@ describe("LintCommands", () => {
 		expect(printed()).toContain("checking 1 file against 1 rule");
 	});
 
-	it("refuses --estimate together with a flag naming something to run", async () => {
-		const commanded = commands(oneRule);
+	it("refuses --estimate together with --agent", async () => {
+		await expect(
+			commands(oneRule).analyze({
+				...analyzing,
+				estimate: true,
+				agent: "haiku",
+			}),
+		).rejects.toThrow("--estimate measures a run instead of making one");
+	});
 
-		for (const naming of [
-			{ agent: "haiku" },
-			{ agent: undefined, exec: "codex exec" },
-			{ agent: undefined, prompt: true },
-		]) {
-			expect(
-				commanded.analyze({ ...analyzing, estimate: true, ...naming }),
-			).rejects.toThrow("--estimate measures a run instead of making one");
-		}
+	it("refuses --estimate together with --exec", async () => {
+		await expect(
+			commands(oneRule).analyze({
+				...analyzing,
+				estimate: true,
+				agent: undefined,
+				exec: "codex exec",
+			}),
+		).rejects.toThrow("--estimate measures a run instead of making one");
+	});
+
+	it("refuses --estimate together with --prompt", async () => {
+		await expect(
+			commands(oneRule).analyze({
+				...analyzing,
+				estimate: true,
+				agent: undefined,
+				prompt: true,
+			}),
+		).rejects.toThrow("--estimate measures a run instead of making one");
 	});
 
 	it("says so and stops when nothing has changed since the ref", async () => {

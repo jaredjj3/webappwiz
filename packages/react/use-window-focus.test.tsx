@@ -30,7 +30,7 @@ describe("useWindowFocus", () => {
 	it("calls back on each transition", () => {
 		const onFocus = mock(() => {});
 		const onBlur = mock(() => {});
-		renderHook(() => useWindowFocus(onFocus, onBlur));
+		renderHook(() => useWindowFocus({ onFocus, onBlur }));
 
 		fire("blur");
 		fire("focus");
@@ -44,7 +44,7 @@ describe("useWindowFocus", () => {
 		// ref rather than capturing the pair from the first render.
 		const later = mock(() => {});
 		const { rerender } = renderHook(
-			({ onBlur }) => useWindowFocus(undefined, onBlur),
+			({ onBlur }) => useWindowFocus({ onBlur }),
 			{
 				initialProps: { onBlur: () => {} },
 			},
@@ -58,7 +58,7 @@ describe("useWindowFocus", () => {
 
 	it("stops listening after unmount", () => {
 		const onBlur = mock(() => {});
-		const { unmount } = renderHook(() => useWindowFocus(undefined, onBlur));
+		const { unmount } = renderHook(() => useWindowFocus({ onBlur }));
 
 		unmount();
 		fire("blur");

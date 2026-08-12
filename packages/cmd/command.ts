@@ -182,7 +182,6 @@ export class Command<O, C extends object = object> {
 		return out as O;
 	}
 
-	// a [flag, text] pair for the help table, e.g. ["--count", "how many (default: 1)"]
 	private optionRow(option: OptionMeta): readonly [string, string] {
 		// an undefined default is the option being absent, which is not news
 		const defaultDescription =

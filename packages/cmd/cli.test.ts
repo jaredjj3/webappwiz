@@ -51,24 +51,32 @@ describe("cli", () => {
 		expect(wiz.run(["v"])).toBe(7);
 	});
 
-	it("prints program help for no args, --help, -h, and an unknown command", () => {
-		const wiz = cli("wiz", log);
-		wiz
-			.command("a")
-			.description("does a")
-			.action(() => {});
-		for (const argv of [[], ["--help"], ["-h"], ["nope"]]) {
-			expect(() => wiz.run(argv)).not.toThrow();
-		}
-		const text = log.entries
-			.map((entry) => color.strip(entry.message))
-			.join("\n");
-		expect(log.entries).toHaveLength(4);
-		expect(text).toContain("Usage: wiz <command> [options]");
-		expect(text).toContain("a  does a");
-		expect(text).toContain(
+	it("prints program help for no args", () => {
+		harness.plain.run([]);
+
+		expect(harness.help()).toContain("Usage: wiz <command> [options]");
+		expect(harness.help()).toContain("a  does a");
+		expect(harness.help()).toContain(
 			"Run `wiz <command> --help` for a command's options.",
 		);
+	});
+
+	it("prints program help for --help", () => {
+		harness.plain.run(["--help"]);
+
+		expect(harness.help()).toContain("Usage: wiz <command> [options]");
+	});
+
+	it("prints program help for -h", () => {
+		harness.plain.run(["-h"]);
+
+		expect(harness.help()).toContain("Usage: wiz <command> [options]");
+	});
+
+	it("prints program help for a command it does not have", () => {
+		harness.plain.run(["nope"]);
+
+		expect(harness.help()).toContain("Usage: wiz <command> [options]");
 	});
 
 	it("writes command help to the injected logger, not the console", () => {
