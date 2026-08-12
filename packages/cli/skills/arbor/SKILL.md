@@ -158,6 +158,13 @@ What needs verifying, and the one question a human has to answer?
   unchecked item, since a task with nothing left merges and disappears. Move a
   finished item to `## Done` rather than deleting it: what you have already
   tried is context a stranger needs.
+- Those checkboxes are the only progress the task reports: `Done` over
+  `Done + Next` is the bar `arbor dev` draws for it. So write every step you
+  can foresee as a `- [ ]` item before you start, keep them roughly one
+  commit's worth of work each, and check one off as soon as it is done rather
+  than at the end. A task that discovers work as it goes will see the bar go
+  backwards, which is honest and fine; one that keeps a single "do the thing"
+  item reports nothing at all.
 - `## Blocked` only when you `arbor escalate`, and it ends in a real question.
 
 `arbor show <task>` prints the file and every way it departs from that shape.
