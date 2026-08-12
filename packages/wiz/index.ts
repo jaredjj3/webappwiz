@@ -7,7 +7,7 @@ import { NodeFs, NodePs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import { Fix } from "./fix";
 import { Path } from "./path";
-import { ShipCommand } from "./ship";
+import { ship } from "./ship";
 import { test } from "./test";
 
 const log = new ConsoleLogger();
@@ -44,7 +44,7 @@ wiz
 	.arg("bump", t.string(), { description: "patch, minor, or major" })
 	.action(async (opts) => {
 		const workspace = await Workspace.at(fs, ps.cwd());
-		const ship = new Ship(
+		const release = new Ship(
 			log,
 			workspace,
 			new Git(ps, workspace.root),
@@ -52,7 +52,7 @@ wiz
 			new Github(ps),
 		);
 		const fix = new Fix(log, ps, new Lint(log, fs, ps));
-		await new ShipCommand(log, ps, ship, fix).run(opts);
+		await ship(opts, log, ps, release, fix);
 	});
 
 wiz
