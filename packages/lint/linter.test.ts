@@ -64,7 +64,9 @@ describe("linter", () => {
 			{ path: "a.md", text: "one\ntwo" },
 		]);
 
-		expect(diagnostics.map((d) => d.message)).toEqual(["line 1 of 2"]);
+		expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+			"line 1 of 2",
+		]);
 	});
 
 	it("drops findings a lint-ignore excuses", () => {

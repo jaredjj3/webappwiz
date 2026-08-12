@@ -36,13 +36,13 @@ export class Lint {
 			paths.map(async (path) => ({ path, text: await this.fs.read(path) })),
 		);
 		const diagnostics = linter.lint(files);
-		for (const d of diagnostics) {
-			const paint = d.severity === "error" ? color.red : color.yellow;
+		for (const diagnostic of diagnostics) {
+			const paint = diagnostic.severity === "error" ? color.red : color.yellow;
 			this.log.info(
-				`${d.path}:${d.line}:${d.column} ${paint(d.rule)} ${d.message}`,
+				`${diagnostic.path}:${diagnostic.line}:${diagnostic.column} ${paint(diagnostic.rule)} ${diagnostic.message}`,
 			);
 		}
-		return !diagnostics.some((d) => d.severity === "error");
+		return !diagnostics.some((diagnostic) => diagnostic.severity === "error");
 	}
 
 	/** The project's rules, or null after reporting a guide that will not
@@ -50,10 +50,15 @@ export class Lint {
 	private async guide(): Promise<Rule[] | null> {
 		const { rules, diagnostics } = await new Guides(this.fs).project();
 		let errors = false;
-		for (const d of diagnostics.filter((d) => d.severity === "error")) {
+		for (const diagnostic of diagnostics.filter(
+			(diagnostic) => diagnostic.severity === "error",
+		)) {
 			errors = true;
-			const at = d.line === undefined ? d.rule : `${d.rule}:${d.line}`;
-			this.log.info(`${at} ${color.red(DEFAULT_GUIDE)} ${d.message}`);
+			const at =
+				diagnostic.line === undefined
+					? diagnostic.rule
+					: `${diagnostic.rule}:${diagnostic.line}`;
+			this.log.info(`${at} ${color.red(DEFAULT_GUIDE)} ${diagnostic.message}`);
 		}
 		return errors ? null : rules;
 	}

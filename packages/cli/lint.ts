@@ -29,7 +29,7 @@ export type Confirm = (question: string) => boolean | Promise<boolean>;
 
 /** What a whole plan reads: every task's prompt and the files it names. */
 const estimated = (tasks: Task[]): number =>
-	tokens(tasks.reduce((n, t) => n + t.bytes, 0));
+	tokens(tasks.reduce((bytes, task) => bytes + task.bytes, 0));
 
 /**
  * Answers on the terminal, and answers no without one: a run nobody is watching
@@ -74,7 +74,7 @@ export class LintCommands {
 			);
 		}
 		const { rules, diagnostics } = await this.guide(opts.rules);
-		if (diagnostics.some((d) => d.severity === "error")) {
+		if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
 			// Before any agent runs: a guide that will not compile is not worth
 			// spending calls on, and the errors are the more urgent report.
 			this.report(rules.length, diagnostics, opts.strict);
@@ -84,7 +84,7 @@ export class LintCommands {
 		// ones are worth asking about.
 		diagnostics.push(
 			...(await mechanizer.check(
-				rules.filter((r) => !r.check),
+				rules.filter((rule) => !rule.check),
 				agentCommand(opts),
 			)),
 		);
@@ -95,15 +95,15 @@ export class LintCommands {
 	async ls(opts: { rules: string }): Promise<void> {
 		const { rules } = await this.sound(opts.rules);
 		const rows = [["ID", "RULE", "LEVEL", "FILES", "CHECK", "GOOD", "BAD"]];
-		for (const r of rules) {
-			const doc = new RuleDocument(r);
+		for (const rule of rules) {
+			const doc = new RuleDocument(rule);
 			rows.push([
-				r.id,
+				rule.id,
 				doc.title,
-				r.level,
-				r.files,
+				rule.level,
+				rule.files,
 				// which rules cost tokens: a checked rule is the linter's, free
-				r.check ? (r.partial ? "partial" : "full") : "",
+				rule.check ? (rule.partial ? "partial" : "full") : "",
 				String(doc.good.length),
 				String(doc.bad.length),
 			]);
@@ -117,10 +117,10 @@ export class LintCommands {
 	 */
 	async show(opts: { id: string; rules: string }): Promise<void> {
 		const { rules } = await this.sound(opts.rules);
-		const rule = rules.find((r) => r.id === opts.id);
+		const rule = rules.find((candidate) => candidate.id === opts.id);
 		if (!rule) {
 			throw new Error(
-				`no rule "${opts.id}" in ${opts.rules}. Known ids: ${rules.map((r) => r.id).join(", ")}`,
+				`no rule "${opts.id}" in ${opts.rules}. Known ids: ${rules.map((candidate) => candidate.id).join(", ")}`,
 			);
 		}
 		this.log.info(
@@ -172,7 +172,7 @@ export class LintCommands {
 		const { rules: all } = await this.sound(opts.rules);
 		// A rule with a full check is the linter's, already enforced for free;
 		// an agent reads only the rules, or the parts of them, no check decides.
-		const rules = all.filter((r) => !r.check || r.partial);
+		const rules = all.filter((rule) => !rule.check || rule.partial);
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
 		const only =
 			opts.since === undefined
@@ -197,7 +197,7 @@ export class LintCommands {
 		}
 		if (opts.estimate) {
 			const tasks = await analyzer.plan(rules, dir, opts.chunk, only);
-			const files = new Set(tasks.flatMap((t) => t.files)).size;
+			const files = new Set(tasks.flatMap((task) => task.files)).size;
 			// No budget check: being asked to approve a number is what running
 			// --estimate is instead of.
 			this.log.info(
@@ -214,7 +214,7 @@ export class LintCommands {
 			agent,
 			{
 				planned: async (tasks) => {
-					const files = new Set(tasks.flatMap((t) => t.files)).size;
+					const files = new Set(tasks.flatMap((task) => task.files)).size;
 					const estimate = estimated(tasks);
 					this.log.info(
 						planned(files, rules.length, tasks.length, estimate, agent.label),
@@ -237,7 +237,9 @@ export class LintCommands {
 		);
 		this.log.info("");
 		this.log.info(summary(violations, this.clock.now().subtract(started)));
-		const errors = violations.filter((v) => v.level === "error").length;
+		const errors = violations.filter(
+			(violation) => violation.level === "error",
+		).length;
 		if (errors > 0) {
 			throw new Error(count(errors, "lint error"));
 		}
@@ -257,7 +259,7 @@ export class LintCommands {
 	 * them: a guide that will not compile prints its diagnostics and exits. */
 	private async sound(path: string): Promise<{ rules: Rule[] }> {
 		const { rules, diagnostics } = await this.guide(path);
-		if (diagnostics.some((d) => d.severity === "error")) {
+		if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
 			this.report(rules.length, diagnostics, false);
 		}
 		return { rules };
@@ -268,15 +270,19 @@ export class LintCommands {
 		diagnostics: GuideDiagnostic[],
 		strict: boolean,
 	): void {
-		const rows = diagnostics.map((d) => [
-			d.line === undefined ? d.rule : `${d.rule}:${d.line}`,
-			d.severity,
-			d.message,
+		const rows = diagnostics.map((diagnostic) => [
+			diagnostic.line === undefined
+				? diagnostic.rule
+				: `${diagnostic.rule}:${diagnostic.line}`,
+			diagnostic.severity,
+			diagnostic.message,
 		]);
 		for (const line of table(rows)) {
 			this.log.info(line);
 		}
-		const errors = diagnostics.filter((d) => d.severity === "error").length;
+		const errors = diagnostics.filter(
+			(diagnostic) => diagnostic.severity === "error",
+		).length;
 		const summary = `${count(errors, "error")}, ${count(diagnostics.length - errors, "warning")}`;
 		if (errors > 0 || (strict && diagnostics.length > errors)) {
 			throw new Error(summary);

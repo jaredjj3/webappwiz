@@ -27,12 +27,12 @@ export function isGuide(value: unknown): value is Guide {
 		"rules" in value &&
 		Array.isArray(value.rules) &&
 		value.rules.every(
-			(r) =>
-				typeof r === "object" &&
-				r !== null &&
-				typeof r.id === "string" &&
-				typeof r.files === "string" &&
-				typeof r.document === "string",
+			(rule) =>
+				typeof rule === "object" &&
+				rule !== null &&
+				typeof rule.id === "string" &&
+				typeof rule.files === "string" &&
+				typeof rule.document === "string",
 		)
 	);
 }

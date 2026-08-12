@@ -139,14 +139,16 @@ describe("rpc", () => {
 	});
 
 	it("rejects with a 500 that leaks nothing when a handler throws", async () => {
-		const err = await client.call("boom", {}).catch((e: unknown) => e);
+		const err = await client.call("boom", {}).catch((error: unknown) => error);
 		expect(err).toBeInstanceOf(RpcError);
 		expect((err as RpcError).status).toBe(500);
 		expect((err as RpcError).message).toBe("boom: internal error");
 	});
 
 	it("rejects with the status and message when a handler throws an RpcError", async () => {
-		const err = await client.call("secret", {}).catch((e: unknown) => e);
+		const err = await client
+			.call("secret", {})
+			.catch((error: unknown) => error);
 		expect((err as RpcError).status).toBe(403);
 		expect((err as RpcError).message).toBe("secret: not yours");
 	});

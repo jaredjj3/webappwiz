@@ -21,8 +21,8 @@ describe("cli", () => {
 			.command("greet")
 			.option("name", t.string())
 			.option("count", t.number())
-			.action((o) => {
-				got = o;
+			.action((opts) => {
+				got = opts;
 			});
 		wiz.run(["greet", "--name", "ada", "--count", "3"]);
 		expect(got).toEqual({ name: "ada", count: 3 });
@@ -52,7 +52,9 @@ describe("cli", () => {
 		for (const argv of [[], ["--help"], ["-h"], ["nope"]]) {
 			expect(() => wiz.run(argv)).not.toThrow();
 		}
-		const text = log.entries.map((e) => color.strip(e.message)).join("\n");
+		const text = log.entries
+			.map((entry) => color.strip(entry.message))
+			.join("\n");
 		expect(log.entries).toHaveLength(4);
 		expect(text).toContain("Usage: wiz <command> [options]");
 		expect(text).toContain("a  does a");
@@ -68,9 +70,9 @@ describe("cli", () => {
 			.description("greet someone")
 			.action(() => {});
 		wiz.run(["greet", "--help"]);
-		expect(log.entries.map((e) => color.strip(e.message)).join("\n")).toContain(
-			"Usage: wiz greet [options]",
-		);
+		expect(
+			log.entries.map((entry) => color.strip(entry.message)).join("\n"),
+		).toContain("Usage: wiz greet [options]");
 	});
 
 	it("reports an error and exits 1 when an option value is bad", () => {
@@ -134,8 +136,8 @@ describe("cli", () => {
 			.group("skills")
 			.command("add")
 			.option("name", t.string())
-			.action((o) => {
-				got = o;
+			.action((opts) => {
+				got = opts;
 			});
 		wiz.run(["skills", "add", "--name", "arbor"]);
 		expect(got).toEqual({ name: "arbor" });
@@ -156,7 +158,9 @@ describe("cli", () => {
 		]) {
 			wiz.run(argv);
 		}
-		const [program, ...group] = log.entries.map((e) => color.strip(e.message));
+		const [program, ...group] = log.entries.map((entry) =>
+			color.strip(entry.message),
+		);
 		expect(program).toContain("skills  manage skills");
 		expect(group).toHaveLength(3);
 		for (const text of group) {

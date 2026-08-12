@@ -41,7 +41,7 @@ describe("Domain", () => {
 		>;
 		expect(Object.keys(distributions)).toHaveLength(2);
 		const domainNames = Object.values(distributions).flatMap(
-			(d) => d.Properties.DistributionConfig.Aliases,
+			(distribution) => distribution.Properties.DistributionConfig.Aliases,
 		);
 		expect(domainNames.sort()).toEqual(
 			[

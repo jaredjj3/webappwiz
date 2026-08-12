@@ -28,7 +28,9 @@ describe("Guides", () => {
 
 		// the rule still checks: only its report suffers
 		expect(rules).toHaveLength(1);
-		expect(diagnostics.map((d) => [d.rule, d.message])).toEqual([
+		expect(
+			diagnostics.map((diagnostic) => [diagnostic.rule, diagnostic.message]),
+		).toEqual([
 			["one", "missing title (# heading)"],
 			["one", "no ## Good section"],
 			["one", "no ## Bad section"],

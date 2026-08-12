@@ -19,15 +19,17 @@ export class ObjectsOverCallbacks implements Rule {
 	check(text: string): Finding[] {
 		const all = tokens(text);
 		const found: Finding[] = [];
-		for (const [i, t] of all.entries()) {
+		for (const [i, token] of all.entries()) {
 			if (
-				t.kind !== SyntaxKind.ConstructorKeyword ||
+				token.kind !== SyntaxKind.ConstructorKeyword ||
 				all[i + 1]?.kind !== SyntaxKind.OpenParenToken
 			) {
 				continue;
 			}
 			if (this.takesFunction(all, i + 1)) {
-				found.push(new Finding(t.line, t.column, ObjectsOverCallbacks.MESSAGE));
+				found.push(
+					new Finding(token.line, token.column, ObjectsOverCallbacks.MESSAGE),
+				);
 			}
 		}
 		return found;

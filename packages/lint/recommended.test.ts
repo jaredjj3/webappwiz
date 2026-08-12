@@ -9,7 +9,9 @@ describe("recommended rules", () => {
 		);
 
 		expect(diagnostics).toEqual([]);
-		expect(new Set(recommended.map((r) => r.id)).size).toBe(recommended.length);
+		expect(new Set(recommended.map((rule) => rule.id)).size).toBe(
+			recommended.length,
+		);
 	});
 
 	// The examples are the check's conformance suite: what keeps the document

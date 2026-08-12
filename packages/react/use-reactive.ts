@@ -28,7 +28,7 @@ export function useReactive<
 		() =>
 			new ReactiveExternalStore(
 				source,
-				(s: Source) => selectRef.current(s),
+				(source: Source) => selectRef.current(source),
 				events,
 			),
 	);

@@ -77,7 +77,9 @@ export class Markdown {
 
 	/** First level-1 heading, or null when the document has none. */
 	get title(): string | null {
-		return this.sections.find((s) => s.level === 1)?.heading ?? null;
+		return (
+			this.sections.find((section) => section.level === 1)?.heading ?? null
+		);
 	}
 
 	/** Throws when the field is absent. */
@@ -101,7 +103,7 @@ export class Markdown {
 		if (!found) {
 			throw new MarkdownError(
 				`no section "${heading}" (have: ${
-					this.sections.map((s) => s.heading).join(", ") || "none"
+					this.sections.map((section) => section.heading).join(", ") || "none"
 				})`,
 			);
 		}
@@ -110,7 +112,9 @@ export class Markdown {
 
 	private find(heading: string): Section | undefined {
 		const want = heading.toLowerCase();
-		return this.sections.find((s) => s.heading.toLowerCase() === want);
+		return this.sections.find(
+			(section) => section.heading.toLowerCase() === want,
+		);
 	}
 }
 
@@ -162,8 +166,9 @@ function sections(body: string, offset: number): Section[] {
 	}
 	return heads.map(({ heading, level, index }, i) => {
 		const next = heads.slice(i + 1);
-		const end = next.find((h) => h.level <= level)?.index ?? lines.length;
-		const child = next.find((h) => h.index < end)?.index ?? end;
+		const end =
+			next.find((later) => later.level <= level)?.index ?? lines.length;
+		const child = next.find((later) => later.index < end)?.index ?? end;
 		return new Section(
 			heading,
 			level,

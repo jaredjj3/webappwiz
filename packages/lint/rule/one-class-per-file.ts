@@ -25,14 +25,17 @@ export class OneClassPerFile implements Rule {
 		const all = tokens(text);
 		return all
 			.filter(
-				(t, i) =>
-					t.kind === SyntaxKind.ClassKeyword &&
-					t.depth === 0 &&
+				(token, i) =>
+					token.kind === SyntaxKind.ClassKeyword &&
+					token.depth === 0 &&
 					!OneClassPerFile.EXPRESSION_LEAD.has(
 						all[i - 1]?.kind ?? SyntaxKind.EndOfFile,
 					),
 			)
 			.slice(1)
-			.map((t) => new Finding(t.line, t.column, OneClassPerFile.MESSAGE));
+			.map(
+				(token) =>
+					new Finding(token.line, token.column, OneClassPerFile.MESSAGE),
+			);
 	}
 }

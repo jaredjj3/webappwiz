@@ -14,7 +14,7 @@ describe("LintCommands", () => {
 	let clock: FakeClock;
 
 	const printed = () =>
-		color.strip(log.entries.map((e) => String(e.message)).join("\n"));
+		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
 	const commands = (guide: Guide, confirm?: Confirm) =>
 		new LintCommands(log, fs, ps, clock, { load: async () => guide }, confirm);
 	const one = (document = ruleDoc("One")) => testRule("one", { document });

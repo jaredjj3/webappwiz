@@ -1,27 +1,27 @@
 /** Compares two values by their own enumerable keys, one level deep. */
-export function shallowEqual<T>(a: T, b: T): boolean {
-	if (Object.is(a, b)) {
+export function shallowEqual<T>(left: T, right: T): boolean {
+	if (Object.is(left, right)) {
 		return true;
 	}
 	if (
-		typeof a !== "object" ||
-		typeof b !== "object" ||
-		a === null ||
-		b === null
+		typeof left !== "object" ||
+		typeof right !== "object" ||
+		left === null ||
+		right === null
 	) {
 		return false;
 	}
-	const keysA = Object.keys(a);
-	const keysB = Object.keys(b);
-	if (keysA.length !== keysB.length) {
+	const keysLeft = Object.keys(left);
+	const keysRight = Object.keys(right);
+	if (keysLeft.length !== keysRight.length) {
 		return false;
 	}
-	return keysA.every(
+	return keysLeft.every(
 		(key) =>
-			Object.hasOwn(b, key) &&
+			Object.hasOwn(right, key) &&
 			Object.is(
-				(a as Record<string, unknown>)[key],
-				(b as Record<string, unknown>)[key],
+				(left as Record<string, unknown>)[key],
+				(right as Record<string, unknown>)[key],
 			),
 	);
 }

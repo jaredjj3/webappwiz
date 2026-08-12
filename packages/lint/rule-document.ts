@@ -71,7 +71,9 @@ export class RuleDocument {
 				);
 			}
 		}
-		for (const section of this.markdown.sections.filter((s) => s.level === 2)) {
+		for (const section of this.markdown.sections.filter(
+			(candidate) => candidate.level === 2,
+		)) {
 			if (!["good", "bad"].includes(section.heading.toLowerCase())) {
 				found.push(
 					this.problem(
@@ -104,7 +106,7 @@ export class RuleDocument {
 			? this.markdown
 					.section(heading)
 					.codeBlocks()
-					.map((b) => b.code)
+					.map((block) => block.code)
 			: [];
 	}
 

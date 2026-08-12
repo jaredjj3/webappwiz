@@ -45,9 +45,9 @@ export class ParametersDeclareFields implements Rule {
 	check(text: string): Finding[] {
 		const all = tokens(text);
 		const found: Finding[] = [];
-		for (const [i, t] of all.entries()) {
+		for (const [i, token] of all.entries()) {
 			if (
-				t.kind !== SyntaxKind.ConstructorKeyword ||
+				token.kind !== SyntaxKind.ConstructorKeyword ||
 				all[i + 1]?.kind !== SyntaxKind.OpenParenToken
 			) {
 				continue;
@@ -91,29 +91,29 @@ export class ParametersDeclareFields implements Rule {
 		let nesting = 0;
 		let starting = true;
 		for (let i = open + 1; i < close; i++) {
-			const t = all[i];
-			if (t === undefined) {
+			const token = all[i];
+			if (token === undefined) {
 				break;
 			}
-			if (ParametersDeclareFields.OPENS.has(t.kind)) {
+			if (ParametersDeclareFields.OPENS.has(token.kind)) {
 				nesting++;
-			} else if (ParametersDeclareFields.CLOSES.has(t.kind)) {
+			} else if (ParametersDeclareFields.CLOSES.has(token.kind)) {
 				nesting--;
 			}
 			if (nesting > 0) {
 				continue;
 			}
-			if (t.kind === SyntaxKind.CommaToken) {
+			if (token.kind === SyntaxKind.CommaToken) {
 				starting = true;
 			} else if (!starting) {
 				continue;
 			}
-			if (ParametersDeclareFields.DECLARES.has(t.kind)) {
+			if (ParametersDeclareFields.DECLARES.has(token.kind)) {
 				starting = false;
-			} else if (t.kind === SyntaxKind.Identifier) {
+			} else if (token.kind === SyntaxKind.Identifier) {
 				starting = false;
 				if (this.isName(all, i)) {
-					names.add(t.text);
+					names.add(token.text);
 				}
 			}
 		}
@@ -140,19 +140,22 @@ export class ParametersDeclareFields implements Rule {
 		}
 		const found: Finding[] = [];
 		for (let i = at + 1; i < all.length; i++) {
-			const t = all[i];
-			if (t === undefined) {
+			const token = all[i];
+			if (token === undefined) {
 				break;
 			}
-			if (t.kind === SyntaxKind.CloseBraceToken && t.depth === body.depth) {
+			if (
+				token.kind === SyntaxKind.CloseBraceToken &&
+				token.depth === body.depth
+			) {
 				break;
 			}
 			const field = all[i + 2];
 			const value = all[i + 4];
 			const ends = all[i + 5]?.kind;
 			if (
-				t.kind === SyntaxKind.ThisKeyword &&
-				t.depth === body.depth + 1 &&
+				token.kind === SyntaxKind.ThisKeyword &&
+				token.depth === body.depth + 1 &&
 				all[i + 1]?.kind === SyntaxKind.DotToken &&
 				field?.kind === SyntaxKind.Identifier &&
 				all[i + 3]?.kind === SyntaxKind.EqualsToken &&
@@ -163,7 +166,11 @@ export class ParametersDeclareFields implements Rule {
 					ends === SyntaxKind.CloseBraceToken)
 			) {
 				found.push(
-					new Finding(t.line, t.column, ParametersDeclareFields.MESSAGE),
+					new Finding(
+						token.line,
+						token.column,
+						ParametersDeclareFields.MESSAGE,
+					),
 				);
 			}
 		}

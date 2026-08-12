@@ -135,7 +135,7 @@ export class Command<O, C extends object = object> {
 		// `cmd --grep x` reports the flag it does not know rather than the
 		// argument it thinks you left out.
 		for (const name of raw.keys()) {
-			if (!this.options.some((o) => o.name === name)) {
+			if (!this.options.some((option) => option.name === name)) {
 				throw new Error(`unknown option --${name}`);
 			}
 		}
@@ -172,18 +172,21 @@ export class Command<O, C extends object = object> {
 	}
 
 	// a [flag, text] pair for the help table, e.g. ["--count", "how many (default: 1)"]
-	private optionRow(o: OptionMeta): readonly [string, string] {
+	private optionRow(option: OptionMeta): readonly [string, string] {
 		// an undefined default is the option being absent, which is not news
 		const defaultDescription =
-			o.hasDefault && o.default !== undefined
-				? color.dim(` (default: ${JSON.stringify(o.default)})`)
+			option.hasDefault && option.default !== undefined
+				? color.dim(` (default: ${JSON.stringify(option.default)})`)
 				: "";
-		return [`--${o.name}`, `${o.description ?? ""}${defaultDescription}`];
+		return [
+			`--${option.name}`,
+			`${option.description ?? ""}${defaultDescription}`,
+		];
 	}
 
 	private help(): void {
-		const args = this.args.map((a) =>
-			a.hasDefault ? `[${a.name}]` : `<${a.name}>`,
+		const args = this.args.map((arg) =>
+			arg.hasDefault ? `[${arg.name}]` : `<${arg.name}>`,
 		);
 		const usage = [
 			color.bold([this.program, this.name].filter(Boolean).join(" ")),
@@ -195,16 +198,16 @@ export class Command<O, C extends object = object> {
 		}
 		if (this.args.length > 0) {
 			lines.push("", color.bold("Arguments:"));
-			const pad = Math.max(...this.args.map((a) => a.name.length));
-			for (const a of this.args) {
+			const pad = Math.max(...this.args.map((arg) => arg.name.length));
+			for (const arg of this.args) {
 				lines.push(
-					`  ${color.blue(a.name.padEnd(pad))}  ${a.description ?? ""}`.trimEnd(),
+					`  ${color.blue(arg.name.padEnd(pad))}  ${arg.description ?? ""}`.trimEnd(),
 				);
 			}
 		}
 		lines.push("", color.bold("Options:"));
 		const rows = [
-			...this.options.map((o) => this.optionRow(o)),
+			...this.options.map((option) => this.optionRow(option)),
 			["-h, --help", "show this help"] as const,
 		];
 		const pad = Math.max(...rows.map(([flag]) => flag.length));

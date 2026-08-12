@@ -38,7 +38,7 @@ describe("useReactive", () => {
 	it("returns the current selection", () => {
 		counter.count = 3;
 		const { result } = renderHook(() =>
-			useReactive(counter, (c) => c.count, ["change"]),
+			useReactive(counter, (state) => state.count, ["change"]),
 		);
 
 		expect(result.current).toBe(3);
@@ -46,7 +46,7 @@ describe("useReactive", () => {
 
 	it("re-renders when a listened event changes the selection", () => {
 		const { result } = renderHook(() =>
-			useReactive(counter, (c) => c.count, ["change"]),
+			useReactive(counter, (state) => state.count, ["change"]),
 		);
 
 		act(() => {
@@ -61,7 +61,7 @@ describe("useReactive", () => {
 		// useSyncExternalStore a new `subscribe` identity each time and made it
 		// tear down and rebuild every listener.
 		const { rerender } = renderHook(() =>
-			useReactive(counter, (c) => c.count, ["change"]),
+			useReactive(counter, (state) => state.count, ["change"]),
 		);
 
 		rerender();
@@ -76,7 +76,7 @@ describe("useReactive", () => {
 		// a selector returning an object literal gave every consumer a new
 		// identity on every render and defeated downstream memoization.
 		const { result, rerender } = renderHook(() =>
-			useReactive(counter, (c) => ({ count: c.count }), ["change"]),
+			useReactive(counter, (state) => ({ count: state.count }), ["change"]),
 		);
 		const first = result.current;
 
@@ -89,7 +89,8 @@ describe("useReactive", () => {
 
 	it("reads the latest selector closure rather than the one from the first render", () => {
 		const { result, rerender } = renderHook(
-			({ offset }) => useReactive(counter, (c) => c.count + offset, ["change"]),
+			({ offset }) =>
+				useReactive(counter, (state) => state.count + offset, ["change"]),
 			{ initialProps: { offset: 10 } },
 		);
 
@@ -103,7 +104,7 @@ describe("useReactive", () => {
 
 	it("unsubscribes on unmount", () => {
 		const { unmount } = renderHook(() =>
-			useReactive(counter, (c) => c.count, ["change"]),
+			useReactive(counter, (state) => state.count, ["change"]),
 		);
 
 		unmount();
@@ -116,7 +117,7 @@ describe("useReactive", () => {
 
 	it("survives StrictMode's double render and mount", () => {
 		const { result } = renderHook(
-			() => useReactive(counter, (c) => c.count, ["change"]),
+			() => useReactive(counter, (state) => state.count, ["change"]),
 			{
 				wrapper: StrictMode,
 			},

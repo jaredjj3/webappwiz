@@ -30,7 +30,7 @@ describe("ReactiveExternalStore", () => {
 
 	it("reports the selected value before anyone subscribes", () => {
 		counter.count = 7;
-		const store = new ReactiveExternalStore(counter, (c) => c.count, [
+		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
 
@@ -38,7 +38,7 @@ describe("ReactiveExternalStore", () => {
 	});
 
 	it("notifies when a listened event changes the selection", () => {
-		const store = new ReactiveExternalStore(counter, (c) => c.count, [
+		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
 		const onStoreChange = mock(() => {});
@@ -51,7 +51,7 @@ describe("ReactiveExternalStore", () => {
 	});
 
 	it("stays quiet when a listened event leaves the selection alone", () => {
-		const store = new ReactiveExternalStore(counter, (c) => c.label, [
+		const store = new ReactiveExternalStore(counter, (state) => state.label, [
 			"change",
 		]);
 		const onStoreChange = mock(() => {});
@@ -63,7 +63,7 @@ describe("ReactiveExternalStore", () => {
 	});
 
 	it("stays quiet for events it was not given", () => {
-		const store = new ReactiveExternalStore(counter, (c) => c.count, [
+		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
 		const onStoreChange = mock(() => {});
@@ -78,7 +78,7 @@ describe("ReactiveExternalStore", () => {
 	it("stays quiet when an object selection is only shallowly unchanged", () => {
 		const store = new ReactiveExternalStore(
 			counter,
-			(c) => ({ label: c.label }),
+			(state) => ({ label: state.label }),
 			["change"],
 		);
 		const onStoreChange = mock(() => {});
@@ -90,7 +90,7 @@ describe("ReactiveExternalStore", () => {
 	});
 
 	it("catches up on a change that landed before subscribing", () => {
-		const store = new ReactiveExternalStore(counter, (c) => c.count, [
+		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
 		counter.count = 5;
@@ -101,7 +101,7 @@ describe("ReactiveExternalStore", () => {
 	});
 
 	it("stops notifying once unsubscribed", () => {
-		const store = new ReactiveExternalStore(counter, (c) => c.count, [
+		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
 		const onStoreChange = mock(() => {});
@@ -114,7 +114,7 @@ describe("ReactiveExternalStore", () => {
 	});
 
 	it("keeps its method identities stable, so React does not resubscribe", () => {
-		const store = new ReactiveExternalStore(counter, (c) => c.count, [
+		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
 

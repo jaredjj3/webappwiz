@@ -65,7 +65,9 @@ export class Ship {
 		// `problems` still must not get to publish from a dirty tree.
 		const fresh = await this.plan(plan.bump);
 		if (fresh.problems.length > 0) {
-			const problems = fresh.problems.map((p) => p.message).join("; ");
+			const problems = fresh.problems
+				.map((problem) => problem.message)
+				.join("; ");
 			throw new Error(`not ready to release: ${problems}`);
 		}
 		if (fresh.next !== plan.next) {
@@ -81,7 +83,7 @@ export class Ship {
 
 		// Publish before tagging: a tag for a version the registry never got
 		// outlives the failure that caused it, and lies about what exists.
-		for (const pkg of fresh.packages.filter((p) => !p.private)) {
+		for (const pkg of fresh.packages.filter((pkg) => !pkg.private)) {
 			if (await this.registry.published(pkg.name, next)) {
 				this.log.info(
 					`${pkg.name}@${next} ${color.green("already published")}`,

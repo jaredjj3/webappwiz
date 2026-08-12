@@ -7,6 +7,7 @@ import { SchemaObject } from "./schema/schema-object";
 import { SchemaOptional } from "./schema/schema-optional";
 import { SchemaString } from "./schema/schema-string";
 
+// biome-ignore lint/style/useNamingConvention: the schema builder is named `t` everywhere it is used
 export const t = {
 	string: (): Schema<string> => new SchemaString(),
 	number: (): Schema<number> => new SchemaNumber(),

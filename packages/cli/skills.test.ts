@@ -13,7 +13,8 @@ describe("skills", () => {
 	let log: MemoryLogger;
 	let skills: Skills;
 
-	const printed = () => log.entries.map((e) => String(e.message)).join("\n");
+	const printed = () =>
+		log.entries.map((entry) => String(entry.message)).join("\n");
 
 	beforeEach(async () => {
 		fs = new FakeFs();

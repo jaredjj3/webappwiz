@@ -15,6 +15,14 @@
 								"selector": { "kind": "typeLike" },
 								"match": "([^I].*|I|I[^A-Z].*)"
 							},
+							{
+								"selector": { "kind": "variable" },
+								"match": "(.{2,}|[ijk])"
+							},
+							{
+								"selector": { "kind": "functionParameter" },
+								"match": "(.{2,}|[ijk])"
+							},
 							{ "selector": { "kind": "any" }, "match": ".*" }
 						]
 					}

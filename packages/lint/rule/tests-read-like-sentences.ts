@@ -21,17 +21,18 @@ export class TestsReadLikeSentences implements Rule {
 			.filter((_, i) => this.isDescribeCall(all, i))
 			.slice(1)
 			.map(
-				(t) => new Finding(t.line, t.column, TestsReadLikeSentences.MESSAGE),
+				(token) =>
+					new Finding(token.line, token.column, TestsReadLikeSentences.MESSAGE),
 			);
 	}
 
 	/** Whether the token at `at` opens a describe call, `describe(` and
 	 * modified forms like `describe.concurrent(` alike. */
 	private isDescribeCall(all: Token[], at: number): boolean {
-		const t = all[at];
+		const token = all[at];
 		if (
-			t?.kind !== SyntaxKind.Identifier ||
-			t.text !== "describe" ||
+			token?.kind !== SyntaxKind.Identifier ||
+			token.text !== "describe" ||
 			all[at - 1]?.kind === SyntaxKind.DotToken
 		) {
 			return false;

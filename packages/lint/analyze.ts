@@ -188,7 +188,7 @@ export class Analyzer {
 		const tasks: Task[] = [];
 		for (const rule of rules) {
 			const glob = new Bun.Glob(rule.files);
-			const files = all.filter((f) => glob.match(f));
+			const files = all.filter((file) => glob.match(file));
 			if (files.length === 0) {
 				// stderr, so the report on stdout stays parseable
 				this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
@@ -203,7 +203,7 @@ export class Analyzer {
 					files: slice,
 					prompt,
 					bytes: slice.reduce(
-						(n, f) => n + (size.get(f) ?? 0),
+						(bytes, file) => bytes + (size.get(file) ?? 0),
 						Buffer.byteLength(prompt),
 					),
 				});
@@ -235,21 +235,21 @@ export class Analyzer {
 			return [];
 		}
 		const violations: Violation[] = [];
-		for (const r of reported) {
-			const file = join(dir, r.file);
+		for (const report of reported) {
+			const file = join(dir, report.file);
 			// The prompt asks the agent to honor markers; this is what enforces it.
-			if (exemptions(await this.source(file), task.rule.id)(r.line)) {
+			if (exemptions(await this.source(file), task.rule.id)(report.line)) {
 				continue;
 			}
 			violations.push({
 				id: task.rule.id,
 				level: task.rule.level,
 				file,
-				line: r.line,
-				message: r.message,
+				line: report.line,
+				message: report.message,
 				// From disk, not from the agent: the quoted line is the reader's
 				// evidence, and evidence a model wrote is no evidence at all.
-				code: (await this.source(file))[r.line - 1]?.trim() ?? "",
+				code: (await this.source(file))[report.line - 1]?.trim() ?? "",
 			});
 		}
 		return violations.sort(cmp);
@@ -276,7 +276,7 @@ export class Analyzer {
 			.text("The rule, verbatim:")
 			.code("markdown", rule.document)
 			.text("Check each of these files, relative to your working directory:")
-			.text(files.map((f) => `- ${f}`).join("\n"))
+			.text(files.map((file) => `- ${file}`).join("\n"))
 			.text(
 				[
 					`This rule's id is \`${rule.id}\`. Code excuses itself from it with a comment:`,
@@ -335,14 +335,14 @@ function parse(
 	}
 	// A malformed element is dropped rather than printed as "undefined:NaN".
 	return value.filter(
-		(v): v is { file: string; line: number; message: string } =>
-			typeof v === "object" &&
-			v !== null &&
-			typeof v.file === "string" &&
-			typeof v.line === "number" &&
-			typeof v.message === "string",
+		(violation): violation is { file: string; line: number; message: string } =>
+			typeof violation === "object" &&
+			violation !== null &&
+			typeof violation.file === "string" &&
+			typeof violation.line === "number" &&
+			typeof violation.message === "string",
 	);
 }
 
-const cmp = (a: Violation, b: Violation): number =>
-	a.file.localeCompare(b.file) || a.line - b.line;
+const cmp = (left: Violation, right: Violation): number =>
+	left.file.localeCompare(right.file) || left.line - right.line;

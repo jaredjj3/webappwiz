@@ -42,7 +42,9 @@ describe("middleware", () => {
 		app
 			.command("who")
 			.arg("greeting", t.string())
-			.action((o, ctx) => seen.push(`${o.greeting} ${ctx.user} ${ctx.id}`));
+			.action((opts, ctx) =>
+				seen.push(`${opts.greeting} ${ctx.user} ${ctx.id}`),
+			);
 
 		await app.run(["who", "hi"]);
 

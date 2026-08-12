@@ -72,9 +72,9 @@ describe("FileLock", () => {
 		const lock = new FileLock(fs, ps, log, path, { pollMs: 10 });
 		await lock.acquire();
 
-		expect(log.entries.map((e) => String(e.message)).join("\n")).toContain(
-			"stealing stale lock",
-		);
+		expect(
+			log.entries.map((entry) => String(entry.message)).join("\n"),
+		).toContain("stealing stale lock");
 		const holder = JSON.parse(await fs.read(`${path}/holder.json`));
 		expect(holder.pid).toBe(ps.pid);
 		await lock.release();
@@ -97,9 +97,9 @@ describe("FileLock", () => {
 		});
 		await lock.acquire();
 
-		expect(log.entries.map((e) => String(e.message)).join("\n")).toContain(
-			"stealing stale lock",
-		);
+		expect(
+			log.entries.map((entry) => String(entry.message)).join("\n"),
+		).toContain("stealing stale lock");
 		await lock.release();
 	});
 

@@ -80,7 +80,7 @@ describe("Markdown", () => {
 	it("ignores headings inside code fences", () => {
 		const md = Markdown.parse("# A\n```md\n# not a heading\n```\n");
 
-		expect(md.sections.map((s) => s.heading)).toEqual(["A"]);
+		expect(md.sections.map((section) => section.heading)).toEqual(["A"]);
 	});
 
 	it("carries source line numbers through frontmatter", () => {

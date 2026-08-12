@@ -72,7 +72,7 @@ export class Dispatcher<T extends Record<string, unknown>>
 		const entries = [
 			...(this.scopedEntries.get(type) ?? []),
 			...this.universalEntries,
-		].sort((a, b) => a.order - b.order);
+		].sort((left, right) => left.order - right.order);
 		const event = args[0] as T[K];
 		for (const entry of entries) {
 			if (entry.kind === "scoped") {
@@ -93,11 +93,13 @@ export class Dispatcher<T extends Record<string, unknown>>
 
 	private off(id: number): void {
 		for (const [type, entries] of this.scopedEntries) {
-			const kept = entries.filter((e) => e.id !== id);
+			const kept = entries.filter((entry) => entry.id !== id);
 			if (kept.length !== entries.length) {
 				this.scopedEntries.set(type, kept);
 			}
 		}
-		this.universalEntries = this.universalEntries.filter((e) => e.id !== id);
+		this.universalEntries = this.universalEntries.filter(
+			(entry) => entry.id !== id,
+		);
 	}
 }

@@ -26,16 +26,21 @@ export class SimpleTestSetup implements Rule {
 		const found: Finding[] = [];
 		// Brace depth of each loop body currently open.
 		const loops: number[] = [];
-		for (const [i, t] of all.entries()) {
-			if (t.kind === SyntaxKind.CloseBraceToken && t.depth === loops.at(-1)) {
+		for (const [i, token] of all.entries()) {
+			if (
+				token.kind === SyntaxKind.CloseBraceToken &&
+				token.depth === loops.at(-1)
+			) {
 				loops.pop();
-			} else if (SimpleTestSetup.LOOPS.has(t.kind)) {
+			} else if (SimpleTestSetup.LOOPS.has(token.kind)) {
 				const body = this.bodyBrace(all, i);
 				if (body !== null) {
 					loops.push(body);
 				}
 			} else if (loops.length > 0 && this.isTestCall(all, i)) {
-				found.push(new Finding(t.line, t.column, SimpleTestSetup.MESSAGE));
+				found.push(
+					new Finding(token.line, token.column, SimpleTestSetup.MESSAGE),
+				);
 			}
 		}
 		return found;
@@ -68,10 +73,10 @@ export class SimpleTestSetup implements Rule {
 	/** Whether the token at `at` registers a test, `it(` and modified forms
 	 * like `it.each(` alike. */
 	private isTestCall(all: Token[], at: number): boolean {
-		const t = all[at];
+		const token = all[at];
 		if (
-			t?.kind !== SyntaxKind.Identifier ||
-			!SimpleTestSetup.TESTS.has(t.text) ||
+			token?.kind !== SyntaxKind.Identifier ||
+			!SimpleTestSetup.TESTS.has(token.text) ||
 			all[at - 1]?.kind === SyntaxKind.DotToken
 		) {
 			return false;

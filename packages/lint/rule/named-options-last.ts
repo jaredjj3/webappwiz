@@ -52,12 +52,12 @@ export class NamedOptionsLast implements Rule {
 	check(text: string): Finding[] {
 		const all = tokens(text);
 		const found: Finding[] = [];
-		for (const [i, t] of all.entries()) {
-			if (t.kind !== SyntaxKind.OpenParenToken) {
+		for (const [i, token] of all.entries()) {
+			if (token.kind !== SyntaxKind.OpenParenToken) {
 				continue;
 			}
 			const params = this.parameters(all, i);
-			for (const [n, param] of params.entries()) {
+			for (const [at, param] of params.entries()) {
 				const name = param.name;
 				// An inline object type is only this rule's business on an options
 				// parameter: elsewhere it is the shape of a value, not a bag of
@@ -70,7 +70,11 @@ export class NamedOptionsLast implements Rule {
 						new Finding(name.line, name.column, NamedOptionsLast.INLINE),
 					);
 				}
-				if (params.slice(n + 1).some((p) => p.name !== undefined && !p.rest)) {
+				if (
+					params
+						.slice(at + 1)
+						.some((later) => later.name !== undefined && !later.rest)
+				) {
 					found.push(
 						new Finding(name.line, name.column, NamedOptionsLast.LAST),
 					);
@@ -105,7 +109,7 @@ export class NamedOptionsLast implements Rule {
 				start = i + 1;
 			}
 		}
-		return slots.some((p) => p.name !== undefined) ? slots : [];
+		return slots.some((param) => param.name !== undefined) ? slots : [];
 	}
 
 	/** The slot between `start` and `end`, read as a parameter. It is one only

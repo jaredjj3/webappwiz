@@ -15,22 +15,22 @@ describe("Command", () => {
 		new Command("greet")
 			.option("name", t.string())
 			.option("count", t.number())
-			.action((o) => {
-				got = o;
+			.action((opts) => {
+				got = opts;
 			})
 			.exec(["--name", "ada", "--count", "3"]);
 		expect(got).toEqual({ name: "ada", count: 3 });
 	});
 
 	it("supports --key=value form", () => {
-		let n = 0;
+		let parsed = 0;
 		new Command("x")
 			.option("n", t.number())
-			.action((o) => {
-				n = o.n;
+			.action((opts) => {
+				parsed = opts.n;
 			})
 			.exec(["--n=42"]);
-		expect(n).toBe(42);
+		expect(parsed).toBe(42);
 	});
 
 	it("parses a bare boolean flag as true and --flag=false as false", () => {
@@ -38,8 +38,8 @@ describe("Command", () => {
 		const cmd = new Command("f")
 			.option("loud", t.boolean())
 			.option("name", t.string())
-			.action((o) => {
-				got = o;
+			.action((opts) => {
+				got = opts;
 			});
 		cmd.exec(["--loud", "--name", "ada"]);
 		expect(got).toEqual({ loud: true, name: "ada" });
@@ -77,8 +77,8 @@ describe("Command", () => {
 		const cmd = new Command("d")
 			.option("add", t.boolean(), { default: false })
 			.option("name", t.string(), { default: "anon" })
-			.action((o) => {
-				got = o;
+			.action((opts) => {
+				got = opts;
 			});
 		cmd.exec([]);
 		expect(got).toEqual({ add: false, name: "anon" });
@@ -133,7 +133,9 @@ describe("Command", () => {
 			.exec(["--help"]);
 
 		expect(ran).toBe(false); // required --name is not enforced when asking for help
-		const text = log.entries.map((e) => color.strip(e.message)).join("\n");
+		const text = log.entries
+			.map((entry) => color.strip(entry.message))
+			.join("\n");
 		expect(text).toContain("Usage: wiz greet [options]");
 		expect(text).toContain("greet someone");
 		expect(text).toContain("--name");
@@ -151,7 +153,9 @@ describe("Command", () => {
 			.action(() => {})
 			.exec(["--help"]);
 
-		const text = log.entries.map((e) => color.strip(e.message)).join("\n");
+		const text = log.entries
+			.map((entry) => color.strip(entry.message))
+			.join("\n");
 		expect(text).toContain("who to greet");
 		expect(text).not.toContain("default");
 	});
@@ -165,7 +169,9 @@ describe("Command", () => {
 			})
 			.exec(["-h"]);
 		expect(ran).toBe(false);
-		expect(log.entries.map((e) => color.strip(e.message)).join("\n")).toContain(
+		expect(
+			log.entries.map((entry) => color.strip(entry.message)).join("\n"),
+		).toContain(
 			"Usage: x [options]", // no prog prefix
 		);
 	});
@@ -174,11 +180,11 @@ describe("Command", () => {
 		new Command("typed")
 			.option("name", t.string())
 			.option("count", t.number())
-			.action((o) => {
-				const name: string = o.name;
-				const count: number = o.count;
+			.action((opts) => {
+				const name: string = opts.name;
+				const count: number = opts.count;
 				// @ts-expect-error name is a string, not a number
-				const wrong: number = o.name;
+				const wrong: number = opts.name;
 				void name;
 				void count;
 				void wrong;
@@ -190,8 +196,8 @@ describe("Command", () => {
 		new Command("prune")
 			.arg("task", t.string())
 			.option("force", t.boolean(), { default: false })
-			.action((o) => {
-				got = o;
+			.action((opts) => {
+				got = opts;
 			})
 			.exec(["alpha", "--force"]);
 		expect(got).toEqual({ task: "alpha", force: true });
@@ -208,8 +214,8 @@ describe("Command", () => {
 		let got: unknown;
 		new Command("ls")
 			.arg("task", t.string(), { default: "all" })
-			.action((o) => {
-				got = o;
+			.action((opts) => {
+				got = opts;
 			})
 			.exec([]);
 		expect(got).toEqual({ task: "all" });
@@ -222,7 +228,9 @@ describe("Command", () => {
 			.action(() => {})
 			.exec(["--help"]);
 
-		const text = log.entries.map((e) => color.strip(e.message)).join("\n");
+		const text = log.entries
+			.map((entry) => color.strip(entry.message))
+			.join("\n");
 		expect(text).toContain("Usage: arbor escalate <reason> [note] [options]");
 		expect(text).toContain("why this needs a human");
 	});

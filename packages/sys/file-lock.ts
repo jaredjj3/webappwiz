@@ -151,9 +151,9 @@ export class FileLock {
 				this.ps.exit(130);
 			});
 		}
-		this.ps.on("uncaughtException", (e: unknown) => {
+		this.ps.on("uncaughtException", (error: unknown) => {
 			drop();
-			this.log.error(e);
+			this.log.error(error);
 			this.ps.exit(1);
 		});
 	}

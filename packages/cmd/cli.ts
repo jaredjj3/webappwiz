@@ -48,10 +48,10 @@ export class Cli<C extends object = object> implements Node {
 	// unknown is the empty-options seed: `unknown & { name: string }` reduces to
 	// `{ name: string }`, so options accumulate cleanly as they're declared.
 	command(name: string): Command<unknown, C> {
-		const c = new Command<unknown, C>(name, this.log, this.name);
+		const command = new Command<unknown, C>(name, this.log, this.name);
 		// registered by reference; chain mutates the same object
-		this.cmds.set(name, c as unknown as Node);
-		return c;
+		this.cmds.set(name, command as unknown as Node);
+		return command;
 	}
 
 	/**
@@ -60,18 +60,20 @@ export class Cli<C extends object = object> implements Node {
 	 * prints help exactly the way the root does; only its name is longer.
 	 */
 	group(name: string): Cli<C> {
-		const g = new Cli<C>(`${this.name} ${name}`, this.log, this.ps);
-		this.cmds.set(name, g as Node);
-		return g;
+		const group = new Cli<C>(`${this.name} ${name}`, this.log, this.ps);
+		this.cmds.set(name, group as Node);
+		return group;
 	}
 
 	run(argv: string[] = Bun.argv.slice(2)): unknown {
 		try {
 			const out = this.exec(argv, []);
 			// async actions reject after exec() returns, so cover that path too
-			return out instanceof Promise ? out.catch((e) => this.fail(e)) : out;
-		} catch (e) {
-			return this.fail(e);
+			return out instanceof Promise
+				? out.catch((error) => this.fail(error))
+				: out;
+		} catch (error) {
+			return this.fail(error);
 		}
 	}
 
@@ -99,8 +101,8 @@ export class Cli<C extends object = object> implements Node {
 	}
 
 	// message only, no stack: a bad flag is a user error, not a crash
-	private fail(e: unknown): void {
-		this.log.error(`error: ${e instanceof Error ? e.message : e}`);
+	private fail(error: unknown): void {
+		this.log.error(`error: ${error instanceof Error ? error.message : error}`);
 		this.ps.exit(1);
 	}
 
@@ -111,7 +113,7 @@ export class Cli<C extends object = object> implements Node {
 			`${color.bold("Usage:")} ${color.bold(this.name)} ${color.dim("<command> [options]")}`,
 			"",
 			color.bold("Commands:"),
-			...entries.map(([name, c]) => c.helpLine(name, pad)),
+			...entries.map(([name, command]) => command.helpLine(name, pad)),
 			"",
 			color.dim(
 				`Run \`${this.name} <command> --help\` for a command's options.`,

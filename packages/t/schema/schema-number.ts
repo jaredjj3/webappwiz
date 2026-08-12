@@ -3,11 +3,11 @@ import type { Schema } from "./schema";
 
 export class SchemaNumber implements Schema<number> {
 	parse(raw: string): number {
-		const n = Number(raw);
-		if (Number.isNaN(n)) {
+		const parsed = Number(raw);
+		if (Number.isNaN(parsed)) {
 			throw new Error(`expected a number, got "${raw}"`);
 		}
-		return n;
+		return parsed;
 	}
 
 	check(value: unknown): number {

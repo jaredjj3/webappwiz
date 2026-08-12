@@ -21,8 +21,8 @@ describe("AsyncDisposer", () => {
 		};
 
 		disposer.use({ disposeAsync: slow("first") });
-		disposer.adopt("value", async (v) => {
-			released.push(`adopted ${v}`);
+		disposer.adopt("value", async (value) => {
+			released.push(`adopted ${value}`);
 		});
 		disposer.defer(slow("last"));
 

@@ -52,7 +52,7 @@ export class Workspace {
 				published: false,
 			});
 		}
-		return packages.sort((a, b) => a.name.localeCompare(b.name));
+		return packages.sort((left, right) => left.name.localeCompare(right.name));
 	}
 
 	/** Stamps `version` into the root manifest and every package, in lockstep. */

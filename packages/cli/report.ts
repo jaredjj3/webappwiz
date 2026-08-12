@@ -2,8 +2,8 @@ import type { Finished, Violation } from "@webappwiz/lint";
 import { color } from "@webappwiz/log";
 import type { Duration } from "@webappwiz/time";
 
-export const count = (n: number, word: string): string =>
-	`${n} ${word}${n === 1 ? "" : "s"}`;
+export const count = (total: number, word: string): string =>
+	`${total} ${word}${total === 1 ? "" : "s"}`;
 
 const compact = new Intl.NumberFormat("en", { notation: "compact" });
 
@@ -87,14 +87,16 @@ export function finished({
  * rule forbids, and the line it happens on. The rule is the heading above, so
  * it is not repeated here.
  */
-export function finding(v: Violation): string[] {
+export function finding(violation: Violation): string[] {
 	const level =
-		v.level === "error" ? color.red("error") : color.yellow(v.level);
+		violation.level === "error"
+			? color.red("error")
+			: color.yellow(violation.level);
 	const lines = [
-		`  ${color.bold(`${v.file}:${v.line}`)}  ${level}  ${v.message}`,
+		`  ${color.bold(`${violation.file}:${violation.line}`)}  ${level}  ${violation.message}`,
 	];
-	if (v.code !== "") {
-		lines.push(color.gray(`  │ ${v.code}`));
+	if (violation.code !== "") {
+		lines.push(color.gray(`  │ ${violation.code}`));
 	}
 	return lines;
 }
@@ -104,7 +106,9 @@ export function summary(violations: Violation[], took: Duration): string {
 	if (violations.length === 0) {
 		return `${color.green("✓ no violations")} ${elapsed}`;
 	}
-	const errors = violations.filter((v) => v.level === "error").length;
+	const errors = violations.filter(
+		(violation) => violation.level === "error",
+	).length;
 	const line = `✖ ${count(violations.length, "problem")} (${count(errors, "error")}, ${count(violations.length - errors, "warning")})`;
 	return `${errors > 0 ? color.red(line) : color.yellow(line)} ${elapsed}`;
 }

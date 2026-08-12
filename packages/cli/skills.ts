@@ -69,8 +69,8 @@ export class Skills {
 		const installed = await this.fs
 			.readdir(`${opts.dir}/.agents/skills`)
 			.catch((): string[] => []); // no .agents/skills at all is just "none installed"
-		const ours = (await this.fs.readdir(source)).filter((n) =>
-			installed.includes(n),
+		const ours = (await this.fs.readdir(source)).filter((name) =>
+			installed.includes(name),
 		);
 		if (ours.length === 0) {
 			this.log.info(

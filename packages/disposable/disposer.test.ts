@@ -13,7 +13,7 @@ describe("Disposer", () => {
 
 	it("releases in reverse order of registration", () => {
 		disposer.use(disposables.callback(() => released.push("first")));
-		disposer.adopt("value", (v) => released.push(`adopted ${v}`));
+		disposer.adopt("value", (value) => released.push(`adopted ${value}`));
 		disposer.defer(() => released.push("last"));
 
 		expect(disposer.disposed).toBe(false);

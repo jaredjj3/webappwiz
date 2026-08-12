@@ -15,8 +15,8 @@ describe("Mechanizer", () => {
 
 	const errors = () =>
 		log.entries
-			.filter((e) => e.level === "error")
-			.map((e) => String(e.message));
+			.filter((entry) => entry.level === "error")
+			.map((entry) => String(entry.message));
 
 	beforeEach(() => {
 		ps = new FakePs();

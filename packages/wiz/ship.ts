@@ -45,7 +45,9 @@ async function recover(
 	ps: Ps,
 	release: Pick<Ship, "plan">,
 ): Promise<Plan> {
-	const fixable = plan.problems.filter((p) => p.remedy !== undefined);
+	const fixable = plan.problems.filter(
+		(problem) => problem.remedy !== undefined,
+	);
 	if (fixable.length === 0) {
 		return plan;
 	}

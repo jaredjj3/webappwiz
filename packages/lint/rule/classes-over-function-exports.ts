@@ -24,8 +24,8 @@ export class ClassesOverFunctionExports implements Rule {
 	check(text: string): Finding[] {
 		const all = tokens(text);
 		const injecting: Token[] = [];
-		for (const [i, t] of all.entries()) {
-			if (t.kind !== SyntaxKind.ExportKeyword || t.depth !== 0) {
+		for (const [i, token] of all.entries()) {
+			if (token.kind !== SyntaxKind.ExportKeyword || token.depth !== 0) {
 				continue;
 			}
 			let j = i + 1;
@@ -40,14 +40,18 @@ export class ClassesOverFunctionExports implements Rule {
 				continue;
 			}
 			if (this.injects(all, j)) {
-				injecting.push(all[j] ?? t);
+				injecting.push(all[j] ?? token);
 			}
 		}
 		return injecting
 			.slice(1)
 			.map(
-				(t) =>
-					new Finding(t.line, t.column, ClassesOverFunctionExports.MESSAGE),
+				(token) =>
+					new Finding(
+						token.line,
+						token.column,
+						ClassesOverFunctionExports.MESSAGE,
+					),
 			);
 	}
 

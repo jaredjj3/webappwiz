@@ -39,7 +39,7 @@ export class Path {
 	private async remove(): Promise<void> {
 		const profile = this.profilePath();
 		const current = await this.fs.read(profile).catch(() => "");
-		const kept = current.split("\n").filter((l) => !l.endsWith(TAG));
+		const kept = current.split("\n").filter((line) => !line.endsWith(TAG));
 		await this.fs.write(profile, kept.join("\n"));
 		this.log.info(
 			`Removed ${binDir} from ${profile}. Restart your shell to pick it up.`,

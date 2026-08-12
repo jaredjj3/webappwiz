@@ -44,11 +44,11 @@ export class NodePs implements Ps {
 
 		let stdout = "";
 		let stderr = "";
-		child.stdout.setEncoding("utf8").on("data", (c: string) => {
-			stdout += c;
+		child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+			stdout += chunk;
 		});
-		child.stderr.setEncoding("utf8").on("data", (c: string) => {
-			stderr += c;
+		child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+			stderr += chunk;
 		});
 
 		return { exitCode: await exitCode(child), stdout, stderr };

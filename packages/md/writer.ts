@@ -27,7 +27,7 @@ export class MarkdownWriter {
 	/** A fenced block. The fence outruns any backtick run in the code. */
 	code(lang: string, code: string): this {
 		const runs = code.match(/`+/g) ?? [];
-		const mark = "`".repeat(Math.max(3, ...runs.map((r) => r.length + 1)));
+		const mark = "`".repeat(Math.max(3, ...runs.map((run) => run.length + 1)));
 		this.blocks.push(`${mark}${lang}\n${code}\n${mark}`);
 		return this;
 	}
@@ -35,7 +35,12 @@ export class MarkdownWriter {
 	toString(): string {
 		const front =
 			this.fields.size > 0
-				? ["---", ...[...this.fields].map(([k, v]) => `${k}: ${v}`), "---", ""]
+				? [
+						"---",
+						...[...this.fields].map(([key, value]) => `${key}: ${value}`),
+						"---",
+						"",
+					]
 				: [];
 		return [...front, this.blocks.join("\n\n"), ""].join("\n");
 	}

@@ -19,8 +19,8 @@ describe("Analyzer", () => {
 
 	const errors = () =>
 		log.entries
-			.filter((e) => e.level === "error")
-			.map((e) => String(e.message));
+			.filter((entry) => entry.level === "error")
+			.map((entry) => String(entry.message));
 
 	beforeEach(async () => {
 		fs = new FakeFs();
@@ -41,7 +41,7 @@ describe("Analyzer", () => {
 			25,
 		);
 
-		expect(tasks.map((t) => [t.rule.id, t.files])).toEqual([
+		expect(tasks.map((task) => [task.rule.id, task.files])).toEqual([
 			["Classes", ["src/a.ts", "src/b.ts"]],
 			["Docs", ["README.md"]],
 		]);
@@ -50,7 +50,10 @@ describe("Analyzer", () => {
 	it("chunks a rule's files into several tasks", async () => {
 		const tasks = await analyzer.plan([rule("Classes")], "/p", 1);
 
-		expect(tasks.map((t) => t.files)).toEqual([["src/a.ts"], ["src/b.ts"]]);
+		expect(tasks.map((task) => task.files)).toEqual([
+			["src/a.ts"],
+			["src/b.ts"],
+		]);
 	});
 
 	it("warns on stderr when a rule matches nothing", async () => {
@@ -127,7 +130,7 @@ describe("Analyzer", () => {
 			agent,
 		);
 
-		expect(violations.map((v) => v.line)).toEqual([3]);
+		expect(violations.map((violation) => violation.line)).toEqual([3]);
 	});
 
 	it("quotes the line from disk, not from the agent", async () => {
@@ -196,7 +199,7 @@ describe("Analyzer", () => {
 			agent,
 		);
 
-		expect(violations.map((v) => v.message)).toEqual(["nope"]);
+		expect(violations.map((violation) => violation.message)).toEqual(["nope"]);
 	});
 
 	it("drops elements the agent malformed", async () => {
@@ -254,6 +257,9 @@ describe("Analyzer", () => {
 			agent,
 		);
 
-		expect(violations.map((v) => v.message)).toEqual(["earlier", "later"]);
+		expect(violations.map((violation) => violation.message)).toEqual([
+			"earlier",
+			"later",
+		]);
 	});
 });

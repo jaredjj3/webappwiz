@@ -26,8 +26,8 @@ export class Mechanizer {
 	 * genuinely need reading comprehension produce nothing.
 	 */
 	async check(rules: Rule[], agent: Agent): Promise<GuideDiagnostic[]> {
-		const found = await Promise.all(rules.map((r) => this.ask(r, agent)));
-		return found.filter((d) => d !== null);
+		const found = await Promise.all(rules.map((rule) => this.ask(rule, agent)));
+		return found.filter((diagnostic) => diagnostic !== null);
 	}
 
 	private async ask(rule: Rule, agent: Agent): Promise<GuideDiagnostic | null> {
