@@ -215,6 +215,11 @@ Write plain commit messages with **no attribution**: no `Co-authored-by:`
 trailers, no "Generated with", no agent/model names, no `--author` overrides.
 Write it as a normal human-authored commit describing the change.
 
+The branch is yours until it lands, so commit as often as it helps you: it is a
+save point you can go back to, not something to save up for the end. A task
+usually takes fewer than 5 commits. Wanting many more is a sign the task grew
+too big and wants splitting, not a rule to satisfy by squashing.
+
 ## Exit codes
 
 Failures print JSON on stdout and an explanation on stderr.
