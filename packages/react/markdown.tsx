@@ -134,26 +134,19 @@ function blocks(text: string): Block[] {
 	return out;
 }
 
-/** Descending sizes, so a document keeps its hierarchy without shouting. */
-const HEADINGS = [
-	"text-xl font-bold",
-	"text-lg font-bold",
-	"text-base font-semibold",
-	"text-sm font-semibold",
-	"text-sm font-semibold",
-	"text-sm font-semibold",
-] as const;
+// Every level renders as the same quiet uppercase label: the documents this
+// renders sit inside a card that already carries the real title, so a heading
+// here is a section marker, not a hierarchy, and a run of title-sized lines
+// would shout over the content. The tag still says the level for a reader.
+const HEADING_STYLE =
+	"mt-[0.9rem] mb-[0.3rem] first:mt-0 font-bold text-[0.8rem] uppercase tracking-[0.08em] opacity-55";
 
 function Block({ block }: { block: Block }): JSX.Element {
 	switch (block.kind) {
 		case "heading": {
 			// The regex clamps the level to 1-6, so the tag is always a real one.
 			const Tag = `h${block.level}` as "h1";
-			return (
-				<Tag className={`mt-4 mb-1 first:mt-0 ${HEADINGS[block.level - 1]}`}>
-					{inline(block.text)}
-				</Tag>
-			);
+			return <Tag className={HEADING_STYLE}>{inline(block.text)}</Tag>;
 		}
 		case "list":
 			return (
