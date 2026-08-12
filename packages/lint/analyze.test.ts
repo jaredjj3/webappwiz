@@ -41,10 +41,30 @@ describe("Analyzer", () => {
 			25,
 		);
 
-		expect(tasks.map((task) => [task.rule.id, task.files])).toEqual([
-			["Classes", ["src/a.ts", "src/b.ts"]],
-			["Docs", ["README.md"]],
+		expect(tasks.map((task) => [task.glob, task.files])).toEqual([
+			["**/*.ts", ["src/a.ts", "src/b.ts"]],
+			["**/*.md", ["README.md"]],
 		]);
+	});
+
+	it("rides every rule sharing a glob in one task, reading the files once", async () => {
+		const tasks = await analyzer.plan(
+			[rule("Classes"), rule("Callbacks"), rule("Docs", "**/*.md")],
+			"/p",
+			25,
+		);
+
+		expect(
+			tasks.map((task) => [task.rules.map((rule) => rule.id), task.files]),
+		).toEqual([
+			[
+				["Classes", "Callbacks"],
+				["src/a.ts", "src/b.ts"],
+			],
+			[["Docs"], ["README.md"]],
+		]);
+		expect(tasks[0]?.prompt).toContain("# Classes");
+		expect(tasks[0]?.prompt).toContain("# Callbacks");
 	});
 
 	it("chunks a rule's files into several tasks", async () => {
@@ -65,13 +85,14 @@ describe("Analyzer", () => {
 	it("gives each task a prompt holding the whole rule and only its files", async () => {
 		const [task] = await analyzer.plan([rule("Classes")], "/p", 1);
 
-		expect(task?.prompt).toContain("exactly one style rule");
+		expect(task?.prompt).toContain("exactly 1 style rule");
+		expect(task?.prompt).toContain("Rule `Classes`, verbatim:");
 		expect(task?.prompt).toContain("# Classes"); // the rule md, verbatim
 		expect(task?.prompt).toContain("## Good");
 		expect(task?.prompt).toContain("- src/a.ts");
 		expect(task?.prompt).not.toContain("b.ts");
 		expect(task?.prompt).toContain('"line"');
-		expect(task?.prompt).toContain("lint-ignore Classes: <reason>");
+		expect(task?.prompt).toContain("lint-ignore <id>: <reason>");
 	});
 
 	it("passes the prompt to the agent command as its last argument", async () => {
@@ -87,14 +108,14 @@ describe("Analyzer", () => {
 		expect(call).toContain("# Classes");
 	});
 
-	it("labels what the agent reports with the id of the rule that found it", async () => {
+	it("labels what the agent reports with the rule it says was broken", async () => {
 		ps.setCaptureOutput(
-			'[{"file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
+			'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
 			"",
 		);
 
 		const violations = await analyzer.analyze(
-			[rule("Classes")],
+			[rule("Classes"), rule("Callbacks")],
 			"/p",
 			25,
 			agent,
@@ -102,7 +123,7 @@ describe("Analyzer", () => {
 
 		expect(violations).toEqual([
 			{
-				id: "Classes", // the fixture's rule file is Classes.md
+				id: "Classes",
 				level: "error",
 				file: "/p/src/a.ts",
 				line: 1,
@@ -118,8 +139,8 @@ describe("Analyzer", () => {
 			"// lint-ignore Classes: the second class is a fixture\nclass A {}\nclass B {}\n",
 		);
 		ps.setCaptureOutput(
-			'[{"file": "src/a.ts", "line": 2, "message": "the file declares a second class"},' +
-				'{"file": "src/a.ts", "line": 3, "message": "the file declares a second class"}]',
+			'[{"rule": "Classes", "file": "src/a.ts", "line": 2, "message": "the file declares a second class"},' +
+				'{"rule": "Classes", "file": "src/a.ts", "line": 3, "message": "the file declares a second class"}]',
 			"",
 		);
 
@@ -136,7 +157,7 @@ describe("Analyzer", () => {
 	it("quotes the line from disk, not from the agent", async () => {
 		await fs.write("/p/src/a.ts", "class A {}\n\tclass B {}\n");
 		ps.setCaptureOutput(
-			'[{"file": "src/a.ts", "line": 2, "message": "the file declares a second class"}]',
+			'[{"rule": "Classes", "file": "src/a.ts", "line": 2, "message": "the file declares a second class"}]',
 			"",
 		);
 
@@ -147,7 +168,7 @@ describe("Analyzer", () => {
 
 	it("leaves the quote empty when the agent names a line that is not there", async () => {
 		ps.setCaptureOutput(
-			'[{"file": "src/gone.ts", "line": 400, "message": "rename it"}]',
+			'[{"rule": "Classes", "file": "src/gone.ts", "line": 400, "message": "rename it"}]',
 			"",
 		);
 
@@ -158,17 +179,39 @@ describe("Analyzer", () => {
 
 	it("hands each task's findings over as its agent returns", async () => {
 		ps.setCaptureOutput(
-			'[{"file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
+			'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
 			"",
 		);
 
 		const finished: string[] = [];
 		await analyzer.analyze([rule("Classes")], "/p", 1, agent, {
 			finished: (task) =>
-				finished.push(`${task.id} ${task.done}/${task.total}`),
+				finished.push(
+					`${task.glob} [${task.rules.join(",")}] ${task.done}/${task.total}`,
+				),
 		});
 
-		expect(finished).toEqual(["Classes 1/2", "Classes 2/2"]);
+		expect(finished).toEqual([
+			"**/*.ts [Classes] 1/2",
+			"**/*.ts [Classes] 2/2",
+		]);
+	});
+
+	it("drops a finding filed under a rule the task was not checking", async () => {
+		ps.setCaptureOutput(
+			'[{"rule": "Docs", "file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
+			"",
+		);
+
+		const violations = await analyzer.analyze(
+			[rule("Classes")],
+			"/p",
+			25,
+			agent,
+		);
+
+		expect(violations).toEqual([]);
+		expect(errors()[0]).toBe('agent reported unknown rule "Docs" on **/*.ts');
 	});
 
 	it("times each task from the moment its agent starts", async () => {
@@ -188,7 +231,7 @@ describe("Analyzer", () => {
 
 	it("finds the array when the agent wraps it in prose", async () => {
 		ps.setCaptureOutput(
-			'Sure! Here you go:\n```json\n[{"file": "src/a.ts", "line": 1, "message": "nope"}]\n```\n',
+			'Sure! Here you go:\n```json\n[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "nope"}]\n```\n',
 			"",
 		);
 
@@ -226,7 +269,7 @@ describe("Analyzer", () => {
 		);
 
 		expect(violations).toEqual([]);
-		expect(errors()[0]).toContain('no JSON array on rule "Classes"');
+		expect(errors()[0]).toContain("no JSON array on **/*.ts");
 	});
 
 	it("reports on stderr when the agent command fails", async () => {
@@ -240,13 +283,13 @@ describe("Analyzer", () => {
 
 		expect(violations).toEqual([]);
 		expect(errors()[0]).toBe(
-			'agent exited 127 on rule "Classes": command not found: claude',
+			"agent exited 127 on **/*.ts: command not found: claude",
 		);
 	});
 
 	it("orders one task's violations by file and line", async () => {
 		ps.setCaptureOutput(
-			'[{"file": "src/b.ts", "line": 1, "message": "later"}, {"file": "src/a.ts", "line": 1, "message": "earlier"}]',
+			'[{"rule": "Classes", "file": "src/b.ts", "line": 1, "message": "later"}, {"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "earlier"}]',
 			"",
 		);
 

@@ -23,14 +23,11 @@ describe("report", () => {
 	});
 	const plain = (lines: string[]) => lines.map((line) => color.strip(line));
 
-	it("puts a clickable location, the level and the violation on one line", () => {
+	it("puts a clickable location, the level, the violation and its rule on one line", () => {
 		expect(plain(finding(violation()))[0]).toBe(
-			"  src/a.ts:3  error  the comment restates the increment below it",
+			"  src/a.ts:3  error  the comment restates the increment below it " +
+				"(comments-say-why-not-what)",
 		);
-	});
-
-	it("leaves the rule off a finding, since its heading carries it", () => {
-		expect(plain(finding(violation()))[0]).not.toContain("comments-say-why");
 	});
 
 	it("spaces the violation off the level the way the level is spaced off the location", () => {
@@ -54,25 +51,23 @@ describe("report", () => {
 		);
 	});
 
-	it("names the rule, its id and what it cost when a task finds nothing", () => {
+	it("names the glob, its rule count and what it cost when a task finds nothing", () => {
 		const lines = finished({
-			rule: "Doc comments address users",
-			id: "doc-comments-address-users",
+			glob: "**/*.ts",
+			rules: ["doc-comments-address-users"],
 			violations: [],
 			took: Duration.secs(8.25),
 			done: 2,
 			total: 6,
 		});
 
-		expect(plain(lines)).toEqual([
-			"✓ [2/6] Doc comments address users (doc-comments-address-users): clean in 8.3s",
-		]);
+		expect(plain(lines)).toEqual(["✓ [2/6] **/*.ts (1 rule): clean in 8.3s"]);
 	});
 
 	it("heads a task's findings with how many it found", () => {
 		const lines = finished({
-			rule: "Comments say why, not what",
-			id: "comments-say-why-not-what",
+			glob: "**/*.ts",
+			rules: ["comments-say-why-not-what", "doc-comments-address-users"],
 			violations: [violation(), violation({ line: 9 })],
 			took: Duration.secs(41),
 			done: 3,
@@ -80,7 +75,7 @@ describe("report", () => {
 		});
 
 		expect(plain(lines)[0]).toBe(
-			"✗ [3/6] Comments say why, not what (comments-say-why-not-what): 2 problems in 41.0s",
+			"✗ [3/6] **/*.ts (2 rules): 2 problems in 41.0s",
 		);
 		expect(plain(lines)).toHaveLength(5); // heading, then two findings and their quotes
 	});

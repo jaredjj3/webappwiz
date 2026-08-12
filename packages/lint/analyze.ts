@@ -6,10 +6,12 @@ import type { Clock, Duration } from "@webappwiz/time";
 import type { Level } from "./diagnostic";
 import { exemptions } from "./ignore";
 import type { Rule } from "./rule/rule";
-import { RuleDocument } from "./rule-document";
 
 export interface Task {
-	rule: Rule;
+	/** Every rule in the guide whose glob is exactly this task's `glob`. */
+	rules: Rule[];
+	/** The glob the task's rules share, which is how reports name the task. */
+	glob: string;
 	files: string[];
 	prompt: string;
 	/**
@@ -36,8 +38,10 @@ export interface Violation {
 
 /** One task's worth of findings, handed over the moment its agent returns. */
 export interface Finished {
-	rule: string;
-	id: string;
+	/** The glob the task's rules share, as the report heads it. */
+	glob: string;
+	/** The ids of the rules the task checked. */
+	rules: string[];
 	violations: Violation[];
 	/** How long this task's agent took. */
 	took: Duration;
@@ -112,9 +116,10 @@ export interface Events {
  * collecting what comes back as violations.
  */
 export class Analyzer {
-	// One rule per task is the point: an agent applying a single rule to a
-	// bounded slice of files stays reliable where a whole guide over a whole repo
-	// does not.
+	// Rules sharing a glob share a task: the files are what a task costs, and a
+	// handful of one-page rules over a bounded slice of them keeps the agent
+	// reliable at a fraction of what one task per rule paid to read the same
+	// files once per rule.
 
 	// A file matched by several rules is read once, not once per finding.
 	private lines = new Map<string, Promise<string[]>>();
@@ -150,8 +155,8 @@ export class Analyzer {
 				const violations = await this.run(task, dir, agent);
 				done += 1;
 				on.finished?.({
-					rule: new RuleDocument(task.rule).title,
-					id: task.rule.id,
+					glob: task.glob,
+					rules: task.rules.map((rule) => rule.id),
 					violations,
 					took: this.clock.now().subtract(started),
 					done,
@@ -185,21 +190,30 @@ export class Analyzer {
 			size.set(file, (await this.fs.stat(path)).size);
 		}
 		all.sort();
-		const tasks: Task[] = [];
+		// Grouped by the glob's exact text: rules over the same files ride in one
+		// task and the files are read once, not once per rule.
+		const groups = new Map<string, Rule[]>();
 		for (const rule of rules) {
-			const glob = new Bun.Glob(rule.files);
-			const files = all.filter((file) => glob.match(file));
+			groups.set(rule.files, [...(groups.get(rule.files) ?? []), rule]);
+		}
+		const tasks: Task[] = [];
+		for (const [glob, group] of groups) {
+			const matcher = new Bun.Glob(glob);
+			const files = all.filter((file) => matcher.match(file));
 			if (files.length === 0) {
-				// stderr, so the report on stdout stays parseable
-				this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
+				for (const rule of group) {
+					// stderr, so the report on stdout stays parseable
+					this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
+				}
 			}
 			// chunks are counted in files, not tokens: switch to a byte budget when
 			// repos with a few huge files start overflowing a task.
 			for (let i = 0; i < files.length; i += chunk) {
 				const slice = files.slice(i, i + chunk);
-				const prompt = this.prompt(rule, slice);
+				const prompt = this.prompt(group, slice);
 				tasks.push({
-					rule,
+					rules: group,
+					glob,
 					files: slice,
 					prompt,
 					bytes: slice.reduce(
@@ -223,27 +237,36 @@ export class Analyzer {
 		});
 		if (exitCode !== 0) {
 			this.log.error(
-				`agent exited ${exitCode} on rule "${task.rule.id}": ${stderr.trim() || "no stderr"}`,
+				`agent exited ${exitCode} on ${task.glob}: ${stderr.trim() || "no stderr"}`,
 			);
 			return [];
 		}
 		const reported = parse(stdout);
 		if (reported === null) {
 			this.log.error(
-				`agent returned no JSON array on rule "${task.rule.id}": ${stdout.trim().slice(0, 200)}`,
+				`agent returned no JSON array on ${task.glob}: ${stdout.trim().slice(0, 200)}`,
 			);
 			return [];
 		}
 		const violations: Violation[] = [];
 		for (const report of reported) {
+			const rule = task.rules.find((candidate) => candidate.id === report.rule);
+			if (!rule) {
+				// Aloud, not dropped in silence: a finding filed under a misspelled
+				// id is still a finding somebody paid for.
+				this.log.error(
+					`agent reported unknown rule "${report.rule}" on ${task.glob}`,
+				);
+				continue;
+			}
 			const file = join(dir, report.file);
 			// The prompt asks the agent to honor markers; this is what enforces it.
-			if (exemptions(await this.source(file), task.rule.id)(report.line)) {
+			if (exemptions(await this.source(file), rule.id)(report.line)) {
 				continue;
 			}
 			violations.push({
-				id: task.rule.id,
-				level: task.rule.level,
+				id: rule.id,
+				level: rule.level,
 				file,
 				line: report.line,
 				message: report.message,
@@ -267,33 +290,37 @@ export class Analyzer {
 		return lines;
 	}
 
-	private prompt(rule: Rule, files: string[]): string {
-		return new MarkdownWriter()
-			.text(
-				"You are checking code against exactly one style rule. " +
-					"Apply only this rule; ignore every other style concern you notice.",
-			)
-			.text("The rule, verbatim:")
-			.code("markdown", rule.document)
+	private prompt(rules: Rule[], files: string[]): string {
+		const writer = new MarkdownWriter().text(
+			`You are checking code against exactly ${rules.length} style ` +
+				`rule${rules.length === 1 ? "" : "s"}, listed below. Apply only ` +
+				"these rules; ignore every other style concern you notice.",
+		);
+		for (const rule of rules) {
+			writer.text(`Rule \`${rule.id}\`, verbatim:`);
+			writer.code("markdown", rule.document);
+		}
+		return writer
 			.text("Check each of these files, relative to your working directory:")
 			.text(files.map((file) => `- ${file}`).join("\n"))
 			.text(
 				[
-					`This rule's id is \`${rule.id}\`. Code excuses itself from it with a comment:`,
+					"Code excuses itself from a rule with a comment naming that rule's id:",
 					"",
-					`- \`lint-ignore ${rule.id}: <reason>\` excuses the line it sits above, ` +
+					"- `lint-ignore <id>: <reason>` excuses the line it sits above, " +
 						"and everything indented under that line.",
-					`- \`lint-ignore-file ${rule.id}: <reason>\` excuses the whole file.`,
+					"- `lint-ignore-file <id>: <reason>` excuses the whole file.",
 					"",
-					"Report nothing an excused line does. A marker naming another rule's id " +
-						"excuses nothing here.",
+					"Report nothing an excused line does against the rule the marker names. " +
+						"A marker excuses only that one rule, and a marker naming an id not " +
+						"listed above excuses nothing here.",
 				].join("\n"),
 			)
 			.text(
 				[
-					"Read the files yourself. Report every violation of the rule as an element of one JSON array:",
+					"Read the files yourself. Report every violation of any of these rules as an element of one JSON array:",
 					"",
-					'[{"file": "<path as listed above>", "line": <1-based line number>, "message": "<how this code breaks the rule>"}]',
+					'[{"rule": "<rule id>", "file": "<path as listed above>", "line": <1-based line number>, "message": "<how this code breaks the rule>"}]',
 					"",
 					'"message" states what the code does that the rule forbids, naming the ' +
 						"construct it applies to. One clause, lowercase, no trailing period.",
@@ -318,7 +345,7 @@ export class Analyzer {
  */
 function parse(
 	stdout: string,
-): Array<{ file: string; line: number; message: string }> | null {
+): Array<{ rule: string; file: string; line: number; message: string }> | null {
 	const start = stdout.indexOf("[");
 	const end = stdout.lastIndexOf("]");
 	if (start === -1 || end < start) {
@@ -335,9 +362,17 @@ function parse(
 	}
 	// A malformed element is dropped rather than printed as "undefined:NaN".
 	return value.filter(
-		(violation): violation is { file: string; line: number; message: string } =>
+		(
+			violation,
+		): violation is {
+			rule: string;
+			file: string;
+			line: number;
+			message: string;
+		} =>
 			typeof violation === "object" &&
 			violation !== null &&
+			typeof violation.rule === "string" &&
 			typeof violation.file === "string" &&
 			typeof violation.line === "number" &&
 			typeof violation.message === "string",

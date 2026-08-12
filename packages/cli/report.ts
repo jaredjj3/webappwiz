@@ -16,9 +16,9 @@ const compact = new Intl.NumberFormat("en", { notation: "compact" });
 export const tokens = (bytes: number): number => Math.ceil(bytes / 4);
 
 /**
- * Why the estimate is a floor: the same file is read once per rule that globs
- * it, and on top of that each call pays for the agent's own system prompt and
- * for whatever it re-reads as it works, none of which is knowable from here.
+ * Why the estimate is a floor: each call pays for the agent's own system
+ * prompt and for whatever it re-reads as it works, none of which is knowable
+ * from here.
  */
 export function overBudget(estimate: number, budget: number): string {
 	return (
@@ -61,17 +61,17 @@ export function planned(
 
 /**
  * A finished task, as it should print the moment its agent returns: a status
- * line naming the rule, then one finding per violation.
+ * line naming the glob its rules share, then one finding per violation.
  */
 export function finished({
-	rule,
-	id,
+	glob,
+	rules,
 	violations,
 	took,
 	done,
 	total,
 }: Finished): string[] {
-	const heading = `${color.gray(`[${done}/${total}]`)} ${rule} ${color.gray(`(${id})`)}`;
+	const heading = `${color.gray(`[${done}/${total}]`)} ${glob} ${color.gray(`(${count(rules.length, "rule")})`)}`;
 	const tail = `${color.gray(`in ${took.human()}`)}`;
 	if (violations.length === 0) {
 		return [`${color.green("✓")} ${heading}: clean ${tail}`];
@@ -84,8 +84,8 @@ export function finished({
 
 /**
  * One violation: a location a reader can click, what the code does that the
- * rule forbids, and the line it happens on. The rule is the heading above, so
- * it is not repeated here.
+ * rule forbids, and the line it happens on. The heading above names only the
+ * glob, so the finding says which of its rules this one breaks.
  */
 export function finding(violation: Violation): string[] {
 	const level =
@@ -93,7 +93,7 @@ export function finding(violation: Violation): string[] {
 			? color.red("error")
 			: color.yellow(violation.level);
 	const lines = [
-		`  ${color.bold(`${violation.file}:${violation.line}`)}  ${level}  ${violation.message}`,
+		`  ${color.bold(`${violation.file}:${violation.line}`)}  ${level}  ${violation.message} ${color.gray(`(${violation.id})`)}`,
 	];
 	if (violation.code !== "") {
 		lines.push(color.gray(`  │ ${violation.code}`));

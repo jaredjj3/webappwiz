@@ -125,8 +125,9 @@ print.
 ## Analyzing
 
 `webappwiz lint analyze [dir]` checks the code against the guide's agent
-rules, handing one rule at a time to an agent and printing what comes back as
-lint output. Which agent is three flags, one of which you must pass:
+rules, handing every rule that shares a glob to an agent in one task so the
+files are read once rather than once per rule, and printing what comes back
+as lint output. Which agent is three flags, one of which you must pass:
 
 ```bash
 webappwiz lint analyze --agent opus          # claude -p --model <haiku|sonnet|opus>
@@ -138,7 +139,7 @@ There is no default: a run spends your tokens, so it will not choose for you
 and exits with a usage error when given none of the three. `--exec` takes the
 whole command, quoting and all, and is handed the prompt as one trailing
 argument. `--prompt` is for an agent running the guide itself: it prints each
-task's prompt under a `=== <id> <rule> (<n> files) ===` header, to hand to
+task's prompt under a `=== <glob>: <ids> (<n> files) ===` header, to hand to
 subagents of its own.
 
 `lint ls` lists the guide's rules, with which are checked and which cost an
@@ -151,7 +152,7 @@ A run says what it is about to read before it reads any of it, and
 
 ```bash
 webappwiz lint analyze --estimate
-# checking 211 files against 7 rules in 52 agent calls, reading 641K+ tokens
+# checking 211 files against 7 rules in 9 agent calls, reading 165K+ tokens
 ```
 
 Because it runs nothing, `--estimate` takes no `--agent`, `--exec` or
@@ -159,11 +160,11 @@ Because it runs nothing, `--estimate` takes no `--agent`, `--exec` or
 is what you run it instead of.
 
 The number is the prompts plus every file they name, at four bytes to the
-token. It is a floor, not a price. The same file is read once per rule whose
-glob matches it, which is where a run's cost actually comes from: seven rules
-over 360 KB of source is 2.4 MB of reading. On top of that each call pays for
-the agent's own system prompt and for whatever it re-reads as it works,
-neither of which is knowable from here.
+token. It is a floor, not a price. Rules that share a glob share their tasks,
+so a file is read once per distinct glob that matches it rather than once per
+rule; the total is close to the size of the source, not a multiple of it. On
+top of that each call pays for the agent's own system prompt and for whatever
+it re-reads as it works, neither of which is knowable from here.
 
 Over `--budget` (200,000 tokens by default) the run asks before spending, and
 answers itself with no on a terminal nobody is watching, so a scripted run

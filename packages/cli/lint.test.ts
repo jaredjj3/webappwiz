@@ -128,16 +128,16 @@ describe("LintCommands", () => {
 	it("prints what the agent found as lint output", async () => {
 		await fs.write("/p/a.ts", "class A {}\nclass B {}");
 		ps.setCaptureOutput(
-			'[{"file": "a.ts", "line": 2, "message": "the file declares a second class"}]',
+			'[{"rule": "one", "file": "a.ts", "line": 2, "message": "the file declares a second class"}]',
 			"",
 		);
 
 		expect(commands(oneRule).analyze(analyzing)).rejects.toThrow(
 			"1 lint error",
 		);
-		expect(printed()).toContain("✗ [1/1] One (one): 1 problem");
+		expect(printed()).toContain("✗ [1/1] **/*.ts (1 rule): 1 problem");
 		expect(printed()).toContain(
-			"/p/a.ts:2  error  the file declares a second class",
+			"/p/a.ts:2  error  the file declares a second class (one)",
 		);
 		expect(printed()).toContain("│ class B {}");
 	});
@@ -171,7 +171,7 @@ describe("LintCommands", () => {
 		]);
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput(
-			'[{"file": "a.ts", "line": 1, "message": "the class has no doc comment"}]',
+			'[{"rule": "one", "file": "a.ts", "line": 1, "message": "the class has no doc comment"}]',
 			"",
 		);
 
@@ -208,8 +208,8 @@ describe("LintCommands", () => {
 
 		await commands(oneRule).analyze({ ...analyzing, prompt: true });
 
-		expect(printed()).toContain("=== one One (1 file) ===");
-		expect(printed()).toContain("exactly one style rule");
+		expect(printed()).toContain("=== **/*.ts: one (1 file) ===");
+		expect(printed()).toContain("exactly 1 style rule");
 		expect(printed()).toContain("- a.ts");
 		expect(ps.getCalls()).toEqual([]);
 	});
@@ -228,10 +228,10 @@ describe("LintCommands", () => {
 
 		await commands(guide).analyze({ ...analyzing, prompt: true });
 
-		// a partial check's rule still needs the agent; a full check's does not
-		expect(printed()).not.toContain("=== one");
-		expect(printed()).toContain("=== two");
-		expect(printed()).toContain("=== three");
+		// a partial check's rule still needs the agent; a full check's does not,
+		// and the two survivors share their glob's one task
+		expect(printed()).toContain("=== **/*.ts: two, three (1 file) ===");
+		expect(printed()).not.toContain("Rule `one`");
 	});
 
 	it("audits only the rules no check enforces", async () => {
@@ -298,7 +298,7 @@ describe("LintCommands", () => {
 			prompt: true,
 		});
 
-		expect(printed()).toContain("=== one One (1 file) ===");
+		expect(printed()).toContain("=== **/*.ts: one (1 file) ===");
 		expect(printed()).toContain("- a.ts");
 		expect(printed()).not.toContain("- b.ts");
 	});

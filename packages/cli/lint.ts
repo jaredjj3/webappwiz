@@ -188,7 +188,7 @@ export class LintCommands {
 		if (opts.prompt) {
 			for (const task of await analyzer.plan(rules, dir, opts.chunk, only)) {
 				this.log.info(
-					`=== ${task.rule.id} ${new RuleDocument(task.rule).title} ` +
+					`=== ${task.glob}: ${task.rules.map((rule) => rule.id).join(", ")} ` +
 						`(${count(task.files.length, "file")}) ===`,
 				);
 				this.log.info(task.prompt);
