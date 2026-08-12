@@ -2,10 +2,12 @@ import { commands } from "@webappwiz/cli/commands";
 import { cli } from "@webappwiz/cmd";
 import { Lint } from "@webappwiz/lint";
 import { ConsoleLogger } from "@webappwiz/log";
+import { Git, Github, Registry, Ship, Workspace } from "@webappwiz/ship";
 import { NodeFs, NodePs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import { Fix } from "./fix";
 import { Path } from "./path";
+import { ShipCommand } from "./ship";
 import { test } from "./test";
 
 const log = new ConsoleLogger();
@@ -35,6 +37,23 @@ wiz
 		description: "remove bin/ from your PATH",
 	})
 	.action((opts) => new Path(log, fs, ps).run(opts));
+
+wiz
+	.command("ship")
+	.description("release every package in the workspace at one version")
+	.arg("bump", t.string(), { description: "patch, minor, or major" })
+	.action(async (opts) => {
+		const workspace = await Workspace.at(fs, ps.cwd());
+		const ship = new Ship(
+			log,
+			workspace,
+			new Git(ps, workspace.root),
+			new Registry(ps),
+			new Github(ps),
+		);
+		const fix = new Fix(log, ps, new Lint(log, fs, ps));
+		await new ShipCommand(log, ps, ship, fix).run(opts);
+	});
 
 wiz
 	.command("test")

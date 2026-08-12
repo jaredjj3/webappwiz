@@ -9,6 +9,7 @@
 		"@webappwiz/cmd": "workspace:*",
 		"@webappwiz/lint": "workspace:*",
 		"@webappwiz/log": "workspace:*",
+		"@webappwiz/ship": "workspace:*",
 		"@webappwiz/sys": "workspace:*",
 		"@webappwiz/t": "workspace:*"
 	}

@@ -1,0 +1,13 @@
+{
+	"name": "@webappwiz/ship",
+	"version": "0.0.0",
+	"type": "module",
+	"module": "index.ts",
+	"exports": {
+		".": "./index.ts"
+	},
+	"dependencies": {
+		"@webappwiz/log": "workspace:*",
+		"@webappwiz/sys": "workspace:*"
+	}
+}

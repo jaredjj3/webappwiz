@@ -122,6 +122,14 @@
         "@webappwiz/t": "workspace:*",
       },
     },
+    "packages/ship": {
+      "name": "@webappwiz/ship",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/log": "workspace:*",
+        "@webappwiz/sys": "workspace:*",
+      },
+    },
     "packages/sys": {
       "name": "@webappwiz/sys",
       "version": "0.0.0",
@@ -149,6 +157,7 @@
         "@webappwiz/cmd": "workspace:*",
         "@webappwiz/lint": "workspace:*",
         "@webappwiz/log": "workspace:*",
+        "@webappwiz/ship": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
       },
@@ -270,6 +279,8 @@
     "@webappwiz/react": ["@webappwiz/react@workspace:packages/react"],
 
     "@webappwiz/rpc": ["@webappwiz/rpc@workspace:packages/rpc"],
+
+    "@webappwiz/ship": ["@webappwiz/ship@workspace:packages/ship"],
 
     "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
 
