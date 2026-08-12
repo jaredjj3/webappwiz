@@ -83,8 +83,7 @@ The recommended rules, each exported as its class so a guide can name one:
   functions injecting dependencies should become a class; the check sees
   function-typed parameters, the agent judges interface-typed ones.
 - `tests-read-like-sentences`, `comments-say-why-not-what`,
-  `doc-comments-address-users`, `no-ponytail-prefixes`,
-  `one-dir-per-interface`: agent rules.
+  `doc-comments-address-users`, `one-dir-per-interface`: agent rules.
 
 `tokens()` hands a check TypeScript's token stream (comment- and string-safe,
 with line, column, and brace depth) when text alone is not enough.
