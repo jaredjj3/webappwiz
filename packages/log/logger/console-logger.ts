@@ -1,11 +1,14 @@
+import type { Console } from "../console/console";
 import type { Logger } from "./logger";
 
 export class ConsoleLogger implements Logger {
+	constructor(private readonly out: Console = console) {}
+
 	info(message: unknown, ...optionalParams: unknown[]): void {
-		console.log(message, ...optionalParams);
+		this.out.log(message, ...optionalParams);
 	}
 
 	error(message: unknown, ...optionalParams: unknown[]): void {
-		console.error(message, ...optionalParams);
+		this.out.error(message, ...optionalParams);
 	}
 }

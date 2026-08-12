@@ -13,9 +13,7 @@ import { useExternalStore } from "./use-external-store";
  * (a controller or singleton, not a per-render object) and a fixed event list.
  * Remount against a new source with a `key` if it ever needs to change.
  */
-// lint-ignore objects-over-callbacks: `select` is a projection run to compute
-// what the hook returns, which the guide calls functional programming and fine.
-// The ref only keeps a fresh inline arrow from re-subscribing.
+// lint-ignore objects-over-callbacks: `select` is a projection run to compute what the hook returns, which the guide calls fine; the ref only keeps a fresh inline arrow from re-subscribing
 export function useReactive<
 	Source extends Eventful<Record<string, unknown>>,
 	State,

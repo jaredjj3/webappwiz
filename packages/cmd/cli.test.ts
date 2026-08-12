@@ -1,5 +1,10 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { color, MemoryLogger } from "@webappwiz/log";
+import { beforeEach, describe, expect, it } from "bun:test";
+import {
+	ConsoleLogger,
+	color,
+	FakeConsole,
+	MemoryLogger,
+} from "@webappwiz/log";
 import { FakePs } from "@webappwiz/sys/testing";
 import { t } from "@webappwiz/t";
 import { cli } from "./cli";
@@ -214,11 +219,13 @@ describe("cli", () => {
 		});
 	});
 
-	it("defaults to the console logger when none is injected", () => {
-		const spy = spyOn(console, "log").mockImplementation(() => {});
-		cli("wiz").run([]);
-		const printed = spy.mock.calls.flat().join("\n");
-		spy.mockRestore();
-		expect(color.strip(printed)).toContain("Usage: wiz <command> [options]");
+	it("prints usage through the console logger it defaults to", () => {
+		const out = new FakeConsole();
+
+		cli("wiz", new ConsoleLogger(out)).run([]);
+
+		expect(color.strip(out.logged.flat().join("\n"))).toContain(
+			"Usage: wiz <command> [options]",
+		);
 	});
 });

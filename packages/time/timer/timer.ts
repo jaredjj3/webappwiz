@@ -7,9 +7,7 @@ import type { Duration } from "../duration";
  * pending callback cannot outlive the thing that scheduled it.
  */
 export interface Timer {
-	// lint-ignore objects-over-callbacks: the signature the platform's own
-	// setTimeout and setInterval have, so wrapping them in events would mean
-	// every caller subscribing to a one-shot they already wrote as a closure.
+	// lint-ignore objects-over-callbacks: the signature the platform's own setTimeout and setInterval have, so events would mean every caller subscribing to a one-shot they already wrote as a closure
 	setTimeout(callback: () => void, delay: Duration): Disposable;
 	setInterval(callback: () => void, interval: Duration): Disposable;
 }

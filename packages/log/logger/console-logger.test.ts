@@ -1,33 +1,27 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 
-import { ConsoleLogger } from "../index";
+import { ConsoleLogger, FakeConsole } from "../index";
 
 describe("ConsoleLogger", () => {
-	it("forwards info to console.log and error to console.error", () => {
-		const logger = new ConsoleLogger();
-		const originalLog = console.log;
-		const originalError = console.error;
-		const logCalls: unknown[][] = [];
-		const errorCalls: unknown[][] = [];
+	let out: FakeConsole;
+	let logger: ConsoleLogger;
+
+	beforeEach(() => {
+		out = new FakeConsole();
+		logger = new ConsoleLogger(out);
+	});
+
+	it("forwards info to the console's log", () => {
+		logger.info("ready", 1, true);
+
+		expect(out.logged).toEqual([["ready", 1, true]]);
+	});
+
+	it("forwards error to the console's error", () => {
 		const error = new Error("boom");
 
-		console.log = ((...args: unknown[]) => {
-			logCalls.push(args);
-		}) as typeof console.log;
+		logger.error("failed", error);
 
-		console.error = ((...args: unknown[]) => {
-			errorCalls.push(args);
-		}) as typeof console.error;
-
-		try {
-			logger.info("ready", 1, true);
-			logger.error("failed", error);
-		} finally {
-			console.log = originalLog;
-			console.error = originalError;
-		}
-
-		expect(logCalls).toEqual([["ready", 1, true]]);
-		expect(errorCalls).toEqual([["failed", error]]);
+		expect(out.errored).toEqual([["failed", error]]);
 	});
 });

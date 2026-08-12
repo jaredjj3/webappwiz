@@ -1,126 +1,18 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { MemoryLogger } from "@webappwiz/log";
-import type { Package } from "./plan";
-import { Ship } from "./ship";
-
-const PACKAGES: Package[] = [
-	{
-		name: "@scope/one",
-		dir: "/repo/packages/one",
-		private: false,
-		published: false,
-	},
-	{
-		name: "@scope/two",
-		dir: "/repo/packages/two",
-		private: false,
-		published: false,
-	},
-	{
-		name: "@scope/hid",
-		dir: "/repo/packages/hid",
-		private: true,
-		published: false,
-	},
-];
-
-function fakeWorkspace() {
-	return {
-		stamped: [] as string[],
-		async version(): Promise<string> {
-			return this.stamped.at(-1) ?? "1.2.3";
-		},
-		async packages(): Promise<Package[]> {
-			return PACKAGES;
-		},
-		async setVersion(version: string): Promise<void> {
-			this.stamped.push(version);
-		},
-	};
-}
-
-function fakeGit() {
-	return {
-		dirty: false,
-		current: "main",
-		trunk: "main",
-		subject: "Teach show to check the TODO",
-		tags: new Set<string>(),
-		commits: [] as string[],
-		pushes: [] as string[],
-		async clean(): Promise<boolean> {
-			return !this.dirty;
-		},
-		async branch(): Promise<string> {
-			return this.current;
-		},
-		async defaultBranch(): Promise<string> {
-			return this.trunk;
-		},
-		async headSubject(): Promise<string> {
-			return this.subject;
-		},
-		async hasTag(tag: string): Promise<boolean> {
-			return this.tags.has(tag);
-		},
-		async commitAll(message: string): Promise<void> {
-			this.commits.push(message);
-		},
-		async tag(tag: string): Promise<void> {
-			this.tags.add(tag);
-		},
-		async push(ref: string): Promise<void> {
-			this.pushes.push(ref);
-		},
-	};
-}
-
-function fakeRegistry() {
-	return {
-		loggedIn: true,
-		/** Entries read `name@version`. */
-		has: new Set<string>(),
-		publishes: [] as string[],
-		async authed(): Promise<boolean> {
-			return this.loggedIn;
-		},
-		async published(name: string, version: string): Promise<boolean> {
-			return this.has.has(`${name}@${version}`);
-		},
-		async publish(dir: string): Promise<void> {
-			this.publishes.push(dir);
-		},
-	};
-}
-
-function fakeGithub() {
-	return {
-		loggedIn: true,
-		releases: [] as string[],
-		async authed(): Promise<boolean> {
-			return this.loggedIn;
-		},
-		async release(tag: string): Promise<void> {
-			this.releases.push(tag);
-		},
-	};
-}
-
-let workspace: ReturnType<typeof fakeWorkspace>;
-let git: ReturnType<typeof fakeGit>;
-let registry: ReturnType<typeof fakeRegistry>;
-let github: ReturnType<typeof fakeGithub>;
-let ship: Ship;
-
-beforeEach(() => {
-	workspace = fakeWorkspace();
-	git = fakeGit();
-	registry = fakeRegistry();
-	github = fakeGithub();
-	ship = new Ship(new MemoryLogger(), workspace, git, registry, github);
-});
+import type { Ship } from "./ship";
+import { ShipHarness } from "./ship-harness";
 
 describe("ship", () => {
+	let workspace: ShipHarness["workspace"];
+	let git: ShipHarness["git"];
+	let registry: ShipHarness["registry"];
+	let github: ShipHarness["github"];
+	let ship: Ship;
+
+	beforeEach(() => {
+		({ workspace, git, registry, github, ship } = new ShipHarness());
+	});
+
 	it("plans the whole workspace onto the next version", async () => {
 		const plan = await ship.plan("minor");
 		expect(plan.current).toBe("1.2.3");
