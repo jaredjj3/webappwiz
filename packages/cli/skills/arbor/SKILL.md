@@ -133,6 +133,24 @@ A successful merge discards the worktree, branch and record: the task is done
 and disappears from `arbor ls`. Your working directory is deleted with it, so
 `cd` to the main tree (the path merge prints) before running anything else.
 
+### After merging
+
+Once the merge succeeds, print a short summary the human can take in at a
+glance: a heading with ✅ and the task name, then one sentence blending what
+the task set out to do with what actually changed.
+
+````markdown
+### ✅ Merged `<task>` onto `<base>`
+
+Agents now print a one-line summary after every merge, so what landed is
+visible at a glance.
+````
+
+The emoji lives in the heading only: ✅ for a merge, ❌ for a task you
+`arbor rm`ed instead (`### ❌ Removed \`<task>\``). Keep the sentence brief.
+This replaces prose about the merge, not the rest of your report: anything
+else worth saying goes after it.
+
 ## TODO.md
 
 Your session can die at any moment. Keep a `TODO.md` at the worktree root so
