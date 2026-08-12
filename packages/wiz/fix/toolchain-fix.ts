@@ -2,12 +2,10 @@ import type { Lint } from "@webappwiz/lint";
 import { color, type Logger } from "@webappwiz/log";
 import type { Ps } from "@webappwiz/sys";
 
-export interface FixOptions {
-	/** Report problems without writing fixes, as CI wants it. */
-	check: boolean;
-}
+import type { Fix, FixOptions } from "./fix";
 
-export class Fix {
+/** Runs biome, the guide's linter, and the type checker, in that order. */
+export class ToolchainFix implements Fix {
 	constructor(
 		private readonly log: Logger,
 		private readonly ps: Ps,

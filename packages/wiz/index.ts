@@ -2,10 +2,16 @@ import { commands } from "@webappwiz/cli/commands";
 import { cli } from "@webappwiz/cmd";
 import { Lint } from "@webappwiz/lint";
 import { ConsoleLogger } from "@webappwiz/log";
-import { Git, Github, Registry, Ship, Workspace } from "@webappwiz/ship";
+import {
+	CliGit,
+	CliGithub,
+	LockstepShip,
+	ManifestWorkspace,
+	NpmRegistry,
+} from "@webappwiz/ship";
 import { NodeFs, NodePs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
-import { Fix } from "./fix";
+import { ToolchainFix } from "./fix/toolchain-fix";
 import { Path } from "./path";
 import { ship } from "./ship";
 import { test } from "./test";
@@ -23,7 +29,7 @@ wiz
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action((opts) => new Fix(log, ps, new Lint(log, fs, ps)).run(opts));
+	.action((opts) => new ToolchainFix(log, ps, new Lint(log, fs, ps)).run(opts));
 
 wiz
 	.command("path")
@@ -43,15 +49,15 @@ wiz
 	.description("release every package in the workspace at one version")
 	.arg("bump", t.string(), { description: "patch, minor, or major" })
 	.action(async (opts) => {
-		const workspace = await Workspace.at(fs, ps.cwd());
-		const release = new Ship(
+		const workspace = await ManifestWorkspace.at(fs, ps.cwd());
+		const release = new LockstepShip(
 			log,
 			workspace,
-			new Git(ps, workspace.root),
-			new Registry(ps),
-			new Github(ps),
+			new CliGit(ps, workspace.root),
+			new NpmRegistry(ps),
+			new CliGithub(ps),
 		);
-		const fix = new Fix(log, ps, new Lint(log, fs, ps));
+		const fix = new ToolchainFix(log, ps, new Lint(log, fs, ps));
 		await ship(log, ps, release, fix, opts);
 	});
 

@@ -1,7 +1,8 @@
 import type { Ps } from "@webappwiz/sys";
+import type { Git } from "./git";
 
-/** The git a release speaks, scoped to one repository. */
-export class Git {
+/** Speaks git by spawning the CLI. */
+export class CliGit implements Git {
 	constructor(
 		private readonly ps: Ps,
 		private readonly root: string,

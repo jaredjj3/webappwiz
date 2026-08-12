@@ -1,7 +1,7 @@
 import { color, type Logger } from "@webappwiz/log";
 import { isBump, type Plan, type Ship } from "@webappwiz/ship";
 import type { Ps } from "@webappwiz/sys";
-import type { Fix } from "./fix";
+import type { Fix } from "./fix/fix";
 
 export interface ShipOptions {
 	/** How far to move the version: patch, minor or major. */
@@ -12,8 +12,8 @@ export interface ShipOptions {
 export async function ship(
 	log: Logger,
 	ps: Ps,
-	release: Pick<Ship, "plan" | "run">,
-	fix: Pick<Fix, "run">,
+	release: Ship,
+	fix: Fix,
 	opts: ShipOptions,
 ): Promise<void> {
 	if (!isBump(opts.bump)) {
@@ -48,7 +48,7 @@ async function recover(
 	plan: Plan,
 	log: Logger,
 	ps: Ps,
-	release: Pick<Ship, "plan">,
+	release: Ship,
 ): Promise<Plan> {
 	const fixable = plan.problems.filter(
 		(problem) => problem.remedy !== undefined,

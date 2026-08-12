@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { FakeFs } from "@webappwiz/sys/testing";
-import { Workspace } from "./workspace";
+import { ManifestWorkspace } from "./manifest-workspace";
 
 let fs: FakeFs;
 
@@ -22,22 +22,22 @@ beforeEach(async () => {
 
 describe("workspace", () => {
 	it("climbs to the manifest that declares the workspaces", async () => {
-		const workspace = await Workspace.at(fs, "/repo/packages/one");
+		const workspace = await ManifestWorkspace.at(fs, "/repo/packages/one");
 		expect(workspace.root).toBe("/repo");
 	});
 
 	it("says so when nothing above is a workspace", async () => {
-		await expect(Workspace.at(fs, "/elsewhere")).rejects.toThrow(
+		await expect(ManifestWorkspace.at(fs, "/elsewhere")).rejects.toThrow(
 			"no workspace above /elsewhere",
 		);
 	});
 
 	it("reads the version off the root manifest", async () => {
-		expect(await new Workspace(fs, "/repo").version()).toBe("1.2.3");
+		expect(await new ManifestWorkspace(fs, "/repo").version()).toBe("1.2.3");
 	});
 
 	it("finds every package the workspaces glob covers", async () => {
-		expect(await new Workspace(fs, "/repo").packages()).toEqual([
+		expect(await new ManifestWorkspace(fs, "/repo").packages()).toEqual([
 			{
 				name: "@scope/one",
 				dir: "/repo/packages/one",
@@ -55,7 +55,7 @@ describe("workspace", () => {
 
 	it("skips a directory with no manifest of its own", async () => {
 		await fs.mkdir("/repo/packages/three");
-		const packages = await new Workspace(fs, "/repo").packages();
+		const packages = await new ManifestWorkspace(fs, "/repo").packages();
 		expect(packages.map((pkg) => pkg.name)).toEqual([
 			"@scope/one",
 			"@scope/two",
@@ -63,7 +63,7 @@ describe("workspace", () => {
 	});
 
 	it("stamps the new version on the root and every package", async () => {
-		await new Workspace(fs, "/repo").setVersion("2.0.0");
+		await new ManifestWorkspace(fs, "/repo").setVersion("2.0.0");
 		for (const dir of ["/repo", "/repo/packages/one", "/repo/packages/two"]) {
 			const manifest = JSON.parse(await fs.read(`${dir}/package.json`));
 			expect(manifest.version).toBe("2.0.0");
@@ -71,7 +71,7 @@ describe("workspace", () => {
 	});
 
 	it("stamps private packages too, so nothing drifts out of lockstep", async () => {
-		await new Workspace(fs, "/repo").setVersion("2.0.0");
+		await new ManifestWorkspace(fs, "/repo").setVersion("2.0.0");
 		const manifest = JSON.parse(
 			await fs.read("/repo/packages/two/package.json"),
 		);

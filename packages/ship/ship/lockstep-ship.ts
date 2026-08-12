@@ -1,40 +1,20 @@
 import { color, type Logger } from "@webappwiz/log";
-import type { Git } from "./git";
-import type { Github } from "./github";
-import type { Package, Plan, Problem } from "./plan";
-import type { Registry } from "./registry";
-import { type Bump, bump } from "./version";
-import type { Workspace } from "./workspace";
+import type { Git } from "../git/git";
+import type { Github } from "../github/github";
+import type { Package, Plan, Problem } from "../plan";
+import type { Registry } from "../registry/registry";
+import { type Bump, bump } from "../version";
+import type { Workspace } from "../workspace/workspace";
+import type { Ship } from "./ship";
 
-/**
- * Releases every package in a workspace together, at one version.
- *
- * Ask `plan` what a release would do, show that to whoever is deciding, then
- * hand the plan back to `run`.
- */
-export class Ship {
+/** Releases the whole workspace at one version, in lockstep. */
+export class LockstepShip implements Ship {
 	constructor(
 		private readonly log: Logger,
-		private readonly workspace: Pick<
-			Workspace,
-			"version" | "packages" | "setVersion"
-		>,
-		private readonly git: Pick<
-			Git,
-			| "clean"
-			| "branch"
-			| "defaultBranch"
-			| "headSubject"
-			| "hasTag"
-			| "commitAll"
-			| "tag"
-			| "push"
-		>,
-		private readonly registry: Pick<
-			Registry,
-			"authed" | "published" | "publish"
-		>,
-		private readonly github: Pick<Github, "authed" | "release">,
+		private readonly workspace: Workspace,
+		private readonly git: Git,
+		private readonly registry: Registry,
+		private readonly github: Github,
 	) {}
 
 	async plan(type: Bump): Promise<Plan> {
