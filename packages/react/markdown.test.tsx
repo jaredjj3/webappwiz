@@ -42,7 +42,9 @@ describe("Markdown", () => {
 	});
 
 	it("renders a plain bullet without a checkbox", () => {
-		const { container } = render(<Markdown text={"- where the code lives\n"} />);
+		const { container } = render(
+			<Markdown text={"- where the code lives\n"} />,
+		);
 
 		expect(container.querySelectorAll("li")).toHaveLength(1);
 		expect(container.querySelector("input")).toBeNull();
@@ -74,7 +76,9 @@ describe("Markdown", () => {
 	it("still renders a fence nobody closed", () => {
 		const { container } = render(<Markdown text={"```\narbor merge\n"} />);
 
-		expect(container.querySelector("pre code")?.textContent).toBe("arbor merge");
+		expect(container.querySelector("pre code")?.textContent).toBe(
+			"arbor merge",
+		);
 	});
 
 	it("renders inline code, bold and italics inside a line", () => {
@@ -99,7 +103,9 @@ describe("Markdown", () => {
 	});
 
 	it("leaves a javascript: link as text rather than making it clickable", () => {
-		const { container } = render(<Markdown text={"[click](javascript:alert(1))"} />);
+		const { container } = render(
+			<Markdown text={"[click](javascript:alert(1))"} />,
+		);
 
 		expect(container.querySelector("a")).toBeNull();
 		expect(container.textContent).toContain("[click](javascript:alert(1))");

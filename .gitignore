@@ -41,3 +41,4 @@ TODO.md
 
 # snapshots and screenshots an agent's browser leaves behind
 .playwright-mcp
+.arbor-shots
