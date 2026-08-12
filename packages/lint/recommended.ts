@@ -6,6 +6,7 @@ import { NoEmDashes } from "./rule/no-em-dashes";
 import { ObjectsOverCallbacks } from "./rule/objects-over-callbacks";
 import { OneClassPerFile } from "./rule/one-class-per-file";
 import { OneDirPerInterface } from "./rule/one-dir-per-interface";
+import { ParametersDeclareFields } from "./rule/parameters-declare-fields";
 import type { Rule } from "./rule/rule";
 import { SimpleTestSetup } from "./rule/simple-test-setup";
 import { TestsReadLikeSentences } from "./rule/tests-read-like-sentences";
@@ -15,6 +16,7 @@ import { TestsReadLikeSentences } from "./rule/tests-read-like-sentences";
 export const recommended: Rule[] = [
 	new NoEmDashes(),
 	new OneClassPerFile(),
+	new ParametersDeclareFields(),
 	new ClassesOverFunctionExports(),
 	new ObjectsOverCallbacks(),
 	new TestsReadLikeSentences(),

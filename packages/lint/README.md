@@ -79,6 +79,8 @@ The recommended rules, each exported as its class so a guide can name one:
   dash survives only between digits, as a range.
 - `one-class-per-file` (checked): a second top-level class wants its own
   file.
+- `parameters-declare-fields` (checked): a constructor copying a parameter
+  into a field of the same name should declare the field on the parameter.
 - `classes-over-function-exports` (partially checked): several exported
   functions injecting dependencies should become a class; the check sees
   function-typed parameters, the agent judges interface-typed ones.

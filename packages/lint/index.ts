@@ -29,6 +29,7 @@ export { NoEmDashes } from "./rule/no-em-dashes";
 export { ObjectsOverCallbacks } from "./rule/objects-over-callbacks";
 export { OneClassPerFile } from "./rule/one-class-per-file";
 export { OneDirPerInterface } from "./rule/one-dir-per-interface";
+export { ParametersDeclareFields } from "./rule/parameters-declare-fields";
 export type { Rule } from "./rule/rule";
 export { TestsReadLikeSentences } from "./rule/tests-read-like-sentences";
 export { RuleDocument } from "./rule-document";
