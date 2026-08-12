@@ -1,6 +1,7 @@
 ---
 name: arbor
-description: Use the @webappwiz/arbor CLI to land your work on trunk from an isolated git worktree without pull requests. Read this before making any code change in an arbor repository, since it decides where the work happens, and whenever you need to create, claim, graft, prune, list, show, locate, wait for, or escalate a workstream.
+description: Use the @webappwiz/arbor CLI to land your work on trunk, or a base branch given as an argument, from an isolated git worktree without pull requests. Read this before making any code change in an arbor repository, since it decides where the work happens, and whenever you need to create, claim, graft, prune, list, show, locate, wait for, or escalate a workstream.
+argument-hint: "[base-branch]"
 version: 0.0.0
 ---
 
@@ -86,7 +87,11 @@ the status for that reason, never on the lease.
    <task>` first if you want to see what a tree is before taking its lease).
    A task lands on trunk by default; `arbor create <task> --base <branch>`
    makes one destined for another branch instead, starting from it and
-   grafting onto it. `arbor show` prints a task's base.
+   grafting onto it. `arbor show` prints a task's base. When this skill is
+   invoked with a branch argument (`/arbor feature/auth`), or the user names
+   the branch the work should land on, pass it as `--base` to every task you
+   create for that request. Otherwise omit `--base`; never guess a base from
+   the currently checked-out branch.
 2. Write `TODO.md` at the worktree root before starting (see below).
 3. Do the work; commit with git (arbor never commits for you). Keep `TODO.md`
    current as you go.
