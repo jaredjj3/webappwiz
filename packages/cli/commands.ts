@@ -86,7 +86,7 @@ export async function commands(
 
 	lint
 		.command("analyze")
-		.description("check a directory against the guide, one agent per rule")
+		.description("check a directory against the guide, one agent per glob")
 		.arg("rules", t.string(), rulesArg)
 		.arg("dir", t.string(), {
 			default: ".",

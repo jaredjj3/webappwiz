@@ -111,8 +111,8 @@ export interface Events {
 }
 
 /**
- * Checks a directory against a guide by handing each rule to an agent of
- * the caller's choosing, one task per rule and chunk of matching files, and
+ * Checks a directory against a guide with an agent of the caller's choosing,
+ * one task per glob the rules share and chunk of matching files, and
  * collecting what comes back as violations.
  */
 export class Analyzer {
