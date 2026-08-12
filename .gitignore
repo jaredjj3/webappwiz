@@ -35,3 +35,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # agent scratch notes (arbor worktrees)
 TODO.md
+
+# snapshots and screenshots an agent's browser leaves behind
+.playwright-mcp
