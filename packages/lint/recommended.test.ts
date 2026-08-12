@@ -26,6 +26,20 @@ describe("recommended rules", () => {
 		}
 	});
 
+	// A filter that skipped a file the rule's own document says is broken would
+	// drop the finding silently, which is the one way this can go wrong.
+	it("keeps every Bad example of a rule that filters files", () => {
+		for (const rule of recommended) {
+			const bad = rule.applies ? new RuleDocument(rule).bad : [];
+			for (const example of bad) {
+				expect(
+					rule.applies?.(example),
+					`${rule.id} filters out a Bad example`,
+				).toBe(true);
+			}
+		}
+	});
+
 	it("catches every Bad example of a full check", () => {
 		// Not of a partial one: partial says the agent decides the cases the
 		// check cannot see, and the Bad section is allowed to show those.

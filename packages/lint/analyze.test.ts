@@ -62,6 +62,39 @@ describe("Analyzer", () => {
 		expect(errors()[0]).toBe('rule "Python" matches no files under /p');
 	});
 
+	it("drops the files a rule's applies rules out", async () => {
+		const only = testRule("Classes", {
+			applies: (text) => text.includes("class B"),
+		});
+
+		const tasks = await analyzer.plan([only], "/p", 25);
+
+		expect(tasks.map((task) => task.files)).toEqual([["src/b.ts"]]);
+	});
+
+	it("chunks what applies keeps, not what the glob matched", async () => {
+		await fs.write("/p/src/c.ts", "class C {}");
+		const only = testRule("Classes", {
+			applies: (text) => !text.includes("class B"),
+		});
+
+		const tasks = await analyzer.plan([only], "/p", 2);
+
+		// One task, not a.ts and c.ts split either side of the file b.ts left
+		expect(tasks.map((task) => task.files)).toEqual([["src/a.ts", "src/c.ts"]]);
+	});
+
+	// An empty glob is a guide pointed at files that are not there; an empty
+	// filter is the answer working, so only the first is worth a warning.
+	it("stays quiet when applies, not the glob, leaves nothing", async () => {
+		const none = testRule("Classes", { applies: () => false });
+
+		const tasks = await analyzer.plan([none], "/p", 25);
+
+		expect(tasks).toEqual([]);
+		expect(errors()).toEqual([]);
+	});
+
 	it("gives each task a prompt holding the whole rule and only its files", async () => {
 		const [task] = await analyzer.plan([rule("Classes")], "/p", 1);
 

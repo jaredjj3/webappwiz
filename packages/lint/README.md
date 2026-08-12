@@ -53,6 +53,15 @@ honest: a check must pass every `## Good` block, and a full check must catch
 every `## Bad` block, so the document and the implementation cannot drift
 apart.
 
+`applies(text)` narrows which files reach an agent, for a rule whose subject
+leaves a trace a scan can see: a file with no `/**` in it cannot break a doc
+comment rule. `files` picks by path and this picks by content, and a run pays
+a local read to spare an agent the whole file. Soundness runs the other way to
+a check, though. A check finding nothing proves nothing, but false here has to
+mean no violation is possible, so match loosely: over-matching costs tokens,
+under-matching costs the finding. The examples hold this half honest too, by
+requiring every `## Bad` block to survive the filter.
+
 ## The guide
 
 A guide is a TypeScript module so composition stays typed. It lives in
@@ -95,8 +104,11 @@ The recommended rules, each exported as its class so a guide can name one:
   reads the titles.
 - `simple-test-setup` (partially checked): a test file opens on what is
   tested; the check sees tests a loop generates, the agent judges the rest.
-- `fakes-over-mocks`, `comments-say-why-not-what`,
-  `doc-comments-address-users`, `one-dir-per-interface`: agent rules.
+- `comments-say-why-not-what` (agent, filtered): comment why, not what; only
+  files holding a comment are read.
+- `doc-comments-address-users` (agent, filtered): a doc comment speaks to the
+  people using the thing; only files holding a `/**` are read.
+- `fakes-over-mocks`, `one-dir-per-interface`: agent rules.
 
 `tokens()` hands a check TypeScript's token stream (comment- and string-safe,
 with line, column, and brace depth) when text alone is not enough.
@@ -159,9 +171,12 @@ Because it runs nothing, `--estimate` takes no `--agent`, `--exec` or
 is what you run it instead of.
 
 The number is the prompts plus every file they name, at four bytes to the
-token. It is a floor, not a price. The same file is read once per rule whose
-glob matches it, which is where a run's cost actually comes from: seven rules
-over 360 KB of source is 2.4 MB of reading. On top of that each call pays for
+token. It is a floor, not a price. The same file is read once per rule that
+wants it, which is where a run's cost actually comes from: seven rules over
+360 KB of source is 2.4 MB of reading. Wanting it means the rule's glob
+matches and its `applies`, if it has one, says the file could break it, so a
+rule that filters shrinks this number rather than the count of rules. On top
+of that each call pays for
 the agent's own system prompt and for whatever it re-reads as it works,
 neither of which is knowable from here.
 
