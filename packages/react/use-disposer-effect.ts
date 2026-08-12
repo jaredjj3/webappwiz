@@ -20,7 +20,14 @@ export function useDisposerEffect(
 ): void {
 	useEffect(() => {
 		const disposer = new Disposer();
-		effect(disposer);
+		try {
+			effect(disposer);
+		} catch (error) {
+			// React only installs the cleanup below if this function returns, so a
+			// throw would strand whatever the callback registered before it.
+			disposer.dispose();
+			throw error;
+		}
 		return () => {
 			disposer.dispose();
 		};
