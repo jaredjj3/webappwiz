@@ -2,6 +2,7 @@
 // package.json exports, not a barrel sitting inside an interface's directory
 export type { ExternalStore } from "./external-store/external-store";
 export { ReactiveExternalStore } from "./external-store/reactive-external-store";
+export { Markdown, type MarkdownProps } from "./markdown";
 export { useDisposable } from "./use-disposable";
 export {
 	type AppendOnlyDisposer,
