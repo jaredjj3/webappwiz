@@ -108,6 +108,64 @@ describe("Analyzer", () => {
 		expect(call).toContain("# Classes");
 	});
 
+	it("reads the findings and the price out of the agent's envelope", async () => {
+		const finished: Array<number | undefined> = [];
+		ps.setCaptureOutput(
+			JSON.stringify({
+				type: "result",
+				total_cost_usd: 0.056097,
+				result:
+					'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
+			}),
+			"",
+		);
+
+		const violations = await analyzer.analyze(
+			[rule("Classes")],
+			"/p",
+			25,
+			agent,
+			{ finished: (task) => finished.push(task.cost) },
+		);
+
+		expect(violations.map((violation) => violation.id)).toEqual(["Classes"]);
+		expect(finished).toEqual([0.056097]);
+	});
+
+	it("finds the array inside the prose an envelope wraps it in", async () => {
+		ps.setCaptureOutput(
+			JSON.stringify({
+				total_cost_usd: 0.01,
+				result:
+					'Here is what I found:\n```json\n[{"rule": "Classes", "file": "src/a.ts", "line": 2, "message": "a second class"}]\n```',
+			}),
+			"",
+		);
+
+		const violations = await analyzer.analyze(
+			[rule("Classes")],
+			"/p",
+			25,
+			agent,
+		);
+
+		expect(violations.map((violation) => violation.line)).toEqual([2]);
+	});
+
+	it("reports no price for an agent that answers with the bare array", async () => {
+		const finished: Array<number | undefined> = [];
+		ps.setCaptureOutput(
+			'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "a second class"}]',
+			"",
+		);
+
+		await analyzer.analyze([rule("Classes")], "/p", 25, agent, {
+			finished: (task) => finished.push(task.cost),
+		});
+
+		expect(finished).toEqual([undefined]);
+	});
+
 	it("labels what the agent reports with the rule it says was broken", async () => {
 		ps.setCaptureOutput(
 			'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',

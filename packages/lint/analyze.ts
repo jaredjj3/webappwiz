@@ -45,6 +45,12 @@ export interface Finished {
 	violations: Violation[];
 	/** How long this task's agent took. */
 	took: Duration;
+	/**
+	 * Dollars this task's call was billed, straight from the agent rather than
+	 * priced here. Undefined for an agent that does not report one, which is any
+	 * `--exec` command: reports leave the money off rather than guess it.
+	 */
+	cost?: number;
 	done: number;
 	total: number;
 }
@@ -55,11 +61,18 @@ export interface Agent {
 	label: string;
 }
 
-/** The models `--agent` names, so a run can pick one without a command. */
+/**
+ * The models `--agent` names, so a run can pick one without a command.
+ *
+ * `--output-format json` wraps the answer in an envelope that also carries what
+ * the call was billed, which is the only place a real dollar figure comes from:
+ * there is no price list to fetch, and pricing tokens ourselves would miss the
+ * agent's own system prompt, which is most of what a small call costs.
+ */
 export const AGENTS: Record<string, string[]> = {
-	haiku: ["claude", "-p", "--model", "haiku"],
-	sonnet: ["claude", "-p", "--model", "sonnet"],
-	opus: ["claude", "-p", "--model", "opus"],
+	haiku: ["claude", "-p", "--output-format", "json", "--model", "haiku"],
+	sonnet: ["claude", "-p", "--output-format", "json", "--model", "sonnet"],
+	opus: ["claude", "-p", "--output-format", "json", "--model", "opus"],
 };
 
 /** The two ways to say what runs a task, of which a caller passes one. */
@@ -157,13 +170,14 @@ export class Analyzer {
 		const found = await Promise.all(
 			tasks.map(async (task) => {
 				const started = this.clock.now();
-				const violations = await this.run(task, dir, agent);
+				const { violations, cost } = await this.run(task, dir, agent);
 				done += 1;
 				on.finished?.({
 					glob: task.glob,
 					rules: task.rules.map((rule) => rule.id),
 					violations,
 					took: this.clock.now().subtract(started),
+					cost,
 					done,
 					total: tasks.length,
 				});
@@ -235,7 +249,7 @@ export class Analyzer {
 		task: Task,
 		dir: string,
 		agent: Agent,
-	): Promise<Violation[]> {
+	): Promise<{ violations: Violation[]; cost?: number }> {
 		const argv = [...agent.argv, task.prompt];
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(argv, {
 			cwd: dir,
@@ -244,17 +258,17 @@ export class Analyzer {
 			this.log.error(
 				`agent exited ${exitCode} on ${task.glob}: ${stderr.trim() || "no stderr"}`,
 			);
-			return [];
+			return { violations: [] };
 		}
 		const reported = parse(stdout);
 		if (reported === null) {
 			this.log.error(
 				`agent returned no JSON array on ${task.glob}: ${stdout.trim().slice(0, 200)}`,
 			);
-			return [];
+			return { violations: [] };
 		}
 		const violations: Violation[] = [];
-		for (const report of reported) {
+		for (const report of reported.reports) {
 			const rule = task.rules.find((candidate) => candidate.id === report.rule);
 			if (!rule) {
 				// Aloud, not dropped in silence: a finding filed under a misspelled
@@ -280,7 +294,7 @@ export class Analyzer {
 				code: (await this.source(file))[report.line - 1]?.trim() ?? "",
 			});
 		}
-		return violations.sort(cmp);
+		return { violations: violations.sort(cmp), cost: reported.cost };
 	}
 
 	private source(file: string): Promise<string[]> {
@@ -343,22 +357,69 @@ export class Analyzer {
 	}
 }
 
+/** One violation as the agent filed it, before it is checked against the guide. */
+interface Report {
+	rule: string;
+	file: string;
+	line: number;
+	message: string;
+}
+
+/**
+ * What an agent's stdout yielded: the violations it filed, and what the call
+ * cost when the agent is one that says.
+ */
+function parse(stdout: string): { reports: Report[]; cost?: number } | null {
+	// The envelope first: under --output-format json the whole of stdout is an
+	// object whose "result" holds the answer, so scanning stdout for brackets
+	// would find one inside the envelope rather than the agent's array.
+	const envelope = wrapper(stdout);
+	const reports = array(envelope?.result ?? stdout);
+	return reports === null ? null : { reports, cost: envelope?.total_cost_usd };
+}
+
+/**
+ * The `--output-format json` envelope, or undefined for stdout that is not one:
+ * an `--exec` command answers with the array itself, and is priced by nobody.
+ */
+function wrapper(
+	stdout: string,
+): { result: string; total_cost_usd?: number } | undefined {
+	let value: unknown;
+	try {
+		value = JSON.parse(stdout);
+	} catch {
+		return undefined;
+	}
+	if (
+		typeof value !== "object" ||
+		value === null ||
+		!("result" in value) ||
+		typeof value.result !== "string"
+	) {
+		return undefined;
+	}
+	const cost = "total_cost_usd" in value ? value.total_cost_usd : undefined;
+	return {
+		result: value.result,
+		total_cost_usd: typeof cost === "number" ? cost : undefined,
+	};
+}
+
 /**
  * The agent's array, or null when there isn't one. Agents wrap their answer in
  * prose or a fence often enough that finding the outermost brackets beats
- * insisting the whole of stdout parse.
+ * insisting the whole of the text parse.
  */
-function parse(
-	stdout: string,
-): Array<{ rule: string; file: string; line: number; message: string }> | null {
-	const start = stdout.indexOf("[");
-	const end = stdout.lastIndexOf("]");
+function array(text: string): Report[] | null {
+	const start = text.indexOf("[");
+	const end = text.lastIndexOf("]");
 	if (start === -1 || end < start) {
 		return null;
 	}
 	let value: unknown;
 	try {
-		value = JSON.parse(stdout.slice(start, end + 1));
+		value = JSON.parse(text.slice(start, end + 1));
 	} catch {
 		return null;
 	}
@@ -367,14 +428,7 @@ function parse(
 	}
 	// A malformed element is dropped rather than printed as "undefined:NaN".
 	return value.filter(
-		(
-			violation,
-		): violation is {
-			rule: string;
-			file: string;
-			line: number;
-			message: string;
-		} =>
+		(violation): violation is Report =>
 			typeof violation === "object" &&
 			violation !== null &&
 			typeof violation.rule === "string" &&

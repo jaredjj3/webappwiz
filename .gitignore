@@ -27,6 +27,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
+# what the last lint run cost, which calibrates the next estimate
+.wiz
+
 # IntelliJ based IDEs
 .idea
 

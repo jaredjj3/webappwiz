@@ -186,8 +186,12 @@ describe("LintCommands", () => {
 
 		await commands(oneRule).analyze(analyzing);
 
-		expect(ps.getCalls()[0]).toStartWith("claude -p --model haiku ");
-		expect(printed()).toContain("using: claude -p --model haiku");
+		expect(ps.getCalls()[0]).toStartWith(
+			"claude -p --output-format json --model haiku ",
+		);
+		expect(printed()).toContain(
+			"using: claude -p --output-format json --model haiku",
+		);
 	});
 
 	it("runs an --exec command through a shell instead", async () => {
@@ -366,6 +370,8 @@ describe("LintCommands", () => {
 		await commands(oneRule).analyze({ ...analyzing, since: "main" });
 
 		expect(printed()).toContain("nothing has changed since main");
-		expect(ps.getCalls()).not.toContain("claude -p --model haiku");
+		expect(ps.getCalls()).not.toContain(
+			"claude -p --output-format json --model haiku",
+		);
 	});
 });

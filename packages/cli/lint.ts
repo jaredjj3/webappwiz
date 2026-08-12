@@ -14,8 +14,10 @@ import type { Logger } from "@webappwiz/log";
 import type { Fs, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
 import { changed } from "./changed";
+import { calibrate, floor, overheads, predict } from "./cost";
 import {
 	count,
+	estimate,
 	finished,
 	overBudget,
 	planned,
@@ -221,13 +223,31 @@ export class LintCommands {
 			const files = new Set(tasks.flatMap((task) => task.files)).size;
 			// No budget check: being asked to approve a number is what running
 			// --estimate is instead of.
-			this.log.info(
-				planned(files, rules.length, tasks.length, estimated(tasks)),
-			);
+			for (const line of estimate(
+				files,
+				rules.length,
+				tasks.length,
+				estimated(tasks),
+				await overheads(this.fs, this.ps.cwd()),
+			)) {
+				this.log.info(line);
+			}
 			return;
 		}
 		const agent = agentCommand(opts);
+		// Against where wiz was run rather than the directory being analyzed: what
+		// a call costs over its files is a fact about this project, and analyzing
+		// one package of it should leave the measurement where the next run of any
+		// scope will find it.
+		const root = this.ps.cwd();
+		const measured = await overheads(this.fs, root);
 		const started = this.clock.now();
+		// What the plan predicted and what the agents were billed, which together
+		// are the calibration this run leaves behind for the next --estimate.
+		let predicted = 0;
+		let calls = 0;
+		let spent = 0;
+		let billed = false;
 		const violations = await analyzer.analyze(
 			rules,
 			dir,
@@ -236,12 +256,17 @@ export class LintCommands {
 			{
 				planned: async (tasks) => {
 					const files = new Set(tasks.flatMap((task) => task.files)).size;
-					const estimate = estimated(tasks);
+					predicted = estimated(tasks);
+					calls = tasks.length;
 					this.log.info(
-						planned(files, rules.length, tasks.length, estimate, agent.label),
+						planned(files, rules.length, calls, predicted, agent.label),
 					);
-					if (estimate > opts.budget) {
-						this.log.info(overBudget(estimate, opts.budget));
+					if (predicted > opts.budget) {
+						const cost =
+							opts.agent === undefined
+								? undefined
+								: predict(opts.agent, predicted, calls, measured);
+						this.log.info(overBudget(predicted, opts.budget, cost));
 						if (!(await this.confirm("Run anyway?"))) {
 							// Throwing here is what cancels: analyze has spawned nothing yet.
 							throw new Error("over budget");
@@ -249,6 +274,10 @@ export class LintCommands {
 					}
 				},
 				finished: (task) => {
+					if (task.cost !== undefined) {
+						spent += task.cost;
+						billed = true;
+					}
 					for (const line of finished(task)) {
 						this.log.info(line);
 					}
@@ -257,12 +286,64 @@ export class LintCommands {
 			only,
 		);
 		this.log.info("");
-		this.log.info(summary(violations, this.clock.now().subtract(started)));
+		this.log.info(
+			summary(
+				violations,
+				this.clock.now().subtract(started),
+				billed ? spent : undefined,
+			),
+		);
+		await this.record(
+			opts.agent,
+			root,
+			predicted,
+			calls,
+			billed ? spent : undefined,
+		);
 		const errors = violations.filter(
 			(violation) => violation.level === "error",
 		).length;
 		if (errors > 0) {
 			throw new Error(count(errors, "lint error"));
+		}
+	}
+
+	/**
+	 * Measures what one call cost over the files it was handed and leaves that
+	 * behind, so the next `--estimate` on this agent has something better than a
+	 * floor. Per call rather than per token, because that is how the charge
+	 * falls: an agent pays for its own system prompt once per spawn, whatever it
+	 * was asked to read, so a figure taken from a two-call run still holds for a
+	 * fifteen-call one.
+	 *
+	 * A run nobody priced records nothing, and a failed write is said aloud
+	 * rather than thrown: the agents have already been paid for by this point,
+	 * and losing the measurement costs the next estimate accuracy, not the run.
+	 */
+	private async record(
+		agent: string | undefined,
+		root: string,
+		predicted: number,
+		calls: number,
+		spent?: number,
+	): Promise<void> {
+		if (agent === undefined || spent === undefined || calls <= 0) {
+			return;
+		}
+		const listed = floor(agent, predicted);
+		if (listed === undefined) {
+			return;
+		}
+		const call = (spent - listed) / calls;
+		if (call <= 0) {
+			// Billed less than the files alone were priced at, so this run says
+			// nothing about the overhead. Leave any earlier measurement alone.
+			return;
+		}
+		try {
+			await calibrate(this.fs, root, agent, call);
+		} catch (error) {
+			this.log.error(`could not record what this run cost: ${error}`);
 		}
 	}
 

@@ -4,9 +4,15 @@ import { agentCommand } from "./analyze";
 describe("agentCommand", () => {
 	it("spawns claude directly for a model shorthand", () => {
 		expect(agentCommand({ agent: "haiku" })).toEqual({
-			argv: ["claude", "-p", "--model", "haiku"],
-			label: "claude -p --model haiku",
+			argv: ["claude", "-p", "--output-format", "json", "--model", "haiku"],
+			label: "claude -p --output-format json --model haiku",
 		});
+	});
+
+	it("asks a model shorthand for the envelope that carries what it cost", () => {
+		for (const agent of ["haiku", "sonnet", "opus"]) {
+			expect(agentCommand({ agent }).argv).toContain("--output-format");
+		}
 	});
 
 	it("refuses to pick an agent when nothing names one", () => {

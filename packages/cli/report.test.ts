@@ -3,12 +3,14 @@ import type { Violation } from "@webappwiz/lint";
 import { color } from "@webappwiz/log";
 import { Duration } from "@webappwiz/time";
 import {
+	estimate,
 	finding,
 	finished,
 	overBudget,
 	planned,
 	summary,
 	tokens,
+	usd,
 } from "./report";
 
 describe("report", () => {
@@ -133,5 +135,73 @@ describe("report", () => {
 			"! this run reads at least 589K tokens, over the 200K budget, " +
 				"and the real cost will be higher. Raise it with --budget.",
 		);
+	});
+
+	it("quotes the money too when the agent over budget has a price", () => {
+		expect(color.strip(overBudget(589_000, 200_000, 1.767))).toBe(
+			"! this run reads at least 589K tokens, over the 200K budget, " +
+				"and the real cost will be higher. That is $1.767 or more. " +
+				"Raise it with --budget.",
+		);
+	});
+
+	it("spends two decimals on a run's total and four on a single call", () => {
+		expect(usd(12.3)).toBe("$12.30");
+		expect(usd(0.056097)).toBe("$0.0561");
+	});
+
+	it("says what a task cost beside how long it took", () => {
+		const lines = finished({
+			glob: "**/*.ts",
+			rules: ["doc-comments-address-users"],
+			violations: [],
+			took: Duration.secs(8.25),
+			cost: 0.0912,
+			done: 2,
+			total: 6,
+		});
+
+		expect(plain(lines)).toEqual([
+			"✓ [2/6] **/*.ts (1 rule): clean in 8.3s  $0.0912",
+		]);
+	});
+
+	it("totals what a run cost under the tally", () => {
+		expect(color.strip(summary([], Duration.secs(3), 1.62))).toBe(
+			"✓ no violations in 3.0s  $1.62 total",
+		);
+	});
+
+	it("prices a plan against every agent, floor first", () => {
+		const lines = plain(estimate(203, 7, 52, 480_000, {}));
+
+		expect(lines[0]).toBe(
+			"checking 203 files against 7 rules in 52 agent calls, reading 480K+ tokens",
+		);
+		expect(lines[2]).toBe("  AGENT   FLOOR");
+		expect(lines[3]).toBe("  haiku   $0.48+");
+		expect(lines[4]).toBe("  sonnet  $1.44+");
+		expect(lines[5]).toBe("  opus    $2.40+");
+	});
+
+	it("says a run is what turns the floor into a measurement", () => {
+		expect(plain(estimate(203, 7, 52, 480_000, {})).join("\n")).toContain(
+			"Run one of these and the estimate is measured against it next time.",
+		);
+	});
+
+	it("adds the measured per-call overhead to the floor, once per call", () => {
+		const lines = plain(estimate(203, 7, 52, 480_000, { haiku: 0.065 }));
+
+		expect(lines[2]).toBe("  AGENT   FLOOR   MEASURED");
+		// $0.48 of files, and 52 calls charging $0.065 each on top of them
+		expect(lines[3]).toBe("  haiku   $0.48+  $3.86");
+	});
+
+	it("leaves the measurement blank for an agent no run has priced", () => {
+		const lines = plain(estimate(203, 7, 52, 480_000, { haiku: 0.065 }));
+
+		expect(lines[4]).toBe("  sonnet  $1.44+");
+		expect(lines[5]).toBe("  opus    $2.40+");
 	});
 });
