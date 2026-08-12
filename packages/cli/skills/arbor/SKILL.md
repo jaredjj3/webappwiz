@@ -110,6 +110,21 @@ mechanically) do not merge. Instead:
 3. Print the output of `arbor path <task>` so the human can find the worktree
    and view the work.
 
+Never ask a human to picture a change. Leave something they can look at, and
+print its **absolute path** so it is one click from the terminal. For anything
+visual or UX (a page, a component, CLI output, a rendered file), that means a
+screenshot: if starting the thing is cheap (a dev server, a script, a command
+that prints), just start it, capture it, and say where the image is. If it is
+expensive or has side effects (a full build, a deploy, anything touching a real
+service), ask before starting it, and say what it will cost.
+
+> Screenshot of the new task card:
+> `/Users/you/repo-arbor/mytask/.arbor-shots/task-card.png`
+> Dev server still up at http://localhost:5173 if you want to click around.
+
+A screenshot is not a substitute for the question: `## Blocked` still ends in
+something a human can answer with a yes or a sentence.
+
 If you claim a tree whose `TODO.md` has a `## Blocked` section that has not been
 answered, do not resume work or merge: ask the user the open question and
 wait for their answer first.
