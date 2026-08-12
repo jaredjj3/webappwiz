@@ -99,9 +99,15 @@ task, watch its status for that reason, never its lease.
 
 ### Escalation
 
-If the work needs verification that tests alone can't provide (visual or UX
-changes, external services, destructive migrations, anything you can't confirm
-mechanically) do not merge. Instead:
+If the work needs verification you can't do mechanically (external services,
+destructive migrations, anything tests can't confirm) do not merge.
+
+Visual and UX work escalates only when it is both non-trivial and untested. A
+copy fix, a color, a spacing tweak, a renamed label: merge it. A new screen, a
+reworked layout, a changed interaction, anything whose look or behavior no test
+pins down: escalate. If tests cover it, merge it.
+
+When you do escalate:
 
 1. `arbor escalate <reason>`.
 2. Under `## Blocked` in `ARBOR.md`, state exactly what needs verifying and the
