@@ -25,7 +25,7 @@ creating anything:
 
 1. List the files and directories you expect to touch.
 2. `arbor ls`. For each task in flight, `arbor show <task>`: it prints that
-   task's state and its `TODO.md` without taking the lease, so looking cannot
+   task's state and its `ARBOR.md` without taking the lease, so looking cannot
    disturb the agent driving it. For the files it has actually changed:
    `git -C "$(arbor path <task>)" diff --name-only main...task/<task>`.
 3. Compare with your list. If nothing overlaps, carry on.
@@ -92,8 +92,8 @@ task, watch its status for that reason, never its lease.
    the branch the work should land on, pass it as `--base` to every task you
    create for that request. Otherwise omit `--base`; never guess a base from
    the currently checked-out branch.
-2. Write `TODO.md` at the worktree root before starting (see below).
-3. Do the work; commit with git (arbor never commits for you). Keep `TODO.md`
+2. Write `ARBOR.md` at the worktree root before starting (see below).
+3. Do the work; commit with git (arbor never commits for you). Keep `ARBOR.md`
    current as you go.
 4. `arbor merge`. On failure, act on the exit code below and merge again.
 
@@ -104,7 +104,7 @@ changes, external services, destructive migrations, anything you can't confirm
 mechanically) do not merge. Instead:
 
 1. `arbor escalate <reason>`.
-2. Under `## Blocked` in `TODO.md`, state exactly what needs verifying and the
+2. Under `## Blocked` in `ARBOR.md`, state exactly what needs verifying and the
    question the human must answer, specific enough that a yes/no or a short
    answer unblocks the task.
 3. Print the output of `arbor path <task>` so the human can find the worktree
@@ -125,7 +125,7 @@ service), ask before starting it, and say what it will cost.
 A screenshot is not a substitute for the question: `## Blocked` still ends in
 something a human can answer with a yes or a sentence.
 
-If you claim a tree whose `TODO.md` has a `## Blocked` section that has not been
+If you claim a tree whose `ARBOR.md` has a `## Blocked` section that has not been
 answered, do not resume work or merge: ask the user the open question and
 wait for their answer first.
 
@@ -151,16 +151,16 @@ The emoji lives in the heading only: ✅ for a merge, ❌ for a task you
 This replaces prose about the merge, not the rest of your report: anything
 else worth saying goes after it.
 
-## TODO.md
+## ARBOR.md
 
-Your session can die at any moment. Keep a `TODO.md` at the worktree root so
+Your session can die at any moment. Keep an `ARBOR.md` at the worktree root so
 another agent with zero context can `arbor claim` the task and continue. It is
 gitignored: never commit it, and never mention it in a commit message.
 
 Write it for a stranger: the task, what you have done, what is left, and
 anything you learned that is not obvious from the diff (files that matter,
 decisions made, dead ends, commands to verify). Update it as you finish steps,
-not just at the end. An unupdated TODO.md is worse than none.
+not just at the end. An unupdated ARBOR.md is worse than none.
 
 The shape is fixed, so anyone reading it knows where to look:
 
