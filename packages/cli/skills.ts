@@ -13,6 +13,17 @@ export function versionOf(md: string): string | null {
 	return frontmatter.match(/^version:\s*(.+)$/m)?.[1]?.trim() ?? null;
 }
 
+/** The project a skills command works on. */
+export interface ProjectOptions {
+	/** Its root: the directory holding `.agents/skills`. */
+	dir: string;
+}
+
+export interface AddOptions extends ProjectOptions {
+	/** The skill to install, as `skills ls` names it. */
+	skill: string;
+}
+
 /** The `skills` command group: what agent skills there are, and which of them
  * a project holds in `.agents/skills`. */
 export class Skills {
@@ -26,7 +37,7 @@ export class Skills {
 	 * project holds is the only thing `add` and `update` cannot tell it, so
 	 * that is what this is for.
 	 */
-	async ls(opts: { dir: string }): Promise<void> {
+	async ls(opts: ProjectOptions): Promise<void> {
 		const rows = [["SKILL", "SHIPS", "INSTALLED"]];
 		let stale = 0;
 		for (const name of await this.fs.readdir(source)) {
@@ -50,7 +61,7 @@ export class Skills {
 	}
 
 	/** Adds a skill a project does not have yet. */
-	async add(opts: { skill: string; dir: string }): Promise<void> {
+	async add(opts: AddOptions): Promise<void> {
 		const available = await this.fs.readdir(source);
 		if (!available.includes(opts.skill)) {
 			throw new Error(
@@ -65,7 +76,7 @@ export class Skills {
 	 * project's business, so this never adds one: a skill someone chose not to
 	 * install should not arrive by way of an update.
 	 */
-	async update(opts: { dir: string }): Promise<void> {
+	async update(opts: ProjectOptions): Promise<void> {
 		const installed = await this.fs
 			.readdir(`${opts.dir}/.agents/skills`)
 			.catch((): string[] => []); // no .agents/skills at all is just "none installed"

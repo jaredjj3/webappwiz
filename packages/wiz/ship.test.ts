@@ -49,7 +49,7 @@ describe("ship", () => {
 	it("refuses a bump nobody has heard of", async () => {
 		const release = fakeRelease(plan([]));
 		await expect(
-			ship({ bump: "sideways" }, log, ps, release, fix),
+			ship(log, ps, release, fix, { bump: "sideways" }),
 		).rejects.toThrow('unknown version bump "sideways"');
 		expect(release.plans).toBe(0);
 	});
@@ -57,7 +57,7 @@ describe("ship", () => {
 	it("runs the command a problem carries, then plans again", async () => {
 		const release = fakeRelease(plan([NPM_AUTH]), plan([NPM_AUTH]));
 		await expect(
-			ship({ bump: "patch" }, log, ps, release, fix),
+			ship(log, ps, release, fix, { bump: "patch" }),
 		).rejects.toThrow("not ready to release");
 		expect(ps.getCalls()).toEqual(["npm login"]);
 		expect(release.plans).toBe(2);
@@ -68,7 +68,7 @@ describe("ship", () => {
 		const dirty = { kind: "dirty" as const, message: "uncommitted changes" };
 		const release = fakeRelease(plan([dirty]));
 		await expect(
-			ship({ bump: "patch" }, log, ps, release, fix),
+			ship(log, ps, release, fix, { bump: "patch" }),
 		).rejects.toThrow("not ready to release");
 		expect(ps.getCalls()).toEqual([]);
 		expect(release.plans).toBe(1);

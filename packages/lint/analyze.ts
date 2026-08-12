@@ -62,15 +62,20 @@ export const AGENTS: Record<string, string[]> = {
 	opus: ["claude", "-p", "--model", "opus"],
 };
 
+/** The two ways to say what runs a task, of which a caller passes one. */
+export interface AgentOptions {
+	/** A model to ask, keyed into `AGENTS`. */
+	agent?: string;
+	/** A command to hand the prompt to instead. */
+	exec?: string;
+}
+
 /**
  * Resolves `--agent` and `--exec`, which are alternatives: name a model, or
  * give a command to run it yourself. Throws if you give both, neither, or a
  * model that is not one of `AGENTS`.
  */
-export const agentCommand = (opts: {
-	agent?: string;
-	exec?: string;
-}): Agent => {
+export const agentCommand = (opts: AgentOptions): Agent => {
 	if (opts.exec !== undefined) {
 		if (opts.agent !== undefined) {
 			throw new Error("--agent and --exec both name an agent, so pass one");

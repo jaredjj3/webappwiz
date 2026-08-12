@@ -27,6 +27,42 @@ import { table } from "./table";
 /** Asked before a run spends more than it was allowed to. */
 export type Confirm = (question: string) => boolean | Promise<boolean>;
 
+/** Which guide to read, which every lint command needs first. */
+export interface GuideOptions {
+	/** The guide module to load, as `lint ls` takes it. */
+	rules: string;
+}
+
+export interface AuditOptions extends GuideOptions {
+	/** Whether a warning fails the run, as an error always does. */
+	strict: boolean;
+	/** The model to ask, one of `AGENTS`; `exec` instead names a command. */
+	agent?: string;
+	exec?: string;
+}
+
+export interface ShowOptions extends GuideOptions {
+	/** The rule to print, as `lint ls` lists it. */
+	id: string;
+}
+
+export interface AnalyzeOptions extends GuideOptions {
+	/** The directory to check, and what paths in the report are relative to. */
+	dir: string;
+	agent?: string;
+	exec?: string;
+	/** Print the prompts and spawn nothing. */
+	prompt?: boolean;
+	/** Print what a run would read and stop. */
+	estimate?: boolean;
+	/** Files per task. */
+	chunk: number;
+	/** Narrows the run to what git says has changed since this ref. */
+	since?: string;
+	/** Tokens a run may read before it asks whether you meant it. */
+	budget: number;
+}
+
 /** What a whole plan reads: every task's prompt and the files it names. */
 const estimated = (tasks: Task[]): number =>
 	tokens(tasks.reduce((bytes, task) => bytes + task.bytes, 0));
@@ -61,12 +97,7 @@ export class LintCommands {
 	 * could take over is the question worth asking, and a guide that will not
 	 * compile is the thing that stops it being asked.
 	 */
-	async audit(opts: {
-		rules: string;
-		strict: boolean;
-		agent?: string;
-		exec?: string;
-	}): Promise<void> {
+	async audit(opts: AuditOptions): Promise<void> {
 		if (opts.agent === undefined && opts.exec === undefined) {
 			throw new Error(
 				"audit asks an agent, so name one: --agent " +
@@ -92,7 +123,7 @@ export class LintCommands {
 	}
 
 	/** Lists a guide's rules, one row each, ids first for citing. */
-	async ls(opts: { rules: string }): Promise<void> {
+	async ls(opts: GuideOptions): Promise<void> {
 		const { rules } = await this.sound(opts.rules);
 		const rows = [["ID", "RULE", "LEVEL", "FILES", "CHECK", "GOOD", "BAD"]];
 		for (const rule of rules) {
@@ -115,7 +146,7 @@ export class LintCommands {
 	 * Prints one rule in full: what it covers, and the document an analysis
 	 * agent is given, verbatim. Take the id from `lint ls` or from a finding.
 	 */
-	async show(opts: { id: string; rules: string }): Promise<void> {
+	async show(opts: ShowOptions): Promise<void> {
 		const { rules } = await this.sound(opts.rules);
 		const rule = rules.find((candidate) => candidate.id === opts.id);
 		if (!rule) {
@@ -146,17 +177,7 @@ export class LintCommands {
 	 * prints that size and stops, which is the answer to "what would this cost"
 	 * without having to guess a budget low enough to be refused.
 	 */
-	async analyze(opts: {
-		rules: string;
-		dir: string;
-		agent?: string;
-		exec?: string;
-		prompt?: boolean;
-		estimate?: boolean;
-		chunk: number;
-		since?: string;
-		budget: number;
-	}): Promise<void> {
+	async analyze(opts: AnalyzeOptions): Promise<void> {
 		if (
 			opts.estimate &&
 			(opts.agent !== undefined || opts.exec !== undefined || opts.prompt)

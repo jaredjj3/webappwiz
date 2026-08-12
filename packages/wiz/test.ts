@@ -1,11 +1,12 @@
 import { dirname } from "node:path";
 import type { Fs, Ps } from "@webappwiz/sys";
 
-export async function test(
-	opts: { package: string },
-	fs: Fs,
-	ps: Ps,
-): Promise<void> {
+export interface TestOptions {
+	/** One package to test, by name; empty runs the whole workspace. */
+	package: string;
+}
+
+export async function test(fs: Fs, ps: Ps, opts: TestOptions): Promise<void> {
 	// the tree you are standing in, not the one `wiz` was installed from: a git
 	// worktree has its own copy of both, and testing the other one passes while
 	// saying nothing about your work

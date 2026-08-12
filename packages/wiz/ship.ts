@@ -3,13 +3,18 @@ import { isBump, type Plan, type Ship } from "@webappwiz/ship";
 import type { Ps } from "@webappwiz/sys";
 import type { Fix } from "./fix";
 
+export interface ShipOptions {
+	/** How far to move the version: patch, minor or major. */
+	bump: string;
+}
+
 /** Releases every package in the workspace together, at one version. */
 export async function ship(
-	opts: { bump: string },
 	log: Logger,
 	ps: Ps,
 	release: Pick<Ship, "plan" | "run">,
 	fix: Pick<Fix, "run">,
+	opts: ShipOptions,
 ): Promise<void> {
 	if (!isBump(opts.bump)) {
 		throw new Error(

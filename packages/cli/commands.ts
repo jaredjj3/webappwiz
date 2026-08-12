@@ -40,7 +40,7 @@ export async function commands(
 			default: version,
 			description: "version to pin to",
 		})
-		.action((opts) => update(opts, log, fs));
+		.action((opts) => update(log, fs, opts));
 
 	const lint = app
 		.group("lint")

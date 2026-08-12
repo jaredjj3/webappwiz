@@ -2,7 +2,10 @@ import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import type { Schema } from "@webappwiz/t";
 import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 
-type Action<O, C> = (opts: O, ctx: C) => unknown;
+// `parsed` is the whole command line: the positionals `arg()` declares and the
+// flags `option()` does, in one object. Not a settings bag the caller can drop,
+// so it leads, and the context the middleware built follows it.
+type Action<O, C> = (parsed: O, ctx: C) => unknown;
 
 type OptionMeta = {
 	name: string;

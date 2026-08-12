@@ -7,6 +7,12 @@ const TAG = "# webappwiz";
 
 const binDir = resolve(import.meta.dir, "../../bin");
 
+/** Which way to move `bin/`: exactly one of these is set. */
+export interface PathOptions {
+	add: boolean;
+	remove: boolean;
+}
+
 export class Path {
 	constructor(
 		private readonly log: Logger,
@@ -15,7 +21,7 @@ export class Path {
 	) {}
 
 	/** Exactly one of `add` or `remove` must be set; anything else throws. */
-	async run(opts: { add: boolean; remove: boolean }): Promise<void> {
+	async run(opts: PathOptions): Promise<void> {
 		if (opts.add === opts.remove) {
 			throw new Error("must specify one of --add or --remove");
 		}

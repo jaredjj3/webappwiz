@@ -52,7 +52,7 @@ wiz
 			new Github(ps),
 		);
 		const fix = new Fix(log, ps, new Lint(log, fs, ps));
-		await ship(opts, log, ps, release, fix);
+		await ship(log, ps, release, fix, opts);
 	});
 
 wiz
@@ -62,7 +62,7 @@ wiz
 		default: "",
 		description: "only test this package (default: all)",
 	})
-	.action((opts) => test(opts, fs, ps));
+	.action((opts) => test(fs, ps, opts));
 
 await commands(
 	wiz.group("cli").description("run @webappwiz/cli against a project"),

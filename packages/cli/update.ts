@@ -9,15 +9,23 @@ import { type Fs, walk } from "@webappwiz/sys";
  */
 const DEPENDENCY = /("@webappwiz\/[^"]+"\s*:\s*")(?!workspace:)[^"]*(")/g;
 
+/** Which tree to pin, and to what. */
+export interface UpdateOptions {
+	/** The directory to scan recursively for manifests. */
+	dir: string;
+	/** The version every `@webappwiz/*` entry is set to. */
+	version: string;
+}
+
 /**
  * Pins every `@webappwiz/*` dependency under `dir` to one version, so a project
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
  */
 export async function update(
-	opts: { dir: string; version: string },
 	log: Logger,
 	fs: Fs,
+	opts: UpdateOptions,
 ): Promise<void> {
 	let count = 0;
 	for await (const path of walk(fs, opts.dir)) {

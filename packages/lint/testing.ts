@@ -14,18 +14,18 @@ export const ruleDoc = (name: string): string =>
 		.code("ts", "class Foo {}\nclass Bar {}")
 		.toString();
 
+/** Whatever a test wants to differ from a plain rule. */
+export interface TestRuleOptions {
+	files?: string;
+	level?: Level;
+	document?: string;
+	check?: (text: string) => Finding[];
+	partial?: boolean;
+}
+
 /** A rule for tests to hand to a guide, a linter or an analyzer. Its document
  * is sound unless the test hands one that is not. */
-export const testRule = (
-	id: string,
-	opts: {
-		files?: string;
-		level?: Level;
-		document?: string;
-		check?: (text: string) => Finding[];
-		partial?: boolean;
-	} = {},
-): Rule => ({
+export const testRule = (id: string, opts: TestRuleOptions = {}): Rule => ({
 	id,
 	files: opts.files ?? "**/*.ts",
 	level: opts.level ?? "error",
