@@ -3,7 +3,7 @@ import type { Finding } from "../finding";
 
 /**
  * One rule of a guide: the files it applies to, the document a human reads and
- * an analysis agent receives verbatim, and the check enforcing it when a
+ * an agent receives verbatim, and the check enforcing it when a
  * linter can decide it.
  *
  * A rule with no check is judged by an agent; a `partial` check is both, the

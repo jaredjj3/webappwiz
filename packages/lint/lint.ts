@@ -8,7 +8,7 @@ import type { Rule } from "./rule/rule";
 /**
  * Lints every git-tracked file a rule's glob wants and reports one line per
  * finding, `path:line:column rule message`. Only rules with checks run here;
- * the agent-judged rest of the guide is `analyze`'s job, on demand.
+ * the agent-judged rest of the guide is `judge`'s job, on demand.
  */
 export class Lint {
 	constructor(

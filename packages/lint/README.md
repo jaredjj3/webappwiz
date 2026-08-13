@@ -114,7 +114,7 @@ one the marker excuses nothing.
 A marker covers itself, the line under it, and everything indented under that
 line, so above a declaration it covers the whole declaration.
 `lint-ignore-file <id>: <reason>` covers the file instead. The linter and the
-analysis agents honor the same markers.
+agents honor the same markers.
 
 ## Linting
 

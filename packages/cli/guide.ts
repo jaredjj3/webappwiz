@@ -244,8 +244,8 @@ export class GuideCommands {
 			return;
 		}
 		const agent = agentCommand(opts);
-		// Against where wiz was run rather than the directory being analyzed: what
-		// a call costs over its files is a fact about this project, and analyzing
+		// Against where wiz was run rather than the directory being judged: what
+		// a call costs over its files is a fact about this project, and judging
 		// one package of it should leave the measurement where the next run of any
 		// scope will find it.
 		const root = this.ps.cwd();

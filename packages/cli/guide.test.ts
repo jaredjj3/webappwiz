@@ -247,7 +247,7 @@ describe("GuideCommands", () => {
 		expect(printed()).toContain("sound: 1 rule, 0 errors, 0 warnings");
 	});
 
-	it("refuses to analyze with an unsound guide", async () => {
+	it("refuses to judge with an unsound guide", async () => {
 		const guide = defineGuide([one("just prose\n")]);
 
 		expect(commands(guide).judge(judging)).rejects.toThrow("2 errors");

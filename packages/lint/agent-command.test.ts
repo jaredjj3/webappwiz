@@ -17,7 +17,7 @@ describe("agentCommand", () => {
 
 	it("refuses to pick an agent when nothing names one", () => {
 		expect(() => agentCommand({})).toThrow(
-			"analyze runs an agent, so say which: --agent <haiku|sonnet|opus>, " +
+			"a run needs an agent, so say which: --agent <haiku|sonnet|opus>, " +
 				"--exec <command>, or --prompt to print the prompts and run nothing",
 		);
 	});

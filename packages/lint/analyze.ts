@@ -28,7 +28,7 @@ export interface Violation {
 	/** The rule's referenceable id, as `rules show` lists it. */
 	id: string;
 	level: Level;
-	/** Path as the caller would type it: the analyzed dir plus the file. */
+	/** Path as the caller would type it: the judged dir plus the file. */
 	file: string;
 	line: number;
 	/** How this code breaks the rule. Never what to do about it. */
@@ -100,9 +100,10 @@ export const agentCommand = (opts: AgentOptions): Agent => {
 	}
 	if (opts.agent === undefined) {
 		// No default model: a run costs the caller's tokens, so who spends them is
-		// theirs to say.
+		// theirs to say. Names no command: this is shared by every caller that
+		// spawns an agent, and naming one of them is how the message goes stale.
 		throw new Error(
-			"analyze runs an agent, so say which: --agent " +
+			"a run needs an agent, so say which: --agent " +
 				`<${Object.keys(AGENTS).join("|")}>, --exec <command>, ` +
 				"or --prompt to print the prompts and run nothing",
 		);

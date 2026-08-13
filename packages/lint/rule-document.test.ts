@@ -89,7 +89,7 @@ describe("RuleDocument", () => {
 		]);
 	});
 
-	it("warns about a section an analysis agent would not know to read", () => {
+	it("warns about a section an agent would not know to read", () => {
 		const doc = documented(`${good}\n## Notes\n\nAn aside.\n`);
 
 		expect(doc.diagnostics()).toEqual([
