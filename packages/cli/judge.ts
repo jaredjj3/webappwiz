@@ -1,17 +1,19 @@
 import {
-	type Agent,
-	type AgentOptions,
 	Analyzer,
-	agentCommand,
 	type Config,
 	type ConfigDiagnostic,
-	type ConfigLoader,
 	Configs,
 	Mechanizer,
 	RuleDocument,
 	type Task,
 } from "@webappwiz/judge";
 import type { Logger } from "@webappwiz/log";
+import {
+	type Agent,
+	type AgentOptions,
+	agentCommand,
+	type ConfigLoader,
+} from "@webappwiz/rules";
 import type { Fs, Glob, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
 import { changed } from "./changed";
@@ -220,10 +222,10 @@ export class JudgeCommands {
 				only,
 			})) {
 				this.log.info(
-					`=== ${task.glob}: ${task.rules.map((rule) => rule.id).join(", ")} ` +
+					`=== ${task.label}: ${task.rules.map((rule) => rule.id).join(", ")} ` +
 						`(${count(task.files.length, "file")}) ===`,
 				);
-				this.log.info(task.prompt);
+				this.log.info(analyzer.prompt(task));
 			}
 			return;
 		}

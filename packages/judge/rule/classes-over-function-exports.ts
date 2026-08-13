@@ -1,4 +1,4 @@
-import { Finding } from "../finding";
+import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./classes-over-function-exports.md" with { type: "text" };
 import type { Rule } from "./rule";
@@ -21,7 +21,7 @@ export class ClassesOverFunctionExports implements Rule {
 	// it decides only half the rule and the agent still reads the rest.
 	readonly partial = true;
 
-	check(text: string): Finding[] {
+	check(text: string): Hit[] {
 		const all = tokens(text);
 		const injecting: Token[] = [];
 		for (const [i, token] of all.entries()) {
@@ -47,11 +47,7 @@ export class ClassesOverFunctionExports implements Rule {
 			.slice(1)
 			.map(
 				(token) =>
-					new Finding(
-						token.line,
-						token.column,
-						ClassesOverFunctionExports.MESSAGE,
-					),
+					new Hit(token.line, token.column, ClassesOverFunctionExports.MESSAGE),
 			);
 	}
 

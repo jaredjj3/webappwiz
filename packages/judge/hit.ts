@@ -1,5 +1,5 @@
 /** A problem a check found, before the run stamps file and severity on it. */
-export class Finding {
+export class Hit {
 	constructor(
 		/** 1-based. */
 		readonly line: number,

@@ -1,10 +1,10 @@
-import type { Finding } from "./finding";
+import type { Hit } from "./hit";
 
 /** What a violation of a rule counts as, and what a diagnostic counts as. */
 export type Level = "error" | "warning";
 
 /** A check's finding, stamped with where it was and which rule said so. */
-export interface Diagnostic extends Finding {
+export interface Diagnostic extends Hit {
 	path: string;
 	rule: string;
 	severity: Level;

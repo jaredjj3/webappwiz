@@ -1,13 +1,9 @@
 // judge-ignore-file one-dir-per-interface: this is the package entry point named in
 // package.json exports, not a barrel sitting inside an interface's directory
 export {
-	AGENTS,
-	type Agent,
-	type AgentOptions,
 	type AnalyzeOptions,
 	Analyzer,
 	type AnalyzerEvents,
-	agentCommand,
 	DEFAULT_CHUNK,
 	type Finished,
 	type Task,
@@ -18,18 +14,13 @@ export { Checker, type FileText } from "./checker";
 export {
 	type Config,
 	type ConfigInput,
-	DEFAULT_AGENT,
-	DEFAULT_CONCURRENCY,
-	DEFAULT_CONFIG,
-	defineConfig,
+	defineJudge,
 	isConfig,
+	SECTION,
 } from "./config";
-export type { ConfigLoader } from "./config-loader/config-loader";
-export { FakeConfigLoader } from "./config-loader/fake-config-loader";
-export { ModuleConfigLoader } from "./config-loader/module-config-loader";
 export { Configs } from "./configs";
 export type { ConfigDiagnostic, Diagnostic, Level } from "./diagnostic";
-export { Finding } from "./finding";
+export { Hit } from "./hit";
 export { exemptions } from "./ignore";
 export { Mechanizer } from "./mechanize";
 export { ClassesOverFunctionExports } from "./rule/classes-over-function-exports";

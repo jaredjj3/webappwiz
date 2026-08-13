@@ -1,6 +1,10 @@
-import { type Config, DEFAULT_CONFIG } from "./config";
-import type { ConfigLoader } from "./config-loader/config-loader";
-import { ModuleConfigLoader } from "./config-loader/module-config-loader";
+import {
+	type ConfigLoader,
+	DEFAULT_CONFIG,
+	duplicates,
+	ModuleConfigLoader,
+} from "@webappwiz/rules";
+import { type Config, isConfig, SECTION } from "./config";
 import type { ConfigDiagnostic } from "./diagnostic";
 import type { Rule } from "./rule/rule";
 import { RuleDocument } from "./rule-document";
@@ -13,31 +17,33 @@ export class Configs {
 	) {}
 
 	/**
-	 * The project's config. A project without one analyzes nothing: there is no
-	 * recommended set to fall back on, because a rule that runs is a rule the
-	 * project named.
+	 * Judge's section of the project's config. A project without one analyzes
+	 * nothing: there is no recommended set to fall back on, because a rule that
+	 * runs is a rule the project named.
 	 */
 	async load(
 		path: string = DEFAULT_CONFIG,
 	): Promise<{ config: Config; diagnostics: ConfigDiagnostic[] }> {
-		const config = await this.loader.load(path);
-		return { config, diagnostics: this.diagnostics(config.rules) };
+		const section = await this.loader.load(path, SECTION);
+		if (!isConfig(section)) {
+			throw new Error(
+				`${path} must default-export a \`${SECTION}\` section: ` +
+					`\`export default { ${SECTION}: defineJudge({ rules: [...] }) }\``,
+			);
+		}
+		return { config: section, diagnostics: this.diagnostics(section.rules) };
 	}
 
 	private diagnostics(rules: Rule[]): ConfigDiagnostic[] {
 		const diagnostics = rules.flatMap((rule) =>
 			new RuleDocument(rule).diagnostics(),
 		);
-		const seen = new Set<string>();
-		for (const rule of rules) {
-			if (seen.has(rule.id)) {
-				diagnostics.push({
-					rule: rule.id,
-					severity: "error",
-					message: `duplicate rule id "${rule.id}"`,
-				});
-			}
-			seen.add(rule.id);
+		for (const id of duplicates(rules.map((rule) => rule.id))) {
+			diagnostics.push({
+				rule: id,
+				severity: "error",
+				message: `duplicate rule id "${id}"`,
+			});
 		}
 		return diagnostics;
 	}

@@ -12,8 +12,9 @@
 	},
 	"dependencies": {
 		"@webappwiz/cmd": "workspace:*",
-		"@webappwiz/log": "workspace:*",
 		"@webappwiz/judge": "workspace:*",
+		"@webappwiz/log": "workspace:*",
+		"@webappwiz/rules": "workspace:*",
 		"@webappwiz/sys": "workspace:*",
 		"@webappwiz/t": "workspace:*",
 		"@webappwiz/time": "workspace:*"

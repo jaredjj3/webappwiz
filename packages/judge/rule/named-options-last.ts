@@ -1,4 +1,4 @@
-import { Finding } from "../finding";
+import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./named-options-last.md" with { type: "text" };
 import type { Rule } from "./rule";
@@ -49,9 +49,9 @@ export class NamedOptionsLast implements Rule {
 	// parameters wanted to be one in the first place is the agent's half.
 	readonly partial = true;
 
-	check(text: string): Finding[] {
+	check(text: string): Hit[] {
 		const all = tokens(text);
-		const found: Finding[] = [];
+		const found: Hit[] = [];
 		for (const [i, token] of all.entries()) {
 			if (token.kind !== SyntaxKind.OpenParenToken) {
 				continue;
@@ -66,18 +66,14 @@ export class NamedOptionsLast implements Rule {
 					continue;
 				}
 				if (param.inline) {
-					found.push(
-						new Finding(name.line, name.column, NamedOptionsLast.INLINE),
-					);
+					found.push(new Hit(name.line, name.column, NamedOptionsLast.INLINE));
 				}
 				if (
 					params
 						.slice(at + 1)
 						.some((later) => later.name !== undefined && !later.rest)
 				) {
-					found.push(
-						new Finding(name.line, name.column, NamedOptionsLast.LAST),
-					);
+					found.push(new Hit(name.line, name.column, NamedOptionsLast.LAST));
 				}
 			}
 		}

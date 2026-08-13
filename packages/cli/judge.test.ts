@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { type Config, defineConfig, FakeConfigLoader } from "@webappwiz/judge";
+import { type Config, defineJudge, SECTION } from "@webappwiz/judge";
 import { ruleDoc, testRule } from "@webappwiz/judge/testing";
 import { color, MemoryLogger } from "@webappwiz/log";
+import { FakeConfigLoader } from "@webappwiz/rules";
 import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
@@ -23,11 +24,11 @@ describe("JudgeCommands", () => {
 			ps,
 			clock,
 			new NodeGlob(),
-			new FakeConfigLoader(config),
+			new FakeConfigLoader({ [SECTION]: config }),
 			confirm,
 		);
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
-	const oneRule = defineConfig({ rules: [one()] });
+	const oneRule = defineJudge({ rules: [one()] });
 	const config = "judge.config.ts";
 	// budget high enough that only the tests about budgets ever meet it
 	const judging = {
@@ -59,7 +60,7 @@ describe("JudgeCommands", () => {
 	});
 
 	it("asks nothing of an agent when the config will not compile", async () => {
-		const config = defineConfig({ rules: [one("just prose\n")] });
+		const config = defineJudge({ rules: [one("just prose\n")] });
 
 		await expect(commands(config).audit(needsAgent)).rejects.toThrow(
 			"2 errors",
@@ -68,14 +69,14 @@ describe("JudgeCommands", () => {
 	});
 
 	it("catches two rules answering to the same id", async () => {
-		const config = defineConfig({ rules: [one(), one()] });
+		const config = defineJudge({ rules: [one(), one()] });
 
 		await expect(commands(config).audit(needsAgent)).rejects.toThrow("1 error");
 		expect(printed()).toContain('duplicate rule id "one"');
 	});
 
 	it("prints diagnostics compiler-style and throws when there are errors", async () => {
-		const config = defineConfig({ rules: [one("just prose\n")] });
+		const config = defineJudge({ rules: [one("just prose\n")] });
 
 		await expect(commands(config).audit(needsAgent)).rejects.toThrow(
 			"2 errors, 1 warning",
@@ -85,7 +86,7 @@ describe("JudgeCommands", () => {
 	});
 
 	it("promotes warnings to failures under strict", async () => {
-		const config = defineConfig({
+		const config = defineJudge({
 			rules: [one(ruleDoc("One").split("\n## Bad")[0] ?? "")],
 		});
 		noTool();
@@ -178,7 +179,7 @@ describe("JudgeCommands", () => {
 	});
 
 	it("reports warnings without failing the run", async () => {
-		const config = defineConfig({
+		const config = defineJudge({
 			rules: [testRule("one", { document: ruleDoc("One"), level: "warning" })],
 		});
 		await fs.write("/p/a.ts", "class A {}");
@@ -225,14 +226,14 @@ describe("JudgeCommands", () => {
 		await commands(oneRule).judge({ ...judging, prompt: true });
 
 		expect(printed()).toContain("=== **/*.ts: one (1 file) ===");
-		expect(printed()).toContain("exactly 1 style rule");
+		expect(printed()).toContain("exactly 1 rule");
 		expect(printed()).toContain("- a.ts");
 		expect(ps.getCalls()).toEqual([]);
 	});
 
 	it("leaves fully checked rules to the linter, judging the rest", async () => {
 		await fs.write("/p/a.ts", "class A {}");
-		const config = defineConfig({
+		const config = defineJudge({
 			rules: [
 				testRule("one", { document: ruleDoc("One"), check: () => [] }),
 				testRule("two", {
@@ -253,7 +254,7 @@ describe("JudgeCommands", () => {
 	});
 
 	it("audits only the rules no check enforces", async () => {
-		const config = defineConfig({
+		const config = defineJudge({
 			rules: [testRule("one", { document: ruleDoc("One"), check: () => [] })],
 		});
 
@@ -264,7 +265,7 @@ describe("JudgeCommands", () => {
 	});
 
 	it("refuses to judge with an unsound config", async () => {
-		const config = defineConfig({ rules: [one("just prose\n")] });
+		const config = defineJudge({ rules: [one("just prose\n")] });
 
 		expect(commands(config).judge(judging)).rejects.toThrow("2 errors");
 	});

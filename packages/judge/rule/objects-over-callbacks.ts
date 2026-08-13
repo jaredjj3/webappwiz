@@ -1,4 +1,4 @@
-import { Finding } from "../finding";
+import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./objects-over-callbacks.md" with { type: "text" };
 import type { Rule } from "./rule";
@@ -16,9 +16,9 @@ export class ObjectsOverCallbacks implements Rule {
 	// is certain. Method parameters that keep a callback still need the agent.
 	readonly partial = true;
 
-	check(text: string): Finding[] {
+	check(text: string): Hit[] {
 		const all = tokens(text);
-		const found: Finding[] = [];
+		const found: Hit[] = [];
 		for (const [i, token] of all.entries()) {
 			if (
 				token.kind !== SyntaxKind.ConstructorKeyword ||
@@ -28,7 +28,7 @@ export class ObjectsOverCallbacks implements Rule {
 			}
 			if (this.takesFunction(all, i + 1)) {
 				found.push(
-					new Finding(token.line, token.column, ObjectsOverCallbacks.MESSAGE),
+					new Hit(token.line, token.column, ObjectsOverCallbacks.MESSAGE),
 				);
 			}
 		}

@@ -1,4 +1,4 @@
-import { Finding } from "../finding";
+import { Hit } from "../hit";
 import doc from "./no-em-dashes.md" with { type: "text" };
 import type { Rule } from "./rule";
 
@@ -16,15 +16,15 @@ export class NoEmDashes implements Rule {
 	readonly level = "error";
 	readonly document = doc;
 
-	check(text: string): Finding[] {
-		const findings: Finding[] = [];
+	check(text: string): Hit[] {
+		const findings: Hit[] = [];
 		for (const [i, line] of text.split("\n").entries()) {
 			for (const match of line.matchAll(/[\u2013\u2014]/g)) {
 				if (match[0] === NoEmDashes.EN && this.range(line, match.index)) {
 					continue;
 				}
 				findings.push(
-					new Finding(
+					new Hit(
 						i + 1,
 						match.index + 1,
 						match[0] === NoEmDashes.EM

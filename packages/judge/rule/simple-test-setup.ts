@@ -1,4 +1,4 @@
-import { Finding } from "../finding";
+import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import type { Rule } from "./rule";
 import doc from "./simple-test-setup.md" with { type: "text" };
@@ -21,9 +21,9 @@ export class SimpleTestSetup implements Rule {
 	// drowns the behavior under test still needs the agent.
 	readonly partial = true;
 
-	check(text: string): Finding[] {
+	check(text: string): Hit[] {
 		const all = tokens(text);
-		const found: Finding[] = [];
+		const found: Hit[] = [];
 		// The token stream is flat, so the only way to know a loop body ended is
 		// the depth its opening brace sat at coming back around.
 		const loops: number[] = [];
@@ -39,9 +39,7 @@ export class SimpleTestSetup implements Rule {
 					loops.push(body);
 				}
 			} else if (loops.length > 0 && this.isTestCall(all, i)) {
-				found.push(
-					new Finding(token.line, token.column, SimpleTestSetup.MESSAGE),
-				);
+				found.push(new Hit(token.line, token.column, SimpleTestSetup.MESSAGE));
 			}
 		}
 		return found;

@@ -1,16 +1,16 @@
 import { describe, expect, it } from "bun:test";
-import { defineConfig } from "./config";
-import { FakeConfigLoader } from "./config-loader/fake-config-loader";
+import { FakeConfigLoader } from "@webappwiz/rules";
+import { defineJudge, SECTION } from "./config";
 import { Configs } from "./configs";
 import { testRule } from "./testing";
 
 describe("Configs", () => {
-	const configs = (config: ReturnType<typeof defineConfig>) =>
-		new Configs(new FakeConfigLoader(config));
+	const configs = (config: ReturnType<typeof defineJudge>) =>
+		new Configs(new FakeConfigLoader({ [SECTION]: config }));
 
 	it("takes the rules the config names, and the defaults it does not", async () => {
 		const { config, diagnostics } = await configs(
-			defineConfig({ rules: [testRule("one")] }),
+			defineJudge({ rules: [testRule("one")] }),
 		).load("config.ts");
 
 		expect(config.rules).toHaveLength(1);
@@ -20,7 +20,7 @@ describe("Configs", () => {
 	});
 
 	it("reports what is wrong with a rule's document", async () => {
-		const config = defineConfig({
+		const config = defineJudge({
 			rules: [testRule("one", { document: "no title here" })],
 		});
 
@@ -41,7 +41,7 @@ describe("Configs", () => {
 	});
 
 	it("refuses two rules answering to the same id", async () => {
-		const config = defineConfig({ rules: [testRule("one"), testRule("one")] });
+		const config = defineJudge({ rules: [testRule("one"), testRule("one")] });
 
 		const { diagnostics } = await configs(config).load("config.ts");
 

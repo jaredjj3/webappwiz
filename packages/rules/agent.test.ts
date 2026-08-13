@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { agentCommand } from "./analyze";
+import { agentCommand } from "./agent";
 
 describe("agentCommand", () => {
 	it("spawns claude directly for a model shorthand", () => {

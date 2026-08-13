@@ -1,5 +1,5 @@
 import type { Cli, Deps } from "@webappwiz/cmd";
-import { AGENTS, DEFAULT_CONFIG } from "@webappwiz/judge";
+import { AGENTS, DEFAULT_CONFIG } from "@webappwiz/rules";
 import type { Fs, Glob } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import type { Clock } from "@webappwiz/time";

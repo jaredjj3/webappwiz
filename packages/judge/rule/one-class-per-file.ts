@@ -1,4 +1,4 @@
-import { Finding } from "../finding";
+import { Hit } from "../hit";
 import { SyntaxKind, tokens } from "../scan";
 import doc from "./one-class-per-file.md" with { type: "text" };
 import type { Rule } from "./rule";
@@ -21,7 +21,7 @@ export class OneClassPerFile implements Rule {
 	readonly level = "error";
 	readonly document = doc;
 
-	check(text: string): Finding[] {
+	check(text: string): Hit[] {
 		const all = tokens(text);
 		return all
 			.filter(
@@ -34,8 +34,7 @@ export class OneClassPerFile implements Rule {
 			)
 			.slice(1)
 			.map(
-				(token) =>
-					new Finding(token.line, token.column, OneClassPerFile.MESSAGE),
+				(token) => new Hit(token.line, token.column, OneClassPerFile.MESSAGE),
 			);
 	}
 }

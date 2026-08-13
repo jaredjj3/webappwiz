@@ -1,7 +1,7 @@
 import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
+import type { Agent } from "@webappwiz/rules";
 import type { Ps } from "@webappwiz/sys";
-import type { Agent } from "./analyze";
 import type { ConfigDiagnostic } from "./diagnostic";
 import type { Rule } from "./rule/rule";
 

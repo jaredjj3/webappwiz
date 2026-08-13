@@ -1,7 +1,7 @@
 import { color, type Logger } from "@webappwiz/log";
+import { DEFAULT_CONFIG } from "@webappwiz/rules";
 import type { Fs, Glob, Ps } from "@webappwiz/sys";
 import { Checker } from "./checker";
-import { DEFAULT_CONFIG } from "./config";
 import { Configs } from "./configs";
 import type { Rule } from "./rule/rule";
 

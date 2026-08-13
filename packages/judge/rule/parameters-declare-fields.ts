@@ -1,4 +1,4 @@
-import { Finding } from "../finding";
+import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./parameters-declare-fields.md" with { type: "text" };
 import type { Rule } from "./rule";
@@ -42,9 +42,9 @@ export class ParametersDeclareFields implements Rule {
 	readonly level = "error";
 	readonly document = doc;
 
-	check(text: string): Finding[] {
+	check(text: string): Hit[] {
 		const all = tokens(text);
-		const found: Finding[] = [];
+		const found: Hit[] = [];
 		for (const [i, token] of all.entries()) {
 			if (
 				token.kind !== SyntaxKind.ConstructorKeyword ||
@@ -133,12 +133,12 @@ export class ParametersDeclareFields implements Rule {
 	/** Every `this.x = x;` standing alone at the top of the constructor body
 	 * opening at `at`. Anything computed, conditional or renamed is a decision
 	 * the constructor makes, and no parameter property. */
-	private copies(all: Token[], at: number, plain: Set<string>): Finding[] {
+	private copies(all: Token[], at: number, plain: Set<string>): Hit[] {
 		const body = all[at];
 		if (body?.kind !== SyntaxKind.OpenBraceToken) {
 			return [];
 		}
-		const found: Finding[] = [];
+		const found: Hit[] = [];
 		for (let i = at + 1; i < all.length; i++) {
 			const token = all[i];
 			if (token === undefined) {
@@ -166,11 +166,7 @@ export class ParametersDeclareFields implements Rule {
 					ends === SyntaxKind.CloseBraceToken)
 			) {
 				found.push(
-					new Finding(
-						token.line,
-						token.column,
-						ParametersDeclareFields.MESSAGE,
-					),
+					new Hit(token.line, token.column, ParametersDeclareFields.MESSAGE),
 				);
 			}
 		}

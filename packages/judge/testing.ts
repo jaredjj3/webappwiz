@@ -1,6 +1,6 @@
 import { MarkdownWriter } from "@webappwiz/md";
 import type { Level } from "./diagnostic";
-import type { Finding } from "./finding";
+import type { Hit } from "./hit";
 import type { Rule } from "./rule/rule";
 
 /** A sound rule document for tests to point a rule at, or to break. */
@@ -19,7 +19,7 @@ export interface TestRuleOptions {
 	files?: string;
 	level?: Level;
 	document?: string;
-	check?: (text: string) => Finding[];
+	check?: (text: string) => Hit[];
 	partial?: boolean;
 }
 

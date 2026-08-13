@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { NodeGlob } from "@webappwiz/sys";
 import { Checker } from "./checker";
-import { Finding } from "./finding";
+import { Hit } from "./hit";
 import type { Rule } from "./rule/rule";
 
 const noX: Rule = {
@@ -13,7 +13,7 @@ const noX: Rule = {
 		text
 			.split("\n")
 			.flatMap((line, i) =>
-				line.includes("x") ? [new Finding(i + 1, 1, "an x")] : [],
+				line.includes("x") ? [new Hit(i + 1, 1, "an x")] : [],
 			),
 };
 
@@ -103,8 +103,8 @@ class Counting implements Rule {
 	readonly level = "error";
 	readonly document = "";
 
-	check(text: string): Finding[] {
-		return [new Finding(1, 1, `line 1 of ${this.lines(text)}`)];
+	check(text: string): Hit[] {
+		return [new Hit(1, 1, `line 1 of ${this.lines(text)}`)];
 	}
 
 	private lines(text: string): number {

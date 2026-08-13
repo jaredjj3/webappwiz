@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
-import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
 import { Analyzer } from "./analyze";
 import { testRule } from "./testing";
@@ -15,7 +14,6 @@ describe("Analyzer", () => {
 	let fs: FakeFs;
 	let ps: FakePs;
 	let log: MemoryLogger;
-	let clock: FakeClock;
 	let analyzer: Analyzer;
 
 	const errors = () =>
@@ -27,8 +25,7 @@ describe("Analyzer", () => {
 		fs = new FakeFs();
 		ps = new FakePs();
 		log = new MemoryLogger();
-		clock = new FakeClock();
-		analyzer = new Analyzer(log, fs, ps, clock, new NodeGlob());
+		analyzer = new Analyzer(log, fs, ps, new FakeClock(), new NodeGlob());
 		await fs.mkdir("/p/src");
 		await fs.write("/p/src/a.ts", "class A {}");
 		await fs.write("/p/src/b.ts", "class B {}");
@@ -42,7 +39,7 @@ describe("Analyzer", () => {
 			{ chunk: 25 },
 		);
 
-		expect(tasks.map((task) => [task.glob, task.files])).toEqual([
+		expect(tasks.map((task) => [task.label, task.files])).toEqual([
 			["**/*.ts", ["src/a.ts", "src/b.ts"]],
 			["**/*.md", ["README.md"]],
 		]);
@@ -64,8 +61,6 @@ describe("Analyzer", () => {
 			],
 			[["Docs"], ["README.md"]],
 		]);
-		expect(tasks[0]?.prompt).toContain("# Classes");
-		expect(tasks[0]?.prompt).toContain("# Callbacks");
 	});
 
 	it("chunks a rule's files into several tasks", async () => {
@@ -85,101 +80,22 @@ describe("Analyzer", () => {
 
 	it("gives each task a prompt holding the whole rule and only its files", async () => {
 		const [task] = await analyzer.plan([rule("Classes")], "/p", { chunk: 1 });
+		const prompt = task ? analyzer.prompt(task) : "";
 
-		expect(task?.prompt).toContain("exactly 1 style rule");
-		expect(task?.prompt).toContain("Rule `Classes`, verbatim:");
-		expect(task?.prompt).toContain("# Classes"); // the rule md, verbatim
-		expect(task?.prompt).toContain("## Good");
-		expect(task?.prompt).toContain("- src/a.ts");
-		expect(task?.prompt).not.toContain("b.ts");
-		expect(task?.prompt).toContain('"line"');
-		expect(task?.prompt).toContain("judge-ignore <id>: <reason>");
+		expect(prompt).toContain("Rule `Classes`, verbatim:");
+		expect(prompt).toContain("# Classes"); // the rule md, verbatim
+		expect(prompt).toContain("## Good");
+		expect(prompt).toContain("- src/a.ts");
+		expect(prompt).not.toContain("b.ts");
+		expect(prompt).toContain("judge-ignore <id>: <reason>");
 	});
 
-	it("keeps no more agents in flight at once than it was allowed", async () => {
-		ps.setCaptureOutput("[]", "");
-		let running = 0;
-		let peak = 0;
-		ps.simulate(async () => {
-			running++;
-			peak = Math.max(peak, running);
-			await Promise.resolve();
-			running--;
-			return 0;
-		});
-		const tasks = await analyzer.plan(
-			[rule("Classes"), rule("Docs", "**/*.md")],
-			"/p",
-			{ chunk: 1 },
+	it("prices a task by its prompt and the files it names", async () => {
+		const [task] = await analyzer.plan([rule("Classes")], "/p", { chunk: 1 });
+
+		expect(task?.bytes).toBeGreaterThan(
+			Buffer.byteLength(task ? analyzer.prompt(task) : ""),
 		);
-
-		await analyzer.run(tasks, "/p", agent, 2);
-
-		expect(tasks).toHaveLength(3); // more tasks than slots, or this proves nothing
-		expect(peak).toBe(2);
-		expect(ps.getCalls()).toHaveLength(3);
-	});
-
-	it("passes the prompt to the agent command as its last argument", async () => {
-		ps.setCaptureOutput("[]", "");
-
-		await analyzer.analyze([rule("Classes")], "/p", {
-			argv: ["claude", "-p"],
-			label: "claude -p",
-		});
-
-		const call = ps.getCalls()[0] ?? "";
-		expect(call.startsWith("claude -p ")).toBe(true);
-		expect(call).toContain("# Classes");
-	});
-
-	it("reads the findings and the price out of the agent's envelope", async () => {
-		const finished: Array<number | undefined> = [];
-		ps.setCaptureOutput(
-			JSON.stringify({
-				type: "result",
-				total_cost_usd: 0.056097,
-				result:
-					'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
-			}),
-			"",
-		);
-
-		analyzer.events.on("finished", (task) => finished.push(task.cost));
-
-		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
-
-		expect(violations.map((violation) => violation.id)).toEqual(["Classes"]);
-		expect(finished).toEqual([0.056097]);
-	});
-
-	it("finds the array inside the prose an envelope wraps it in", async () => {
-		ps.setCaptureOutput(
-			JSON.stringify({
-				total_cost_usd: 0.01,
-				result:
-					'Here is what I found:\n```json\n[{"rule": "Classes", "file": "src/a.ts", "line": 2, "message": "a second class"}]\n```',
-			}),
-			"",
-		);
-
-		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
-
-		expect(violations.map((violation) => violation.line)).toEqual([2]);
-	});
-
-	it("reports no price for an agent that answers with the bare array", async () => {
-		const finished: Array<number | undefined> = [];
-		ps.setCaptureOutput(
-			'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "a second class"}]',
-			"",
-		);
-
-		analyzer.events.on("finished", (task) => finished.push(task.cost));
-
-		await analyzer.analyze([rule("Classes")], "/p", agent);
-
-		expect(finished).toEqual([undefined]);
 	});
 
 	it("labels what the agent reports with the rule it says was broken", async () => {
@@ -245,95 +161,43 @@ describe("Analyzer", () => {
 		expect(found?.code).toBe("");
 	});
 
-	it("hands each task's findings over as its agent returns", async () => {
+	it("drops a finding the agent gave nowhere to point at", async () => {
+		ps.setCaptureOutput('[{"rule": "Classes", "message": "somewhere"}]', "");
+
+		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
+
+		expect(violations).toEqual([]);
+		expect(errors()[0]).toBe('agent located no file for "Classes" on **/*.ts');
+	});
+
+	it("hands each task's violations over as its agent returns", async () => {
 		ps.setCaptureOutput(
 			'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
 			"",
 		);
-
-		const finished: string[] = [];
+		const handed: string[] = [];
 		analyzer.events.on("finished", (task) =>
-			finished.push(
+			handed.push(
 				`${task.glob} [${task.rules.join(",")}] ${task.done}/${task.total}`,
 			),
 		);
 
 		await analyzer.analyze([rule("Classes")], "/p", agent, { chunk: 1 });
 
-		expect(finished).toEqual([
-			"**/*.ts [Classes] 1/2",
-			"**/*.ts [Classes] 2/2",
-		]);
+		expect(handed).toEqual(["**/*.ts [Classes] 1/2", "**/*.ts [Classes] 2/2"]);
 	});
 
-	it("drops a finding filed under a rule the task was not checking", async () => {
+	it("passes the price the agent reported through to its own event", async () => {
+		const billed: Array<number | undefined> = [];
 		ps.setCaptureOutput(
-			'[{"rule": "Docs", "file": "src/a.ts", "line": 1, "message": "the file declares a second class"}]',
+			JSON.stringify({ total_cost_usd: 0.056097, result: "[]" }),
 			"",
 		);
-
-		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
-
-		expect(violations).toEqual([]);
-		expect(errors()[0]).toBe('agent reported unknown rule "Docs" on **/*.ts');
-	});
-
-	it("times each task from the moment its agent starts", async () => {
-		ps.setCaptureOutput("[]", "");
-		ps.simulate(async () => {
-			clock.advance(Duration.secs(3));
-			return 0;
-		});
-
-		const took: string[] = [];
-		analyzer.events.on("finished", (task) => took.push(task.took.human()));
+		analyzer.events.on("finished", (task) => billed.push(task.cost));
 
 		await analyzer.analyze([rule("Classes")], "/p", agent);
 
-		expect(took).toEqual(["3.0s"]);
-	});
-
-	it("finds the array when the agent wraps it in prose", async () => {
-		ps.setCaptureOutput(
-			'Sure! Here you go:\n```json\n[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "nope"}]\n```\n',
-			"",
-		);
-
-		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
-
-		expect(violations.map((violation) => violation.message)).toEqual(["nope"]);
-	});
-
-	it("drops elements the agent malformed", async () => {
-		ps.setCaptureOutput('[{"file": "src/a.ts"}, "nonsense"]', "");
-
-		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
-
-		expect(violations).toEqual([]);
-	});
-
-	it("reports on stderr when the agent answers with no array at all", async () => {
-		ps.setCaptureOutput("I could not read the files.", "");
-
-		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
-
-		expect(violations).toEqual([]);
-		expect(errors()[0]).toContain("no JSON array on **/*.ts");
-	});
-
-	it("reports on stderr when the agent command fails", async () => {
-		ps.exit(127);
-		ps.setCaptureOutput("", "command not found: claude");
-
-		const violations = await analyzer.analyze([rule("Classes")], "/p", {
-			argv: ["claude"],
-			label: "claude",
-		});
-
-		expect(violations).toEqual([]);
-		expect(errors()[0]).toBe(
-			"agent exited 127 on **/*.ts: command not found: claude",
-		);
+		expect(billed).toEqual([0.056097]);
 	});
 
 	it("orders one task's violations by file and line", async () => {
