@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { type Config, defineJudge, SECTION } from "@webappwiz/judge";
+import { type Config, defineJudge } from "@webappwiz/judge";
 import { ruleDoc, testRule } from "@webappwiz/judge/testing";
 import { color, MemoryLogger } from "@webappwiz/log";
-import { FakeConfigLoader } from "@webappwiz/rules";
 import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
@@ -18,21 +17,11 @@ describe("JudgeCommands", () => {
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
 	const commands = (config: Config, confirm?: Confirm) =>
-		new JudgeCommands(
-			log,
-			fs,
-			ps,
-			clock,
-			new NodeGlob(),
-			new FakeConfigLoader({ [SECTION]: config }),
-			confirm,
-		);
+		new JudgeCommands(log, fs, ps, clock, new NodeGlob(), config, confirm);
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
 	const oneRule = defineJudge({ rules: [one()] });
-	const config = "rules.config.ts";
 	// budget high enough that only the tests about budgets ever meet it
 	const judging = {
-		config: config,
 		dir: "/p",
 		agent: "haiku",
 		chunk: 25,
@@ -48,7 +37,7 @@ describe("JudgeCommands", () => {
 	});
 
 	// the answer an agent gives about a rule nothing but an agent could enforce
-	const needsAgent = { config: config, strict: false, agent: "haiku" };
+	const needsAgent = { strict: false, agent: "haiku" };
 	const noTool = () => ps.setCaptureOutput('{"tool": null}', "");
 
 	it("declares a sound config sound", async () => {
@@ -113,20 +102,20 @@ describe("JudgeCommands", () => {
 	it("asks the config's agent when told no other", async () => {
 		noTool();
 
-		await commands(oneRule).audit({ config: config, strict: false });
+		await commands(oneRule).audit({ strict: false });
 
 		expect(ps.getCalls()[0]).toContain("haiku");
 	});
 
 	it("shows each rule as a table row when showing", async () => {
-		await commands(oneRule).ls({ config: config });
+		commands(oneRule).ls();
 
 		expect(printed()).toContain("ID   RULE  LEVEL  FILES");
 		expect(printed()).toContain("one  One   error");
 	});
 
 	it("prints one rule in full when shown its id", async () => {
-		await commands(oneRule).show({ id: "one", config: config });
+		await commands(oneRule).show({ id: "one" });
 
 		expect(printed()).toContain("ID     one");
 		expect(printed()).toContain("LEVEL  error");
@@ -135,9 +124,9 @@ describe("JudgeCommands", () => {
 	});
 
 	it("lists the ids it does know when shown one it does not", async () => {
-		expect(
-			commands(oneRule).show({ id: "two", config: config }),
-		).rejects.toThrow('no rule "two" in rules.config.ts. Known ids: one');
+		expect(commands(oneRule).show({ id: "two" })).rejects.toThrow(
+			'no rule "two". Known ids: one',
+		);
 	});
 
 	it("prints what the agent found as a report of its own", async () => {

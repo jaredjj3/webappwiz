@@ -1,5 +1,5 @@
 import type { Cli, Deps } from "@webappwiz/cmd";
-import { AGENTS, DEFAULT_CONFIG } from "@webappwiz/rules";
+import { AGENTS } from "@webappwiz/rules";
 import type { Fs, Glob } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import type { Clock } from "@webappwiz/time";
@@ -8,6 +8,7 @@ import { JudgeCommands } from "./judge";
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
 import { version } from "./package.json";
+import { WEBAPPWIZ_RULES } from "./rules";
 import { Skills } from "./skills";
 import { update } from "./update";
 
@@ -45,16 +46,11 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 	// config is shared, with `wiz fix` enforcing the rules that carry a check and
 	// `judge` the ones only an agent can decide, so neither owns the rule set.
 	const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
-		new JudgeCommands(log, fs, ps, clock, glob);
-	const configArg = {
-		default: DEFAULT_CONFIG,
-		description: `config module (default: ${DEFAULT_CONFIG})`,
-	};
+		new JudgeCommands(log, fs, ps, clock, glob, WEBAPPWIZ_RULES);
 
 	app
 		.command("judge")
 		.description("check a directory against the config, one agent per glob")
-		.arg("config", t.string(), configArg)
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "directory to judge (default: .)",
@@ -91,19 +87,17 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 
 	const rules = app
 		.group("rules")
-		.description("list, print, and audit the rules a config is made of");
+		.description("list, print, and audit the rules judge is made of");
 
 	rules
 		.command("ls")
-		.description("list the config rules")
-		.arg("config", t.string(), configArg)
-		.action((opts, deps) => judge(deps).ls(opts));
+		.description("list the rules")
+		.action((_opts, deps) => judge(deps).ls());
 
 	rules
 		.command("show")
 		.description("print one rule in full, by the id `rules ls` gives it")
 		.arg("id", t.string(), { description: "rule id" })
-		.arg("config", t.string(), configArg)
 		.action((opts, deps) => judge(deps).show(opts));
 
 	rules
@@ -111,7 +105,6 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 		.description(
 			"check the config: is it sound, and which rules need no agent at all",
 		)
-		.arg("config", t.string(), configArg)
 		.option("strict", t.boolean(), {
 			default: false,
 			description: "treat warnings as errors",

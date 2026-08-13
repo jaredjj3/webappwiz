@@ -2,19 +2,14 @@ import {
 	Analyzer,
 	type Config,
 	type ConfigDiagnostic,
-	Configs,
+	diagnose,
 	Mechanizer,
 	needsAgent,
 	RuleDocument,
 	type Task,
 } from "@webappwiz/judge";
 import type { Logger } from "@webappwiz/log";
-import {
-	type Agent,
-	type AgentOptions,
-	agentCommand,
-	type ConfigLoader,
-} from "@webappwiz/rules";
+import { type Agent, type AgentOptions, agentCommand } from "@webappwiz/rules";
 import type { Fs, Glob, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
 import { changed } from "./changed";
@@ -35,13 +30,7 @@ export interface Confirm {
 	confirm(question: string): boolean | Promise<boolean>;
 }
 
-/** Which config to read, which every command here needs first. */
-export interface ConfigOptions {
-	/** The config module to load, as `rules ls` takes it. */
-	config: string;
-}
-
-export interface AuditOptions extends ConfigOptions {
+export interface AuditOptions {
 	/** Whether a warning fails the run, as an error always does. */
 	strict: boolean;
 	/** The model to ask, one of `AGENTS`; `exec` instead names a command.
@@ -50,12 +39,12 @@ export interface AuditOptions extends ConfigOptions {
 	exec?: string;
 }
 
-export interface ShowOptions extends ConfigOptions {
+export interface ShowOptions {
 	/** The rule to print, as `rules ls` lists it. */
 	id: string;
 }
 
-export interface JudgeOptions extends ConfigOptions {
+export interface JudgeOptions {
 	/** The directory to check, and what paths in the report are relative to. */
 	dir: string;
 	agent?: string;
@@ -94,7 +83,7 @@ export class JudgeCommands {
 		private ps: Ps,
 		private clock: Clock,
 		private glob: Glob,
-		private loader?: ConfigLoader,
+		private rules: Config,
 		private confirmer: Confirm = ask,
 	) {}
 
@@ -109,7 +98,7 @@ export class JudgeCommands {
 		// Both halves every time, rather than a flag: which rules a tool could
 		// take over is the question worth asking, and a config that will not
 		// compile is the thing that stops it being asked.
-		const { config, diagnostics } = await this.config(opts.config);
+		const { config, diagnostics } = this.checked();
 		if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
 			// Before any agent runs: a config that will not compile is not worth
 			// spending calls on, and the errors are the more urgent report.
@@ -127,9 +116,9 @@ export class JudgeCommands {
 		this.report(config.rules.length, diagnostics, opts.strict);
 	}
 
-	/** Lists a config's rules, one row each, ids first for citing. */
-	async ls(opts: ConfigOptions): Promise<void> {
-		const { rules } = await this.sound(opts.config);
+	/** Lists the rule set, one row each, ids first for citing. */
+	ls(): void {
+		const { rules } = this.sound();
 		const rows = [["ID", "RULE", "LEVEL", "FILES", "CHECK", "GOOD", "BAD"]];
 		for (const rule of rules) {
 			const doc = new RuleDocument(rule);
@@ -152,11 +141,11 @@ export class JudgeCommands {
 	 * agent is given, verbatim. Take the id from `rules ls` or from a finding.
 	 */
 	async show(opts: ShowOptions): Promise<void> {
-		const { rules } = await this.sound(opts.config);
+		const { rules } = this.sound();
 		const rule = rules.find((candidate) => candidate.id === opts.id);
 		if (!rule) {
 			throw new Error(
-				`no rule "${opts.id}" in ${opts.config}. Known ids: ${rules.map((candidate) => candidate.id).join(", ")}`,
+				`no rule "${opts.id}". Known ids: ${rules.map((candidate) => candidate.id).join(", ")}`,
 			);
 		}
 		this.log.info(
@@ -195,7 +184,7 @@ export class JudgeCommands {
 					"--agent, --exec or --prompt",
 			);
 		}
-		const config = await this.sound(opts.config);
+		const config = this.sound();
 		// A rule judged by code alone is already enforced locally, for free; an
 		// agent reads only the rules, or the parts of them, no check decides.
 		const rules = config.rules.filter(needsAgent);
@@ -383,20 +372,19 @@ export class JudgeCommands {
 		return opts.exec === undefined ? (opts.agent ?? config.agent) : undefined;
 	}
 
-	private config(
-		path: string,
-	): Promise<{ config: Config; diagnostics: ConfigDiagnostic[] }> {
-		return new Configs(this.loader).load(path);
-	}
-
-	/** The config, for a command that has no business running without it: one
-	 * that will not compile prints its diagnostics and exits. */
-	private async sound(path: string): Promise<Config> {
-		const { config, diagnostics } = await this.config(path);
+	/** The rule set, for a command with no business running without a sound
+	 * one: a broken document prints its diagnostics and exits. */
+	private sound(): Config {
+		const { config, diagnostics } = this.checked();
 		if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
 			this.report(config.rules.length, diagnostics, false);
 		}
 		return config;
+	}
+
+	/** The rule set this was built with, and everything wrong with its rules. */
+	private checked(): { config: Config; diagnostics: ConfigDiagnostic[] } {
+		return { config: this.rules, diagnostics: diagnose(this.rules.rules) };
 	}
 
 	private report(

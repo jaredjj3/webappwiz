@@ -11,14 +11,8 @@ export {
 } from "./analyze";
 export { Check } from "./check";
 export { Checker, type FileText } from "./checker";
-export {
-	type Config,
-	type ConfigInput,
-	defineJudge,
-	isConfig,
-	SECTION,
-} from "./config";
-export { Configs } from "./configs";
+export { type Config, type ConfigInput, defineJudge } from "./config";
+export { diagnose } from "./diagnose";
 export type { ConfigDiagnostic, Diagnostic, Level } from "./diagnostic";
 export { Hit } from "./hit";
 export { exemptions } from "./ignore";

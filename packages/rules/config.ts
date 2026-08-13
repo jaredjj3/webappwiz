@@ -8,10 +8,6 @@ export interface RunnerOptions {
 	concurrency: number;
 }
 
-/** Where a project keeps its rules unless a command is told otherwise. One
- * file, one section per use case, so a repo has one place to look. */
-export const DEFAULT_CONFIG = "rules.config.ts";
-
 /** The cheapest model that reads a rule and a file well enough to judge it.
  * Anything slower is a decision to make per project, in the config. */
 export const DEFAULT_AGENT = "haiku";

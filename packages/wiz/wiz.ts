@@ -1,5 +1,6 @@
 import type { CommandDeps } from "@webappwiz/cli/commands";
 import { commands } from "@webappwiz/cli/commands";
+import { WEBAPPWIZ_RULES } from "@webappwiz/cli/rules";
 import { cli } from "@webappwiz/cmd";
 import { Check } from "@webappwiz/judge";
 import {
@@ -19,7 +20,11 @@ import { test } from "./test";
 export type WizDeps = CommandDeps;
 
 const toolchainFix = ({ log, fs, ps, glob }: WizDeps): ToolchainFix =>
-	new ToolchainFix(log, ps, new Check(log, fs, ps, glob));
+	new ToolchainFix(
+		log,
+		ps,
+		new Check(log, fs, ps, glob, WEBAPPWIZ_RULES.rules),
+	);
 
 export const wiz = cli<WizDeps>("wiz");
 

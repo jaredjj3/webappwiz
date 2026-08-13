@@ -68,29 +68,28 @@ A rule says who decides it, and the type it implements makes that binding:
 cannot claim a check it does not implement or hide one it does, and consumers
 discriminate on `judgedBy` rather than guessing from which fields are present.
 
-## The config
+## The rule set
 
-A config is a TypeScript module so composition stays typed. It lives in
-`rules.config.ts` unless a command is told otherwise, one section per command
-that runs rules, and judge's is required: there is no recommended set to fall
-back on, and no rule runs that the config does not name.
+There is no config file. Rules reach judge as objects, so a rule set is a
+constant beside the code that runs it, and composing one stays typed without a
+module being imported at runtime to find out what is in it.
 
 ```ts
-// rules.config.ts
+// rules.ts
 import { defineJudge, NoEmDashes, OneClassPerFile } from "@webappwiz/judge";
 import { NoFixme } from "./rules/no-fixme";
 
-export default {
-	judge: defineJudge({
-		rules: [new NoEmDashes(), new OneClassPerFile(), new NoFixme()],
-		agent: "haiku", // the model an agent run uses unless told otherwise
-		concurrency: 4, // agent calls in flight at once
-	}),
-};
+export const RULES = defineJudge({
+	rules: [new NoEmDashes(), new OneClassPerFile(), new NoFixme()],
+	agent: "haiku", // the model an agent run uses unless told otherwise
+	concurrency: 4, // agent calls in flight at once
+});
 ```
 
-Your own rule is the same class and the same markdown import, wherever it
-lives.
+Hand that to `Check` for the local pass, or to `JudgeCommands` for the agent
+one. There is no recommended set to fall back on and nothing runs implicitly:
+a rule is in the list or it does not run. Your own rule is the same class and
+the same markdown import, wherever it lives.
 
 `agent` and `concurrency` are the two knobs a run has, and both have defaults:
 `haiku`, because the rule and the file are in the prompt and the reading is
@@ -98,8 +97,8 @@ what a run is paying for, and 4 calls at once, which is about rate limits and
 patience rather than this machine. `--agent` and `--exec` override the model
 per run.
 
-The rules this package ships, each exported as its class so a config can name
-one:
+The rules this package ships, each exported as its class so a rule set can
+name one:
 
 - `no-em-dashes` (`code`): no em dashes in code, comments, or prose; an en
   dash survives only between digits, as a range.
@@ -144,17 +143,18 @@ honor the same markers.
 
 ## Checking
 
-`wiz fix` runs the checks; standalone, `bunx @webappwiz/judge`. Every
-git-tracked file a checked rule's glob wants is read, reporting like a
-compiler: `path:line:column rule message`. Errors fail the run; warnings only
-print.
+`wiz fix` runs the checks, through `Check`. Every git-tracked file a checked
+rule's glob wants is read, reporting like a compiler:
+`path:line:column rule message`. Errors fail the run; warnings only print.
+This package ships no binary of its own: what transport the checks run over is
+the caller's to choose.
 
 ## Judging
 
-`webappwiz judge [dir]` checks the code against the config's agent rules,
+`webappwiz judge [dir]` checks the code against the rule set's agent rules,
 handing every rule that shares a glob to an agent in one task so the files are
 read once rather than once per rule, and printing what comes back as one
-report. Which agent is three flags, and the config answers when you pass none
+report. Which agent is three flags, and the rule set answers when you pass none
 of them:
 
 ```bash
@@ -165,11 +165,11 @@ webappwiz judge --prompt              # print the prompts, run nothing
 
 `--exec` takes the
 whole command, quoting and all, and is handed the prompt as one trailing
-argument. `--prompt` is for an agent running the config itself: it prints each
+argument. `--prompt` is for an agent running the rules itself: it prints each
 task's prompt under a `=== <glob>: <ids> (<n> files) ===` header, to hand to
 subagents of its own.
 
-`rules ls` lists the config's rules, with which are checked and which cost an
+`rules ls` lists the rules, with which are checked and which cost an
 agent; `rules show <id>` prints one in full.
 
 ## What a run costs
@@ -231,7 +231,7 @@ because writing the check is a judgment you make once, not something to fail
 a build on by surprise: `--strict` is how you make it fail once you have
 decided. Rules already carrying a full check are not asked about at all.
 
-Audit also validates the config itself, the way judge does before running:
+Audit also validates the rules themselves, the way judge does before running:
 a rule whose document is broken is an error, printed before any agent spends
 anything. There is no mode flag and no half of this to run on its own, so
 audit does the same thing every time you call it:
@@ -241,14 +241,13 @@ webappwiz rules audit --agent sonnet
 # sound: 8 rules, 0 errors, 0 warnings
 ```
 
-A broken document stops the run before it spends anything, since a config
-that will not compile is not worth asking an agent about.
+A broken document stops the run before it spends anything, since a rule set
+nobody can report against is not worth asking an agent about.
 
 ## API
 
-Those commands are a thin shell over this package. `Configs.load` reads a
-module's `judge` section, defaulting to `rules.config.ts`, and reports what is wrong with
-its rules; `RuleDocument` parses one rule's markdown, for a report that wants
+Those commands are a thin shell over this package. `diagnose` reports what is
+wrong with a rule set's own rules; `RuleDocument` parses one rule's markdown, for a report that wants
 its title or its examples; `Checker`
 runs the checks over in-memory files and `Check` over the git-tracked tree;
 `Mechanizer` asks an agent which agent rules a tool could enforce instead,
@@ -260,7 +259,7 @@ caller's: a violation carries the rule's id and level, the file and line, the
 message, and that line of source read from disk.
 
 ```ts
-const { config, diagnostics } = await new Configs().load();
+const config = RULES;
 const analyzer = new Analyzer(log, fs, ps, clock);
 analyzer.events.on("finished", (task) =>
 	console.log(task.glob, task.violations.length),

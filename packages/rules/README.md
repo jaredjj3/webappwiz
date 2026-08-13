@@ -78,15 +78,10 @@ to a command of your own instead. `--output-format json` is how a model run
 reports what it was billed, which is the only place a real dollar figure comes
 from, so an `--exec` run reports no money rather than guessing it.
 
-## The config
+## No config file
 
-Sections live in `rules.config.ts` at the repo root, one per command, so a
-repo has one place to look. `ConfigLoader` reads one section by key and hands
-it back unchecked: what a section's shape is, only the command that asked for
-it knows, so guarding it is that command's job.
-
-```ts
-export default {
-	judge: defineJudge({ rules: [new NoEmDashes()] }),
-};
-```
+There is none, and the harness reads none. Rules arrive as objects on a task,
+so a caller keeps its rule set wherever it keeps code, and picks its own
+transport: a CLI flag, a constant beside the call, whatever suits. What the
+harness does own is the two knobs every caller needs, `agent` and
+`concurrency`, as `RunnerOptions` for a caller's own rule set type to extend.
