@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import { BunHttpServer, type Listening } from "@webappwiz/http";
 import { t } from "@webappwiz/t";
+import { Duration } from "@webappwiz/time";
 
 import {
 	Client,
 	type Contract,
 	type Handlers,
 	RpcError,
-	Server,
+	Service,
 } from "./index";
 
 describe("rpc", () => {
@@ -51,18 +53,21 @@ describe("rpc", () => {
 		},
 	};
 
-	const server = new Server(contract, handlers);
-	let listener: ReturnType<typeof Bun.serve>;
+	const service = new Service(contract, handlers);
+	let listening: Listening;
 	let base: string;
 	let client: Client<typeof contract>;
 
-	beforeAll(() => {
-		listener = Bun.serve({ port: 0, fetch: server.fetch });
-		base = listener.url.origin;
+	beforeAll(async () => {
+		listening = await new BunHttpServer().serve(service.fetch, {
+			port: 0,
+			idleTimeout: Duration.secs(10),
+		});
+		base = `http://localhost:${listening.port}`;
 		client = new Client(contract, base);
 	});
 
-	afterAll(() => listener.stop(true));
+	afterAll(() => listening.stop());
 
 	it("round-trips over POST when calling a mutation", async () => {
 		const { id } = await client.call("addTodo", { title: "milk" });
@@ -151,7 +156,7 @@ describe("rpc", () => {
 	});
 
 	it("dispatches to the handler when mounted under a path prefix", async () => {
-		const res = await server.fetch(
+		const res = await service.fetch(
 			new Request(
 				`http://mounted/api/v1/getTodo?input=${encodeURIComponent('{"id":3}')}`,
 			),
@@ -161,11 +166,11 @@ describe("rpc", () => {
 
 	it("rejects preflights by default and answers them when cors is enabled", async () => {
 		expect(
-			(await server.fetch(new Request(`${base}/boom`, { method: "OPTIONS" })))
+			(await service.fetch(new Request(`${base}/boom`, { method: "OPTIONS" })))
 				.status,
 		).toBe(405);
 
-		const open = new Server(contract, handlers, { cors: "https://app.test" });
+		const open = new Service(contract, handlers, { cors: "https://app.test" });
 		const preflight = await open.fetch(
 			new Request(`${base}/addTodo`, {
 				method: "OPTIONS",

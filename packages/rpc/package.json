@@ -9,5 +9,9 @@
 	"dependencies": {
 		"@webappwiz/events": "workspace:*",
 		"@webappwiz/t": "workspace:*"
+	},
+	"devDependencies": {
+		"@webappwiz/http": "workspace:*",
+		"@webappwiz/time": "workspace:*"
 	}
 }

@@ -2,7 +2,7 @@ import { SchemaError } from "@webappwiz/t";
 import type { Contract, Handlers } from "./contract";
 import { RpcError } from "./error";
 
-export type ServerOptions = {
+export type ServiceOptions = {
 	/**
 	 * Allowed browser origin, e.g. "*" or "https://app.example.com". Omit to
 	 * send no CORS headers at all, which is right for same-origin clients.
@@ -11,18 +11,19 @@ export type ServerOptions = {
 };
 
 /**
- * Serves a contract over HTTP. Its whole surface is `fetch`, the shape every
- * fetch-style runtime already takes:
+ * Answers a contract over HTTP. A service is not a server: it binds no port and
+ * its whole surface is `fetch`, the shape every fetch-style runtime already
+ * takes, so whatever is listening hands requests straight to it.
  *
- *     Bun.serve(server)                 // Bun takes { fetch }
- *     export default server             // Workers, Deno
- *     app.mount("/rpc", server.fetch)   // Hono
+ *     http.serve(service.fetch, { port })   // @webappwiz/http
+ *     export default service                // Workers, Deno
+ *     app.mount("/rpc", service.fetch)      // Hono
  */
-export class Server<C extends Contract> {
+export class Service<C extends Contract> {
 	constructor(
 		private contract: C,
 		private handlers: Handlers<C>,
-		private options: ServerOptions = {},
+		private options: ServiceOptions = {},
 	) {}
 
 	/** Bound, so it survives being passed around detached from the instance. */
