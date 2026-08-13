@@ -244,7 +244,7 @@ Failures print JSON on stdout and an explanation on stderr.
 - 6 `lease_held`: another agent is driving this tree.
 - 7 `dirty`: uncommitted changes. Commit, then merge.
 - 8 `not_found`: no such task, or not run from a task worktree.
-- 9 `hook_failed`: `postCreate` failed; worktree exists. Fix and re-run the
+- 9 `hook_failed`: `postCheckout` failed; worktree exists. Fix and re-run the
   hook by hand.
 - 10 `exists`: task already exists. Claim it, or rm first.
 - 11 `orphaned`: record with no worktree. Remove it with `arbor rm`.
