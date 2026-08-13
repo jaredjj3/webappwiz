@@ -6,7 +6,7 @@ import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Path } from "./path";
 
 describe("path", () => {
-	const binDir = resolve(import.meta.dir, "../../bin");
+	const binDir = resolve(import.meta.dirname, "../../bin");
 	const profile = "/home/wiz/.zshrc";
 	let log: MemoryLogger;
 	let fs: FakeFs;

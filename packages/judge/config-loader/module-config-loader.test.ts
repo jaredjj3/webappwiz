@@ -5,7 +5,7 @@ import { ModuleConfigLoader } from "./module-config-loader";
 // The real module system, so these read this repository's own files rather than
 // a fake fs. Anchored on this file, not the working directory: what a config
 // path resolves against is the caller's business, not this suite's.
-const root = join(import.meta.dir, "../../..");
+const root = join(import.meta.dirname, "../../..");
 
 describe("ModuleConfigLoader", () => {
 	it("loads the config a project keeps at the root", async () => {

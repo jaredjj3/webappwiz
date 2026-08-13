@@ -150,10 +150,10 @@ describe("skills", () => {
 		// package version exactly
 		const real = new NodeFs();
 		const { version } = JSON.parse(
-			await real.read(`${import.meta.dir}/package.json`),
+			await real.read(`${import.meta.dirname}/package.json`),
 		);
 		const root = JSON.parse(
-			await real.read(`${import.meta.dir}/../../package.json`),
+			await real.read(`${import.meta.dirname}/../../package.json`),
 		);
 		expect(root.version).toEqual(version);
 

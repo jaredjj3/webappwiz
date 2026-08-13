@@ -5,7 +5,7 @@ import type { Fs, Ps } from "@webappwiz/sys";
 // Tag every line we add so `remove` can find and delete exactly ours.
 const TAG = "# webappwiz";
 
-const binDir = resolve(import.meta.dir, "../../bin");
+const binDir = resolve(import.meta.dirname, "../../bin");
 
 /** Which way to move `bin/`: exactly one of these is set. */
 export interface PathOptions {

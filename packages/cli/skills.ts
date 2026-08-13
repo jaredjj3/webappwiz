@@ -4,7 +4,7 @@ import { type Fs, walk } from "@webappwiz/sys";
 import { table } from "./table";
 
 /** The directory holding the skills this package ships. */
-export const source = `${import.meta.dir}/skills`;
+export const source = `${import.meta.dirname}/skills`;
 
 export function versionOf(md: string): string | null {
 	// frontmatter only, so a `version:` inside a fenced example in the body is
