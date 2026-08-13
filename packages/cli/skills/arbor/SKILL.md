@@ -60,6 +60,12 @@ before its record), so trust a broken status only if it is still there when
 you look again. Only ask before waiting if the wait itself is the problem: the
 task has been sitting for hours, or you were told this was urgent.
 
+A status is only true for the moment you read it. Other agents land work while
+the human is typing, so a task you are blocked on has often merged by the time
+they reply. Never repeat a status you read earlier in the conversation: re-run
+`arbor ls` first, every time you come back to say you are still waiting, still
+blocked, or still overlapping. Say what it reads now, not what it read then.
+
 ## Leases
 
 A lease records who is driving a tree. `arbor add` and `arbor claim` take
