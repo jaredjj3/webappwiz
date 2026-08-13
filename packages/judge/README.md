@@ -1,10 +1,15 @@
 # @webappwiz/judge
 
-A harness for static analysis you write yourself, not a lint engine. There is
-no built-in rule set, no severity matrix and no plugin protocol: there is one
-rule format, and it covers the analysis an agent has to read code to do as
-well as the analysis a token scan can decide. If your rule is a regex, biome
-or eslint already run it faster; this is for the rules they cannot express.
+Static analysis you write yourself, not a lint engine. There is no built-in
+rule set, no severity matrix and no plugin protocol: there is one rule format,
+and it covers the analysis an agent has to read code to do as well as the
+analysis a token scan can decide. If your rule is a regex, biome or eslint
+already run it faster; this is for the rules they cannot express.
+
+The agent runner underneath is [`@webappwiz/rules`](../rules), which owns
+concurrency, prompt assembly and the JSON contract. Everything file-shaped is
+here: which files a rule applies to, how they are chunked, `judge-ignore`
+markers, and quoting the offending line off disk.
 
 A rule is a class beside its markdown: the class says what the rule applies to
 and how, if at all, code alone decides it; the document says what the rule is,
@@ -24,7 +29,7 @@ export class OneClassPerFile implements Rule {
 	readonly level = "error";
 	readonly document = doc;
 
-	check(text: string): Finding[] {
+	check(text: string): Hit[] {
 		...
 	}
 }
@@ -61,20 +66,22 @@ apart.
 ## The config
 
 A config is a TypeScript module so composition stays typed. It lives in
-`judge.config.ts` unless a command is told otherwise, and it is required:
-there is no recommended set to fall back on, and no rule runs that the config
-does not name.
+`rules.config.ts` unless a command is told otherwise, one section per command
+that runs rules, and judge's is required: there is no recommended set to fall
+back on, and no rule runs that the config does not name.
 
 ```ts
-// judge.config.ts
-import { defineConfig, NoEmDashes, OneClassPerFile } from "@webappwiz/judge";
+// rules.config.ts
+import { defineJudge, NoEmDashes, OneClassPerFile } from "@webappwiz/judge";
 import { NoFixme } from "./rules/no-fixme";
 
-export default defineConfig({
-	rules: [new NoEmDashes(), new OneClassPerFile(), new NoFixme()],
-	agent: "haiku", // the model an agent run uses unless told otherwise
-	concurrency: 4, // agent calls in flight at once
-});
+export default {
+	judge: defineJudge({
+		rules: [new NoEmDashes(), new OneClassPerFile(), new NoFixme()],
+		agent: "haiku", // the model an agent run uses unless told otherwise
+		concurrency: 4, // agent calls in flight at once
+	}),
+};
 ```
 
 Your own rule is the same class and the same markdown import, wherever it
@@ -235,7 +242,7 @@ that will not compile is not worth asking an agent about.
 ## API
 
 Those commands are a thin shell over this package. `Configs.load` reads a
-config module, defaulting to `judge.config.ts`, and reports what is wrong with
+module's `judge` section, defaulting to `rules.config.ts`, and reports what is wrong with
 its rules; `RuleDocument` parses one rule's markdown, for a report that wants
 its title or its examples; `Checker`
 runs the checks over in-memory files and `Check` over the git-tracked tree;

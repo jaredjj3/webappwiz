@@ -3,8 +3,8 @@ import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs, NodeGlob, NodePs } from "@webappwiz/sys";
 import { Check } from "./check";
 
-// Runs the checked half of judge.config.ts, the half no agent is needed for.
-// The rules it cannot decide are `webappwiz judge`'s, on demand.
+// Runs the checked half of the judge section of rules.config.ts, the half no
+// agent is needed for. The rules it cannot decide are `webappwiz judge`'s.
 const ok = await new Check(
 	new ConsoleLogger(),
 	new NodeFs(),

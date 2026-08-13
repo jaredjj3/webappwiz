@@ -29,7 +29,7 @@ describe("JudgeCommands", () => {
 		);
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
 	const oneRule = defineJudge({ rules: [one()] });
-	const config = "judge.config.ts";
+	const config = "rules.config.ts";
 	// budget high enough that only the tests about budgets ever meet it
 	const judging = {
 		config: config,
@@ -137,7 +137,7 @@ describe("JudgeCommands", () => {
 	it("lists the ids it does know when shown one it does not", async () => {
 		expect(
 			commands(oneRule).show({ id: "two", config: config }),
-		).rejects.toThrow('no rule "two" in judge.config.ts. Known ids: one');
+		).rejects.toThrow('no rule "two" in rules.config.ts. Known ids: one');
 	});
 
 	it("prints what the agent found as a report of its own", async () => {
