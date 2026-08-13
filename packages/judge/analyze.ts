@@ -43,6 +43,8 @@ export interface Finished {
 	glob: string;
 	/** The ids of the rules the task checked. */
 	rules: string[];
+	/** How many files this task's agent was told to read. */
+	files: number;
 	violations: Violation[];
 	/** How long this task's agent took. */
 	took: Duration;
@@ -153,6 +155,7 @@ export class Analyzer {
 					this.dispatcher.dispatch("finished", {
 						glob: task.label,
 						rules: finished.rules,
+						files: task.files.length,
 						violations,
 						took: finished.took,
 						cost: finished.cost,

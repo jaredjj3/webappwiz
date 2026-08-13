@@ -84,7 +84,7 @@ export function estimate(
 		]);
 	}
 	return [
-		planned(files, rules, calls, tokens),
+		planned({ files, rules, calls, estimate: tokens }),
 		"",
 		...table(rows).map((line) => `  ${line}`),
 		"",
@@ -112,13 +112,29 @@ export function estimate(
  * `[n/total]` headings below. Without an `agent` it is the whole of what
  * `--estimate` prints, so it names no command it is not going to run.
  */
-export function planned(
-	files: number,
-	rules: number,
-	calls: number,
-	estimate: number,
-	agent?: string,
-): string {
+export interface Planned {
+	files: number;
+	rules: number;
+	calls: number;
+	/** Tokens the plan can see, which is a floor on what the run reads. */
+	estimate: number;
+	/** Agent calls in flight at once, which is what the wall clock turns on. */
+	concurrency?: number;
+	/** What those calls are predicted to cost, when the agent has a price. */
+	cost?: number;
+	/** The command the run will spawn. */
+	agent?: string;
+}
+
+export function planned({
+	files,
+	rules,
+	calls,
+	estimate,
+	concurrency,
+	cost,
+	agent,
+}: Planned): string {
 	// Each stat gets its own color, so the prose between them is grayed piece by
 	// piece: a foreground color resets to the default rather than to whatever it
 	// was nested in, so one gray around the whole line would not survive them.
@@ -129,8 +145,14 @@ export function planned(
 		color.green(count(rules, "rule")) +
 		color.gray(" in ") +
 		color.yellow(count(calls, "agent call")) +
+		(concurrency === undefined
+			? ""
+			: color.gray(`, ${concurrency} at a time`)) +
 		color.gray(", reading ") +
-		color.red(`${compact.format(estimate)}+ tokens`);
+		color.red(`${compact.format(estimate)}+ tokens`) +
+		(cost === undefined
+			? ""
+			: color.gray(" for ") + color.bold(`${usd(cost)}+`));
 	return agent === undefined
 		? plan
 		: `${plan}${color.gray(", using: ")}${color.bold(agent)}`;
@@ -143,13 +165,16 @@ export function planned(
 export function finished({
 	glob,
 	rules,
+	files,
 	violations,
 	took,
 	cost,
 	done,
 	total,
 }: Finished): string[] {
-	const heading = `${color.gray(`[${done}/${total}]`)} ${glob} ${color.gray(`(${count(rules.length, "rule")})`)}`;
+	const heading =
+		`${color.gray(`[${done}/${total}]`)} ${glob} ` +
+		color.gray(`(${count(rules.length, "rule")}, ${count(files, "file")})`);
 	// No dollars rather than a zero when the agent reported none: an `--exec`
 	// command costing nothing and one that never said are different things.
 	const spent = cost === undefined ? "" : `  ${usd(cost)}`;

@@ -148,7 +148,7 @@ describe("JudgeCommands", () => {
 		);
 
 		expect(commands(oneRule).judge(judging)).rejects.toThrow("1 error");
-		expect(printed()).toContain("✗ [1/1] **/*.ts (1 rule): 1 problem");
+		expect(printed()).toContain("✗ [1/1] **/*.ts (1 rule, 1 file): 1 problem");
 		expect(printed()).toContain(
 			"/p/a.ts:2  error  the file declares a second class (one)",
 		);

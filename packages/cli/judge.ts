@@ -266,12 +266,24 @@ export class JudgeCommands {
 		const files = new Set(tasks.flatMap((task) => task.files)).size;
 		const predicted = estimated(tasks);
 		const calls = tasks.length;
-		this.log.info(planned(files, rules.length, calls, predicted, agent.label));
+		// Priced whether or not it is over budget: what a run will cost is worth
+		// knowing every time, not only on the runs that trip a limit.
+		const cost =
+			model === undefined
+				? undefined
+				: predict(model, predicted, calls, measured);
+		this.log.info(
+			planned({
+				files,
+				rules: rules.length,
+				calls,
+				estimate: predicted,
+				concurrency: config.concurrency,
+				cost,
+				agent: agent.label,
+			}),
+		);
 		if (predicted > opts.budget) {
-			const cost =
-				model === undefined
-					? undefined
-					: predict(model, predicted, calls, measured);
 			this.log.info(overBudget(predicted, opts.budget, cost));
 			if (!(await this.confirmer.confirm("Run anyway?"))) {
 				// Throwing before run is what cancels: nothing has been spawned yet.
