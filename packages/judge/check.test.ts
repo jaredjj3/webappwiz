@@ -48,14 +48,4 @@ describe("check", () => {
 			"git ls-files",
 		);
 	});
-
-	it("falls back to the recommended rules with no config to read", async () => {
-		ps.setCaptureOutput("a.ts\n", "");
-		await fs.write("a.ts", "class A {}\nclass B {}\n");
-
-		// No judge.config.ts in this fake fs, so the recommended rules run: they
-		// carry their own documents and need nothing read to load.
-		expect(await new Check(log, fs, ps).run()).toBe(false);
-		expect(String(log.entries[0]?.message)).toContain("one-class-per-file");
-	});
 });

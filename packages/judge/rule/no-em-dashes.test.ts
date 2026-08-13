@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { NoEmDashes } from "./no-em-dashes";
 
-// The document's examples are the rest of this rule's suite: recommended.test.ts
+// The document's examples are the rest of this rule's suite: judge.config.test.ts
 // runs every Good and Bad block through the check. What is left here is where a
 // finding points, and which of the two messages it carries.
 describe("no-em-dashes", () => {

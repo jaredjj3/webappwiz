@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { ParametersDeclareFields } from "./parameters-declare-fields";
 
-// The document's examples are the rest of this rule's suite: recommended.test.ts
+// The document's examples are the rest of this rule's suite: judge.config.test.ts
 // runs every Good block through the check and every Bad block against it. What
 // is left here is where a finding points, and the token edges no document
 // should have to teach.

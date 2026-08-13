@@ -134,7 +134,7 @@ export class JudgeCommands {
 				doc.title,
 				rule.level,
 				rule.files,
-				// which rules cost tokens: a checked rule is the linter's, free
+				// which rules cost tokens: a checked rule is decided locally, free
 				rule.check ? (rule.partial ? "partial" : "full") : "",
 				String(doc.good.length),
 				String(doc.bad.length),
@@ -192,7 +192,7 @@ export class JudgeCommands {
 			);
 		}
 		const config = await this.sound(opts.config);
-		// A rule with a full check is the linter's, already enforced for free;
+		// A rule with a full check is already enforced locally, for free;
 		// an agent reads only the rules, or the parts of them, no check decides.
 		const rules = config.rules.filter((rule) => !rule.check || rule.partial);
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
@@ -240,10 +240,9 @@ export class JudgeCommands {
 			return;
 		}
 		const agent = this.agent(config, opts);
-		// The model the run is really using, the config's default included: it is
-		// what the cost is predicted from and recorded against.
-		const model =
-			opts.exec === undefined ? (opts.agent ?? config.agent) : undefined;
+		// What the cost is predicted from and recorded against, which is the
+		// config's model as readily as one the caller named.
+		const model = this.model(config, opts);
 		// Against where wiz was run rather than the directory being judged: what
 		// a call costs over its files is a fact about this project, and judging
 		// one package of it should leave the measurement where the next run of any
@@ -352,9 +351,14 @@ export class JudgeCommands {
 
 	/** The agent a command runs with: what it was told, else the config's. */
 	private agent(config: Config, opts: AgentOptions): Agent {
-		return agentCommand(
-			opts.exec === undefined ? { agent: opts.agent ?? config.agent } : opts,
-		);
+		const model = this.model(config, opts);
+		return agentCommand(model === undefined ? opts : { agent: model });
+	}
+
+	/** The model a run asks, or undefined for an `--exec` command, which is a
+	 * model nothing here can name or price. */
+	private model(config: Config, opts: AgentOptions): string | undefined {
+		return opts.exec === undefined ? (opts.agent ?? config.agent) : undefined;
 	}
 
 	private config(
