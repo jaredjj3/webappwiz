@@ -4,7 +4,7 @@ import type { Logger } from "@webappwiz/log";
 import type { Fs, Ps } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import { SystemClock } from "@webappwiz/time";
-import { LintCommands } from "./lint";
+import { GuideCommands } from "./guide";
 import { Skills } from "./skills";
 import { update } from "./update";
 
@@ -42,55 +42,22 @@ export async function commands(
 		})
 		.action((opts) => update(log, fs, opts));
 
-	const lint = app
-		.group("lint")
-		.description("author, audit, and run the guide's agent rules");
-	const lintCommands = new LintCommands(log, fs, ps, new SystemClock());
-	const rulesArg = {
+	// `judge` and `rules` are siblings rather than one nested in the other: the
+	// guide is shared, with `wiz fix` enforcing the rules that carry a check and
+	// `judge` the ones only an agent can decide, so neither owns the rule set.
+	const guideCommands = new GuideCommands(log, fs, ps, new SystemClock());
+	const guideArg = {
 		default: DEFAULT_GUIDE,
 		description: `guide module (default: ${DEFAULT_GUIDE})`,
 	};
 
-	lint
-		.command("audit")
-		.description(
-			"check the guide: is it sound, and which rules need no agent at all",
-		)
-		.arg("rules", t.string(), rulesArg)
-		.option("strict", t.boolean(), {
-			default: false,
-			description: "treat warnings as errors",
-		})
-		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
-			default: undefined,
-			description: "model to ask with; required unless --exec",
-		})
-		.option("exec", t.optional(t.string()), {
-			default: undefined,
-			description: "command the prompt is passed to, instead of --agent",
-		})
-		.action((opts) => lintCommands.audit(opts));
-
-	lint
-		.command("ls")
-		.description("list the guide rules")
-		.arg("rules", t.string(), rulesArg)
-		.action((opts) => lintCommands.ls(opts));
-
-	lint
-		.command("show")
-		.description("print one rule in full, by the id `lint ls` gives it")
-		.arg("id", t.string(), { description: "rule id" })
-		.arg("rules", t.string(), rulesArg)
-		.action((opts) => lintCommands.show(opts));
-
-	lint
-		.command("analyze")
+	app
+		.command("judge")
 		.description("check a directory against the guide, one agent per glob")
-		.arg("rules", t.string(), rulesArg)
+		.arg("guide", t.string(), guideArg)
 		.arg("dir", t.string(), {
 			default: ".",
-			description: "directory to analyze (default: .)",
+			description: "directory to judge (default: .)",
 		})
 		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
 			default: undefined,
@@ -120,7 +87,44 @@ export async function commands(
 			default: 200_000,
 			description: "confirm before reading more than this many tokens",
 		})
-		.action((opts) => lintCommands.analyze(opts));
+		.action((opts) => guideCommands.judge(opts));
+
+	const rules = app
+		.group("rules")
+		.description("list, print, and audit the rules a guide is made of");
+
+	rules
+		.command("ls")
+		.description("list the guide rules")
+		.arg("guide", t.string(), guideArg)
+		.action((opts) => guideCommands.ls(opts));
+
+	rules
+		.command("show")
+		.description("print one rule in full, by the id `rules ls` gives it")
+		.arg("id", t.string(), { description: "rule id" })
+		.arg("guide", t.string(), guideArg)
+		.action((opts) => guideCommands.show(opts));
+
+	rules
+		.command("audit")
+		.description(
+			"check the guide: is it sound, and which rules need no agent at all",
+		)
+		.arg("guide", t.string(), guideArg)
+		.option("strict", t.boolean(), {
+			default: false,
+			description: "treat warnings as errors",
+		})
+		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
+			default: undefined,
+			description: "model to ask with; required unless --exec",
+		})
+		.option("exec", t.optional(t.string()), {
+			default: undefined,
+			description: "command the prompt is passed to, instead of --agent",
+		})
+		.action((opts) => guideCommands.audit(opts));
 
 	const skillsGroup = app
 		.group("skills")

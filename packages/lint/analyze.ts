@@ -25,7 +25,7 @@ export interface Task {
 
 /** One rule broken in one place, as the report prints it. */
 export interface Violation {
-	/** The rule's referenceable id, as `lint show` lists it. */
+	/** The rule's referenceable id, as `rules show` lists it. */
 	id: string;
 	level: Level;
 	/** Path as the caller would type it: the analyzed dir plus the file. */

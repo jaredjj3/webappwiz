@@ -10,7 +10,7 @@ import type { Finding } from "../finding";
  * linter deciding the cases it can see and the agent the rest.
  */
 export interface Rule {
-	/** Kebab case: what a report cites and `lint show` takes. */
+	/** Kebab case: what a report cites and `rules show` takes. */
 	readonly id: string;
 	/** Glob choosing which files this rule applies to. */
 	readonly files: string;

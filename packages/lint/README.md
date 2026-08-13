@@ -46,8 +46,8 @@ class Bar {}
 ```
 
 A rule that implements `check` is enforced by the linter for free on every
-`wiz fix`. A rule without one is judged by an agent, on demand, through `lint
-analyze`. `partial = true` is both: the linter decides the cases a token scan
+`wiz fix`. A rule without one is judged by an agent, on demand, through
+`judge`. `partial = true` is both: the linter decides the cases a token scan
 can see and the agent reads the rest. The rule's examples keep the two halves
 honest: a check must pass every `## Good` block, and a full check must catch
 every `## Bad` block, so the document and the implementation cannot drift
@@ -123,17 +123,17 @@ git-tracked file a checked rule's glob wants is linted, reporting like a
 compiler: `path:line:column rule message`. Errors fail the run; warnings only
 print.
 
-## Analyzing
+## Judging
 
-`webappwiz lint analyze [dir]` checks the code against the guide's agent
-rules, handing every rule that shares a glob to an agent in one task so the
-files are read once rather than once per rule, and printing what comes back
-as lint output. Which agent is three flags, one of which you must pass:
+`webappwiz judge [dir]` checks the code against the guide's agent rules,
+handing every rule that shares a glob to an agent in one task so the files are
+read once rather than once per rule, and printing what comes back as lint
+output. Which agent is three flags, one of which you must pass:
 
 ```bash
-webappwiz lint analyze --agent opus          # claude -p --model <haiku|sonnet|opus>
-webappwiz lint analyze --exec "codex exec"   # any command, run by a shell
-webappwiz lint analyze --prompt              # print the prompts, run nothing
+webappwiz judge --agent opus          # claude -p --model <haiku|sonnet|opus>
+webappwiz judge --exec "codex exec"   # any command, run by a shell
+webappwiz judge --prompt              # print the prompts, run nothing
 ```
 
 There is no default: a run spends your tokens, so it will not choose for you
@@ -143,8 +143,8 @@ argument. `--prompt` is for an agent running the guide itself: it prints each
 task's prompt under a `=== <glob>: <ids> (<n> files) ===` header, to hand to
 subagents of its own.
 
-`lint ls` lists the guide's rules, with which are checked and which cost an
-agent; `lint show <id>` prints one in full.
+`rules ls` lists the guide's rules, with which are checked and which cost an
+agent; `rules show <id>` prints one in full.
 
 ## What a run costs
 
@@ -152,7 +152,7 @@ A run says what it is about to read before it reads any of it, and
 `--estimate` prints that line and stops, spawning nothing:
 
 ```bash
-webappwiz lint analyze --estimate
+webappwiz judge --estimate
 # checking 211 files against 7 rules in 9 agent calls, reading 165K+ tokens
 ```
 
@@ -177,7 +177,7 @@ ref, staged, unstaged or untracked alike, which is usually the cheaper
 answer:
 
 ```bash
-webappwiz lint analyze --since main --agent sonnet
+webappwiz judge --since main --agent sonnet
 ```
 
 Deletions are left out, since a violation quotes its line from disk and a
@@ -189,8 +189,8 @@ still part of what they are meant to look at.
 
 An agent is the last resort. It costs minutes and tokens every run and only
 ever judges, so a rule a formatter, linter, type checker or grep could decide
-outright belongs to a check instead. `lint audit`, with the same `--agent`
-and `--exec` flags analyze takes, asks that question of every agent rule and
+outright belongs to a check instead. `rules audit`, with the same `--agent`
+and `--exec` flags judge takes, asks that question of every agent rule and
 warns about the ones that answer with a tool:
 
 ```
@@ -205,13 +205,13 @@ because writing the check is a judgment you make once, not something to fail
 a build on by surprise: `--strict` is how you make it fail once you have
 decided. Rules already carrying a full check are not asked about at all.
 
-Audit also validates the guide itself, the way analyze does before running:
+Audit also validates the guide itself, the way judge does before running:
 a rule whose document is broken is an error, printed before any agent spends
 anything. There is no mode flag and no half of this to run on its own, so
 audit does the same thing every time you call it:
 
 ```bash
-webappwiz lint audit --agent sonnet
+webappwiz rules audit --agent sonnet
 # sound: 8 rules, 0 errors, 0 warnings
 ```
 

@@ -31,10 +31,10 @@ export interface Confirm {
 	confirm(question: string): boolean | Promise<boolean>;
 }
 
-/** Which guide to read, which every lint command needs first. */
+/** Which guide to read, which every command here needs first. */
 export interface GuideOptions {
-	/** The guide module to load, as `lint ls` takes it. */
-	rules: string;
+	/** The guide module to load, as `rules ls` takes it. */
+	guide: string;
 }
 
 export interface AuditOptions extends GuideOptions {
@@ -46,11 +46,11 @@ export interface AuditOptions extends GuideOptions {
 }
 
 export interface ShowOptions extends GuideOptions {
-	/** The rule to print, as `lint ls` lists it. */
+	/** The rule to print, as `rules ls` lists it. */
 	id: string;
 }
 
-export interface AnalyzeOptions extends GuideOptions {
+export interface JudgeOptions extends GuideOptions {
 	/** The directory to check, and what paths in the report are relative to. */
 	dir: string;
 	agent?: string;
@@ -82,7 +82,7 @@ export const ask: Confirm = {
 		/^y(es)?$/i.test((prompt(`${question} [y/N]`) ?? "").trim()),
 };
 
-export class LintCommands {
+export class GuideCommands {
 	constructor(
 		private log: Logger,
 		private fs: Fs,
@@ -109,7 +109,7 @@ export class LintCommands {
 					`<${Object.keys(AGENTS).join("|")}> or --exec <command>`,
 			);
 		}
-		const { rules, diagnostics } = await this.guide(opts.rules);
+		const { rules, diagnostics } = await this.guide(opts.guide);
 		if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
 			// Before any agent runs: a guide that will not compile is not worth
 			// spending calls on, and the errors are the more urgent report.
@@ -129,7 +129,7 @@ export class LintCommands {
 
 	/** Lists a guide's rules, one row each, ids first for citing. */
 	async ls(opts: GuideOptions): Promise<void> {
-		const { rules } = await this.sound(opts.rules);
+		const { rules } = await this.sound(opts.guide);
 		const rows = [["ID", "RULE", "LEVEL", "FILES", "CHECK", "GOOD", "BAD"]];
 		for (const rule of rules) {
 			const doc = new RuleDocument(rule);
@@ -149,14 +149,14 @@ export class LintCommands {
 
 	/**
 	 * Prints one rule in full: what it covers, and the document an analysis
-	 * agent is given, verbatim. Take the id from `lint ls` or from a finding.
+	 * agent is given, verbatim. Take the id from `rules ls` or from a finding.
 	 */
 	async show(opts: ShowOptions): Promise<void> {
-		const { rules } = await this.sound(opts.rules);
+		const { rules } = await this.sound(opts.guide);
 		const rule = rules.find((candidate) => candidate.id === opts.id);
 		if (!rule) {
 			throw new Error(
-				`no rule "${opts.id}" in ${opts.rules}. Known ids: ${rules.map((candidate) => candidate.id).join(", ")}`,
+				`no rule "${opts.id}" in ${opts.guide}. Known ids: ${rules.map((candidate) => candidate.id).join(", ")}`,
 			);
 		}
 		this.log.info(
@@ -182,7 +182,7 @@ export class LintCommands {
 	 * prints that size and stops, which is the answer to "what would this cost"
 	 * without having to guess a budget low enough to be refused.
 	 */
-	async analyze(opts: AnalyzeOptions): Promise<void> {
+	async judge(opts: JudgeOptions): Promise<void> {
 		if (
 			opts.estimate &&
 			(opts.agent !== undefined || opts.exec !== undefined || opts.prompt)
@@ -195,7 +195,7 @@ export class LintCommands {
 					"--agent, --exec or --prompt",
 			);
 		}
-		const { rules: all } = await this.sound(opts.rules);
+		const { rules: all } = await this.sound(opts.guide);
 		// A rule with a full check is the linter's, already enforced for free;
 		// an agent reads only the rules, or the parts of them, no check decides.
 		const rules = all.filter((rule) => !rule.check || rule.partial);

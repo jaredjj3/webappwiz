@@ -5,9 +5,9 @@ import { color, MemoryLogger } from "@webappwiz/log";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
-import { type Confirm, LintCommands } from "./lint";
+import { type Confirm, GuideCommands } from "./guide";
 
-describe("LintCommands", () => {
+describe("GuideCommands", () => {
 	let fs: FakeFs;
 	let ps: FakePs;
 	let log: MemoryLogger;
@@ -16,13 +16,13 @@ describe("LintCommands", () => {
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
 	const commands = (guide: Guide, confirm?: Confirm) =>
-		new LintCommands(log, fs, ps, clock, new FakeGuideLoader(guide), confirm);
+		new GuideCommands(log, fs, ps, clock, new FakeGuideLoader(guide), confirm);
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
 	const oneRule = defineGuide([one()]);
 	const config = "lint.config.ts";
 	// budget high enough that only the tests about budgets ever meet it
-	const analyzing = {
-		rules: config,
+	const judging = {
+		guide: config,
 		dir: "/p",
 		agent: "haiku",
 		chunk: 25,
@@ -38,7 +38,7 @@ describe("LintCommands", () => {
 	});
 
 	// the answer an agent gives about a rule nothing but an agent could enforce
-	const needsAgent = { rules: config, strict: false, agent: "haiku" };
+	const needsAgent = { guide: config, strict: false, agent: "haiku" };
 	const noTool = () => ps.setCaptureOutput('{"tool": null}', "");
 
 	it("declares a sound guide sound", async () => {
@@ -98,20 +98,20 @@ describe("LintCommands", () => {
 
 	it("refuses to audit without an agent to ask", async () => {
 		await expect(
-			commands(oneRule).audit({ rules: config, strict: false }),
+			commands(oneRule).audit({ guide: config, strict: false }),
 		).rejects.toThrow("audit asks an agent, so name one");
 		expect(ps.getCalls()).toEqual([]);
 	});
 
 	it("shows each rule as a table row when showing", async () => {
-		await commands(oneRule).ls({ rules: config });
+		await commands(oneRule).ls({ guide: config });
 
 		expect(printed()).toContain("ID   RULE  LEVEL  FILES");
 		expect(printed()).toContain("one  One   error");
 	});
 
 	it("prints one rule in full when shown its id", async () => {
-		await commands(oneRule).show({ id: "one", rules: config });
+		await commands(oneRule).show({ id: "one", guide: config });
 
 		expect(printed()).toContain("ID     one");
 		expect(printed()).toContain("LEVEL  error");
@@ -121,7 +121,7 @@ describe("LintCommands", () => {
 
 	it("lists the ids it does know when shown one it does not", async () => {
 		expect(
-			commands(oneRule).show({ id: "two", rules: config }),
+			commands(oneRule).show({ id: "two", guide: config }),
 		).rejects.toThrow('no rule "two" in lint.config.ts. Known ids: one');
 	});
 
@@ -132,9 +132,7 @@ describe("LintCommands", () => {
 			"",
 		);
 
-		expect(commands(oneRule).analyze(analyzing)).rejects.toThrow(
-			"1 lint error",
-		);
+		expect(commands(oneRule).judge(judging)).rejects.toThrow("1 lint error");
 		expect(printed()).toContain("✗ [1/1] **/*.ts (1 rule): 1 problem");
 		expect(printed()).toContain(
 			"/p/a.ts:2  error  the file declares a second class (one)",
@@ -146,7 +144,7 @@ describe("LintCommands", () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
-		await commands(oneRule).analyze(analyzing);
+		await commands(oneRule).judge(judging);
 
 		expect(printed()).toContain("no violations");
 	});
@@ -159,7 +157,7 @@ describe("LintCommands", () => {
 			return 0;
 		});
 
-		await commands(oneRule).analyze(analyzing);
+		await commands(oneRule).judge(judging);
 
 		expect(printed()).toContain("clean in 12.5s");
 		expect(printed()).toContain("no violations in 12.5s");
@@ -175,7 +173,7 @@ describe("LintCommands", () => {
 			"",
 		);
 
-		await commands(guide).analyze(analyzing);
+		await commands(guide).judge(judging);
 
 		expect(printed()).toContain("/p/a.ts:1  warning  the class has no doc");
 	});
@@ -184,7 +182,7 @@ describe("LintCommands", () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
-		await commands(oneRule).analyze(analyzing);
+		await commands(oneRule).judge(judging);
 
 		expect(ps.getCalls()[0]).toStartWith(
 			"claude -p --output-format json --model haiku ",
@@ -198,8 +196,8 @@ describe("LintCommands", () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
-		await commands(oneRule).analyze({
-			...analyzing,
+		await commands(oneRule).judge({
+			...judging,
 			agent: undefined,
 			exec: "codex exec",
 		});
@@ -210,7 +208,7 @@ describe("LintCommands", () => {
 	it("prints the prompts and spawns nothing under --prompt", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 
-		await commands(oneRule).analyze({ ...analyzing, prompt: true });
+		await commands(oneRule).judge({ ...judging, prompt: true });
 
 		expect(printed()).toContain("=== **/*.ts: one (1 file) ===");
 		expect(printed()).toContain("exactly 1 style rule");
@@ -218,7 +216,7 @@ describe("LintCommands", () => {
 		expect(ps.getCalls()).toEqual([]);
 	});
 
-	it("leaves fully checked rules to the linter, analyzing the rest", async () => {
+	it("leaves fully checked rules to the linter, judging the rest", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 		const guide = defineGuide([
 			testRule("one", { document: ruleDoc("One"), check: () => [] }),
@@ -230,7 +228,7 @@ describe("LintCommands", () => {
 			testRule("three", { document: ruleDoc("Three") }),
 		]);
 
-		await commands(guide).analyze({ ...analyzing, prompt: true });
+		await commands(guide).judge({ ...judging, prompt: true });
 
 		// a partial check's rule still needs the agent; a full check's does not,
 		// and the two survivors share their glob's one task
@@ -252,14 +250,14 @@ describe("LintCommands", () => {
 	it("refuses to analyze with an unsound guide", async () => {
 		const guide = defineGuide([one("just prose\n")]);
 
-		expect(commands(guide).analyze(analyzing)).rejects.toThrow("2 errors");
+		expect(commands(guide).judge(judging)).rejects.toThrow("2 errors");
 	});
 
 	it("says what the run will read before it reads any of it", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
-		await commands(oneRule).analyze(analyzing);
+		await commands(oneRule).judge(judging);
 
 		expect(printed()).toMatch(/reading \d[\d.]*K?\+ tokens/);
 	});
@@ -269,8 +267,8 @@ describe("LintCommands", () => {
 		ps.setCaptureOutput("[]", "");
 
 		expect(
-			commands(oneRule, { confirm: () => false }).analyze({
-				...analyzing,
+			commands(oneRule, { confirm: () => false }).judge({
+				...judging,
 				budget: 10,
 			}),
 		).rejects.toThrow("over budget");
@@ -282,8 +280,8 @@ describe("LintCommands", () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
-		await commands(oneRule, { confirm: () => true }).analyze({
-			...analyzing,
+		await commands(oneRule, { confirm: () => true }).judge({
+			...judging,
 			budget: 10,
 		});
 
@@ -296,8 +294,8 @@ describe("LintCommands", () => {
 		await fs.write("/p/b.ts", "class B {}");
 		ps.setCaptureOutput("a.ts\n", "");
 
-		await commands(oneRule).analyze({
-			...analyzing,
+		await commands(oneRule).judge({
+			...judging,
 			since: "main",
 			prompt: true,
 		});
@@ -310,8 +308,8 @@ describe("LintCommands", () => {
 	it("prints what a run would read and spawns nothing under --estimate", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 
-		await commands(oneRule).analyze({
-			...analyzing,
+		await commands(oneRule).judge({
+			...judging,
 			agent: undefined,
 			estimate: true,
 		});
@@ -325,8 +323,8 @@ describe("LintCommands", () => {
 	it("names no agent under --estimate, having none to run", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 
-		await commands(oneRule).analyze({
-			...analyzing,
+		await commands(oneRule).judge({
+			...judging,
 			agent: undefined,
 			estimate: true,
 		});
@@ -339,8 +337,8 @@ describe("LintCommands", () => {
 		await fs.write("/p/b.ts", "class B {}");
 		ps.setCaptureOutput("a.ts\n", "");
 
-		await commands(oneRule).analyze({
-			...analyzing,
+		await commands(oneRule).judge({
+			...judging,
 			agent: undefined,
 			estimate: true,
 			since: "main",
@@ -351,8 +349,8 @@ describe("LintCommands", () => {
 
 	it("refuses --estimate together with --agent", async () => {
 		await expect(
-			commands(oneRule).analyze({
-				...analyzing,
+			commands(oneRule).judge({
+				...judging,
 				estimate: true,
 				agent: "haiku",
 			}),
@@ -361,8 +359,8 @@ describe("LintCommands", () => {
 
 	it("refuses --estimate together with --exec", async () => {
 		await expect(
-			commands(oneRule).analyze({
-				...analyzing,
+			commands(oneRule).judge({
+				...judging,
 				estimate: true,
 				agent: undefined,
 				exec: "codex exec",
@@ -372,8 +370,8 @@ describe("LintCommands", () => {
 
 	it("refuses --estimate together with --prompt", async () => {
 		await expect(
-			commands(oneRule).analyze({
-				...analyzing,
+			commands(oneRule).judge({
+				...judging,
 				estimate: true,
 				agent: undefined,
 				prompt: true,
@@ -385,7 +383,7 @@ describe("LintCommands", () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("", "");
 
-		await commands(oneRule).analyze({ ...analyzing, since: "main" });
+		await commands(oneRule).judge({ ...judging, since: "main" });
 
 		expect(printed()).toContain("nothing has changed since main");
 		expect(ps.getCalls()).not.toContain(
