@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
+import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
@@ -27,7 +28,7 @@ describe("Analyzer", () => {
 		ps = new FakePs();
 		log = new MemoryLogger();
 		clock = new FakeClock();
-		analyzer = new Analyzer(log, fs, ps, clock);
+		analyzer = new Analyzer(log, fs, ps, clock, new NodeGlob());
 		await fs.mkdir("/p/src");
 		await fs.write("/p/src/a.ts", "class A {}");
 		await fs.write("/p/src/b.ts", "class B {}");

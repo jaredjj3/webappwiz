@@ -1,6 +1,6 @@
 import type { Cli, Deps } from "@webappwiz/cmd";
 import { AGENTS, DEFAULT_CONFIG } from "@webappwiz/judge";
-import type { Fs } from "@webappwiz/sys";
+import type { Fs, Glob } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import type { Clock } from "@webappwiz/time";
 import { JudgeCommands } from "./judge";
@@ -15,6 +15,7 @@ import { update } from "./update";
 export interface CommandDeps extends Deps {
 	fs: Fs;
 	clock: Clock;
+	glob: Glob;
 }
 
 /**
@@ -43,8 +44,8 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 	// `judge` and `rules` are siblings rather than one nested in the other: the
 	// config is shared, with `wiz fix` enforcing the rules that carry a check and
 	// `judge` the ones only an agent can decide, so neither owns the rule set.
-	const judge = ({ log, fs, ps, clock }: CommandDeps): JudgeCommands =>
-		new JudgeCommands(log, fs, ps, clock);
+	const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
+		new JudgeCommands(log, fs, ps, clock, glob);
 	const configArg = {
 		default: DEFAULT_CONFIG,
 		description: `config module (default: ${DEFAULT_CONFIG})`,

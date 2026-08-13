@@ -1,4 +1,4 @@
-import { Glob } from "bun";
+import type { Glob } from "@webappwiz/sys";
 import type { Diagnostic } from "./diagnostic";
 import { exemptions } from "./ignore";
 import type { Rule } from "./rule/rule";
@@ -14,24 +14,25 @@ export interface FileText {
  * skipped.
  */
 export class Checker {
-	private readonly matchers: Array<{ rule: Rule; glob: Glob }>;
+	private readonly checked: Rule[];
 
-	constructor(rules: Rule[]) {
-		this.matchers = rules.flatMap((rule) =>
-			rule.check ? [{ rule, glob: new Glob(rule.files) }] : [],
-		);
+	constructor(
+		rules: Rule[],
+		private readonly glob: Glob,
+	) {
+		this.checked = rules.filter((rule) => rule.check);
 	}
 
 	/** Whether any check wants this file: lets a caller skip reading the rest. */
 	matches(path: string): boolean {
-		return this.matchers.some(({ glob }) => glob.match(path));
+		return this.checked.some((rule) => this.glob.matches(rule.files, path));
 	}
 
 	check(files: FileText[]): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 		for (const { path, text } of files) {
-			for (const { rule, glob } of this.matchers) {
-				if (!glob.match(path)) {
+			for (const rule of this.checked) {
+				if (!this.glob.matches(rule.files, path)) {
 					continue;
 				}
 				const findings = rule.check?.(text) ?? [];

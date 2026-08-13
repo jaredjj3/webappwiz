@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { Dispatcher, type Events } from "@webappwiz/events";
 import type { Logger } from "@webappwiz/log";
 import { MarkdownWriter } from "@webappwiz/md";
-import { type Fs, type Ps, walk } from "@webappwiz/sys";
+import { type Fs, type Glob, type Ps, walk } from "@webappwiz/sys";
 import type { Clock, Duration } from "@webappwiz/time";
 import { DEFAULT_CONCURRENCY } from "./config";
 import type { Level } from "./diagnostic";
@@ -164,6 +164,7 @@ export class Analyzer {
 		private fs: Fs,
 		private ps: Ps,
 		private clock: Clock,
+		private glob: Glob,
 	) {}
 
 	/**
@@ -247,9 +248,8 @@ export class Analyzer {
 			groups.set(rule.files, [...(groups.get(rule.files) ?? []), rule]);
 		}
 		const tasks: Task[] = [];
-		for (const [glob, group] of groups) {
-			const matcher = new Bun.Glob(glob);
-			const files = all.filter((file) => matcher.match(file));
+		for (const [pattern, group] of groups) {
+			const files = all.filter((file) => this.glob.matches(pattern, file));
 			if (files.length === 0) {
 				for (const rule of group) {
 					// stderr, so the report on stdout stays parseable
@@ -263,7 +263,7 @@ export class Analyzer {
 				const prompt = this.prompt(group, slice);
 				tasks.push({
 					rules: group,
-					glob,
+					glob: pattern,
 					files: slice,
 					prompt,
 					bytes: slice.reduce(

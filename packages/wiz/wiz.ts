@@ -18,8 +18,8 @@ import { test } from "./test";
 /** Everything `wiz` is run with. The mounted `cli` commands need the same. */
 export type WizDeps = CommandDeps;
 
-const toolchainFix = ({ log, fs, ps }: WizDeps): ToolchainFix =>
-	new ToolchainFix(log, ps, new Check(log, fs, ps));
+const toolchainFix = ({ log, fs, ps, glob }: WizDeps): ToolchainFix =>
+	new ToolchainFix(log, ps, new Check(log, fs, ps, glob));
 
 export const wiz = cli<WizDeps>("wiz");
 

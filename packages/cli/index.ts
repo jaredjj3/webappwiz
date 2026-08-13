@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { ConsoleLogger } from "@webappwiz/log";
-import { NodeFs, NodePs } from "@webappwiz/sys";
+import { NodeFs, NodeGlob, NodePs } from "@webappwiz/sys";
 import { SystemClock } from "@webappwiz/time";
 import { webappwiz } from "./webappwiz";
 
@@ -9,4 +9,5 @@ await webappwiz.run({
 	fs: new NodeFs(),
 	ps: new NodePs(),
 	clock: new SystemClock(),
+	glob: new NodeGlob(),
 });

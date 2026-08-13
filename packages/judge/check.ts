@@ -1,5 +1,5 @@
 import { color, type Logger } from "@webappwiz/log";
-import type { Fs, Ps } from "@webappwiz/sys";
+import type { Fs, Glob, Ps } from "@webappwiz/sys";
 import { Checker } from "./checker";
 import { DEFAULT_CONFIG } from "./config";
 import { Configs } from "./configs";
@@ -15,6 +15,7 @@ export class Check {
 		private readonly log: Logger,
 		private readonly fs: Fs,
 		private readonly ps: Ps,
+		private readonly glob: Glob,
 		private readonly rules?: Rule[],
 	) {}
 
@@ -28,7 +29,7 @@ export class Check {
 		if (listed.exitCode !== 0) {
 			throw new Error("git ls-files failed: checks run in a git repository");
 		}
-		const checker = new Checker(rules);
+		const checker = new Checker(rules, this.glob);
 		const paths = listed.stdout
 			.split("\n")
 			.filter((path) => path !== "" && checker.matches(path));

@@ -3,6 +3,8 @@
 export { FileLock, type FileLockOptions } from "./file-lock";
 export type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs/fs";
 export { NodeFs } from "./fs/node-fs";
+export type { Glob } from "./glob/glob";
+export { NodeGlob } from "./glob/node-glob";
 export { FileHostMapper } from "./host-mapper/file-host-mapper";
 export type { HostMapper } from "./host-mapper/host-mapper";
 export { NoopHostMapper } from "./host-mapper/noop-host-mapper";

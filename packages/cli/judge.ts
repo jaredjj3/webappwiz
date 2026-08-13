@@ -12,7 +12,7 @@ import {
 	type Task,
 } from "@webappwiz/judge";
 import type { Logger } from "@webappwiz/log";
-import type { Fs, Ps } from "@webappwiz/sys";
+import type { Fs, Glob, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
 import { changed } from "./changed";
 import { calibrate, floor, overheads, predict } from "./cost";
@@ -90,6 +90,7 @@ export class JudgeCommands {
 		private fs: Fs,
 		private ps: Ps,
 		private clock: Clock,
+		private glob: Glob,
 		private loader?: ConfigLoader,
 		private confirmer: Confirm = ask,
 	) {}
@@ -206,7 +207,13 @@ export class JudgeCommands {
 			this.log.info(`nothing has changed since ${opts.since}`);
 			return;
 		}
-		const analyzer = new Analyzer(this.log, this.fs, this.ps, this.clock);
+		const analyzer = new Analyzer(
+			this.log,
+			this.fs,
+			this.ps,
+			this.clock,
+			this.glob,
+		);
 		if (opts.prompt) {
 			for (const task of await analyzer.plan(rules, dir, {
 				chunk: opts.chunk,

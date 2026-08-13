@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
+import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { FakeClock } from "@webappwiz/time/testing";
 import { webappwiz } from "./webappwiz";
@@ -14,7 +15,13 @@ describe("webappwiz", () => {
 		);
 
 		await webappwiz.run(
-			{ log: new MemoryLogger(), fs, ps: new FakePs(), clock: new FakeClock() },
+			{
+				log: new MemoryLogger(),
+				fs,
+				ps: new FakePs(),
+				clock: new FakeClock(),
+				glob: new NodeGlob(),
+			},
 			["update", "/p", "--version", "1.2.3"],
 		);
 

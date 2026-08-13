@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { type Config, defineConfig, FakeConfigLoader } from "@webappwiz/judge";
 import { ruleDoc, testRule } from "@webappwiz/judge/testing";
 import { color, MemoryLogger } from "@webappwiz/log";
+import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
@@ -21,6 +22,7 @@ describe("JudgeCommands", () => {
 			fs,
 			ps,
 			clock,
+			new NodeGlob(),
 			new FakeConfigLoader(config),
 			confirm,
 		);
