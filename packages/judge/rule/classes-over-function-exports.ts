@@ -1,9 +1,9 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./classes-over-function-exports.md" with { type: "text" };
-import type { Rule } from "./rule";
+import type { PartlyChecked } from "./rule";
 
-export class ClassesOverFunctionExports implements Rule {
+export class ClassesOverFunctionExports implements PartlyChecked {
 	// Modifiers that may sit between `export` and `function`.
 	private static readonly MODIFIERS = new Set<SyntaxKind>([
 		SyntaxKind.AsyncKeyword,
@@ -16,10 +16,10 @@ export class ClassesOverFunctionExports implements Rule {
 	readonly id = "classes-over-function-exports";
 	readonly files = "**/*.ts";
 	readonly level = "error";
+	readonly judgedBy = "both";
 	readonly document = doc;
 	// The check sees function-typed parameters but not interface-typed ones, so
 	// it decides only half the rule and the agent still reads the rest.
-	readonly partial = true;
 
 	check(text: string): Hit[] {
 		const all = tokens(text);

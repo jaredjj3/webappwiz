@@ -1,7 +1,7 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./named-options-last.md" with { type: "text" };
-import type { Rule } from "./rule";
+import type { PartlyChecked } from "./rule";
 
 /** One slot of a parameter list, read as far as this check needs it. */
 interface Parameter {
@@ -13,7 +13,7 @@ interface Parameter {
 	rest: boolean;
 }
 
-export class NamedOptionsLast implements Rule {
+export class NamedOptionsLast implements PartlyChecked {
 	/** What a parameter may open with before its name. */
 	private static readonly MODIFIERS = new Set<SyntaxKind>([
 		SyntaxKind.PrivateKeyword,
@@ -43,11 +43,11 @@ export class NamedOptionsLast implements Rule {
 	readonly id = "named-options-last";
 	readonly files = "**/*.ts";
 	readonly level = "warning";
+	readonly judgedBy = "both";
 	readonly document = doc;
 	// The check sees an options object already in the parameter list, where
 	// both its position and its type are certain. Whether a row of positional
 	// parameters wanted to be one in the first place is the agent's half.
-	readonly partial = true;
 
 	check(text: string): Hit[] {
 		const all = tokens(text);

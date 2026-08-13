@@ -239,7 +239,7 @@ describe("JudgeCommands", () => {
 				testRule("two", {
 					document: ruleDoc("Two"),
 					check: () => [],
-					partial: true,
+					judgedBy: "both",
 				}),
 				testRule("three", { document: ruleDoc("Three") }),
 			],

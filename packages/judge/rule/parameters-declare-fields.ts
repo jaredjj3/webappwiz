@@ -1,9 +1,9 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./parameters-declare-fields.md" with { type: "text" };
-import type { Rule } from "./rule";
+import type { Checked } from "./rule";
 
-export class ParametersDeclareFields implements Rule {
+export class ParametersDeclareFields implements Checked {
 	/** A parameter starting with one of these already declares its field, or
 	 * cannot: a parameter property, or a rest parameter. */
 	private static readonly DECLARES = new Set<SyntaxKind>([
@@ -40,6 +40,7 @@ export class ParametersDeclareFields implements Rule {
 	readonly id = "parameters-declare-fields";
 	readonly files = "**/*.ts";
 	readonly level = "error";
+	readonly judgedBy = "code";
 	readonly document = doc;
 
 	check(text: string): Hit[] {

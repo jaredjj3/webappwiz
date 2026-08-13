@@ -1,9 +1,9 @@
 import { Hit } from "../hit";
 import { SyntaxKind, tokens } from "../scan";
 import doc from "./one-class-per-file.md" with { type: "text" };
-import type { Rule } from "./rule";
+import type { Checked } from "./rule";
 
-export class OneClassPerFile implements Rule {
+export class OneClassPerFile implements Checked {
 	// `class` after one of these is a class expression, not a declaration.
 	private static readonly EXPRESSION_LEAD = new Set<SyntaxKind>([
 		SyntaxKind.EqualsToken,
@@ -19,6 +19,7 @@ export class OneClassPerFile implements Rule {
 	readonly id = "one-class-per-file";
 	readonly files = "**/*.ts";
 	readonly level = "error";
+	readonly judgedBy = "code";
 	readonly document = doc;
 
 	check(text: string): Hit[] {

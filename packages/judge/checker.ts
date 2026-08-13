@@ -1,7 +1,12 @@
 import type { Glob } from "@webappwiz/sys";
 import type { Diagnostic } from "./diagnostic";
 import { exemptions } from "./ignore";
-import type { Rule } from "./rule/rule";
+import {
+	type Checked,
+	hasCheck,
+	type PartlyChecked,
+	type Rule,
+} from "./rule/rule";
 
 export interface FileText {
 	path: string;
@@ -14,13 +19,13 @@ export interface FileText {
  * skipped.
  */
 export class Checker {
-	private readonly checked: Rule[];
+	private readonly checked: Array<Checked | PartlyChecked>;
 
 	constructor(
 		rules: Rule[],
 		private readonly glob: Glob,
 	) {
-		this.checked = rules.filter((rule) => rule.check);
+		this.checked = rules.filter(hasCheck);
 	}
 
 	/** Whether any check wants this file: lets a caller skip reading the rest. */
@@ -35,7 +40,7 @@ export class Checker {
 				if (!this.glob.matches(rule.files, path)) {
 					continue;
 				}
-				const findings = rule.check?.(text) ?? [];
+				const findings = rule.check(text);
 				if (findings.length === 0) {
 					continue;
 				}

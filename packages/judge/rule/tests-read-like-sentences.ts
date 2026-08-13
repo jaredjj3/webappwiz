@@ -1,19 +1,19 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
-import type { Rule } from "./rule";
+import type { PartlyChecked } from "./rule";
 import doc from "./tests-read-like-sentences.md" with { type: "text" };
 
-export class TestsReadLikeSentences implements Rule {
+export class TestsReadLikeSentences implements PartlyChecked {
 	private static readonly MESSAGE =
 		"more than one describe call in this file: a test file makes exactly one";
 
 	readonly id = "tests-read-like-sentences";
 	readonly files = "**/*.test.ts";
 	readonly level = "error";
+	readonly judgedBy = "both";
 	readonly document = doc;
 	// The check counts describe calls, where a second one is certain. Whether
 	// a title completes "it ..." naturally still needs the agent.
-	readonly partial = true;
 
 	check(text: string): Hit[] {
 		const all = tokens(text);

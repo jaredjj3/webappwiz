@@ -1,9 +1,9 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./objects-over-callbacks.md" with { type: "text" };
-import type { Rule } from "./rule";
+import type { PartlyChecked } from "./rule";
 
-export class ObjectsOverCallbacks implements Rule {
+export class ObjectsOverCallbacks implements PartlyChecked {
 	private static readonly MESSAGE =
 		"constructor takes a function-typed parameter: name an interface and " +
 		"inject an object, or expose Events from @webappwiz/events";
@@ -11,10 +11,10 @@ export class ObjectsOverCallbacks implements Rule {
 	readonly id = "objects-over-callbacks";
 	readonly files = "**/*.ts";
 	readonly level = "warning";
+	readonly judgedBy = "both";
 	readonly document = doc;
 	// The check sees function types in constructor parameters, where retention
 	// is certain. Method parameters that keep a callback still need the agent.
-	readonly partial = true;
 
 	check(text: string): Hit[] {
 		const all = tokens(text);

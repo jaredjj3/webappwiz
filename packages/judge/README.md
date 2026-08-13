@@ -18,15 +18,16 @@ to a human and to an agent, in `## Good` and `## Bad` examples.
 ```ts
 // rule/one-class-per-file.ts
 import doc from "./one-class-per-file.md" with { type: "text" };
-import type { Rule } from "./rule";
+import type { Checked } from "./rule";
 
-export class OneClassPerFile implements Rule {
+export class OneClassPerFile implements Checked {
 	private static readonly MESSAGE =
 		"more than one class in this file: give each its own file";
 
 	readonly id = "one-class-per-file";
 	readonly files = "**/*.ts";
 	readonly level = "error";
+	readonly judgedBy = "code";
 	readonly document = doc;
 
 	check(text: string): Hit[] {
@@ -55,10 +56,17 @@ class Bar {}
 ​```
 ```
 
-A rule that implements `check` runs locally, for free, on every `wiz fix`. A
-rule without one is judged by an agent, on demand, through `judge`. `partial =
-true` is both: the check decides the cases a token scan can see and the agent
-reads the rest.
+A rule says who decides it, and the type it implements makes that binding:
+
+| `judgedBy` | implements | who decides | what it costs |
+| --- | --- | --- | --- |
+| `"code"` | `Checked` | a token scan, outright | free, on every `wiz fix` |
+| `"both"` | `PartlyChecked` | the check what it can see, an agent the rest | both |
+| `"agent"` | `Judged` | an agent reading the code | billed, on demand |
+
+`Checked` and `PartlyChecked` require a `check`; `Judged` has none. So a rule
+cannot claim a check it does not implement or hide one it does, and consumers
+discriminate on `judgedBy` rather than guessing from which fields are present.
 
 ## The config
 
@@ -93,29 +101,29 @@ per run.
 The rules this package ships, each exported as its class so a config can name
 one:
 
-- `no-em-dashes` (checked): no em dashes in code, comments, or prose; an en
+- `no-em-dashes` (`code`): no em dashes in code, comments, or prose; an en
   dash survives only between digits, as a range.
-- `one-class-per-file` (checked): a second top-level class wants its own
+- `one-class-per-file` (`code`): a second top-level class wants its own
   file.
-- `parameters-declare-fields` (checked): a constructor copying a parameter
+- `parameters-declare-fields` (`code`): a constructor copying a parameter
   into a field of the same name should declare the field on the parameter.
-- `classes-over-function-exports` (partially checked): several exported
+- `classes-over-function-exports` (`both`): several exported
   functions injecting dependencies should become a class; the check sees
   function-typed parameters, the agent judges interface-typed ones.
-- `objects-over-callbacks` (partially checked): inject objects, not
+- `objects-over-callbacks` (`both`): inject objects, not
   callbacks; the check sees function types in constructor parameters, the
   agent judges retained method parameters.
-- `named-options-last` (partially checked): an options object goes last and
+- `named-options-last` (`both`): an options object goes last and
   its type is named; the check sees an options parameter that is neither, the
   agent judges parameters that should have been one.
-- `tests-read-like-sentences` (partially checked): one describe per test
+- `tests-read-like-sentences` (`both`): one describe per test
   file, titles completing "it ..."; the check counts the describes, the agent
   reads the titles.
-- `simple-test-setup` (partially checked): a test file opens on what is
+- `simple-test-setup` (`both`): a test file opens on what is
   tested; the check sees tests a loop generates, the agent judges the rest.
 - `fakes-over-mocks`, `comments-say-why-not-what`,
   `doc-comments-address-users`, `one-dir-per-interface`,
-  `reactive-over-use-state`, `dev-servers-find-a-port`: agent rules.
+  `reactive-over-use-state`, `dev-servers-find-a-port`: `agent`.
 
 `tokens()` hands a check TypeScript's token stream (comment- and string-safe,
 with line, column, and brace depth) when text alone is not enough.
@@ -218,7 +226,7 @@ no-fixme  warning  a linter could enforce this without an agent:
 
 A tool only wins if it decides every case the rule covers, exceptions
 included, so a rule a check would half-enforce stays with the agent, as a
-`partial` check at most. The finding is a warning rather than an error
+`PartlyChecked` rule at most. The finding is a warning rather than an error
 because writing the check is a judgment you make once, not something to fail
 a build on by surprise: `--strict` is how you make it fail once you have
 decided. Rules already carrying a full check are not asked about at all.
@@ -257,7 +265,7 @@ const analyzer = new Analyzer(log, fs, ps, clock);
 analyzer.events.on("finished", (task) =>
 	console.log(task.glob, task.violations.length),
 );
-const rules = config.rules.filter((rule) => !rule.check || rule.partial);
+const rules = config.rules.filter(needsAgent);
 const violations = await analyzer.run(
 	await analyzer.plan(rules, ".", { chunk: 25 }),
 	".",

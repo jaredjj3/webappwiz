@@ -1,8 +1,8 @@
 import { Hit } from "../hit";
 import doc from "./no-em-dashes.md" with { type: "text" };
-import type { Rule } from "./rule";
+import type { Checked } from "./rule";
 
-export class NoEmDashes implements Rule {
+export class NoEmDashes implements Checked {
 	// Escaped, since this file is one the rule reads.
 	private static readonly EM = "\u2014";
 	private static readonly EN = "\u2013";
@@ -14,6 +14,7 @@ export class NoEmDashes implements Rule {
 	readonly id = "no-em-dashes";
 	readonly files = "**/*.{ts,md}";
 	readonly level = "error";
+	readonly judgedBy = "code";
 	readonly document = doc;
 
 	check(text: string): Hit[] {

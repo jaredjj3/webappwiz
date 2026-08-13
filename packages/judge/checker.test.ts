@@ -2,12 +2,13 @@ import { describe, expect, it } from "bun:test";
 import { NodeGlob } from "@webappwiz/sys";
 import { Checker } from "./checker";
 import { Hit } from "./hit";
-import type { Rule } from "./rule/rule";
+import type { Checked, Rule } from "./rule/rule";
 
 const noX: Rule = {
 	id: "no-x",
 	files: "**/*.md",
 	level: "warning",
+	judgedBy: "code",
 	document: "",
 	check: (text) =>
 		text
@@ -40,7 +41,13 @@ describe("checker", () => {
 	});
 
 	it("skips a rule with no check: that one is an agent's job", () => {
-		const agentRule: Rule = { ...noX, check: undefined };
+		const agentRule: Rule = {
+			id: noX.id,
+			files: noX.files,
+			level: noX.level,
+			judgedBy: "agent",
+			document: noX.document,
+		};
 		const checker = new Checker([agentRule], glob);
 
 		expect(checker.matches("docs/a.md")).toBe(false);
@@ -97,10 +104,11 @@ describe("checker", () => {
 	});
 });
 
-class Counting implements Rule {
+class Counting implements Checked {
 	readonly id = "counting";
 	readonly files = "**/*.md";
 	readonly level = "error";
+	readonly judgedBy = "code";
 	readonly document = "";
 
 	check(text: string): Hit[] {

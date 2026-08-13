@@ -1,9 +1,9 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
-import type { Rule } from "./rule";
+import type { PartlyChecked } from "./rule";
 import doc from "./simple-test-setup.md" with { type: "text" };
 
-export class SimpleTestSetup implements Rule {
+export class SimpleTestSetup implements PartlyChecked {
 	private static readonly LOOPS = new Set<SyntaxKind>([
 		SyntaxKind.ForKeyword,
 		SyntaxKind.WhileKeyword,
@@ -16,10 +16,10 @@ export class SimpleTestSetup implements Rule {
 	readonly id = "simple-test-setup";
 	readonly files = "**/*.test.ts";
 	readonly level = "error";
+	readonly judgedBy = "both";
 	readonly document = doc;
 	// The check sees tests a loop generates, which are certain. Whether setup
 	// drowns the behavior under test still needs the agent.
-	readonly partial = true;
 
 	check(text: string): Hit[] {
 		const all = tokens(text);

@@ -4,6 +4,7 @@ import {
 	type ConfigDiagnostic,
 	Configs,
 	Mechanizer,
+	needsAgent,
 	RuleDocument,
 	type Task,
 } from "@webappwiz/judge";
@@ -119,7 +120,7 @@ export class JudgeCommands {
 		// ones are worth asking about.
 		diagnostics.push(
 			...(await mechanizer.check(
-				config.rules.filter((rule) => !rule.check),
+				config.rules.filter((rule) => rule.judgedBy === "agent"),
 				this.agent(config, opts),
 			)),
 		);
@@ -137,8 +138,8 @@ export class JudgeCommands {
 				doc.title,
 				rule.level,
 				rule.files,
-				// which rules cost tokens: a checked rule is decided locally, free
-				rule.check ? (rule.partial ? "partial" : "full") : "",
+				// which rules cost tokens: a rule judged by code alone is free
+				rule.judgedBy,
 				String(doc.good.length),
 				String(doc.bad.length),
 			]);
@@ -195,9 +196,9 @@ export class JudgeCommands {
 			);
 		}
 		const config = await this.sound(opts.config);
-		// A rule with a full check is already enforced locally, for free;
-		// an agent reads only the rules, or the parts of them, no check decides.
-		const rules = config.rules.filter((rule) => !rule.check || rule.partial);
+		// A rule judged by code alone is already enforced locally, for free; an
+		// agent reads only the rules, or the parts of them, no check decides.
+		const rules = config.rules.filter(needsAgent);
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
 		const only =
 			opts.since === undefined

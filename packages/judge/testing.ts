@@ -20,16 +20,22 @@ export interface TestRuleOptions {
 	level?: Level;
 	document?: string;
 	check?: (text: string) => Hit[];
-	partial?: boolean;
+	/** Who decides the rule. Defaults to what `check` implies: an agent judges
+	 * a rule with no check, code judges a rule that has one. */
+	judgedBy?: Rule["judgedBy"];
 }
 
 /** A rule for tests to hand to a config, a checker or an analyzer. Its document
  * is sound unless the test hands one that is not. */
-export const testRule = (id: string, opts: TestRuleOptions = {}): Rule => ({
-	id,
-	files: opts.files ?? "**/*.ts",
-	level: opts.level ?? "error",
-	document: opts.document ?? ruleDoc(id),
-	check: opts.check,
-	partial: opts.partial,
-});
+export const testRule = (id: string, opts: TestRuleOptions = {}): Rule => {
+	const common = {
+		id,
+		files: opts.files ?? "**/*.ts",
+		level: opts.level ?? "error",
+		document: opts.document ?? ruleDoc(id),
+	};
+	const judgedBy = opts.judgedBy ?? (opts.check ? "code" : "agent");
+	return judgedBy === "agent"
+		? { ...common, judgedBy }
+		: { ...common, judgedBy, check: opts.check ?? (() => []) };
+};

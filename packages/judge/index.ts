@@ -35,7 +35,14 @@ export { OneClassPerFile } from "./rule/one-class-per-file";
 export { OneDirPerInterface } from "./rule/one-dir-per-interface";
 export { ParametersDeclareFields } from "./rule/parameters-declare-fields";
 export { ReactiveOverUseState } from "./rule/reactive-over-use-state";
-export type { Rule } from "./rule/rule";
+export {
+	type Checked,
+	hasCheck,
+	type Judged,
+	needsAgent,
+	type PartlyChecked,
+	type Rule,
+} from "./rule/rule";
 export { SimpleTestSetup } from "./rule/simple-test-setup";
 export { TestsReadLikeSentences } from "./rule/tests-read-like-sentences";
 export { RuleDocument } from "./rule-document";
