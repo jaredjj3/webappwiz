@@ -2,4 +2,5 @@
 // takes one, to mount a set of commands on it, needs to be able to say so.
 export type { Cli } from "./cli";
 export { cli } from "./cli";
+export type { Deps } from "./deps";
 export type { Middleware, Next } from "./middleware";

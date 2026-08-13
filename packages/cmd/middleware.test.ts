@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
+import { FakePs } from "@webappwiz/sys/testing";
 import { t } from "@webappwiz/t";
 import { cli } from "./cli";
 import { Command } from "./command";
+import type { Deps } from "./deps";
 import type { Middleware } from "./middleware";
 
 describe("middleware", () => {
 	let trace: string[];
+	let deps: Deps;
 
 	const mark =
 		(name: string): Middleware<object> =>
@@ -18,13 +21,14 @@ describe("middleware", () => {
 
 	beforeEach(() => {
 		trace = [];
+		deps = { log: new MemoryLogger(), ps: new FakePs() };
 	});
 
 	it("wraps the action, outermost first", async () => {
-		const app = cli("app", new MemoryLogger()).use(mark("a")).use(mark("b"));
+		const app = cli("app").use(mark("a")).use(mark("b"));
 		app.command("go").action(() => trace.push("action"));
 
-		await app.run(["go"]);
+		await app.run(deps, ["go"]);
 
 		expect(trace).toEqual([">a", ">b", "action", "<b", "<a"]);
 	});
@@ -34,7 +38,7 @@ describe("middleware", () => {
 	// declare a `Middleware<C, Out>` return type (the usual shape) infer fine.
 	it("hands the action the context a middleware passed to next", async () => {
 		const seen: unknown[] = [];
-		const app = cli("app", new MemoryLogger())
+		const app = cli("app")
 			.use<{ user: string }>(async (_ctx, next) => next({ user: "ada" }))
 			.use<{ user: string; id: number }>(async (ctx, next) =>
 				next({ ...ctx, id: 7 }),
@@ -46,25 +50,25 @@ describe("middleware", () => {
 				seen.push(`${opts.greeting} ${ctx.user} ${ctx.id}`),
 			);
 
-		await app.run(["who", "hi"]);
+		await app.run(deps, ["who", "hi"]);
 
 		expect(seen).toEqual(["hi ada 7"]);
 	});
 
 	it("runs a command's own middleware inside the cli's", async () => {
-		const app = cli("app", new MemoryLogger()).use(mark("cli"));
+		const app = cli("app").use(mark("cli"));
 		app
 			.command("go")
 			.use(mark("cmd"))
 			.action(() => trace.push("action"));
 
-		await app.run(["go"]);
+		await app.run(deps, ["go"]);
 
 		expect(trace).toEqual([">cli", ">cmd", "action", "<cmd", "<cli"]);
 	});
 
 	it("can catch what the action throws", async () => {
-		const app = cli("app", new MemoryLogger()).use(async (ctx, next) => {
+		const app = cli("app").use(async (ctx, next) => {
 			try {
 				await next(ctx);
 			} catch {
@@ -75,27 +79,27 @@ describe("middleware", () => {
 			throw new Error("nope");
 		});
 
-		expect(await app.run(["boom"])).toBeUndefined();
+		expect(await app.run(deps, ["boom"])).toBeUndefined();
 	});
 
 	it("returns the action's value back through the chain", async () => {
-		const app = cli("app", new MemoryLogger()).use(mark("a"));
+		const app = cli("app").use(mark("a"));
 		app.command("v").action(() => 7);
 
-		expect(await app.run(["v"])).toBe(7);
+		expect(await app.run(deps, ["v"])).toBe(7);
 	});
 
 	it("never runs the middleware when asking for help", async () => {
-		const app = cli("app", new MemoryLogger()).use(mark("a"));
+		const app = cli("app").use(mark("a"));
 		app.command("go").action(() => trace.push("action"));
 
-		await app.run(["go", "--help"]);
+		await app.run(deps, ["go", "--help"]);
 
 		expect(trace).toEqual([]);
 	});
 
 	it("throws when use comes after the things it wraps", () => {
-		const app = cli("app", new MemoryLogger());
+		const app = cli("app");
 		app.command("go").action(() => {});
 		expect(() => app.use(mark("late"))).toThrow("before command()");
 
@@ -104,10 +108,10 @@ describe("middleware", () => {
 	});
 
 	it("keeps a sync action sync when there is no middleware", () => {
-		const app = cli("app", new MemoryLogger());
+		const app = cli("app");
 		app.command("v").action(() => 7);
 
-		const out = app.run(["v"]);
+		const out = app.run(deps, ["v"]);
 
 		expect(out).not.toBeInstanceOf(Promise);
 		expect(out).toBe(7);

@@ -1,6 +1,6 @@
-import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
-import { NodePs, type Ps } from "@webappwiz/sys";
+import { color } from "@webappwiz/log";
 import { Command } from "./command";
+import type { Deps } from "./deps";
 import type { AnyMiddleware, Middleware } from "./middleware";
 
 /**
@@ -9,22 +9,26 @@ import type { AnyMiddleware, Middleware } from "./middleware";
  */
 // lint-ignore one-dir-per-interface: a file-local structural type for the dispatch
 // map, not an injected dependency anything hands in
-interface Node {
+interface Node<D> {
 	/** One row of the parent's help table, keyed by the name it registered under. */
 	helpLine(name: string, pad: number): string;
-	exec(argv: string[], outer: AnyMiddleware[]): unknown;
+	exec(argv: string[], deps: D, outer: AnyMiddleware[]): unknown;
 }
 
-export class Cli<C extends object = object> implements Node {
-	private cmds = new Map<string, Node>();
+/**
+ * `D` is what `run` is handed and what the actions start from; `C` is what the
+ * middleware has made of it by the time an action runs. Declaring a cli
+ * therefore takes no dependencies at all, which is what makes the declaration
+ * itself testable: build it once at module scope, run it with fakes.
+ */
+export class Cli<D extends Deps = Deps, C extends object = D>
+	implements Node<D>
+{
+	private cmds = new Map<string, Node<D>>();
 	private middleware: AnyMiddleware[] = [];
 	private _description = "";
 
-	constructor(
-		readonly name: string,
-		private log: Logger,
-		private ps: Ps,
-	) {}
+	constructor(readonly name: string) {}
 
 	/** Only shown when this is a group, on its line in the parent's help. */
 	description(description: string): this {
@@ -37,20 +41,20 @@ export class Cli<C extends object = object> implements Node {
 	 * `command()` fixes the context type at the point it is called, so a later
 	 * `use` would change what actions receive without changing their types.
 	 */
-	use<Out extends object>(middleware: Middleware<C, Out>): Cli<Out> {
+	use<Out extends object>(middleware: Middleware<C, Out>): Cli<D, Out> {
 		if (this.cmds.size > 0) {
 			throw new Error(`${this.name}: use() must come before command()`);
 		}
 		this.middleware.push(middleware as unknown as AnyMiddleware);
-		return this as unknown as Cli<Out>;
+		return this as unknown as Cli<D, Out>;
 	}
 
 	// unknown is the empty-options seed: `unknown & { name: string }` reduces to
 	// `{ name: string }`, so options accumulate cleanly as they're declared.
 	command(name: string): Command<unknown, C> {
-		const command = new Command<unknown, C>(name, this.log, this.name);
+		const command = new Command<unknown, C>(name, this.name);
 		// registered by reference; chain mutates the same object
-		this.cmds.set(name, command as unknown as Node);
+		this.cmds.set(name, command as unknown as Node<D>);
 		return command;
 	}
 
@@ -59,21 +63,21 @@ export class Cli<C extends object = object> implements Node {
 	 * update`. The group is a `Cli` too, so it groups, takes middleware and
 	 * prints help exactly the way the root does; only its name is longer.
 	 */
-	group(name: string): Cli<C> {
-		const group = new Cli<C>(`${this.name} ${name}`, this.log, this.ps);
-		this.cmds.set(name, group as Node);
+	group(name: string): Cli<D, C> {
+		const group = new Cli<D, C>(`${this.name} ${name}`);
+		this.cmds.set(name, group as Node<D>);
 		return group;
 	}
 
-	run(argv: string[] = Bun.argv.slice(2)): unknown {
+	run(deps: D, argv: string[] = Bun.argv.slice(2)): unknown {
 		try {
-			const out = this.exec(argv, []);
+			const out = this.exec(argv, deps, []);
 			// async actions reject after exec() returns, so cover that path too
 			return out instanceof Promise
-				? out.catch((error) => this.fail(error))
+				? out.catch((error) => this.fail(deps, error))
 				: out;
 		} catch (error) {
-			return this.fail(error);
+			return this.fail(deps, error);
 		}
 	}
 
@@ -82,16 +86,16 @@ export class Cli<C extends object = object> implements Node {
 	 * left to propagate: only the root's `run` ends the process, so a group
 	 * nested three deep still fails once, at the top.
 	 */
-	exec(argv: string[], outer: AnyMiddleware[] = []): unknown {
+	exec(argv: string[], deps: D, outer: AnyMiddleware[] = []): unknown {
 		const [name, ...rest] = argv;
 		if (!name || name === "--help" || name === "-h") {
-			return this.help();
+			return this.help(deps);
 		}
 		const cmd = this.cmds.get(name);
 		if (!cmd) {
-			return this.help();
+			return this.help(deps);
 		}
-		return cmd.exec(rest, [...outer, ...this.middleware]);
+		return cmd.exec(rest, deps, [...outer, ...this.middleware]);
 	}
 
 	// padded before it is coloured: the trailing spaces land inside the escape
@@ -101,12 +105,12 @@ export class Cli<C extends object = object> implements Node {
 	}
 
 	// message only, no stack: a bad flag is a user error, not a crash
-	private fail(error: unknown): void {
-		this.log.error(`error: ${error instanceof Error ? error.message : error}`);
-		this.ps.exit(1);
+	private fail(deps: D, error: unknown): void {
+		deps.log.error(`error: ${error instanceof Error ? error.message : error}`);
+		deps.ps.exit(1);
 	}
 
-	private help(): void {
+	private help(deps: D): void {
 		const entries = [...this.cmds];
 		const pad = Math.max(0, ...entries.map(([name]) => name.length));
 		const lines = [
@@ -119,14 +123,10 @@ export class Cli<C extends object = object> implements Node {
 				`Run \`${this.name} <command> --help\` for a command's options.`,
 			),
 		];
-		this.log.info(lines.join("\n"));
+		deps.log.info(lines.join("\n"));
 	}
 }
 
-export function cli(
-	name: string,
-	log: Logger = new ConsoleLogger(),
-	ps: Ps = new NodePs(),
-): Cli {
-	return new Cli(name, log, ps);
+export function cli<D extends Deps = Deps>(name: string): Cli<D> {
+	return new Cli<D>(name);
 }

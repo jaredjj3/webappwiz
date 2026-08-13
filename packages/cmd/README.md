@@ -7,16 +7,16 @@ Builds a CLI: subcommands, positional `.arg()`s and `--flag` options typed by
 import { cli } from "@webappwiz/cmd";
 import { t } from "@webappwiz/t";
 
-const app = cli("app");
+export const app = cli("app");
 
 app
 	.command("greet")
 	.description("say hello")
 	.arg("name", t.string(), { description: "who to greet" })
 	.option("loud", t.boolean(), { default: false })
-	.action((opts) => console.log(opts.loud ? "HI" : "hi", opts.name));
+	.action((opts, { log }) => log.info(opts.loud ? "HI" : "hi", opts.name));
 
-await app.run();
+await app.run({ log: new ConsoleLogger(), ps: new NodePs() });
 ```
 
 ```bash
@@ -31,6 +31,33 @@ A flag the command never declared is an error, and so is a positional past
 the ones it does, since the alternative is a typo running the command anyway
 with a default the caller thought they had overridden. A reason or message
 that reads as prose has to be quoted to arrive as one argument.
+
+## Dependencies
+
+Nothing is instantiated to declare a cli: `run` is handed the dependencies, and
+they arrive as the context every action receives. So the declaration is a value
+a test can import and run with fakes, rather than a module that reaches for the
+real filesystem the moment it loads.
+
+```ts
+// app.ts
+interface AppDeps extends Deps {
+	fs: Fs;
+}
+
+export const app = cli<AppDeps>("app");
+
+app.command("ls").action((opts, { fs, log }) => /* … */);
+
+// index.ts, the bin: the only place a real dependency is made
+await app.run({ log: new ConsoleLogger(), ps: new NodePs(), fs: new NodeFs() });
+
+// app.test.ts
+await app.run({ log: new MemoryLogger(), ps: new FakePs(), fs: new FakeFs() }, ["ls"]);
+```
+
+`Deps` is the minimum: a `Logger` to print help and errors through, and a `Ps`
+to exit with. A program's own type extends it with whatever its commands need.
 
 ## Groups
 
@@ -57,13 +84,16 @@ Since `cli()` and `group()` hand back the same thing, a function that takes a
 another's commands as a subcommand instead of shelling out to it.
 
 ```ts
-export function commands(app: Cli): void {
+export function commands<D extends AppDeps>(app: Cli<D>): void {
 	app.command("update").action(/* … */);
 }
 
-commands(cli("webappwiz"));       // webappwiz update
-commands(wiz.group("cli"));       // wiz cli update
+commands(cli<AppDeps>("webappwiz"));   // webappwiz update
+commands(wiz.group("cli"));            // wiz cli update
 ```
+
+The type argument is what keeps that honest: a program can only mount commands
+whose dependencies it already promises to run with.
 
 ## Middleware
 
@@ -73,7 +103,7 @@ context the action receives, so the context type accumulates the way options
 do.
 
 ```ts
-function database(url: string): Middleware<object, { db: Db }> {
+function database<C extends Deps>(url: string): Middleware<C, C & { db: Db }> {
 	return async (ctx, next) => {
 		const db = await connect(url);
 		try {
@@ -84,7 +114,7 @@ function database(url: string): Middleware<object, { db: Db }> {
 	};
 }
 
-const app = cli("app").use(database(process.env.DATABASE_URL));
+const app = cli<AppDeps>("app").use(database<AppDeps>(DATABASE_URL));
 
 app
 	.command("users")

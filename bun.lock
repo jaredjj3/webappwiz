@@ -175,6 +175,7 @@
         "@webappwiz/ship": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
+        "@webappwiz/time": "workspace:*",
       },
     },
   },

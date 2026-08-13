@@ -18,7 +18,7 @@ describe("Command", () => {
 			.action((opts) => {
 				got = opts;
 			})
-			.exec(["--name", "ada", "--count", "3"]);
+			.exec(["--name", "ada", "--count", "3"], { log });
 		expect(got).toEqual({ name: "ada", count: 3 });
 	});
 
@@ -29,7 +29,7 @@ describe("Command", () => {
 			.action((opts) => {
 				parsed = opts.n;
 			})
-			.exec(["--n=42"]);
+			.exec(["--n=42"], { log });
 		expect(parsed).toBe(42);
 	});
 
@@ -41,16 +41,16 @@ describe("Command", () => {
 			.action((opts) => {
 				got = opts;
 			});
-		cmd.exec(["--loud", "--name", "ada"]);
+		cmd.exec(["--loud", "--name", "ada"], { log });
 		expect(got).toEqual({ loud: true, name: "ada" });
-		cmd.exec(["--loud=false", "--name", "ada"]);
+		cmd.exec(["--loud=false", "--name", "ada"], { log });
 		expect(got).toEqual({ loud: false, name: "ada" });
 	});
 
 	it("throws on a flag it was never given", () => {
 		const cmd = new Command("p").option("name", t.string()).action(() => {});
 
-		expect(() => cmd.exec(["--name", "ada", "--nmae", "bob"])).toThrow(
+		expect(() => cmd.exec(["--name", "ada", "--nmae", "bob"], { log })).toThrow(
 			"unknown option --nmae",
 		);
 	});
@@ -58,7 +58,7 @@ describe("Command", () => {
 	it("throws on a positional past the ones it declares", () => {
 		const cmd = new Command("p").arg("task", t.string()).action(() => {});
 
-		expect(() => cmd.exec(["alpha", "extra"])).toThrow(
+		expect(() => cmd.exec(["alpha", "extra"], { log })).toThrow(
 			'unexpected argument "extra"',
 		);
 	});
@@ -69,7 +69,9 @@ describe("Command", () => {
 			.option("force", t.boolean(), { default: false })
 			.action(() => {});
 
-		expect(() => cmd.exec(["--frce"])).toThrow("unknown option --frce");
+		expect(() => cmd.exec(["--frce"], { log })).toThrow(
+			"unknown option --frce",
+		);
 	});
 
 	it("uses defaults for absent flags and the given value when present", () => {
@@ -80,9 +82,9 @@ describe("Command", () => {
 			.action((opts) => {
 				got = opts;
 			});
-		cmd.exec([]);
+		cmd.exec([], { log });
 		expect(got).toEqual({ add: false, name: "anon" });
-		cmd.exec(["--add", "--name", "ada"]);
+		cmd.exec(["--add", "--name", "ada"], { log });
 		expect(got).toEqual({ add: true, name: "ada" });
 	});
 
@@ -90,23 +92,25 @@ describe("Command", () => {
 		const cmd = new Command("r")
 			.option("must", t.string(), { description: "required" })
 			.action(() => {});
-		expect(() => cmd.exec([])).toThrow("missing required option --must");
+		expect(() => cmd.exec([], { log })).toThrow(
+			"missing required option --must",
+		);
 	});
 
 	it("propagates schema parse errors to the caller", () => {
 		const cmd = new Command("n").option("x", t.number()).action(() => {});
-		expect(() => cmd.exec(["--x", "abc"])).toThrow(/number/);
+		expect(() => cmd.exec(["--x", "abc"], { log })).toThrow(/number/);
 	});
 
 	it("returns the action's value from exec, including a promise", async () => {
-		expect(new Command("v").action(() => 7).exec([])).toBe(7);
+		expect(new Command("v").action(() => 7).exec([], { log })).toBe(7);
 		await expect(
-			new Command("a").action(async () => "done").exec([]),
+			new Command("a").action(async () => "done").exec([], { log }),
 		).resolves.toBe("done");
 	});
 
 	it("returns undefined when the command has no action", () => {
-		expect(new Command("noop").exec([])).toBeUndefined();
+		expect(new Command("noop").exec([], { log })).toBeUndefined();
 	});
 
 	it("pads the name and omits an unset description in helpLine", () => {
@@ -120,7 +124,7 @@ describe("Command", () => {
 
 	it("prints usage, options, and defaults and skips the action on --help", () => {
 		let ran = false;
-		new Command("greet", log, "wiz")
+		new Command("greet", "wiz")
 			.description("greet someone")
 			.option("name", t.string(), { description: "who to greet" })
 			.option("count", t.number(), {
@@ -130,7 +134,7 @@ describe("Command", () => {
 			.action(() => {
 				ran = true;
 			})
-			.exec(["--help"]);
+			.exec(["--help"], { log });
 
 		expect(ran).toBe(false); // required --name is not enforced when asking for help
 		const text = log.entries
@@ -145,13 +149,13 @@ describe("Command", () => {
 	});
 
 	it("says nothing about the default of an option that defaults to undefined", () => {
-		new Command("greet", log, "wiz")
+		new Command("greet", "wiz")
 			.option("name", t.optional(t.string()), {
 				default: undefined,
 				description: "who to greet",
 			})
 			.action(() => {})
-			.exec(["--help"]);
+			.exec(["--help"], { log });
 
 		const text = log.entries
 			.map((entry) => color.strip(entry.message))
@@ -162,12 +166,12 @@ describe("Command", () => {
 
 	it("prints help for -h just as for --help", () => {
 		let ran = false;
-		new Command("x", log)
+		new Command("x")
 			.option("n", t.number())
 			.action(() => {
 				ran = true;
 			})
-			.exec(["-h"]);
+			.exec(["-h"], { log });
 		expect(ran).toBe(false);
 		expect(
 			log.entries.map((entry) => color.strip(entry.message)).join("\n"),
@@ -199,7 +203,7 @@ describe("Command", () => {
 			.action((opts) => {
 				got = opts;
 			})
-			.exec(["alpha", "--force"]);
+			.exec(["alpha", "--force"], { log });
 		expect(got).toEqual({ task: "alpha", force: true });
 	});
 
@@ -208,7 +212,7 @@ describe("Command", () => {
 			new Command("prune")
 				.arg("task", t.string())
 				.action(() => {})
-				.exec([]),
+				.exec([], { log }),
 		).toThrow("missing required argument <task>");
 
 		let got: unknown;
@@ -217,16 +221,16 @@ describe("Command", () => {
 			.action((opts) => {
 				got = opts;
 			})
-			.exec([]);
+			.exec([], { log });
 		expect(got).toEqual({ task: "all" });
 	});
 
 	it("shows arguments in the usage line and their own section in help", () => {
-		new Command("escalate", log, "arbor")
+		new Command("escalate", "arbor")
 			.arg("reason", t.string(), { description: "why this needs a human" })
 			.arg("note", t.string(), { default: "" })
 			.action(() => {})
-			.exec(["--help"]);
+			.exec(["--help"], { log });
 
 		const text = log.entries
 			.map((entry) => color.strip(entry.message))

@@ -1,5 +1,6 @@
-import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
+import { color, type Logger } from "@webappwiz/log";
 import type { Schema } from "@webappwiz/t";
+import type { Deps } from "./deps";
 import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 
 // `parsed` is the whole command line: the positionals `arg()` declares and the
@@ -33,7 +34,6 @@ export class Command<O, C extends object = object> {
 
 	constructor(
 		readonly name: string,
-		private log: Logger = new ConsoleLogger(),
 		private program = "", // program name for the usage line; empty when run standalone
 	) {}
 
@@ -98,9 +98,15 @@ export class Command<O, C extends object = object> {
 		return this;
 	}
 
-	exec(argv: string[], outer: AnyMiddleware[] = []): unknown {
+	// Of the dependencies only the logger is this command's business; the rest of
+	// the object it just seeds the context with, for the middleware and action.
+	exec(
+		argv: string[],
+		deps: Pick<Deps, "log">,
+		outer: AnyMiddleware[] = [],
+	): unknown {
 		if (argv.includes("--help") || argv.includes("-h")) {
-			this.help();
+			this.help(deps.log);
 			return;
 		}
 		const opts = this.parse(argv);
@@ -108,13 +114,13 @@ export class Command<O, C extends object = object> {
 		// Without middleware there is nothing to await, and a sync action stays
 		// sync, parse errors included.
 		if (chain.length === 0) {
-			return this._action(opts, {} as C);
+			return this._action(opts, deps as unknown as C);
 		}
 		let result: unknown;
 		const run = compose(chain, async (ctx) => {
 			result = await this._action(opts, ctx as C);
 		});
-		return run({}).then(() => result);
+		return run(deps).then(() => result);
 	}
 
 	private parse(argv: string[]): O {
@@ -194,7 +200,7 @@ export class Command<O, C extends object = object> {
 		];
 	}
 
-	private help(): void {
+	private help(log: Logger): void {
 		const args = this.args.map((arg) =>
 			arg.hasDefault ? `[${arg.name}]` : `<${arg.name}>`,
 		);
@@ -224,6 +230,6 @@ export class Command<O, C extends object = object> {
 		for (const [flag, text] of rows) {
 			lines.push(`  ${color.blue(flag.padEnd(pad))}  ${text}`.trimEnd());
 		}
-		this.log.info(lines.join("\n"));
+		log.info(lines.join("\n"));
 	}
 }

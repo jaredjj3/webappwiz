@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
-import { cli } from "@webappwiz/cmd";
 import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs, NodePs } from "@webappwiz/sys";
-import { commands } from "./commands";
+import { SystemClock } from "@webappwiz/time";
+import { webappwiz } from "./webappwiz";
 
-const log = new ConsoleLogger();
-const app = cli("webappwiz", log);
-
-await commands(app, log, new NodeFs(), new NodePs());
-await app.run();
+await webappwiz.run({
+	log: new ConsoleLogger(),
+	fs: new NodeFs(),
+	ps: new NodePs(),
+	clock: new SystemClock(),
+});
