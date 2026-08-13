@@ -5,7 +5,15 @@ import type {
 	ServeOptions,
 } from "./http-server";
 
-/** Listens with `Bun.serve`, which is the only thing in here that knows Bun. */
+/**
+ * Listens with `Bun.serve`, which is the only thing in here that knows Bun.
+ *
+ * No test of its own, deliberately: `rpc.test.ts` round-trips fourteen real
+ * requests through it and `arbor`'s `dev.test.ts` serves and fetches a real
+ * page, port 0 included. A unit test would have to build a `Response`, and any
+ * test file running after one that registers happy-dom gets a `Response` that
+ * `Bun.serve` quietly refuses, serving its own welcome page instead.
+ */
 export class BunHttpServer implements HttpServer {
 	async serve(handler: Handler, options: ServeOptions): Promise<Listening> {
 		const server = Bun.serve({
