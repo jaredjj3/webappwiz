@@ -150,6 +150,20 @@
         "@webappwiz/time": "workspace:*",
       },
     },
+    "packages/rules": {
+      "name": "@webappwiz/rules",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/events": "workspace:*",
+        "@webappwiz/log": "workspace:*",
+        "@webappwiz/md": "workspace:*",
+        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/time": "workspace:*",
+      },
+      "peerDependencies": {
+        "typescript": "^7",
+      },
+    },
     "packages/ship": {
       "name": "@webappwiz/ship",
       "version": "0.0.0",
@@ -338,6 +352,8 @@
     "@webappwiz/react": ["@webappwiz/react@workspace:packages/react"],
 
     "@webappwiz/rpc": ["@webappwiz/rpc@workspace:packages/rpc"],
+
+    "@webappwiz/rules": ["@webappwiz/rules@workspace:packages/rules"],
 
     "@webappwiz/ship": ["@webappwiz/ship@workspace:packages/ship"],
 
