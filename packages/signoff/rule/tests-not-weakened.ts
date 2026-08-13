@@ -8,7 +8,7 @@ const SILENCED = /\b(?:it|test|describe|suite)\b[\w.]*\.(skip|only)\s*\(/;
 
 export class TestsNotWeakened implements Checked {
 	readonly id = "tests-not-weakened";
-	readonly decides = "all";
+	readonly checkedBy = "code";
 	readonly document = doc;
 
 	check(changeset: Changeset): Finding[] {

@@ -109,7 +109,7 @@ export class JudgeCommands {
 		// ones are worth asking about.
 		diagnostics.push(
 			...(await mechanizer.check(
-				config.rules.filter((rule) => rule.judgedBy === "agent"),
+				config.rules.filter((rule) => rule.checkedBy === "agent"),
 				this.agent(config, opts),
 			)),
 		);
@@ -128,7 +128,7 @@ export class JudgeCommands {
 				rule.level,
 				rule.files,
 				// which rules cost tokens: a rule judged by code alone is free
-				rule.judgedBy,
+				rule.checkedBy,
 				String(doc.good.length),
 				String(doc.bad.length),
 			]);

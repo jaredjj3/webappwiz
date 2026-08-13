@@ -10,7 +10,7 @@ export class TestsReadLikeSentences implements PartlyChecked {
 	readonly id = "tests-read-like-sentences";
 	readonly files = "**/*.test.ts";
 	readonly level = "error";
-	readonly judgedBy = "both";
+	readonly checkedBy = "code-then-agent";
 	readonly document = doc;
 	// The check counts describe calls, where a second one is certain. Whether
 	// a title completes "it ..." naturally still needs the agent.

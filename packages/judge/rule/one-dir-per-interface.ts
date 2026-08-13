@@ -1,10 +1,10 @@
 import doc from "./one-dir-per-interface.md" with { type: "text" };
-import type { Judged } from "./rule";
+import type { Reviewed } from "./rule";
 
-export class OneDirPerInterface implements Judged {
+export class OneDirPerInterface implements Reviewed {
 	readonly id = "one-dir-per-interface";
 	readonly files = "**/*.ts";
 	readonly level = "warning";
-	readonly judgedBy = "agent";
+	readonly checkedBy = "agent";
 	readonly document = doc;
 }

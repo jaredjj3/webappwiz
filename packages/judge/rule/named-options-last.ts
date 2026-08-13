@@ -43,7 +43,7 @@ export class NamedOptionsLast implements PartlyChecked {
 	readonly id = "named-options-last";
 	readonly files = "**/*.ts";
 	readonly level = "warning";
-	readonly judgedBy = "both";
+	readonly checkedBy = "code-then-agent";
 	readonly document = doc;
 	// The check sees an options object already in the parameter list, where
 	// both its position and its type are certain. Whether a row of positional

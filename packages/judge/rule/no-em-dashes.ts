@@ -14,7 +14,7 @@ export class NoEmDashes implements Checked {
 	readonly id = "no-em-dashes";
 	readonly files = "**/*.{ts,md}";
 	readonly level = "error";
-	readonly judgedBy = "code";
+	readonly checkedBy = "code";
 	readonly document = doc;
 
 	check(text: string): Hit[] {

@@ -16,7 +16,7 @@ export class ClassesOverFunctionExports implements PartlyChecked {
 	readonly id = "classes-over-function-exports";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly judgedBy = "both";
+	readonly checkedBy = "code-then-agent";
 	readonly document = doc;
 	// The check sees function-typed parameters but not interface-typed ones, so
 	// it decides only half the rule and the agent still reads the rest.

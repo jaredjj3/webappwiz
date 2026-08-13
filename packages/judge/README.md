@@ -27,7 +27,7 @@ export class OneClassPerFile implements Checked {
 	readonly id = "one-class-per-file";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly judgedBy = "code";
+	readonly checkedBy = "code";
 	readonly document = doc;
 
 	check(text: string): Hit[] {
@@ -56,17 +56,18 @@ class Bar {}
 ​```
 ```
 
-A rule says who decides it, and the type it implements makes that binding:
+A rule says what checks it, and the type it implements makes that binding:
 
-| `judgedBy` | implements | who decides | what it costs |
+| `checkedBy` | implements | what settles it | what it costs |
 | --- | --- | --- | --- |
 | `"code"` | `Checked` | a token scan, outright | free, on every `wiz fix` |
-| `"both"` | `PartlyChecked` | the check what it can see, an agent the rest | both |
-| `"agent"` | `Judged` | an agent reading the code | billed, on demand |
+| `"code-then-agent"` | `PartlyChecked` | the check what it can see, an agent the rest | both |
+| `"agent"` | `Reviewed` | an agent reading the code | billed, on demand |
 
-`Checked` and `PartlyChecked` require a `check`; `Judged` has none. So a rule
+`Checked` and `PartlyChecked` require a `check`; `Reviewed` has none. So a rule
 cannot claim a check it does not implement or hide one it does, and consumers
-discriminate on `judgedBy` rather than guessing from which fields are present.
+discriminate on `checkedBy` rather than guessing from which fields are
+present.
 
 ## The rule set
 
@@ -106,19 +107,19 @@ name one:
   file.
 - `parameters-declare-fields` (`code`): a constructor copying a parameter
   into a field of the same name should declare the field on the parameter.
-- `classes-over-function-exports` (`both`): several exported
+- `classes-over-function-exports` (`code-then-agent`): several exported
   functions injecting dependencies should become a class; the check sees
   function-typed parameters, the agent judges interface-typed ones.
-- `objects-over-callbacks` (`both`): inject objects, not
+- `objects-over-callbacks` (`code-then-agent`): inject objects, not
   callbacks; the check sees function types in constructor parameters, the
   agent judges retained method parameters.
-- `named-options-last` (`both`): an options object goes last and
+- `named-options-last` (`code-then-agent`): an options object goes last and
   its type is named; the check sees an options parameter that is neither, the
   agent judges parameters that should have been one.
-- `tests-read-like-sentences` (`both`): one describe per test
+- `tests-read-like-sentences` (`code-then-agent`): one describe per test
   file, titles completing "it ..."; the check counts the describes, the agent
   reads the titles.
-- `simple-test-setup` (`both`): a test file opens on what is
+- `simple-test-setup` (`code-then-agent`): a test file opens on what is
   tested; the check sees tests a loop generates, the agent judges the rest.
 - `fakes-over-mocks`, `comments-say-why-not-what`,
   `doc-comments-address-users`, `one-dir-per-interface`,

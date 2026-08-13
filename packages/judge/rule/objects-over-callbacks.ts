@@ -11,7 +11,7 @@ export class ObjectsOverCallbacks implements PartlyChecked {
 	readonly id = "objects-over-callbacks";
 	readonly files = "**/*.ts";
 	readonly level = "warning";
-	readonly judgedBy = "both";
+	readonly checkedBy = "code-then-agent";
 	readonly document = doc;
 	// The check sees function types in constructor parameters, where retention
 	// is certain. Method parameters that keep a callback still need the agent.

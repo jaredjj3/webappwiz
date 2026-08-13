@@ -2,7 +2,7 @@ import type { Rule as Base } from "@webappwiz/rules";
 import type { Level } from "../diagnostic";
 import type { Hit } from "../hit";
 
-/** What every rule carries, whoever ends up deciding it. */
+/** What every rule carries, whoever ends up checking it. */
 interface Common extends Base {
 	/** Glob choosing which files this rule applies to. */
 	readonly files: string;
@@ -15,17 +15,9 @@ interface Common extends Base {
  * costs nothing, and no agent ever reads it.
  */
 export interface Checked extends Common {
-	readonly judgedBy: "code";
+	readonly checkedBy: "code";
 	/** Every violation in one file's text. */
 	check(text: string): Hit[];
-}
-
-/**
- * A rule only an agent can decide, because applying it means reading the code
- * rather than matching it. It runs on demand, and it is billed.
- */
-export interface Judged extends Common {
-	readonly judgedBy: "agent";
 }
 
 /**
@@ -34,24 +26,32 @@ export interface Judged extends Common {
  * token scan cannot see.
  */
 export interface PartlyChecked extends Common {
-	readonly judgedBy: "both";
+	readonly checkedBy: "code-then-agent";
 	/** The violations code alone can be sure of, which is not all of them. */
 	check(text: string): Hit[];
 }
 
 /**
+ * A rule only an agent can settle, because applying it means reading the code
+ * rather than matching it. It runs on demand, and it is billed.
+ */
+export interface Reviewed extends Common {
+	readonly checkedBy: "agent";
+}
+
+/**
  * One rule of judge's rule set: what it applies to, the document a human reads
- * and an agent receives verbatim, and who decides it.
+ * and an agent receives verbatim, and what checks it.
  *
- * `judgedBy` is the discriminant, so a rule cannot claim a check it does not
+ * `checkedBy` is the discriminant, so a rule cannot claim a check it does not
  * implement or hide one it does.
  */
-export type Rule = Checked | Judged | PartlyChecked;
+export type Rule = Checked | PartlyChecked | Reviewed;
 
 /** Whether this rule has a check to run locally. */
 export const hasCheck = (rule: Rule): rule is Checked | PartlyChecked =>
-	rule.judgedBy !== "agent";
+	rule.checkedBy !== "agent";
 
 /** Whether an agent still has to read this rule. */
-export const needsAgent = (rule: Rule): rule is Judged | PartlyChecked =>
-	rule.judgedBy !== "code";
+export const needsAgent = (rule: Rule): rule is PartlyChecked | Reviewed =>
+	rule.checkedBy !== "code";

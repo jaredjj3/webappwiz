@@ -1,10 +1,10 @@
 import doc from "./dev-servers-find-a-port.md" with { type: "text" };
-import type { Judged } from "./rule";
+import type { Reviewed } from "./rule";
 
-export class DevServersFindAPort implements Judged {
+export class DevServersFindAPort implements Reviewed {
 	readonly id = "dev-servers-find-a-port";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly judgedBy = "agent";
+	readonly checkedBy = "agent";
 	readonly document = doc;
 }

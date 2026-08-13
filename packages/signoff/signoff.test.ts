@@ -9,41 +9,35 @@ const changeset: Changeset = {
 	changes: [{ path: "src/a.ts", status: "modified", added: ["const a = 1;"] }],
 };
 
-class Objects implements Checked {
-	readonly id = "objects";
-	readonly decides = "all";
-	readonly document = "# Objects";
+const objects: Checked = {
+	id: "objects",
+	checkedBy: "code",
+	document: "# Objects",
+	check: (): Finding[] => [{ rule: "objects", message: "it objects" }],
+};
 
-	check(): Finding[] {
-		return [{ rule: this.id, message: "it objects" }];
-	}
-}
+const quiet: Checked = {
+	id: "quiet",
+	checkedBy: "code",
+	document: "# Quiet",
+	check: (): Finding[] => [],
+};
 
-class Quiet implements Checked {
-	readonly id = "quiet";
-	readonly decides = "all";
-	readonly document = "# Quiet";
-
-	check(): Finding[] {
-		return [];
-	}
-}
-
-class Read implements Reviewed {
-	readonly id = "read";
-	readonly decides = "none";
-	readonly document = "# Read";
-}
+const read: Reviewed = {
+	id: "read",
+	checkedBy: "agent",
+	document: "# Read",
+};
 
 describe("Signoff", () => {
 	it("ships a change no rule objects to", () => {
-		const decision = new Signoff([new Quiet()]).check(changeset);
+		const decision = new Signoff([quiet]).check(changeset);
 
 		expect(decision).toEqual({ ships: true, reasons: [] });
 	});
 
 	it("stops a change on one rule's objection, whatever the others say", () => {
-		const decision = new Signoff([new Quiet(), new Objects()]).check(changeset);
+		const decision = new Signoff([quiet, objects]).check(changeset);
 
 		expect(decision.ships).toBe(false);
 		expect(decision.reasons.map((reason) => reason.rule)).toEqual(["objects"]);
@@ -55,7 +49,7 @@ describe("Signoff", () => {
 
 	it("leaves a rule only an agent can settle to the agent", () => {
 		// No check to run, so the local pass has nothing to say about it yet.
-		expect(new Signoff([new Read()]).check(changeset)).toEqual({
+		expect(new Signoff([read]).check(changeset)).toEqual({
 			ships: true,
 			reasons: [],
 		});

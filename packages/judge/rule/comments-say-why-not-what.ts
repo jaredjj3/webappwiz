@@ -1,10 +1,10 @@
 import doc from "./comments-say-why-not-what.md" with { type: "text" };
-import type { Judged } from "./rule";
+import type { Reviewed } from "./rule";
 
-export class CommentsSayWhyNotWhat implements Judged {
+export class CommentsSayWhyNotWhat implements Reviewed {
 	readonly id = "comments-say-why-not-what";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly judgedBy = "agent";
+	readonly checkedBy = "agent";
 	readonly document = doc;
 }

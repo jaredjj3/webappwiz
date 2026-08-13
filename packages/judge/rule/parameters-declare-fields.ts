@@ -40,7 +40,7 @@ export class ParametersDeclareFields implements Checked {
 	readonly id = "parameters-declare-fields";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly judgedBy = "code";
+	readonly checkedBy = "code";
 	readonly document = doc;
 
 	check(text: string): Hit[] {

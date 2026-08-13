@@ -9,7 +9,7 @@ type Common = Base;
  * runs first: a change stopped here never pays for an agent.
  */
 export interface Checked extends Common {
-	readonly decides: "all";
+	readonly checkedBy: "code";
 	/** Everything about this change the rule wants a person to look at. */
 	check(changeset: Changeset): Finding[];
 }
@@ -19,7 +19,7 @@ export interface Checked extends Common {
  * check runs with the others; the agent still gets the rule.
  */
 export interface PartlyChecked extends Common {
-	readonly decides: "some";
+	readonly checkedBy: "code-then-agent";
 	check(changeset: Changeset): Finding[];
 }
 
@@ -28,21 +28,21 @@ export interface PartlyChecked extends Common {
  * change rather than matching it.
  */
 export interface Reviewed extends Common {
-	readonly decides: "none";
+	readonly checkedBy: "agent";
 }
 
 /**
  * One rule of a signoff: what it looks for in a change, and who decides it.
  *
- * `decides` says how much of the rule a check settles, so it discriminates
+ * `checkedBy` is the discriminant, so it discriminates
  * without a rule being able to claim a check it does not implement.
  */
 export type Rule = Checked | PartlyChecked | Reviewed;
 
 /** Whether this rule has a check to run over the changeset. */
 export const hasCheck = (rule: Rule): rule is Checked | PartlyChecked =>
-	rule.decides !== "none";
+	rule.checkedBy !== "agent";
 
 /** Whether an agent still has to read this rule. */
 export const needsAgent = (rule: Rule): rule is PartlyChecked | Reviewed =>
-	rule.decides !== "all";
+	rule.checkedBy !== "code";

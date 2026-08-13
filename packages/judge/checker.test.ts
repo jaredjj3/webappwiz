@@ -8,7 +8,7 @@ const noX: Rule = {
 	id: "no-x",
 	files: "**/*.md",
 	level: "warning",
-	judgedBy: "code",
+	checkedBy: "code",
 	document: "",
 	check: (text) =>
 		text
@@ -45,7 +45,7 @@ describe("checker", () => {
 			id: noX.id,
 			files: noX.files,
 			level: noX.level,
-			judgedBy: "agent",
+			checkedBy: "agent",
 			document: noX.document,
 		};
 		const checker = new Checker([agentRule], glob);
@@ -108,7 +108,7 @@ class Counting implements Checked {
 	readonly id = "counting";
 	readonly files = "**/*.md";
 	readonly level = "error";
-	readonly judgedBy = "code";
+	readonly checkedBy = "code";
 	readonly document = "";
 
 	check(text: string): Hit[] {

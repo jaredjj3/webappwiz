@@ -43,14 +43,14 @@ whole change.
 
 ## A rule
 
-`decides` says how much of the rule a check settles, which is also what makes
-`check` required or absent:
+`checkedBy` says what settles the rule, which is also what makes `check`
+required or absent:
 
-| `decides` | implements | who settles it | what it costs |
+| `checkedBy` | implements | what settles it | what it costs |
 | --- | --- | --- | --- |
-| `"all"` | `Checked` | reading the changeset | nothing |
-| `"some"` | `PartlyChecked` | the check what it can, an agent the rest | one call |
-| `"none"` | `Reviewed` | an agent reading the change | one call |
+| `"code"` | `Checked` | reading the changeset | nothing |
+| `"code-then-agent"` | `PartlyChecked` | the check what it can, an agent the rest | one call |
+| `"agent"` | `Reviewed` | an agent reading the change | one call |
 
 Checks run first, so a change stopped by a free rule never pays for an agent.
 

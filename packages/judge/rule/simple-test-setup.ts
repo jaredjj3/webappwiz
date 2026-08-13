@@ -16,7 +16,7 @@ export class SimpleTestSetup implements PartlyChecked {
 	readonly id = "simple-test-setup";
 	readonly files = "**/*.test.ts";
 	readonly level = "error";
-	readonly judgedBy = "both";
+	readonly checkedBy = "code-then-agent";
 	readonly document = doc;
 	// The check sees tests a loop generates, which are certain. Whether setup
 	// drowns the behavior under test still needs the agent.

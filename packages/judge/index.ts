@@ -32,9 +32,9 @@ export { ReactiveOverUseState } from "./rule/reactive-over-use-state";
 export {
 	type Checked,
 	hasCheck,
-	type Judged,
 	needsAgent,
 	type PartlyChecked,
+	type Reviewed,
 	type Rule,
 } from "./rule/rule";
 export { SimpleTestSetup } from "./rule/simple-test-setup";

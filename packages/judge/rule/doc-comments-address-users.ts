@@ -1,10 +1,10 @@
 import doc from "./doc-comments-address-users.md" with { type: "text" };
-import type { Judged } from "./rule";
+import type { Reviewed } from "./rule";
 
-export class DocCommentsAddressUsers implements Judged {
+export class DocCommentsAddressUsers implements Reviewed {
 	readonly id = "doc-comments-address-users";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly judgedBy = "agent";
+	readonly checkedBy = "agent";
 	readonly document = doc;
 }

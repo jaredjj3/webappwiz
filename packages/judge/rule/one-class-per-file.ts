@@ -19,7 +19,7 @@ export class OneClassPerFile implements Checked {
 	readonly id = "one-class-per-file";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly judgedBy = "code";
+	readonly checkedBy = "code";
 	readonly document = doc;
 
 	check(text: string): Hit[] {

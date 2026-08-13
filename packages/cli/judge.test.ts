@@ -228,7 +228,7 @@ describe("JudgeCommands", () => {
 				testRule("two", {
 					document: ruleDoc("Two"),
 					check: () => [],
-					judgedBy: "both",
+					checkedBy: "code-then-agent",
 				}),
 				testRule("three", { document: ruleDoc("Three") }),
 			],

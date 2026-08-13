@@ -20,9 +20,9 @@ export interface TestRuleOptions {
 	level?: Level;
 	document?: string;
 	check?: (text: string) => Hit[];
-	/** Who decides the rule. Defaults to what `check` implies: an agent judges
-	 * a rule with no check, code judges a rule that has one. */
-	judgedBy?: Rule["judgedBy"];
+	/** What checks the rule. Defaults to what `check` implies: an agent reads
+	 * a rule with no check, code checks a rule that has one. */
+	checkedBy?: Rule["checkedBy"];
 }
 
 /** A rule for tests to hand to a config, a checker or an analyzer. Its document
@@ -34,8 +34,8 @@ export const testRule = (id: string, opts: TestRuleOptions = {}): Rule => {
 		level: opts.level ?? "error",
 		document: opts.document ?? ruleDoc(id),
 	};
-	const judgedBy = opts.judgedBy ?? (opts.check ? "code" : "agent");
-	return judgedBy === "agent"
-		? { ...common, judgedBy }
-		: { ...common, judgedBy, check: opts.check ?? (() => []) };
+	const checkedBy = opts.checkedBy ?? (opts.check ? "code" : "agent");
+	return checkedBy === "agent"
+		? { ...common, checkedBy }
+		: { ...common, checkedBy, check: opts.check ?? (() => []) };
 };
