@@ -87,6 +87,13 @@
         "@webappwiz/disposable": "workspace:*",
       },
     },
+    "packages/http": {
+      "name": "@webappwiz/http",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/time": "workspace:*",
+      },
+    },
     "packages/judge": {
       "name": "@webappwiz/judge",
       "version": "0.0.0",
@@ -314,6 +321,8 @@
     "@webappwiz/disposable": ["@webappwiz/disposable@workspace:packages/disposable"],
 
     "@webappwiz/events": ["@webappwiz/events@workspace:packages/events"],
+
+    "@webappwiz/http": ["@webappwiz/http@workspace:packages/http"],
 
     "@webappwiz/judge": ["@webappwiz/judge@workspace:packages/judge"],
 
