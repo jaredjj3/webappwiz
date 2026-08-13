@@ -58,10 +58,7 @@ class Bar {}
 A rule that implements `check` runs locally, for free, on every `wiz fix`. A
 rule without one is judged by an agent, on demand, through `judge`. `partial =
 true` is both: the check decides the cases a token scan can see and the agent
-reads the rest. The rule's examples keep the two halves
-honest: a check must pass every `## Good` block, and a full check must catch
-every `## Bad` block, so the document and the implementation cannot drift
-apart.
+reads the rest.
 
 ## The config
 

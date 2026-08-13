@@ -1,9 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { TestsReadLikeSentences } from "./tests-read-like-sentences";
 
-// The document's examples are the rest of this rule's suite: judge.config.test.ts
-// runs every Good and Bad block through the check. What is left here is where a
-// finding points, and the call forms no document should have to teach.
+// The document says what the rule is, to a human and to an agent. What is
+// here is where a finding points, and the call forms no document should have to teach.
 describe("tests-read-like-sentences", () => {
 	it("points at each describe after the first", () => {
 		const text = [

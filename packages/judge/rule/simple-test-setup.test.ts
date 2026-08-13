@@ -1,9 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { SimpleTestSetup } from "./simple-test-setup";
 
-// The document's examples are the rest of this rule's suite: judge.config.test.ts
-// runs every Good and Bad block through the check. What is left here is where a
-// finding points, and the loop shapes no document should have to teach.
+// The document says what the rule is, to a human and to an agent. What is
+// here is where a finding points, and the loop shapes no document should have to teach.
 describe("simple-test-setup", () => {
 	it("points at a test a loop registers, wherever the loop nests", () => {
 		const text = [

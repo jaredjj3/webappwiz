@@ -1,9 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { ClassesOverFunctionExports } from "./classes-over-function-exports";
 
-// The document's examples are the rest of this rule's suite: judge.config.test.ts
-// runs every Good block through the check. What is left here is where a finding
-// points, and the token edges no document should have to teach.
+// The document says what the rule is, to a human and to an agent. What is
+// here is where a finding points, and the token edges no document should have to teach.
 describe("classes-over-function-exports", () => {
 	it("points at the second exported function that injects", () => {
 		const text = [
