@@ -34,6 +34,8 @@ describe("BunHttpServer", () => {
 
 		await listening.stop();
 
-		expect(fetch(base)).rejects.toThrow();
+		// awaited: an unawaited rejection here surfaces as an unhandled error in
+		// whichever test the runner happens to be in when it lands
+		await expect(fetch(base)).rejects.toThrow();
 	});
 });
