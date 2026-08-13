@@ -238,8 +238,9 @@ Failures print JSON on stdout and an explanation on stderr.
   merge again.
 - 4 `lease_lost`: another agent took the tree mid-merge. **Stop. Do not
   retry.**
-- 5 `budget_exhausted`: out of merge attempts. Escalate, or rm and redo
-  against current trunk.
+- 5 `budget_exhausted`: out of merge attempts. Escalate, and say in `##
+  Blocked` what you would do with another attempt: a human can grant one more
+  budget with `arbor retry <task>`. Or rm and redo against current trunk.
 - 6 `lease_held`: another agent is driving this tree.
 - 7 `dirty`: uncommitted changes. Commit, then merge.
 - 8 `not_found`: no such task, or not run from a task worktree.
