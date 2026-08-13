@@ -4,10 +4,15 @@ import { NodeFs, NodeGlob, NodePs } from "@webappwiz/sys";
 import { SystemClock } from "@webappwiz/time";
 import { webappwiz } from "./webappwiz";
 
-await webappwiz.run({
-	log: new ConsoleLogger(),
-	fs: new NodeFs(),
-	ps: new NodePs(),
-	clock: new SystemClock(),
-	glob: new NodeGlob(),
-});
+const ps = new NodePs();
+
+await webappwiz.run(
+	{
+		log: new ConsoleLogger(),
+		fs: new NodeFs(),
+		ps,
+		clock: new SystemClock(),
+		glob: new NodeGlob(),
+	},
+	ps.args,
+);

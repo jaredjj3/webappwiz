@@ -6,6 +6,7 @@
 export interface ProcessLike {
 	platform: NodeJS.Platform;
 	pid: number;
+	argv: string[];
 	env: NodeJS.ProcessEnv;
 	kill(pid: number, signal: 0): boolean;
 	cwd(): string;

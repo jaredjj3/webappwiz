@@ -69,7 +69,7 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 		return group;
 	}
 
-	run(deps: D, argv: string[] = Bun.argv.slice(2)): unknown {
+	run(deps: D, argv: string[]): unknown {
 		try {
 			const out = this.exec(argv, deps, []);
 			// async actions reject after exec() returns, so cover that path too

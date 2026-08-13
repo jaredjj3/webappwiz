@@ -9,6 +9,9 @@ import type { ProcessLike } from "./process-like";
 export class FakeProcess implements ProcessLike {
 	platform: NodeJS.Platform = process.platform;
 	pid = process.pid;
+	// the runtime and entry point a real argv leads with, then nothing: a test
+	// that wants arguments assigns them
+	argv: string[] = process.argv.slice(0, 2);
 	env: NodeJS.ProcessEnv = process.env;
 	readonly exits: number[] = [];
 

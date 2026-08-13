@@ -7,10 +7,13 @@ export class NodePs implements Ps {
 	platform: NodeJS.Platform;
 	pid: number;
 	hostname = hostname();
+	args: string[];
 
 	constructor(private readonly proc: ProcessLike = process) {
 		this.platform = proc.platform;
 		this.pid = proc.pid;
+		// argv[0] is the runtime and argv[1] the entry point; a cli parses neither
+		this.args = proc.argv.slice(2);
 	}
 
 	alive(pid: number): boolean {

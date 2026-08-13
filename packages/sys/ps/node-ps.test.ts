@@ -10,6 +10,18 @@ describe("NodePs", () => {
 		proc = new FakeProcess();
 	});
 
+	it("drops the runtime and the entry point from args", () => {
+		proc.argv = ["/bin/bun", "/repo/cli.ts", "judge", "--dir", "packages"];
+
+		expect(new NodePs(proc).args).toEqual(["judge", "--dir", "packages"]);
+	});
+
+	it("reports no args when only the runtime and entry point were given", () => {
+		proc.argv = ["/bin/bun", "/repo/cli.ts"];
+
+		expect(new NodePs(proc).args).toEqual([]);
+	});
+
 	it("adds to the environment rather than replacing it when given env", async () => {
 		proc.env = { INHERITED: "kept" };
 

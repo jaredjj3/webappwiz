@@ -5,6 +5,12 @@ export interface Ps {
 	platform: NodeJS.Platform;
 	pid: number;
 	hostname: string;
+	/**
+	 * What the program was invoked with, past the runtime and the script: the
+	 * arguments a cli parses. Never the executable or the entry point, which
+	 * nothing here has ever wanted.
+	 */
+	args: string[];
 	/** Whether a pid on *this* host is still running. */
 	alive(pid: number): boolean;
 	spawn(argv: string[], opts?: SpawnOptions): Promise<SpawnResult>;

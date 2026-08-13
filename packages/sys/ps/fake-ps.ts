@@ -4,6 +4,7 @@ export class FakePs implements Ps {
 	platform: NodeJS.Platform = "darwin";
 	pid = 4242;
 	hostname = "fake-host";
+	args: string[] = [];
 
 	private dead = new Set<number>();
 	private path = "/";
