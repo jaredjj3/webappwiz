@@ -87,7 +87,7 @@ export class FakePs implements Ps {
 		this.on(event, wrapped);
 	}
 
-	// lint-ignore objects-over-callbacks: a test knob on a fake, where what a spawn does is one expression, so an interface would only ask every test to wrap that expression in an object literal
+	// judge-ignore objects-over-callbacks: a test knob on a fake, where what a spawn does is one expression, so an interface would only ask every test to wrap that expression in an object literal
 	simulate(simulation: () => Promise<number>): void {
 		this.simulation = simulation;
 	}

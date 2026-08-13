@@ -7,7 +7,7 @@ import type { AnyMiddleware, Middleware } from "./middleware";
  * What a `Cli` dispatches to: a command, or a group that dispatches again.
  * `Command` satisfies it as it is, which is what lets the two nest freely.
  */
-// lint-ignore one-dir-per-interface: a file-local structural type for the dispatch
+// judge-ignore one-dir-per-interface: a file-local structural type for the dispatch
 // map, not an injected dependency anything hands in
 interface Node<D> {
 	/** One row of the parent's help table, keyed by the name it registered under. */

@@ -1,4 +1,4 @@
-// lint-ignore-file objects-over-callbacks: a component reacts to a transition with a closure over its own props, and handing it a Dispatcher instead would need another hook to subscribe and unsubscribe
+// judge-ignore-file objects-over-callbacks: a component reacts to a transition with a closure over its own props, and handing it a Dispatcher instead would need another hook to subscribe and unsubscribe
 import { useCallback, useRef, useState } from "react";
 import { useWindowEventListener } from "./use-window-event-listener";
 

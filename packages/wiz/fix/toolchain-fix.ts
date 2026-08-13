@@ -1,21 +1,21 @@
-import type { Lint } from "@webappwiz/lint";
+import type { Check } from "@webappwiz/judge";
 import { color, type Logger } from "@webappwiz/log";
 import type { Ps } from "@webappwiz/sys";
 
 import type { Fix, FixOptions } from "./fix";
 
-/** Runs biome, the guide's linter, and the type checker, in that order. */
+/** Runs biome, the config's checks, and the type checker, in that order. */
 export class ToolchainFix implements Fix {
 	constructor(
 		private readonly log: Logger,
 		private readonly ps: Ps,
-		private readonly linter: Pick<Lint, "run">,
+		private readonly checks: Pick<Check, "run">,
 	) {}
 
 	/** Pass `check: true` to report problems without writing fixes. */
 	async run(opts: FixOptions): Promise<void> {
 		await this.biome(opts.check);
-		await this.lint();
+		await this.check();
 		await this.typecheck();
 	}
 
@@ -36,11 +36,13 @@ export class ToolchainFix implements Fix {
 		}
 	}
 
-	private async lint(): Promise<void> {
-		const ok = await this.linter.run();
-		this.log.info(`lint: ${ok ? color.green("success") : color.red("failed")}`);
+	private async check(): Promise<void> {
+		const ok = await this.checks.run();
+		this.log.info(
+			`check: ${ok ? color.green("success") : color.red("failed")}`,
+		);
 		if (!ok) {
-			throw new Error("Lint failed");
+			throw new Error("Checks failed");
 		}
 	}
 

@@ -7,6 +7,7 @@
       "devDependencies": {
         "@biomejs/biome": "^2.5.7",
         "@types/bun": "latest",
+        "@webappwiz/judge": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^7",
@@ -59,7 +60,7 @@
       },
       "dependencies": {
         "@webappwiz/cmd": "workspace:*",
-        "@webappwiz/lint": "workspace:*",
+        "@webappwiz/judge": "workspace:*",
         "@webappwiz/log": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
@@ -86,11 +87,11 @@
         "@webappwiz/disposable": "workspace:*",
       },
     },
-    "packages/lint": {
-      "name": "@webappwiz/lint",
+    "packages/judge": {
+      "name": "@webappwiz/judge",
       "version": "0.0.0",
       "bin": {
-        "lint": "./cli.ts",
+        "judge": "./cli.ts",
       },
       "dependencies": {
         "@webappwiz/events": "workspace:*",
@@ -170,7 +171,7 @@
       "dependencies": {
         "@webappwiz/cli": "workspace:*",
         "@webappwiz/cmd": "workspace:*",
-        "@webappwiz/lint": "workspace:*",
+        "@webappwiz/judge": "workspace:*",
         "@webappwiz/log": "workspace:*",
         "@webappwiz/ship": "workspace:*",
         "@webappwiz/sys": "workspace:*",
@@ -314,7 +315,7 @@
 
     "@webappwiz/events": ["@webappwiz/events@workspace:packages/events"],
 
-    "@webappwiz/lint": ["@webappwiz/lint@workspace:packages/lint"],
+    "@webappwiz/judge": ["@webappwiz/judge@workspace:packages/judge"],
 
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
 

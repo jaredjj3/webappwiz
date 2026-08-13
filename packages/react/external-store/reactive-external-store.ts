@@ -18,7 +18,7 @@ export class ReactiveExternalStore<
 {
 	private state: State;
 
-	// lint-ignore objects-over-callbacks: a selector is the React idiom, and an interface around one pure projection adds nothing
+	// judge-ignore objects-over-callbacks: a selector is the React idiom, and an interface around one pure projection adds nothing
 	constructor(
 		private source: Source,
 		private select: (source: Source) => State,

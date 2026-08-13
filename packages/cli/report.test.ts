@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Violation } from "@webappwiz/lint";
+import type { Violation } from "@webappwiz/judge";
 import { color } from "@webappwiz/log";
 import { Duration } from "@webappwiz/time";
 import {

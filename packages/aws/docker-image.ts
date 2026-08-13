@@ -15,7 +15,7 @@ type Env = {
 	secrets?: Record<string, secretsmanager.ISecret>;
 };
 
-// lint-ignore one-dir-per-interface: apps composing this package supply their own
+// judge-ignore one-dir-per-interface: apps composing this package supply their own
 // images, so the contract is the point even with one implementation shipped here
 /** What a service needs from an image: how to run it, and what to run it with. */
 export interface ServiceImage {

@@ -35,7 +35,7 @@ export function floor(agent: string, tokens: number): number | undefined {
  */
 export type Overheads = Record<string, number>;
 
-const FILE = join(".wiz", "lint-cost.json");
+const FILE = join(".wiz", "judge-cost.json");
 
 /**
  * What past runs in `root` measured, empty until one has finished there. A

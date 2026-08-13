@@ -26,7 +26,7 @@ describe("wiz", () => {
 		wiz.run(deps, []);
 
 		expect(out()).toContain("Usage: wiz <command> [options]");
-		expect(out()).toContain("fix   format, lint, and typecheck the workspace");
+		expect(out()).toContain("fix   format, check, and typecheck the workspace");
 		expect(out()).toContain("run @webappwiz/cli against a project");
 	});
 

@@ -17,7 +17,7 @@ describe("fix", () => {
 		fix = new ToolchainFix(log, ps, { run: async () => clean });
 	});
 
-	it("writes fixes by default, then lints and typechecks", async () => {
+	it("writes fixes by default, then checks and typechecks", async () => {
 		await fix.run({ check: false });
 
 		expect(ps.getCalls()).toEqual([
@@ -40,10 +40,10 @@ describe("fix", () => {
 		);
 	});
 
-	it("throws when lint fails, without typechecking", async () => {
+	it("throws when a check fails, without typechecking", async () => {
 		clean = false;
 
-		await expect(fix.run({ check: false })).rejects.toThrow("Lint failed");
+		await expect(fix.run({ check: false })).rejects.toThrow("Checks failed");
 		expect(ps.getCalls()).toEqual(["bunx biome check --write --unsafe ."]);
 	});
 });

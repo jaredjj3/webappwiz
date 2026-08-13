@@ -1,7 +1,7 @@
 import type { CommandDeps } from "@webappwiz/cli/commands";
 import { commands } from "@webappwiz/cli/commands";
 import { cli } from "@webappwiz/cmd";
-import { Lint } from "@webappwiz/lint";
+import { Check } from "@webappwiz/judge";
 import {
 	CliGit,
 	CliGithub,
@@ -19,13 +19,13 @@ import { test } from "./test";
 export type WizDeps = CommandDeps;
 
 const toolchainFix = ({ log, fs, ps }: WizDeps): ToolchainFix =>
-	new ToolchainFix(log, ps, new Lint(log, fs, ps));
+	new ToolchainFix(log, ps, new Check(log, fs, ps));
 
 export const wiz = cli<WizDeps>("wiz");
 
 wiz
 	.command("fix")
-	.description("format, lint, and typecheck the workspace")
+	.description("format, check, and typecheck the workspace")
 	.option("check", t.boolean(), {
 		default: false,
 		description: "report problems without writing fixes (for CI)",

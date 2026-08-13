@@ -1,4 +1,4 @@
-import type { Finished, Violation } from "@webappwiz/lint";
+import type { Finished, Violation } from "@webappwiz/judge";
 import { color } from "@webappwiz/log";
 import type { Duration } from "@webappwiz/time";
 import { floor, type Overheads, predict, priced } from "./cost";

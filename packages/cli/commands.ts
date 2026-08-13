@@ -1,9 +1,9 @@
 import type { Cli, Deps } from "@webappwiz/cmd";
-import { AGENTS, DEFAULT_GUIDE } from "@webappwiz/lint";
+import { AGENTS, DEFAULT_CONFIG } from "@webappwiz/judge";
 import type { Fs } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import type { Clock } from "@webappwiz/time";
-import { GuideCommands } from "./guide";
+import { JudgeCommands } from "./judge";
 // Every @webappwiz package is released in lockstep, so this one's version is
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
@@ -41,26 +41,26 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 		.action((opts, { log, fs }) => update(log, fs, opts));
 
 	// `judge` and `rules` are siblings rather than one nested in the other: the
-	// guide is shared, with `wiz fix` enforcing the rules that carry a check and
+	// config is shared, with `wiz fix` enforcing the rules that carry a check and
 	// `judge` the ones only an agent can decide, so neither owns the rule set.
-	const guide = ({ log, fs, ps, clock }: CommandDeps): GuideCommands =>
-		new GuideCommands(log, fs, ps, clock);
-	const guideArg = {
-		default: DEFAULT_GUIDE,
-		description: `guide module (default: ${DEFAULT_GUIDE})`,
+	const judge = ({ log, fs, ps, clock }: CommandDeps): JudgeCommands =>
+		new JudgeCommands(log, fs, ps, clock);
+	const configArg = {
+		default: DEFAULT_CONFIG,
+		description: `config module (default: ${DEFAULT_CONFIG})`,
 	};
 
 	app
 		.command("judge")
-		.description("check a directory against the guide, one agent per glob")
-		.arg("guide", t.string(), guideArg)
+		.description("check a directory against the config, one agent per glob")
+		.arg("config", t.string(), configArg)
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "directory to judge (default: .)",
 		})
 		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
 			default: undefined,
-			description: "model to check with; required unless --exec or --prompt",
+			description: "model to check with (default: the config's agent)",
 		})
 		.option("exec", t.optional(t.string()), {
 			default: undefined,
@@ -86,44 +86,44 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 			default: 200_000,
 			description: "confirm before reading more than this many tokens",
 		})
-		.action((opts, deps) => guide(deps).judge(opts));
+		.action((opts, deps) => judge(deps).judge(opts));
 
 	const rules = app
 		.group("rules")
-		.description("list, print, and audit the rules a guide is made of");
+		.description("list, print, and audit the rules a config is made of");
 
 	rules
 		.command("ls")
-		.description("list the guide rules")
-		.arg("guide", t.string(), guideArg)
-		.action((opts, deps) => guide(deps).ls(opts));
+		.description("list the config rules")
+		.arg("config", t.string(), configArg)
+		.action((opts, deps) => judge(deps).ls(opts));
 
 	rules
 		.command("show")
 		.description("print one rule in full, by the id `rules ls` gives it")
 		.arg("id", t.string(), { description: "rule id" })
-		.arg("guide", t.string(), guideArg)
-		.action((opts, deps) => guide(deps).show(opts));
+		.arg("config", t.string(), configArg)
+		.action((opts, deps) => judge(deps).show(opts));
 
 	rules
 		.command("audit")
 		.description(
-			"check the guide: is it sound, and which rules need no agent at all",
+			"check the config: is it sound, and which rules need no agent at all",
 		)
-		.arg("guide", t.string(), guideArg)
+		.arg("config", t.string(), configArg)
 		.option("strict", t.boolean(), {
 			default: false,
 			description: "treat warnings as errors",
 		})
 		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
 			default: undefined,
-			description: "model to ask with; required unless --exec",
+			description: "model to ask with (default: the config's agent)",
 		})
 		.option("exec", t.optional(t.string()), {
 			default: undefined,
 			description: "command the prompt is passed to, instead of --agent",
 		})
-		.action((opts, deps) => guide(deps).audit(opts));
+		.action((opts, deps) => judge(deps).audit(opts));
 
 	const skillsGroup = app
 		.group("skills")

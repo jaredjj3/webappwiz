@@ -49,7 +49,7 @@ describe("cost", () => {
 
 	it("measures nothing rather than throwing on a file it cannot read", async () => {
 		await fs.mkdir("/p/.wiz");
-		await fs.write("/p/.wiz/lint-cost.json", "not json {");
+		await fs.write("/p/.wiz/judge-cost.json", "not json {");
 
 		expect(await overheads(fs, "/p")).toEqual({});
 	});
@@ -72,7 +72,7 @@ describe("cost", () => {
 	it("drops a recorded overhead that is not a positive number", async () => {
 		await fs.mkdir("/p/.wiz");
 		await fs.write(
-			"/p/.wiz/lint-cost.json",
+			"/p/.wiz/judge-cost.json",
 			'{"haiku": "2.5", "sonnet": 0, "opus": 1.8}',
 		);
 

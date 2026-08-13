@@ -1,0 +1,23 @@
+{
+	"name": "@webappwiz/judge",
+	"version": "0.0.0",
+	"type": "module",
+	"module": "index.ts",
+	"bin": {
+		"judge": "./cli.ts"
+	},
+	"exports": {
+		".": "./index.ts",
+		"./testing": "./testing.ts"
+	},
+	"dependencies": {
+		"@webappwiz/events": "workspace:*",
+		"@webappwiz/log": "workspace:*",
+		"@webappwiz/md": "workspace:*",
+		"@webappwiz/sys": "workspace:*",
+		"@webappwiz/time": "workspace:*"
+	},
+	"peerDependencies": {
+		"typescript": "^7"
+	}
+}
