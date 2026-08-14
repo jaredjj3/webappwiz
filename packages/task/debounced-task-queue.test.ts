@@ -3,7 +3,7 @@ import { Duration } from "@webappwiz/time";
 import { FakeTimer } from "@webappwiz/time/testing";
 import { Debouncer } from "@webappwiz/util";
 
-import { DebouncedTaskQueue } from "../index";
+import { DebouncedTaskQueue } from "./index";
 
 describe("DebouncedTaskQueue", () => {
 	let timer: FakeTimer;

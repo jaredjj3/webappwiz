@@ -3,7 +3,7 @@ import { Duration } from "@webappwiz/time";
 import { FakeTimer } from "@webappwiz/time/testing";
 import { Throttler } from "@webappwiz/util";
 
-import { ThrottledTaskQueue } from "../index";
+import { ThrottledTaskQueue } from "./index";
 
 describe("ThrottledTaskQueue", () => {
 	let timer: FakeTimer;

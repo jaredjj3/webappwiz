@@ -1,8 +1,16 @@
 import { type Frame, raf } from "@webappwiz/browser";
 import { type Disposable, Disposer } from "@webappwiz/disposable";
 import type { Clock } from "@webappwiz/time";
-import { ConflatedTaskQueue } from "./task-queue/conflated-task-queue";
-import type { Task, TaskQueue, TaskQueueState } from "./task-queue/task-queue";
+import { ConflatedTaskQueue } from "./conflated-task-queue";
+import type { Task, TaskQueue, TaskQueueState } from "./task-queue";
+
+/** How a frame is asked for. `raf` is the one that asks the browser. */
+export type Raf = typeof raf;
+
+/** What a `RafTaskQueue` asks for its frames through; the real one by default. */
+export interface RafTaskQueueOptions {
+	raf?: Raf;
+}
 
 /**
  * A `TaskQueue` that runs its task on an animation frame, so work triggered by
@@ -17,12 +25,15 @@ import type { Task, TaskQueue, TaskQueueState } from "./task-queue/task-queue";
 export class RafTaskQueue implements TaskQueue, Disposable {
 	private readonly disposer = new Disposer();
 	private readonly queue: TaskQueue;
+	private readonly frames: Raf;
 	private frame: Frame | null = null;
 
 	constructor(
 		private readonly clock: Clock,
 		private readonly task: Task,
+		opts: RafTaskQueueOptions = {},
 	) {
+		this.frames = opts.raf ?? raf;
 		this.queue = this.disposer.use(
 			new ConflatedTaskQueue(() => this.scheduleFrame()),
 		);
@@ -51,7 +62,7 @@ export class RafTaskQueue implements TaskQueue, Disposable {
 	}
 
 	private scheduleFrame(): Promise<void> {
-		this.frame = raf(this.clock, () => this.task());
+		this.frame = this.frames(this.clock, () => this.task());
 		return this.frame.promise;
 	}
 }

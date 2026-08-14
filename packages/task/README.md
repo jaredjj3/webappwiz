@@ -52,3 +52,11 @@ Runs the task on an animation frame, so work triggered by a stream of events
 happens once per frame at most and lands when the browser is about to paint
 anyway. It is behind its own entry point because it reaches for
 `requestAnimationFrame`, which a server does not have.
+
+How it asks for a frame is the `raf` of `@webappwiz/browser` unless you say
+otherwise, so a test can hand over frames of its own and drive them without a
+DOM:
+
+```ts
+const queue = new RafTaskQueue(clock, task, { raf: frames.request });
+```

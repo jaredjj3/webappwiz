@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { ConflatedTaskQueue } from "../index";
+import { ConflatedTaskQueue } from "./index";
 
 describe("ConflatedTaskQueue", () => {
 	it("runs the task once for a single trigger", async () => {
