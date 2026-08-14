@@ -157,13 +157,20 @@ export class Signoff {
 				"review goes to a person instead of trunk.",
 		);
 		for (const rule of this.rules) {
-			this.log.info("");
-			this.log.info(color.dim(rule.id));
-			this.log.info("");
+			this.log.info(`\n${divider(rule.id)}\n`);
 			this.log.info(rule.document.trim());
 		}
+		// A rule's document is markdown with headings of its own, so where one
+		// ends is not otherwise visible: the last one wants a closing line as
+		// much as the others want an opening one.
+		this.log.info(`\n${divider()}`);
 	}
 }
+
+/** Where one rule stops and the next starts, named so a reader knows which
+ * document they are in without scrolling back to the heading. */
+const divider = (id?: string): string =>
+	color.dim(id === undefined ? "-".repeat(72) : `--- ${id} `.padEnd(72, "-"));
 
 /** What these rules are for, which the prompt's "report every violation" does
  * not say on its own: a signoff rule is broken by a change that should have

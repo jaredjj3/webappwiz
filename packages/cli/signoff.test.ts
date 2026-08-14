@@ -49,6 +49,14 @@ describe("Signoff", () => {
 		expect(ps.getCalls()).toEqual([]);
 	});
 
+	it("divides each rule from the next, and the last from what follows", async () => {
+		await signoff().run({ ...weighing, print: true });
+
+		expect(printed()).toContain("--- two ---");
+		expect(printed()).toContain("--- three ---");
+		expect(printed().trimEnd()).toEndWith("-----");
+	});
+
 	it("says there are none rather than printing nothing", async () => {
 		await new Signoff(log, ps, clock, [], "haiku").run({
 			...weighing,
