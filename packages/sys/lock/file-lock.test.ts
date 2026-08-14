@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MemoryLogger } from "@webappwiz/log";
 import { Duration, sleep } from "@webappwiz/time";
+import { NodeFs } from "../fs/node-fs";
+import { FakePs } from "../ps/fake-ps";
 import { FileLock } from "./file-lock";
-import { NodeFs } from "./fs/node-fs";
-import { FakePs } from "./ps/fake-ps";
 
 /**
  * A real filesystem, because `mkdir`'s atomicity is the whole mechanism and an

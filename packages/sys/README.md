@@ -2,7 +2,7 @@
 
 Interfaces for the things that touch the machine, so code under test doesn't
 have to: `Fs` (filesystem), `Ps` (processes), `IpProvider`/`HostMapper`
-(loopback IPs and hostname mapping), plus `FileLock`, built on those seams.
+(loopback IPs and hostname mapping), plus `Lock`, built on those seams.
 
 ```ts
 import { NodeFs, NodePs } from "@webappwiz/sys";
@@ -20,11 +20,8 @@ In tests, swap in the fakes:
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 ```
 
-`FileLock` is a mutex between processes (`acquire`, `release`,
-`releaseIfOurs`), held by a directory: `mkdir` is
-atomic everywhere, so there is no check-then-write window. `acquire` blocks
-until the lock is free, a holder that died is detected and its lock stolen,
-and the directory is removed on signals and uncaught exceptions.
+A `Lock` is a mutex (`acquire`, `release`, `releaseIfOurs`). `acquire` blocks
+until the lock is free, so there is no "busy" answer to ignore.
 
 ```ts
 const lock = new FileLock(fs, ps, log, "/path/to/some.lock");
@@ -36,3 +33,11 @@ try {
 	await lock.release();
 }
 ```
+
+`FileLock` holds the lock as a directory, so it works between processes:
+`mkdir` is atomic everywhere, so there is no check-then-write window. A holder
+that died is detected and its lock stolen, and the directory is removed on
+signals and uncaught exceptions.
+
+`MemoryLock` holds nothing but itself, so it only serializes callers inside one
+process that share the instance. Waiters are served in the order they arrived.
