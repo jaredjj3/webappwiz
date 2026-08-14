@@ -39,8 +39,8 @@ describe("JudgeCommands", () => {
 	it("shows each rule as a table row when listing", () => {
 		commands(oneRule).ls();
 
-		expect(printed()).toContain("ID   RULE  SET    LEVEL  FILES");
-		expect(printed()).toContain("one  One   judge  error");
+		expect(printed()).toContain("id    rule   set     level   files");
+		expect(printed()).toContain("one   One    judge   error");
 	});
 
 	it("lists the rules only a reader applies beside the ones a run checks", () => {
@@ -48,15 +48,15 @@ describe("JudgeCommands", () => {
 			{ id: "two", document: ruleDoc("Two") },
 		]).ls();
 
-		expect(printed()).toContain("one  One   judge");
-		expect(printed()).toContain("two  Two   signoff");
+		expect(printed()).toContain("one   One    judge");
+		expect(printed()).toContain("two   Two    signoff");
 	});
 
 	it("prints one rule in full when shown its id", () => {
 		commands(oneRule).show({ id: "one" });
 
-		expect(printed()).toContain("ID     one");
-		expect(printed()).toContain("LEVEL  error");
+		expect(printed()).toContain("id      one");
+		expect(printed()).toContain("level   error");
 		expect(printed()).toContain("# One"); // the document itself, verbatim
 		expect(printed()).toContain("## Bad");
 	});
@@ -130,7 +130,7 @@ describe("JudgeCommands", () => {
 			"claude -p --output-format json --model haiku ",
 		);
 		expect(printed()).toContain(
-			"AGENT    claude -p --output-format json --model haiku",
+			"agent     claude -p --output-format json --model haiku",
 		);
 	});
 
@@ -188,7 +188,7 @@ describe("JudgeCommands", () => {
 
 		await commands(oneRule).judge(judging);
 
-		expect(printed()).toMatch(/READING {2}\d[\d.]*K?\+ tokens/);
+		expect(printed()).toMatch(/reading {3}\d[\d.]*K?\+ tokens/);
 	});
 
 	it("prints the plan as lines rather than as one logged array", async () => {
@@ -198,7 +198,7 @@ describe("JudgeCommands", () => {
 		await commands(oneRule).judge(judging);
 
 		expect(printed()).toContain(
-			["  FILES    1", "  RULES    1", "  CALLS    1"].join("\n"),
+			["  files     1", "  rules     1", "  calls     1"].join("\n"),
 		);
 	});
 
@@ -255,9 +255,9 @@ describe("JudgeCommands", () => {
 		});
 
 		expect(printed()).toContain(
-			["  FILES    1", "  RULES    1", "  CALLS    1"].join("\n"),
+			["  files     1", "  rules     1", "  calls     1"].join("\n"),
 		);
-		expect(printed()).toMatch(/READING {2}\d[\d.]*K?\+ tokens/);
+		expect(printed()).toMatch(/reading {3}\d[\d.]*K?\+ tokens/);
 		expect(ps.getCalls()).toEqual([]);
 	});
 
@@ -285,7 +285,7 @@ describe("JudgeCommands", () => {
 			since: "main",
 		});
 
-		expect(printed()).toContain(["  FILES    1", "  RULES    1"].join("\n"));
+		expect(printed()).toContain(["  files     1", "  rules     1"].join("\n"));
 	});
 
 	it("refuses --estimate together with --agent", async () => {

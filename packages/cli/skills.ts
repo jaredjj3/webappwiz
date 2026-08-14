@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import type { Logger } from "@webappwiz/log";
+import { color, type Logger } from "@webappwiz/log";
 import { type Fs, walk } from "@webappwiz/sys";
 import { table } from "./table";
 
@@ -38,7 +38,7 @@ export class Skills {
 	 * that is what this is for.
 	 */
 	async ls(opts: ProjectOptions): Promise<void> {
-		const rows = [["SKILL", "SHIPS", "INSTALLED"]];
+		const rows = [["skill", "ships", "installed"].map(color.dim)];
 		let stale = 0;
 		for (const name of await this.fs.readdir(source)) {
 			const ships =

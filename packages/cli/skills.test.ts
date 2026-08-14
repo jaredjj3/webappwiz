@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { MemoryLogger } from "@webappwiz/log";
+import { color, MemoryLogger } from "@webappwiz/log";
 import { NodeFs } from "@webappwiz/sys";
 import { FakeFs } from "@webappwiz/sys/testing";
 
@@ -14,7 +14,7 @@ describe("skills", () => {
 	let skills: Skills;
 
 	const printed = () =>
-		log.entries.map((entry) => String(entry.message)).join("\n");
+		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
 
 	beforeEach(async () => {
 		fs = new FakeFs();
@@ -33,9 +33,11 @@ describe("skills", () => {
 		await skills.ls({ dir: "/p" });
 
 		expect(printed()).toEqual(
-			["SKILL  SHIPS  INSTALLED", "arbor  1.0.0  -", "other  1.0.0  -"].join(
-				"\n",
-			),
+			[
+				"skill   ships   installed",
+				"arbor   1.0.0   -",
+				"other   1.0.0   -",
+			].join("\n"),
 		);
 	});
 
@@ -45,7 +47,7 @@ describe("skills", () => {
 
 		await skills.ls({ dir: "/p" });
 
-		expect(printed()).toContain("arbor  1.0.0  0.9.0");
+		expect(printed()).toContain("arbor   1.0.0   0.9.0");
 		expect(printed()).toContain("1 out of date: run `skills update`");
 	});
 
@@ -55,7 +57,7 @@ describe("skills", () => {
 
 		await skills.ls({ dir: "/p" });
 
-		expect(printed()).toContain("arbor  1.0.0  1.0.0");
+		expect(printed()).toContain("arbor   1.0.0   1.0.0");
 		expect(printed()).not.toContain("out of date");
 	});
 

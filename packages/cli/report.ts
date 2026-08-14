@@ -81,8 +81,10 @@ export function estimate(
 				: predict(agent, tokens, calls, overheads);
 		rows.push([
 			agent,
-			color.green(`${usd(least)}+`),
-			...(measured ? [whole === undefined ? "" : color.green(usd(whole))] : []),
+			color.yellow(`${usd(least)}+`),
+			...(measured
+				? [whole === undefined ? "" : color.yellow(usd(whole))]
+				: []),
 		]);
 	}
 	return [
@@ -154,7 +156,7 @@ export function planned({
 		[color.dim("reading"), `${compact.format(estimate)}+ tokens`],
 	];
 	if (cost !== undefined) {
-		rows.push([color.dim("cost"), color.green(`${usd(cost)}+`)]);
+		rows.push([color.dim("cost"), color.yellow(`${usd(cost)}+`)]);
 	}
 	if (agent !== undefined) {
 		rows.push([color.dim("agent"), agent]);
