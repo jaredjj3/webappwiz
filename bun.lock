@@ -114,6 +114,7 @@
       "name": "@webappwiz/http",
       "version": "0.0.0",
       "dependencies": {
+        "@webappwiz/store": "workspace:*",
         "@webappwiz/time": "workspace:*",
       },
     },

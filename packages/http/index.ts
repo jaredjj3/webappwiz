@@ -7,3 +7,8 @@ export type {
 	Listening,
 	ServeOptions,
 } from "./http-server/http-server";
+export {
+	type RateLimit,
+	RateLimiter,
+	type RateLimiterOptions,
+} from "./rate-limiter";
