@@ -108,10 +108,12 @@ task, watch its status for that reason, never its lease.
 If the work needs verification you can't do mechanically (external services,
 destructive migrations, anything tests can't confirm) do not merge.
 
-Visual and UX work escalates only when it is both non-trivial and untested. A
-copy fix, a color, a spacing tweak, a renamed label: merge it. A new screen, a
-reworked layout, a changed interaction, anything whose look or behavior no test
-pins down: escalate. If tests cover it, merge it.
+Whether the change itself needs a person is `@webappwiz/signoff`'s question
+rather than this skill's: its rules decide, `visual-work-tested` among them,
+and what they stop is what you escalate.
+
+The one thing no rule can decide is that the user wants to look. If they asked
+to see the work before it lands, escalate whatever the rules make of it.
 
 When you do escalate:
 

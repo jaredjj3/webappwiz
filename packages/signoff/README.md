@@ -54,7 +54,7 @@ sections are `## Ships` and `## Needs review`, rather than judge's
 `## Good` and `## Bad`: a signoff rule is not about right and wrong, it is
 about who decides.
 
-## The rule this package ships
+## The rules this package ships
 
 `tests-not-weakened`: a change may add tests, rewrite them, or delete a test
 for code it also deletes; it may not quietly cover less than it did. A test
@@ -63,3 +63,13 @@ file deleted while its subject survives, a `.skip` added, a `.only` added.
 The merge gate runs the tests, so the tests are what stands between a change
 and trunk. A change that weakens them passes its own gate, green either way.
 Only something reading the change to the tests can tell the difference.
+
+`visual-work-tested`: work on what a person sees or does lands on its own when
+it is trivial, or when a test pins down what it did, and needs a person when
+it is neither. A copy fix or a color ships; a new screen nothing tests does
+not.
+
+Its check settles nothing and escalates every change, because trivial and
+tested are judgements about what a change looks like to a person rather than
+patterns over its lines. It is the shape a rule takes when the document is the
+whole rule.

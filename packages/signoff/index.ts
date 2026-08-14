@@ -11,4 +11,5 @@ export {
 } from "./changeset";
 export type { Rule } from "./rule/rule";
 export { TestsNotWeakened } from "./rule/tests-not-weakened";
+export { VisualWorkTested } from "./rule/visual-work-tested";
 export { type Decision, Signoff } from "./signoff";
