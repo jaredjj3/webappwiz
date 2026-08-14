@@ -49,6 +49,11 @@ Where the hits are kept is the caller's choice, because it decides what the
 limiter can do. `MemoryStore` is per process, so two instances of the app each
 allow the full quota; a shared `Store` makes the limit the whole app's.
 
+Nothing has to be cleaned up. Each client's entry is written with the window as
+its `ttl`, so it goes when its newest hit ages out, and the entry itself holds
+at most `max` timestamps. A `Store` that ignores `ttl` is the one case where
+this grows without limit: the store is what expires entries, not the limiter.
+
 The client is taken from `X-Forwarded-For` by default, first entry only, since
 a proxy appends to that header and the original client is at the front. Pass
 `clientIpHeaders` for a host that uses its own (`cf-connecting-ip`,
