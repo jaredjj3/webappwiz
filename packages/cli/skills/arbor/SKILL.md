@@ -108,9 +108,10 @@ task, watch its status for that reason, never its lease.
 If the work needs verification you can't do mechanically (external services,
 destructive migrations, anything tests can't confirm) do not merge.
 
-Whether the change itself needs a person is `@webappwiz/signoff`'s question
-rather than this skill's: its rules decide, `visual-work-tested` among them,
-and what they stop is what you escalate.
+Whether the change itself needs a person is a question the signoff rules
+answer rather than this skill: `wiz rules ls` lists them and `wiz rules show
+<id>` prints one in full. Nothing runs them for you, so read them and apply
+them yourself, `visual-work-tested` among them, and escalate what they stop.
 
 The one thing no rule can decide is that the user wants to look. If they asked
 to see the work before it lands, escalate whatever the rules make of it.

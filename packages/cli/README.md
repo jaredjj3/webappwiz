@@ -7,7 +7,48 @@ bunx @webappwiz/cli update             # pin @webappwiz/* deps, like bun update
 bunx @webappwiz/cli skills ls          # what there is, and what you have
 bunx @webappwiz/cli skills add arbor   # install an agent skill
 bunx @webappwiz/cli skills update      # refresh the ones already installed
+bunx @webappwiz/cli rules ls           # every rule there is
+bunx @webappwiz/cli judge .            # check a directory against them
 ```
+
+## rules
+
+Every rule webappwiz judges itself by lives in [`rules.ts`](./rules.ts) as a
+constant, one class each. There is no config file and no preset: a rule is in
+that list or it does not exist.
+
+```
+ID                  RULE                       SET      LEVEL    FILES
+no-em-dashes        No em dashes               judge    error    **/*.ts
+one-class-per-file  One class per file         judge    error    **/*.ts
+visual-work-tested  Visual work is tested      signoff
+```
+
+`rules show <id>` prints one in full: its glob, its level, and the document an
+agent is handed verbatim.
+
+The `SET` column is which of the two lists a rule is in. `judge` rules are what
+`judge` checks files against. `signoff` rules have no glob and no check because
+no command runs them: they are documents an agent reads and applies itself
+before merging, and they are listed here so it can find them.
+
+## judge
+
+Runs the rules over a directory, one agent call per set of rules sharing a set
+of files.
+
+```bash
+bunx @webappwiz/cli judge . --agent haiku
+bunx @webappwiz/cli judge . --estimate        # what would this read, and cost
+bunx @webappwiz/cli judge . --prompt          # print the prompts, spawn nothing
+bunx @webappwiz/cli judge . --since main      # only what changed
+```
+
+Each rule's code half runs first, free, and only what it escalates reaches an
+agent. `--budget` caps what a run may read before it asks whether you meant it;
+`--estimate` answers that without having to guess a budget low enough to be
+refused. Code excuses itself from a rule with a `judge-ignore <id>: <reason>`
+comment above the line, or `judge-ignore-file <id>: <reason>` for the file.
 
 ## update
 
