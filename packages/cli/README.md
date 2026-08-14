@@ -9,6 +9,7 @@ bunx @webappwiz/cli skills add arbor   # install an agent skill
 bunx @webappwiz/cli skills update      # refresh the ones already installed
 bunx @webappwiz/cli rules ls           # every rule there is
 bunx @webappwiz/cli judge .            # check a directory against them
+bunx @webappwiz/cli signoff            # the rules to weigh before merging
 ```
 
 ## rules
@@ -31,6 +32,17 @@ The `SET` column is which of the two lists a rule is in. `judge` rules are what
 `judge` checks files against. `signoff` rules have no glob and no check because
 no command runs them: they are documents an agent reads and applies itself
 before merging, and they are listed here so it can find them.
+
+## signoff
+
+Prints every signoff rule in full, which is the whole of running them. An agent
+about to merge its own work reads them and decides whether the change needs a
+person; a project points its agent instructions at this one command rather than
+at a list of rule ids that goes stale the next time a rule is added.
+
+```bash
+bunx @webappwiz/cli signoff
+```
 
 ## judge
 

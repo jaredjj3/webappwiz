@@ -86,7 +86,7 @@ export class JudgeCommands {
 		private clock: Clock,
 		private glob: Glob,
 		private rules: RuleSet,
-		private signoff: Rule[] = [],
+		private signoffRules: Rule[] = [],
 		private confirmer: Confirm = ask,
 	) {}
 
@@ -100,7 +100,7 @@ export class JudgeCommands {
 		for (const rule of this.rules.rules) {
 			rows.push([rule.id, title(rule), "judge", rule.level, rule.files]);
 		}
-		for (const rule of this.signoff) {
+		for (const rule of this.signoffRules) {
 			rows.push([rule.id, title(rule), "signoff", "", ""]);
 		}
 		this.log.info(table(rows).join("\n"));
@@ -112,7 +112,7 @@ export class JudgeCommands {
 	 * how a reader applies a rule nothing runs for them.
 	 */
 	show(opts: ShowOptions): void {
-		const all: Rule[] = [...this.rules.rules, ...this.signoff];
+		const all: Rule[] = [...this.rules.rules, ...this.signoffRules];
 		const rule = all.find((candidate) => candidate.id === opts.id);
 		if (!rule) {
 			throw new Error(
@@ -132,6 +132,27 @@ export class JudgeCommands {
 		this.log.info(table(rows).join("\n"));
 		this.log.info("");
 		this.log.info(rule.document.trim());
+	}
+
+	/**
+	 * Prints every signoff rule in full, for the agent about to merge to read
+	 * and apply to its own change. Nothing runs these, so this is the whole of
+	 * running them: one command rather than a list of ids in a project's agent
+	 * instructions, which would go stale the next time a rule is added.
+	 */
+	signoff(): void {
+		if (this.signoffRules.length === 0) {
+			this.log.info("no signoff rules");
+			return;
+		}
+		this.log.info(
+			"Weigh your change against each rule below. Anything that needs " +
+				"review goes to a person instead of trunk.",
+		);
+		for (const rule of this.signoffRules) {
+			this.log.info("");
+			this.show({ id: rule.id });
+		}
 	}
 
 	/**

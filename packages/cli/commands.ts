@@ -84,6 +84,11 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 		})
 		.action((opts, deps) => judge(deps).judge(opts));
 
+	app
+		.command("signoff")
+		.description("print the rules to weigh yourself before merging a change")
+		.action((_opts, deps) => judge(deps).signoff());
+
 	const rules = app
 		.group("rules")
 		.description("list and print the rules, to run or to read yourself");

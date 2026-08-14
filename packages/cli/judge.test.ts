@@ -67,6 +67,24 @@ describe("JudgeCommands", () => {
 		);
 	});
 
+	it("prints every signoff rule in full for the agent about to merge", () => {
+		new JudgeCommands(log, fs, ps, clock, new NodeGlob(), oneRule, [
+			{ id: "two", document: ruleDoc("Two") },
+			{ id: "three", document: ruleDoc("Three") },
+		]).signoff();
+
+		expect(printed()).toContain("Weigh your change against each rule below");
+		expect(printed()).toContain("# Two");
+		expect(printed()).toContain("# Three");
+		expect(printed()).not.toContain("# One"); // judged by a run, not a reader
+	});
+
+	it("says there are none rather than printing nothing", () => {
+		commands(oneRule).signoff();
+
+		expect(printed()).toContain("no signoff rules");
+	});
+
 	it("prints what the agent found as a report of its own", async () => {
 		await fs.write("/p/a.ts", "class A {}\nclass B {}");
 		ps.setCaptureOutput(
