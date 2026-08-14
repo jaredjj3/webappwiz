@@ -1,0 +1,42 @@
+import type { Duration, Timer } from "@webappwiz/time";
+import type { Worker } from "./worker";
+
+/**
+ * A `Worker` wrapping another, rejecting anything that takes longer than
+ * `timeout`. The work carries on wherever it is running: this decides how long
+ * the caller waits for it.
+ *
+ * ```ts
+ * const worker = new TimeoutWorker(inner, timer, Duration.secs(30));
+ * ```
+ */
+export class TimeoutWorker<Input, Output> implements Worker<Input, Output> {
+	constructor(
+		private readonly worker: Worker<Input, Output>,
+		private readonly timer: Timer,
+		private readonly timeout: Duration,
+	) {}
+
+	send(input: Input): Promise<Output> {
+		return new Promise<Output>((resolve, reject) => {
+			const deadline = this.timer.setTimeout(() => {
+				reject(new Error(`worker timed out after ${this.timeout.ms}ms`));
+			}, this.timeout);
+
+			this.worker.send(input).then(
+				(output) => {
+					deadline.dispose();
+					resolve(output);
+				},
+				(error: unknown) => {
+					deadline.dispose();
+					reject(error);
+				},
+			);
+		});
+	}
+
+	dispose(): void {
+		this.worker.dispose();
+	}
+}

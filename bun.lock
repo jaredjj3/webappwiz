@@ -227,6 +227,15 @@
         "@webappwiz/time": "workspace:*",
       },
     },
+    "packages/worker": {
+      "name": "@webappwiz/worker",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/disposable": "workspace:*",
+        "@webappwiz/time": "workspace:*",
+        "@webappwiz/util": "workspace:*",
+      },
+    },
   },
   "packages": {
     "@aws-cdk/asset-awscli-v1": ["@aws-cdk/asset-awscli-v1@2.2.282", "", {}, "sha512-7hKMi5tTxDcKGIMIOq14PnY0GBcugW33Uh/2YHDZiEwSxLeFOCYBwhR+BFXONb/EJeVI3RETFgailNZbkcKF6g=="],
@@ -390,6 +399,8 @@
     "@webappwiz/time": ["@webappwiz/time@workspace:packages/time"],
 
     "@webappwiz/util": ["@webappwiz/util@workspace:packages/util"],
+
+    "@webappwiz/worker": ["@webappwiz/worker@workspace:packages/worker"],
 
     "ansi-regex": ["ansi-regex@5.0.1", "", {}, "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ=="],
 
