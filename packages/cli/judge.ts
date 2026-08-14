@@ -1,4 +1,4 @@
-import type { Logger } from "@webappwiz/log";
+import { color, type Logger } from "@webappwiz/log";
 import {
 	type Agent,
 	type AgentOptions,
@@ -96,7 +96,7 @@ export class JudgeCommands {
 	 * column, because "what rules are there" is one question.
 	 */
 	ls(): void {
-		const rows = [["ID", "RULE", "SET", "LEVEL", "FILES"]];
+		const rows = [["id", "rule", "set", "level", "files"].map(color.dim)];
 		for (const rule of this.rules.rules) {
 			rows.push([rule.id, title(rule), "judge", rule.level, rule.files]);
 		}
@@ -120,11 +120,14 @@ export class JudgeCommands {
 			);
 		}
 		const rows = [
-			["ID", rule.id],
-			["RULE", title(rule)],
+			[color.dim("id"), rule.id],
+			[color.dim("rule"), title(rule)],
 		];
 		if (isFileRule(rule)) {
-			rows.push(["LEVEL", rule.level], ["FILES", rule.files]);
+			rows.push(
+				[color.dim("level"), rule.level],
+				[color.dim("files"), rule.files],
+			);
 		}
 		this.log.info(table(rows).join("\n"));
 		this.log.info("");

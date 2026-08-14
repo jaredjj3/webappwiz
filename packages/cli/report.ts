@@ -70,7 +70,9 @@ export function estimate(
 ): string[] {
 	const agents = priced();
 	const measured = agents.some((agent) => overheads[agent] !== undefined);
-	const rows = [["AGENT", "FLOOR", ...(measured ? ["MEASURED"] : [])]];
+	const rows = [
+		["agent", "floor", ...(measured ? ["measured"] : [])].map(color.dim),
+	];
 	for (const agent of agents) {
 		const least = floor(agent, tokens) ?? 0;
 		const whole =
@@ -79,8 +81,8 @@ export function estimate(
 				: predict(agent, tokens, calls, overheads);
 		rows.push([
 			agent,
-			`${usd(least)}+`,
-			...(measured ? [whole === undefined ? "" : usd(whole)] : []),
+			color.green(`${usd(least)}+`),
+			...(measured ? [whole === undefined ? "" : color.green(usd(whole))] : []),
 		]);
 	}
 	return [
@@ -136,24 +138,26 @@ export function planned({
 	agent,
 }: Planned): string[] {
 	// A table rather than a sentence: these are six numbers a reader scans for
-	// one of, and a line of prose makes them hunt for it every time.
+	// one of, and a line of prose makes them hunt for it every time. The labels
+	// are dim and the figures plain, so a scan lands on the numbers; only the
+	// money is colored, because it is the one figure worth stopping on.
 	const rows = [
-		["FILES", color.blue(String(files))],
-		["RULES", color.green(String(rules))],
+		[color.dim("files"), String(files)],
+		[color.dim("rules"), String(rules)],
 		[
-			"CALLS",
-			color.yellow(String(calls)) +
+			color.dim("calls"),
+			String(calls) +
 				(concurrency === undefined
 					? ""
-					: color.gray(`, ${concurrency} at a time`)),
+					: color.dim(`, ${concurrency} at a time`)),
 		],
-		["READING", color.red(`${compact.format(estimate)}+ tokens`)],
+		[color.dim("reading"), `${compact.format(estimate)}+ tokens`],
 	];
 	if (cost !== undefined) {
-		rows.push(["COST", color.bold(`${usd(cost)}+`)]);
+		rows.push([color.dim("cost"), color.green(`${usd(cost)}+`)]);
 	}
 	if (agent !== undefined) {
-		rows.push(["AGENT", color.bold(agent)]);
+		rows.push([color.dim("agent"), agent]);
 	}
 	return table(rows).map((line) => `  ${line}`);
 }
