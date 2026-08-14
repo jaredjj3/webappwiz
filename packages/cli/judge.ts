@@ -4,12 +4,12 @@ import {
 	type AgentOptions,
 	agentCommand,
 	type FileRule,
-	type FileTask,
 	Files,
+	type FileTask,
 	Harness,
-	prompt as taskPrompt,
 	type Rule,
 	type RuleSet,
+	prompt as taskPrompt,
 	type Violation,
 } from "@webappwiz/rules";
 import type { Fs, Glob, Ps } from "@webappwiz/sys";
@@ -98,13 +98,7 @@ export class JudgeCommands {
 	ls(): void {
 		const rows = [["ID", "RULE", "SET", "LEVEL", "FILES"]];
 		for (const rule of this.rules.rules) {
-			rows.push([
-				rule.id,
-				title(rule),
-				"judge",
-				rule.level,
-				rule.files,
-			]);
+			rows.push([rule.id, title(rule), "judge", rule.level, rule.files]);
 		}
 		for (const rule of this.signoff) {
 			rows.push([rule.id, title(rule), "signoff", "", ""]);

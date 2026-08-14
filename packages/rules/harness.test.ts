@@ -4,6 +4,7 @@ import { FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
 import { Harness } from "./harness";
+import { prompt } from "./prompt";
 import type { Task } from "./task";
 import { testRule } from "./testing";
 
@@ -34,18 +35,18 @@ describe("Harness", () => {
 	});
 
 	it("builds a prompt from the rule documents, the context and the contract", () => {
-		const prompt = harness.prompt({
+		const built = prompt({
 			...task("src/a.ts", "Classes"),
 			instructions: "Honor judge-ignore markers.",
 		});
 
-		expect(prompt).toContain("exactly 1 rule");
-		expect(prompt).toContain("Rule `Classes`, verbatim:");
-		expect(prompt).toContain("# Classes"); // the rule md, verbatim
-		expect(prompt).toContain("## Good");
-		expect(prompt).toContain("Judge this:");
-		expect(prompt).toContain("Honor judge-ignore markers.");
-		expect(prompt).toContain('"rule"');
+		expect(built).toContain("exactly 1 rule");
+		expect(built).toContain("Rule `Classes`, verbatim:");
+		expect(built).toContain("# Classes"); // the rule md, verbatim
+		expect(built).toContain("## Good");
+		expect(built).toContain("Judge this:");
+		expect(built).toContain("Honor judge-ignore markers.");
+		expect(built).toContain('"rule"');
 	});
 
 	it("keeps no more agents in flight at once than it was allowed", async () => {

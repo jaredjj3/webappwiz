@@ -46,15 +46,7 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 	// rule set is shared, with `wiz fix` enforcing the rules that carry a check
 	// and `judge` the ones only an agent can decide, so neither owns it.
 	const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
-		new JudgeCommands(
-			log,
-			fs,
-			ps,
-			clock,
-			glob,
-			WEBAPPWIZ_RULES,
-			SIGNOFF_RULES,
-		);
+		new JudgeCommands(log, fs, ps, clock, glob, WEBAPPWIZ_RULES, SIGNOFF_RULES);
 
 	app
 		.command("judge")

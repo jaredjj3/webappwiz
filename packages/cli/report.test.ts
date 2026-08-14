@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { Violation } from "@webappwiz/judge";
 import { color } from "@webappwiz/log";
+import type { Violation } from "@webappwiz/rules";
 import { Duration } from "@webappwiz/time";
 import {
 	estimate,
@@ -64,7 +64,6 @@ describe("report", () => {
 
 	it("sizes a call, and says what it cost, when a task finds nothing", () => {
 		const lines = finished({
-			label: "**/*.ts",
 			rules: ["doc-comments-address-users"],
 			files: 25,
 			violations: [],
@@ -78,7 +77,6 @@ describe("report", () => {
 
 	it("leaves the rule ids out of a heading, since a finding names its own", () => {
 		const lines = finished({
-			label: "comments-say-why-not-what, doc-comments-address-users",
 			rules: ["comments-say-why-not-what", "doc-comments-address-users"],
 			files: 4,
 			violations: [],
@@ -92,7 +90,6 @@ describe("report", () => {
 
 	it("heads a task's findings with how many it found", () => {
 		const lines = finished({
-			label: "**/*.ts",
 			rules: ["comments-say-why-not-what", "doc-comments-address-users"],
 			files: 4,
 			violations: [violation(), violation({ line: 9 })],
@@ -201,7 +198,6 @@ describe("report", () => {
 
 	it("says what a task cost beside how long it took", () => {
 		const lines = finished({
-			label: "**/*.ts",
 			rules: ["doc-comments-address-users"],
 			files: 25,
 			violations: [],

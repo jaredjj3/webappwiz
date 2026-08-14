@@ -1,4 +1,12 @@
-import { Hit, SyntaxKind, tokens, type FileRule, type FileText, type Token, type Verdict } from "@webappwiz/rules";
+import {
+	type FileRule,
+	type FileText,
+	Hit,
+	SyntaxKind,
+	type Token,
+	tokens,
+	type Verdict,
+} from "@webappwiz/rules";
 import doc from "./parameters-declare-fields.md" with { type: "text" };
 
 export class ParametersDeclareFields implements FileRule {

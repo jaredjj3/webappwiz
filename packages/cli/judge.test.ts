@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { type Config, defineJudge } from "@webappwiz/judge";
-import { ruleDoc, testRule } from "@webappwiz/judge/testing";
 import { color, MemoryLogger } from "@webappwiz/log";
+import { defineRules, type RuleSet } from "@webappwiz/rules";
+import { ruleDoc, testRule } from "@webappwiz/rules/testing";
 import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Duration } from "@webappwiz/time";
@@ -16,10 +16,10 @@ describe("JudgeCommands", () => {
 
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
-	const commands = (config: Config, confirm?: Confirm) =>
-		new JudgeCommands(log, fs, ps, clock, new NodeGlob(), config, confirm);
+	const commands = (config: RuleSet, confirm?: Confirm) =>
+		new JudgeCommands(log, fs, ps, clock, new NodeGlob(), config, [], confirm);
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
-	const oneRule = defineJudge({ rules: [one()] });
+	const oneRule = defineRules({ rules: [one()] });
 	// budget high enough that only the tests about budgets ever meet it
 	const judging = {
 		dir: "/p",
@@ -36,86 +36,24 @@ describe("JudgeCommands", () => {
 		await fs.mkdir("/p");
 	});
 
-	// the answer an agent gives about a rule nothing but an agent could enforce
-	const needsAgent = { strict: false, agent: "haiku" };
-	const noTool = () => ps.setCaptureOutput('{"tool": null}', "");
-
-	it("declares a sound config sound", async () => {
-		noTool();
-
-		await commands(oneRule).audit(needsAgent);
-
-		expect(printed()).toBe("sound: 1 rule, 0 errors, 0 warnings");
-	});
-
-	it("asks nothing of an agent when the config will not compile", async () => {
-		const config = defineJudge({ rules: [one("just prose\n")] });
-
-		await expect(commands(config).audit(needsAgent)).rejects.toThrow(
-			"2 errors",
-		);
-		expect(ps.getCalls()).toEqual([]);
-	});
-
-	it("catches two rules answering to the same id", async () => {
-		const config = defineJudge({ rules: [one(), one()] });
-
-		await expect(commands(config).audit(needsAgent)).rejects.toThrow("1 error");
-		expect(printed()).toContain('duplicate rule id "one"');
-	});
-
-	it("prints diagnostics compiler-style and throws when there are errors", async () => {
-		const config = defineJudge({ rules: [one("just prose\n")] });
-
-		await expect(commands(config).audit(needsAgent)).rejects.toThrow(
-			"2 errors, 1 warning",
-		);
-		expect(printed()).toContain("one  error    missing title (# heading)");
-		expect(printed()).toContain("one  warning  no ## Bad section");
-	});
-
-	it("promotes warnings to failures under strict", async () => {
-		const config = defineJudge({
-			rules: [one(ruleDoc("One").split("\n## Bad")[0] ?? "")],
-		});
-		noTool();
-
-		await commands(config).audit(needsAgent);
-		expect(printed()).toContain("sound: 1 rule, 0 errors, 1 warning");
-
-		await expect(
-			commands(config).audit({ ...needsAgent, strict: true }),
-		).rejects.toThrow("0 errors, 1 warning");
-	});
-
-	it("audits rules and warns about the ones a tool could enforce", async () => {
-		ps.setCaptureOutput('{"tool": "biome", "reason": "a regex"}', "");
-
-		await commands(oneRule).audit(needsAgent);
-
-		expect(printed()).toContain(
-			"biome could enforce this without an agent: a regex",
-		);
-		expect(printed()).toContain("0 errors, 1 warning");
-	});
-
-	it("asks the config's agent when told no other", async () => {
-		noTool();
-
-		await commands(oneRule).audit({ strict: false });
-
-		expect(ps.getCalls()[0]).toContain("haiku");
-	});
-
-	it("shows each rule as a table row when showing", async () => {
+	it("shows each rule as a table row when listing", () => {
 		commands(oneRule).ls();
 
-		expect(printed()).toContain("ID   RULE  LEVEL  FILES");
-		expect(printed()).toContain("one  One   error");
+		expect(printed()).toContain("ID   RULE  SET    LEVEL  FILES");
+		expect(printed()).toContain("one  One   judge  error");
 	});
 
-	it("prints one rule in full when shown its id", async () => {
-		await commands(oneRule).show({ id: "one" });
+	it("lists the rules only a reader applies beside the ones a run checks", () => {
+		new JudgeCommands(log, fs, ps, clock, new NodeGlob(), oneRule, [
+			{ id: "two", document: ruleDoc("Two") },
+		]).ls();
+
+		expect(printed()).toContain("one  One   judge");
+		expect(printed()).toContain("two  Two   signoff");
+	});
+
+	it("prints one rule in full when shown its id", () => {
+		commands(oneRule).show({ id: "one" });
 
 		expect(printed()).toContain("ID     one");
 		expect(printed()).toContain("LEVEL  error");
@@ -123,8 +61,8 @@ describe("JudgeCommands", () => {
 		expect(printed()).toContain("## Bad");
 	});
 
-	it("lists the ids it does know when shown one it does not", async () => {
-		expect(commands(oneRule).show({ id: "two" })).rejects.toThrow(
+	it("lists the ids it does know when shown one it does not", () => {
+		expect(() => commands(oneRule).show({ id: "two" })).toThrow(
 			'no rule "two". Known ids: one',
 		);
 	});
@@ -168,7 +106,7 @@ describe("JudgeCommands", () => {
 	});
 
 	it("reports warnings without failing the run", async () => {
-		const config = defineJudge({
+		const config = defineRules({
 			rules: [testRule("one", { document: ruleDoc("One"), level: "warning" })],
 		});
 		await fs.write("/p/a.ts", "class A {}");
@@ -222,7 +160,7 @@ describe("JudgeCommands", () => {
 
 	it("leaves fully checked rules to the linter, judging the rest", async () => {
 		await fs.write("/p/a.ts", "class A {}");
-		const config = defineJudge({
+		const config = defineRules({
 			rules: [
 				testRule("one", {
 					document: ruleDoc("One"),
@@ -242,28 +180,6 @@ describe("JudgeCommands", () => {
 		// and the two survivors share their glob's one task
 		expect(printed()).toContain("=== two, three (1 file) ===");
 		expect(printed()).not.toContain("Rule `one`");
-	});
-
-	it("audits only the rules no check enforces", async () => {
-		const config = defineJudge({
-			rules: [
-				testRule("one", {
-					document: ruleDoc("One"),
-					check: () => ({ findings: [] }),
-				}),
-			],
-		});
-
-		await commands(config).audit(needsAgent);
-
-		expect(ps.getCalls()).toEqual([]);
-		expect(printed()).toContain("sound: 1 rule, 0 errors, 0 warnings");
-	});
-
-	it("refuses to judge with an unsound config", async () => {
-		const config = defineJudge({ rules: [one("just prose\n")] });
-
-		expect(commands(config).judge(judging)).rejects.toThrow("2 errors");
 	});
 
 	it("says what the run will read before it reads any of it", async () => {

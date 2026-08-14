@@ -1,5 +1,5 @@
-import type { Check } from "@webappwiz/rules";
 import { color, type Logger } from "@webappwiz/log";
+import type { Check } from "@webappwiz/rules";
 import type { Ps } from "@webappwiz/sys";
 
 import type { Fix, FixOptions } from "./fix";

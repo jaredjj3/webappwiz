@@ -1,4 +1,11 @@
-import { Hit, SyntaxKind, tokens, type FileRule, type FileText, type Verdict } from "@webappwiz/rules";
+import {
+	type FileRule,
+	type FileText,
+	Hit,
+	SyntaxKind,
+	tokens,
+	type Verdict,
+} from "@webappwiz/rules";
 import doc from "./one-class-per-file.md" with { type: "text" };
 
 export class OneClassPerFile implements FileRule {

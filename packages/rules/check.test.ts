@@ -3,9 +3,22 @@ import { MemoryLogger } from "@webappwiz/log";
 import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { Check } from "./check";
-import { OneClassPerFile } from "./rule/one-class-per-file";
+import { Hit } from "./hit";
+import { testRule } from "./testing";
 
-const oneClass = new OneClassPerFile();
+/** A stand-in for a real rule with a code half: one finding per line after the
+ * first that declares a class. The rules themselves live with the caller. */
+const oneClass = testRule("one-class-per-file", {
+	check: ({ text }) => ({
+		findings: text
+			.split("\n")
+			.flatMap((line, i) =>
+				i > 0 && line.startsWith("class ")
+					? [new Hit(i + 1, 1, "the file declares a second class")]
+					: [],
+			),
+	}),
+});
 
 describe("check", () => {
 	let log: MemoryLogger;

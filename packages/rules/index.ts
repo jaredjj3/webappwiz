@@ -19,8 +19,8 @@ export {
 export type { Diagnostic } from "./diagnostic";
 export {
 	DEFAULT_CHUNK,
-	type FileTask,
 	Files,
+	type FileTask,
 	type PlanOptions,
 	type Violation,
 } from "./files";

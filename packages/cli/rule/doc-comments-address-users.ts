@@ -1,4 +1,4 @@
-import { type FileRule, type Verdict } from "@webappwiz/rules";
+import type { FileRule, Verdict } from "@webappwiz/rules";
 import doc from "./doc-comments-address-users.md" with { type: "text" };
 
 export class DocCommentsAddressUsers implements FileRule {

@@ -1,4 +1,12 @@
-import { Hit, SyntaxKind, tokens, type FileRule, type FileText, type Token, type Verdict } from "@webappwiz/rules";
+import {
+	type FileRule,
+	type FileText,
+	Hit,
+	SyntaxKind,
+	type Token,
+	tokens,
+	type Verdict,
+} from "@webappwiz/rules";
 import doc from "./classes-over-function-exports.md" with { type: "text" };
 
 export class ClassesOverFunctionExports implements FileRule {

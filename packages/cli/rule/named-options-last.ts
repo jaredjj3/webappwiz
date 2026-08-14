@@ -1,4 +1,12 @@
-import { Hit, SyntaxKind, tokens, type FileRule, type FileText, type Token, type Verdict } from "@webappwiz/rules";
+import {
+	type FileRule,
+	type FileText,
+	Hit,
+	SyntaxKind,
+	type Token,
+	tokens,
+	type Verdict,
+} from "@webappwiz/rules";
 import doc from "./named-options-last.md" with { type: "text" };
 
 /** One slot of a parameter list, read as far as this check needs it. */

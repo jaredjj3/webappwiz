@@ -2,9 +2,9 @@ import { describe, expect, it } from "bun:test";
 import { NodeGlob } from "@webappwiz/sys";
 import { Checker } from "./checker";
 import { Hit } from "./hit";
-import type { FileText, Rule, Verdict } from "./rule/rule";
+import type { FileRule, FileText, Verdict } from "./rule";
 
-const noX: Rule = {
+const noX: FileRule = {
 	id: "no-x",
 	files: "**/*.md",
 	level: "warning",
@@ -42,7 +42,7 @@ describe("checker", () => {
 	});
 
 	it("reports the files a check escalates, for an agent to read", () => {
-		const agentRule: Rule = {
+		const agentRule: FileRule = {
 			id: noX.id,
 			files: noX.files,
 			level: noX.level,
@@ -114,7 +114,7 @@ describe("checker", () => {
 	});
 });
 
-class Counting implements Rule {
+class Counting implements FileRule {
 	readonly id = "counting";
 	readonly files = "**/*.md";
 	readonly level = "error";

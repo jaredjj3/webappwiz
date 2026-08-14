@@ -1,5 +1,5 @@
-import type { Violation } from "@webappwiz/rules";
 import { color } from "@webappwiz/log";
+import type { Violation } from "@webappwiz/rules";
 import type { Duration } from "@webappwiz/time";
 import { floor, type Overheads, predict, priced } from "./cost";
 import { table } from "./table";
