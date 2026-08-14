@@ -123,6 +123,7 @@ describe("report", () => {
 
 	it("tables what a run is about to do, counting agent calls rather than tasks", () => {
 		expect(plain(planned(plan))).toEqual([
+			"",
 			"  files     203",
 			"  rules     7",
 			"  calls     52, 4 at a time",
@@ -136,6 +137,7 @@ describe("report", () => {
 		expect(
 			plain(planned({ ...plan, concurrency: undefined, cost: undefined })),
 		).toEqual([
+			"",
 			"  files     203",
 			"  rules     7",
 			"  calls     52",
@@ -147,7 +149,7 @@ describe("report", () => {
 	it("colors the money and leaves every other figure plain", () => {
 		const lines = planned(plan).join("\n");
 
-		expect(lines).toContain(color.yellow("$1.23+"));
+		expect(lines).toContain(color.green("$1.23+"));
 		expect(lines).toContain("  203");
 		expect(lines).toContain("  589K+ tokens");
 		expect(lines).toContain("  claude -p --model haiku");
@@ -162,6 +164,7 @@ describe("report", () => {
 		};
 
 		expect(plain(planned(bare))).toEqual([
+			"",
 			"  files     203",
 			"  rules     7",
 			"  calls     52",
@@ -220,13 +223,14 @@ describe("report", () => {
 	it("prices a plan against every agent, floor first, under the plan itself", () => {
 		const lines = plain(estimate(203, 7, 52, 480_000, {}));
 
-		expect(lines.slice(0, 4)).toEqual([
+		expect(lines.slice(0, 5)).toEqual([
+			"",
 			"  files     203",
 			"  rules     7",
 			"  calls     52",
 			"  reading   480K+ tokens",
 		]);
-		expect(lines.slice(5, 9)).toEqual([
+		expect(lines.slice(6, 10)).toEqual([
 			"  agent    floor",
 			"  haiku    $0.48+",
 			"  sonnet   $1.44+",
@@ -243,15 +247,15 @@ describe("report", () => {
 	it("adds the measured per-call overhead to the floor, once per call", () => {
 		const lines = plain(estimate(203, 7, 52, 480_000, { haiku: 0.065 }));
 
-		expect(lines[5]).toBe("  agent    floor    measured");
+		expect(lines[6]).toBe("  agent    floor    measured");
 		// $0.48 of files, and 52 calls charging $0.065 each on top of them
-		expect(lines[6]).toBe("  haiku    $0.48+   $3.86");
+		expect(lines[7]).toBe("  haiku    $0.48+   $3.86");
 	});
 
 	it("leaves the measurement blank for an agent no run has priced", () => {
 		const lines = plain(estimate(203, 7, 52, 480_000, { haiku: 0.065 }));
 
-		expect(lines[7]).toBe("  sonnet   $1.44+");
-		expect(lines[8]).toBe("  opus     $2.40+");
+		expect(lines[8]).toBe("  sonnet   $1.44+");
+		expect(lines[9]).toBe("  opus     $2.40+");
 	});
 });

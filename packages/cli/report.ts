@@ -81,10 +81,8 @@ export function estimate(
 				: predict(agent, tokens, calls, overheads);
 		rows.push([
 			agent,
-			color.yellow(`${usd(least)}+`),
-			...(measured
-				? [whole === undefined ? "" : color.yellow(usd(whole))]
-				: []),
+			color.green(`${usd(least)}+`),
+			...(measured ? [whole === undefined ? "" : color.green(usd(whole))] : []),
 		]);
 	}
 	return [
@@ -156,12 +154,14 @@ export function planned({
 		[color.dim("reading"), `${compact.format(estimate)}+ tokens`],
 	];
 	if (cost !== undefined) {
-		rows.push([color.dim("cost"), color.yellow(`${usd(cost)}+`)]);
+		rows.push([color.dim("cost"), color.green(`${usd(cost)}+`)]);
 	}
 	if (agent !== undefined) {
 		rows.push([color.dim("agent"), agent]);
 	}
-	return table(rows).map((line) => `  ${line}`);
+	// A blank line first: this is the top of everything a run prints, and it
+	// wants air between the table and whatever the shell left above it.
+	return ["", ...table(rows).map((line) => `  ${line}`)];
 }
 
 /** A finished task as the report prints it: what the call covered, what it
