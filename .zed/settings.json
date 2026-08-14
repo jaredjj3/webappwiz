@@ -11,6 +11,11 @@
 				"path": "node_modules/.bin/biome",
 				"arguments": ["lsp-proxy"]
 			}
+		},
+		"vscode-css-language-server": {
+			"settings": {
+				"css": { "lint": { "unknownAtRules": "ignore" } }
+			}
 		}
 	},
 	"languages": {
