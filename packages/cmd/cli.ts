@@ -1,4 +1,5 @@
-import { color } from "@webappwiz/log";
+import { ConsoleLogger, color } from "@webappwiz/log";
+import { NodePs } from "@webappwiz/sys";
 import { Command } from "./command";
 import type { Deps } from "./deps";
 import type { AnyMiddleware, Middleware } from "./middleware";
@@ -69,15 +70,22 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 		return group;
 	}
 
-	run(deps: D, argv: string[]): unknown {
+	/**
+	 * The program's own dependencies; `log` and `ps` are filled in with the real
+	 * ones when left out, and `argv` with the process's own arguments, so a bin
+	 * only names what is its own. A test that wants fakes passes them.
+	 */
+	run(deps: Omit<D, keyof Deps> & Partial<Deps>, argv?: string[]): unknown {
+		const ps = deps.ps ?? new NodePs();
+		const full = { ...deps, log: deps.log ?? new ConsoleLogger(), ps } as D;
 		try {
-			const out = this.exec(argv, deps, []);
+			const out = this.exec(argv ?? ps.args, full, []);
 			// async actions reject after exec() returns, so cover that path too
 			return out instanceof Promise
-				? out.catch((error) => this.fail(deps, error))
+				? out.catch((error) => this.fail(full, error))
 				: out;
 		} catch (error) {
-			return this.fail(deps, error);
+			return this.fail(full, error);
 		}
 	}
 

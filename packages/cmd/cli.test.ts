@@ -5,6 +5,7 @@ import {
 	FakeConsole,
 	MemoryLogger,
 } from "@webappwiz/log";
+import { NodePs } from "@webappwiz/sys";
 import { FakePs } from "@webappwiz/sys/testing";
 import { t } from "@webappwiz/t";
 import { cli } from "./cli";
@@ -264,5 +265,30 @@ describe("cli", () => {
 		expect(color.strip(out.logged.flat().join("\n"))).toContain(
 			"Usage: wiz <command> [options]",
 		);
+	});
+
+	it("defaults the logger and process a command is given", () => {
+		let got: Deps | undefined;
+		const wiz = cli("wiz");
+		wiz.command("a").action((_o, ctx) => {
+			got = ctx;
+		});
+
+		wiz.run({}, ["a"]);
+
+		expect(got?.log).toBeInstanceOf(ConsoleLogger);
+		expect(got?.ps).toBeInstanceOf(NodePs);
+	});
+
+	it("defaults argv to the arguments the process was run with", () => {
+		const calls: string[] = [];
+		const wiz = cli("wiz");
+		wiz.command("a").action(() => calls.push("a"));
+
+		ps.args = ["a"];
+
+		wiz.run({ log, ps });
+
+		expect(calls).toEqual(["a"]);
 	});
 });

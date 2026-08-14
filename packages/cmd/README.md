@@ -16,7 +16,7 @@ app
 	.option("loud", t.boolean(), { default: false })
 	.action((opts, { log }) => log.info(opts.loud ? "HI" : "hi", opts.name));
 
-await app.run({ log: new ConsoleLogger(), ps: new NodePs() });
+await app.run({});
 ```
 
 ```bash
@@ -50,7 +50,7 @@ export const app = cli<AppDeps>("app");
 app.command("ls").action((opts, { fs, log }) => /* … */);
 
 // index.ts, the bin: the only place a real dependency is made
-await app.run({ log: new ConsoleLogger(), ps: new NodePs(), fs: new NodeFs() });
+await app.run({ fs: new NodeFs() });
 
 // app.test.ts
 await app.run({ log: new MemoryLogger(), ps: new FakePs(), fs: new FakeFs() }, ["ls"]);
@@ -58,6 +58,11 @@ await app.run({ log: new MemoryLogger(), ps: new FakePs(), fs: new FakeFs() }, [
 
 `Deps` is the minimum: a `Logger` to print help and errors through, and a `Ps`
 to exit with. A program's own type extends it with whatever its commands need.
+
+Actions always get both, but a caller need not supply them: `run` fills in a
+`ConsoleLogger` and a `NodePs` when they are left out, and reads `argv` from
+the process. Only a test that wants to see what was printed, or to run a
+program against arguments the process was not given, passes its own.
 
 ## Groups
 
