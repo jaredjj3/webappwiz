@@ -7,13 +7,13 @@ HTTP endpoint, because deciding what to release is separate from doing it.
 ```ts
 import { Git, Github, Registry, Ship, Workspace } from "@webappwiz/ship";
 
-const workspace = await Workspace.at(fs, ps.cwd());
+const workspace = await Workspace.at(ps.cwd());
 const ship = new Ship(
-	log,
 	workspace,
-	new Git(ps, workspace.root),
-	new Registry(ps),
-	new Github(ps),
+	new Git(workspace.root),
+	new Registry(),
+	new Github(),
+	log,
 );
 
 const plan = await ship.plan("patch");

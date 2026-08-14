@@ -23,8 +23,11 @@ import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 A `Lock` is a mutex (`acquire`, `release`, `releaseIfOurs`). `acquire` blocks
 until the lock is free, so there is no "busy" answer to ignore.
 
+Every dependency here is optional and defaults to the real implementation, so
+a caller with nothing to swap in passes nothing; a test passes its fakes.
+
 ```ts
-const lock = new FileLock(fs, ps, log, "/path/to/some.lock");
+const lock = new FileLock("/path/to/some.lock");
 
 await lock.acquire();
 try {

@@ -41,10 +41,10 @@ a hybrid returns both.
 makes the calls. A command holds both, and nothing wraps either:
 
 ```ts
-const files = new Files(log, fs, glob);
+const files = new Files(log);
 const tasks = await files.plan(rules, dir, { chunk: 25 });
 
-const harness = new Harness(log, ps, clock);
+const harness = new Harness(log);
 harness.events.on("finished", ({ at, findings }) => {
 	const task = tasks[at];
 	if (task) {
