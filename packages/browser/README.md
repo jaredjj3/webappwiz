@@ -13,13 +13,21 @@ const device = Device.parse(navigator.userAgent, {
 	touchPoints: navigator.maxTouchPoints,
 });
 device.isIos; // true on an iPhone, and on an iPad claiming to be a Mac
+device.type; // "phone" | "tablet" | "desktop"
 device.browser; // "safari" | "chrome" | "firefox" | "edge" | "unknown"
 ```
 
 It takes the string rather than reading `navigator`, so the same call works on
-the server against a request header. It answers os, browser and touch, and
-nothing else: versions, device models and bot detection need a maintained
+the server against a request header. It answers os, browser, type and touch,
+and nothing else: versions, device models and bot detection need a maintained
 database of user agents, which this is not.
+
+The phone and tablet rules come from
+[isMobile](https://github.com/kaimallea/isMobile), which covers the cases a
+first attempt gets wrong: an Android tablet is the one that does *not* say
+"Mobile", and the Facebook and Twitter in-app browsers append a device that is
+not the one in your hand. `touchPoints` is ours, and is what tells an iPad from
+the Mac it reports itself as.
 
 ## Scroll
 

@@ -13,6 +13,7 @@ export {
 	type BrowserName,
 	Device,
 	type DeviceOptions,
+	type DeviceType,
 	type Os,
 } from "./device";
 export { download } from "./download";
