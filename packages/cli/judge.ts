@@ -227,7 +227,7 @@ export class JudgeCommands {
 				concurrency: config.concurrency,
 				cost,
 				agent: agent.label,
-			}),
+			}).join("\n"),
 		);
 		if (predicted > opts.budget) {
 			this.log.info(overBudget(predicted, opts.budget, cost));

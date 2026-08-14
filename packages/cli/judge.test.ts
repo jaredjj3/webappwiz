@@ -191,6 +191,17 @@ describe("JudgeCommands", () => {
 		expect(printed()).toMatch(/READING {2}\d[\d.]*K?\+ tokens/);
 	});
 
+	it("prints the plan as lines rather than as one logged array", async () => {
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		await commands(oneRule).judge(judging);
+
+		expect(printed()).toContain(
+			["  FILES    1", "  RULES    1", "  CALLS    1"].join("\n"),
+		);
+	});
+
 	it("spawns nothing when the estimate is over budget and nobody says go", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
