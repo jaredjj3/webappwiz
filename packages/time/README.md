@@ -20,10 +20,50 @@ const poll = timer.setInterval(() => check(), Duration.secs(5));
 poll.dispose(); // cancelling is just releasing a resource
 ```
 
-In tests, swap in the fakes so nothing waits on real time:
+## How long, and when
+
+`Clock` counts from an arbitrary origin (process start, page load), so it can
+say how long something took and nothing else. `WallClock` is calendar time, as
+Unix epoch milliseconds, and is the one that can say when.
 
 ```ts
-import { FakeClock, FakeTimer } from "@webappwiz/time/testing";
+import { SystemWallClock, timeAgo, Duration } from "@webappwiz/time";
+
+const wall = new SystemWallClock();
+
+await db.insert(events).values({ at: wall.now() });
+timeAgo(Duration.ms(wall.now() - row.at)); // "5 minutes ago"
+```
+
+Reach for `WallClock` whenever a timestamp is written down, read back, or
+compared against one somebody else produced: a JWT `exp`, an HTTP `Date`, a row
+in a database. A `Clock` reading means nothing outside the process that took it,
+and starts again from zero on the next page load.
+
+Measure elapsed time with `Clock` even so, because a wall clock steps when the
+machine syncs with NTP or the user changes it.
+
+## Stopwatch
+
+Elapsed time that can be paused, so the parts that should not count are left
+out.
+
+```ts
+import { Stopwatch } from "@webappwiz/time";
+
+const stopwatch = new Stopwatch(clock);
+stopwatch.start();
+stopwatch.stop(); // pauses, keeping what has accrued
+stopwatch.resume();
+stopwatch.elapsed();
+```
+
+## Testing
+
+Swap in the fakes so nothing waits on real time, or on today's date:
+
+```ts
+import { FakeClock, FakeTimer, FakeWallClock } from "@webappwiz/time/testing";
 
 const clock = new FakeClock();
 clock.advance(Duration.mins(3));
@@ -31,4 +71,7 @@ clock.advance(Duration.mins(3));
 const timer = new FakeTimer();
 timer.fireTimeouts();
 timer.fireIntervals();
+
+const wall = new FakeWallClock(Date.parse("2026-01-01T00:00:00Z"));
+wall.advance(Duration.hrs(2));
 ```
