@@ -1,15 +1,17 @@
-import {
-	Analyzer,
-	type Config,
-	type ConfigDiagnostic,
-	diagnose,
-	Mechanizer,
-	type Rule,
-	RuleDocument,
-	type Task,
-} from "@webappwiz/judge";
 import type { Logger } from "@webappwiz/log";
-import { type Agent, type AgentOptions, agentCommand } from "@webappwiz/rules";
+import {
+	type Agent,
+	type AgentOptions,
+	agentCommand,
+	type FileRule,
+	type FileTask,
+	Files,
+	Harness,
+	prompt as taskPrompt,
+	type Rule,
+	type RuleSet,
+	type Violation,
+} from "@webappwiz/rules";
 import type { Fs, Glob, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
 import { changed } from "./changed";
@@ -28,15 +30,6 @@ import { table } from "./table";
 /** Asked before a run spends more than it was allowed to. */
 export interface Confirm {
 	confirm(question: string): boolean | Promise<boolean>;
-}
-
-export interface AuditOptions {
-	/** Whether a warning fails the run, as an error always does. */
-	strict: boolean;
-	/** The model to ask, one of `AGENTS`; `exec` instead names a command.
-	 * Neither means the config's `agent`. */
-	agent?: string;
-	exec?: string;
 }
 
 export interface ShowOptions {
@@ -62,14 +55,17 @@ export interface JudgeOptions {
 }
 
 /** What a whole plan reads: every task's prompt and the files it names. */
-const estimated = (tasks: Task[]): number =>
+const estimated = (tasks: FileTask[]): number =>
 	tokens(tasks.reduce((bytes, task) => bytes + task.bytes, 0));
 
-/** Whether a rule ever asks for an agent, probed with an empty file. A rule
- * escalating conditionally per file dodges the probe, and pays an agent only
- * when its own judgment says a file is worth one, which is its point. */
-const escalates = (rule: Rule): boolean =>
-	rule.check({ path: "", text: "" }).escalate === true;
+/** Whether a rule is one a run checks files against, rather than one only a
+ * reader applies. */
+const isFileRule = (rule: Rule): rule is FileRule => "files" in rule;
+
+/** A rule's title, off the first `# ` line of its document: the whole of what
+ * a listing needs, without a markdown parser to get it. */
+const title = (rule: Rule): string =>
+	/^#\s+(.+)$/m.exec(rule.document)?.[1]?.trim() ?? rule.id;
 
 /**
  * Answers on the terminal, and answers no without one: a run nobody is watching
@@ -89,83 +85,60 @@ export class JudgeCommands {
 		private ps: Ps,
 		private clock: Clock,
 		private glob: Glob,
-		private rules: Config,
+		private rules: RuleSet,
+		private signoff: Rule[] = [],
 		private confirmer: Confirm = ask,
 	) {}
 
 	/**
-	 * Everything wrong with the config itself: compile diagnostics, and a warning
-	 * for each rule an agent says a linter, formatter, type checker or grep
-	 * could enforce instead. Exits 1 on errors, and on warnings only under
-	 * `strict`: moving a rule out of the config is a decision to make once, not a
-	 * build failure by surprise.
+	 * Lists every rule there is, one row each, ids first for citing. The rules a
+	 * run checks and the ones only a reader applies are one list with a SET
+	 * column, because "what rules are there" is one question.
 	 */
-	async audit(opts: AuditOptions): Promise<void> {
-		// Both halves every time, rather than a flag: which rules a tool could
-		// take over is the question worth asking, and a config that will not
-		// compile is the thing that stops it being asked.
-		const { config, diagnostics } = this.checked();
-		if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
-			// Before any agent runs: a config that will not compile is not worth
-			// spending calls on, and the errors are the more urgent report.
-			this.report(config.rules.length, diagnostics, opts.strict);
-		}
-		const mechanizer = new Mechanizer(this.log, this.ps);
-		// Rules whose checks settle everything are already mechanized: only what
-		// escalates to an agent is worth asking about.
-		diagnostics.push(
-			...(await mechanizer.check(
-				config.rules.filter(escalates),
-				this.agent(config, opts),
-			)),
-		);
-		this.report(config.rules.length, diagnostics, opts.strict);
-	}
-
-	/** Lists the rule set, one row each, ids first for citing. */
 	ls(): void {
-		const { rules } = this.sound();
-		const rows = [["ID", "RULE", "LEVEL", "FILES", "GOOD", "BAD"]];
-		for (const rule of rules) {
-			const doc = new RuleDocument(rule);
+		const rows = [["ID", "RULE", "SET", "LEVEL", "FILES"]];
+		for (const rule of this.rules.rules) {
 			rows.push([
 				rule.id,
-				doc.title,
+				title(rule),
+				"judge",
 				rule.level,
 				rule.files,
-				String(doc.good.length),
-				String(doc.bad.length),
 			]);
+		}
+		for (const rule of this.signoff) {
+			rows.push([rule.id, title(rule), "signoff", "", ""]);
 		}
 		this.log.info(table(rows).join("\n"));
 	}
 
 	/**
-	 * Prints one rule in full: what it covers, and the document an analysis
-	 * agent is given, verbatim. Take the id from `rules ls` or from a finding.
+	 * Prints one rule in full: what it covers, and the document an agent is
+	 * given, verbatim. Take the id from `rules ls` or from a finding. This is
+	 * how a reader applies a rule nothing runs for them.
 	 */
-	async show(opts: ShowOptions): Promise<void> {
-		const { rules } = this.sound();
-		const rule = rules.find((candidate) => candidate.id === opts.id);
+	show(opts: ShowOptions): void {
+		const all: Rule[] = [...this.rules.rules, ...this.signoff];
+		const rule = all.find((candidate) => candidate.id === opts.id);
 		if (!rule) {
 			throw new Error(
-				`no rule "${opts.id}". Known ids: ${rules.map((candidate) => candidate.id).join(", ")}`,
+				`no rule "${opts.id}". Known ids: ${all.map((candidate) => candidate.id).join(", ")}`,
 			);
 		}
-		this.log.info(
-			table([
-				["ID", rule.id],
-				["RULE", new RuleDocument(rule).title],
-				["LEVEL", rule.level],
-				["FILES", rule.files],
-			]).join("\n"),
-		);
+		const rows = [
+			["ID", rule.id],
+			["RULE", title(rule)],
+		];
+		if (isFileRule(rule)) {
+			rows.push(["LEVEL", rule.level], ["FILES", rule.files]);
+		}
+		this.log.info(table(rows).join("\n"));
 		this.log.info("");
 		this.log.info(rule.document.trim());
 	}
 
 	/**
-	 * Runs the config over a directory with the agent you name, as `agent` or
+	 * Runs the rules over a directory with the agent you name, as `agent` or
 	 * `exec`; there is no default. Exits 1 on any error. Under `prompt` it
 	 * spawns nothing and prints the prompts instead, for an agent that would
 	 * rather hand them to subagents of its own.
@@ -188,7 +161,7 @@ export class JudgeCommands {
 					"--agent, --exec or --prompt",
 			);
 		}
-		const config = this.sound();
+		const config = this.rules;
 		// Every rule goes in: planning runs the free checks first and sends the
 		// agent only the files they escalated.
 		const rules = config.rules;
@@ -203,38 +176,31 @@ export class JudgeCommands {
 			this.log.info(`nothing has changed since ${opts.since}`);
 			return;
 		}
-		const analyzer = new Analyzer(
-			this.log,
-			this.fs,
-			this.ps,
-			this.clock,
-			this.glob,
-		);
+		const files = new Files(this.log, this.fs, this.glob);
+		const tasks = await files.plan(rules, dir, {
+			chunk: opts.chunk,
+			only,
+		});
 		if (opts.prompt) {
-			for (const task of await analyzer.plan(rules, dir, {
-				chunk: opts.chunk,
-				only,
-			})) {
+			for (const task of tasks) {
 				this.log.info(
 					`=== ${task.label} (${count(task.files.length, "file")}) ===`,
 				);
-				this.log.info(analyzer.prompt(task));
+				this.log.info(taskPrompt(task));
 			}
 			return;
 		}
+		const read = new Set(tasks.flatMap((task) => task.files)).size;
+		const predicted = estimated(tasks);
+		const calls = tasks.length;
 		if (opts.estimate) {
-			const tasks = await analyzer.plan(rules, dir, {
-				chunk: opts.chunk,
-				only,
-			});
-			const files = new Set(tasks.flatMap((task) => task.files)).size;
 			// No budget check: being asked to approve a number is what running
 			// --estimate is instead of.
 			for (const line of estimate(
-				files,
+				read,
 				rules.length,
-				tasks.length,
-				estimated(tasks),
+				calls,
+				predicted,
 				await overheads(this.fs, this.ps.cwd()),
 			)) {
 				this.log.info(line);
@@ -252,30 +218,23 @@ export class JudgeCommands {
 		const root = this.ps.cwd();
 		const measured = await overheads(this.fs, root);
 		const started = this.clock.now();
-
-		const tasks = await analyzer.plan(rules, dir, { chunk: opts.chunk, only });
-		// What the plan predicted and what the agents were billed, which together
-		// are the calibration this run leaves behind for the next --estimate.
-		const files = new Set(tasks.flatMap((task) => task.files)).size;
-		const predicted = estimated(tasks);
-		const calls = tasks.length;
 		// Priced whether or not it is over budget: what a run will cost is worth
 		// knowing every time, not only on the runs that trip a limit.
 		const cost =
 			model === undefined
 				? undefined
 				: predict(model, predicted, calls, measured);
-		for (const line of planned({
-			files,
-			rules: rules.length,
-			calls,
-			estimate: predicted,
-			concurrency: config.concurrency,
-			cost,
-			agent: agent.label,
-		})) {
-			this.log.info(line);
-		}
+		this.log.info(
+			planned({
+				files: read,
+				rules: rules.length,
+				calls,
+				estimate: predicted,
+				concurrency: config.concurrency,
+				cost,
+				agent: agent.label,
+			}),
+		);
 		if (predicted > opts.budget) {
 			this.log.info(overBudget(predicted, opts.budget, cost));
 			if (!(await this.confirmer.confirm("Run anyway?"))) {
@@ -286,21 +245,38 @@ export class JudgeCommands {
 
 		let spent = 0;
 		let billed = false;
-		analyzer.events.on("finished", (task) => {
+		const found: Violation[][] = [];
+		const harness = new Harness(this.log, this.ps, this.clock);
+		harness.events.on("finished", (task) => {
 			if (task.cost !== undefined) {
 				spent += task.cost;
 				billed = true;
 			}
-			for (const line of finished(task)) {
+			const at = tasks[task.at];
+			if (!at) {
+				return;
+			}
+			// Sync, off what the plan already read, so a task's findings print the
+			// moment its agent returns rather than waiting on a second pass.
+			const violations = files.violations(at, task.findings, dir);
+			found[task.at] = violations;
+			for (const line of finished({
+				rules: task.rules,
+				files: at.files.length,
+				violations,
+				took: task.took,
+				cost: task.cost,
+				done: task.done,
+				total: task.total,
+			})) {
 				this.log.info(line);
 			}
 		});
-		const violations = await analyzer.run(
-			tasks,
-			dir,
-			agent,
-			config.concurrency,
-		);
+		await harness.run(tasks, agent, {
+			cwd: dir,
+			concurrency: config.concurrency,
+		});
+		const violations = found.flat();
 		this.log.info("");
 		this.log.info(
 			summary(
@@ -364,54 +340,14 @@ export class JudgeCommands {
 	}
 
 	/** The agent a command runs with: what it was told, else the config's. */
-	private agent(config: Config, opts: AgentOptions): Agent {
+	private agent(config: RuleSet, opts: AgentOptions): Agent {
 		const model = this.model(config, opts);
 		return agentCommand(model === undefined ? opts : { agent: model });
 	}
 
 	/** The model a run asks, or undefined for an `--exec` command, which is a
 	 * model nothing here can name or price. */
-	private model(config: Config, opts: AgentOptions): string | undefined {
+	private model(config: RuleSet, opts: AgentOptions): string | undefined {
 		return opts.exec === undefined ? (opts.agent ?? config.agent) : undefined;
-	}
-
-	/** The rule set, for a command with no business running without a sound
-	 * one: a broken document prints its diagnostics and exits. */
-	private sound(): Config {
-		const { config, diagnostics } = this.checked();
-		if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
-			this.report(config.rules.length, diagnostics, false);
-		}
-		return config;
-	}
-
-	/** The rule set this was built with, and everything wrong with its rules. */
-	private checked(): { config: Config; diagnostics: ConfigDiagnostic[] } {
-		return { config: this.rules, diagnostics: diagnose(this.rules.rules) };
-	}
-
-	private report(
-		rules: number,
-		diagnostics: ConfigDiagnostic[],
-		strict: boolean,
-	): void {
-		const rows = diagnostics.map((diagnostic) => [
-			diagnostic.line === undefined
-				? diagnostic.rule
-				: `${diagnostic.rule}:${diagnostic.line}`,
-			diagnostic.severity,
-			diagnostic.message,
-		]);
-		for (const line of table(rows)) {
-			this.log.info(line);
-		}
-		const errors = diagnostics.filter(
-			(diagnostic) => diagnostic.severity === "error",
-		).length;
-		const summary = `${count(errors, "error")}, ${count(diagnostics.length - errors, "warning")}`;
-		if (errors > 0 || (strict && diagnostics.length > errors)) {
-			throw new Error(summary);
-		}
-		this.log.info(`sound: ${count(rules, "rule")}, ${summary}`);
 	}
 }

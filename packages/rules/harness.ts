@@ -1,11 +1,11 @@
 import { Dispatcher, type Events } from "@webappwiz/events";
 import type { Logger } from "@webappwiz/log";
-import { MarkdownWriter } from "@webappwiz/md";
 import type { Ps } from "@webappwiz/sys";
 import type { Clock, Duration } from "@webappwiz/time";
 import type { Agent } from "./agent";
 import { DEFAULT_CONCURRENCY } from "./config";
 import type { Finding } from "./finding";
+import { prompt } from "./prompt";
 import type { Task } from "./task";
 
 /** One task's worth of findings, handed over the moment its agent returns. */
@@ -108,55 +108,12 @@ export class Harness {
 		return found.flat();
 	}
 
-	/** The prompt a task would be spawned with, for a caller printing them
-	 * instead of paying for them. */
-	prompt(task: Task): string {
-		const count = task.rules.length;
-		const writer = new MarkdownWriter().text(
-			`You are checking against exactly ${count} ` +
-				`rule${count === 1 ? "" : "s"}, listed below. Apply only ` +
-				"these rules; ignore every other concern you notice.",
-		);
-		for (const rule of task.rules) {
-			writer.text(`Rule \`${rule.id}\`, verbatim:`);
-			writer.code("markdown", rule.document);
-		}
-		writer.text(task.context);
-		if (task.instructions !== undefined) {
-			writer.text(task.instructions);
-		}
-		return writer
-			.text(
-				[
-					"Report every violation of any of these rules as an element of one JSON array:",
-					"",
-					'[{"rule": "<rule id>", "message": "<how this breaks the rule>", "file": "<path>", "line": <1-based line number>}]',
-					"",
-					'"file" and "line" locate a finding that is somewhere in particular. ' +
-						"Leave both out when the rule is about the change as a whole rather " +
-						"than about a place in it.",
-					"",
-					'"message" states what the code does that the rule forbids, naming the ' +
-						"construct it applies to. One clause, lowercase, no trailing period.",
-					"",
-					"Never say what to do about it. Deciding the fix belongs to the reader, " +
-						"who knows things you do not. " +
-						'Write "greet and greetAll each take a clock parameter", not ' +
-						'"give them a constructor". Write "the comment restates the increment ' +
-						'below it", not "delete the comment".',
-					"",
-					"Output only the JSON array and nothing else. No violations means [].",
-				].join("\n"),
-			)
-			.toString();
-	}
-
 	private async spawn(
 		task: Task,
 		agent: Agent,
 		cwd?: string,
 	): Promise<{ findings: Finding[]; cost?: number }> {
-		const argv = [...agent.argv, this.prompt(task)];
+		const argv = [...agent.argv, prompt(task)];
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(argv, {
 			cwd,
 		});

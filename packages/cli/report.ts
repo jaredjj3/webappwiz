@@ -1,4 +1,4 @@
-import type { Finished, Violation } from "@webappwiz/judge";
+import type { Violation } from "@webappwiz/rules";
 import { color } from "@webappwiz/log";
 import type { Duration } from "@webappwiz/time";
 import { floor, type Overheads, predict, priced } from "./cost";
@@ -156,6 +156,22 @@ export function planned({
 		rows.push(["AGENT", color.bold(agent)]);
 	}
 	return table(rows).map((line) => `  ${line}`);
+}
+
+/** A finished task as the report prints it: what the call covered, what it
+ * found, and what it cost. */
+export interface Finished {
+	/** The ids of the rules the task checked. */
+	rules: string[];
+	/** How many files this task's agent was told to read. */
+	files: number;
+	violations: Violation[];
+	/** How long this task's agent took. */
+	took: Duration;
+	/** Dollars this task's call was billed, when the agent reported a figure. */
+	cost?: number;
+	done: number;
+	total: number;
 }
 
 /**

@@ -1,3 +1,5 @@
+import type { FileRule } from "./rule";
+
 /** What every section of a config shares: which agent runs it, and how many
  * calls it may have in flight. Callers add their own rules and whatever else
  * their use case needs. */
@@ -17,19 +19,24 @@ export const DEFAULT_AGENT = "haiku";
  * raise it in the config when the limits allow. */
 export const DEFAULT_CONCURRENCY = 4;
 
-/**
- * Every rule id that appears more than once, which is a config that cannot be
- * reported honestly: two rules under one name means a finding cites something
- * ambiguous. Callers decide how loudly to say so.
- */
-export function duplicates(ids: string[]): string[] {
-	const seen = new Set<string>();
-	const repeated = new Set<string>();
-	for (const id of ids) {
-		if (seen.has(id)) {
-			repeated.add(id);
-		}
-		seen.add(id);
-	}
-	return [...repeated];
+/** The rules a run checks and the two knobs it has. There is no config file
+ * and no implicit set: this is a constant a caller writes and passes in. */
+export interface RuleSet extends RunnerOptions {
+	// Each rule owns its glob, its level and its document, so TypeScript's job
+	// here is only composition: the rules are a typed array, and spreading
+	// shared rule sets stays statically checked.
+	rules: FileRule[];
 }
+
+/** A rule set as its author writes it, before the defaults are filled in. */
+export interface RuleSetInput {
+	rules: FileRule[];
+	agent?: string;
+	concurrency?: number;
+}
+
+export const defineRules = ({
+	rules,
+	agent = DEFAULT_AGENT,
+	concurrency = DEFAULT_CONCURRENCY,
+}: RuleSetInput): RuleSet => ({ rules, agent, concurrency });

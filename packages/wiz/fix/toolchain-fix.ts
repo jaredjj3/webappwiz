@@ -1,4 +1,4 @@
-import type { Check } from "@webappwiz/judge";
+import type { Check } from "@webappwiz/rules";
 import { color, type Logger } from "@webappwiz/log";
 import type { Ps } from "@webappwiz/sys";
 

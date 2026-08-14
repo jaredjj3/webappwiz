@@ -8,7 +8,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.7",
 		"@types/bun": "latest",
-		"@webappwiz/judge": "workspace:*"
+		"@webappwiz/rules": "workspace:*"
 	},
 	"peerDependencies": {
 		"typescript": "^7"

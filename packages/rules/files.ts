@@ -1,0 +1,220 @@
+import { join } from "node:path";
+import type { Logger } from "@webappwiz/log";
+import type { Fs, Glob } from "@webappwiz/sys";
+import { walk } from "@webappwiz/sys";
+import { Checker } from "./checker";
+import type { Finding } from "./finding";
+import { exemptions } from "./ignore";
+import { prompt } from "./prompt";
+import type { FileRule, Level } from "./rule";
+import type { Task } from "./task";
+
+/** One agent call over files: the harness's task, plus what was chosen for it. */
+export interface FileTask extends Task {
+	rules: FileRule[];
+	/** The files this task's prompt tells the agent to read, dir-relative. */
+	files: string[];
+	/** Always priced: the size of every file named is known here. */
+	bytes: number;
+}
+
+/** One rule broken in one place, as the report prints it. */
+export interface Violation {
+	/** The rule's referenceable id, as `rules ls` lists it. */
+	id: string;
+	level: Level;
+	/** Path as the caller would type it: the judged dir plus the file. */
+	file: string;
+	line: number;
+	/** How this code breaks the rule. Never what to do about it. */
+	message: string;
+	/** That line of the file, read from disk rather than from the agent. */
+	code: string;
+}
+
+/** How much of the tree a run covers, and how finely it is cut up. */
+export interface PlanOptions {
+	/** Files per task. Chunks are counted in files, not tokens. */
+	chunk?: number;
+	/**
+	 * Narrows the run to these files, named the way the globs are, for a caller
+	 * checking a subset of the tree rather than all of it. A rule matching
+	 * nothing left in it is still worth saying so.
+	 */
+	only?: Set<string>;
+}
+
+/** Files per task when a caller does not say. */
+export const DEFAULT_CHUNK = 25;
+
+/**
+ * Turns a directory and a set of rules into tasks the harness can run, and the
+ * findings that come back into violations a report can print.
+ *
+ * Everything file-shaped lives here: choosing the files, chunking them,
+ * honoring `judge-ignore` markers and quoting the offending line off disk. The
+ * harness underneath knows none of it, and this does not wrap it: a caller
+ * plans here, runs there, and turns the findings back here.
+ */
+export class Files {
+	// Every file the plan read, by dir-relative path, so turning findings into
+	// violations needs no second pass over the disk. Planning has already read
+	// exactly the files the agent is told to look at.
+	private lines = new Map<string, string[]>();
+
+	constructor(
+		private log: Logger,
+		private fs: Fs,
+		private glob: Glob,
+	) {}
+
+	/**
+	 * The tasks a run would spawn, without spawning any of them. Planning runs
+	 * every rule's check first, free, and builds tasks from exactly what those
+	 * checks escalated: the agent reads the files no check could settle, and
+	 * nothing else. What the checks found locally is `wiz fix`'s report, not
+	 * this run's, and is dropped here.
+	 */
+	async plan(
+		rules: FileRule[],
+		dir: string,
+		{ chunk = DEFAULT_CHUNK, only }: PlanOptions = {},
+	): Promise<FileTask[]> {
+		const checker = new Checker(rules, this.glob);
+		const all: string[] = [];
+		const size = new Map<string, number>();
+		const files: Array<{ path: string; text: string }> = [];
+		for await (const path of walk(this.fs, dir)) {
+			const file = path.slice(dir.length + 1); // dir-relative, like the globs
+			if (only && !only.has(file)) {
+				continue;
+			}
+			all.push(file);
+			if (!checker.matches(file)) {
+				continue;
+			}
+			size.set(file, (await this.fs.stat(path)).size);
+			const text = await this.fs.read(path);
+			this.lines.set(file, text.split("\n"));
+			files.push({ path: file, text });
+		}
+		files.sort((left, right) => left.path.localeCompare(right.path));
+		const { escalations } = checker.check(files);
+		// Seeded in rule order, so tasks land in the order the config lists the
+		// rules rather than the order the walk found their files.
+		const wanted = new Map<FileRule, string[]>(rules.map((rule) => [rule, []]));
+		for (const { rule, path } of escalations) {
+			wanted.get(rule)?.push(path);
+		}
+		for (const rule of rules) {
+			if (!all.some((file) => this.glob.matches(rule.files, file))) {
+				// stderr, so the report on stdout stays parseable
+				this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
+			}
+		}
+		// Rules escalating the same files ride in one task: the files are what a
+		// task costs, and they are read once, not once per rule.
+		const groups = new Map<string, { rules: FileRule[]; files: string[] }>();
+		for (const [rule, escalated] of wanted) {
+			if (escalated.length === 0) {
+				continue;
+			}
+			const key = escalated.join("\n");
+			const group = groups.get(key) ?? { rules: [], files: escalated };
+			group.rules.push(rule);
+			groups.set(key, group);
+		}
+		const tasks: FileTask[] = [];
+		for (const group of groups.values()) {
+			// chunks are counted in files, not tokens: switch to a byte budget when
+			// repos with a few huge files start overflowing a task.
+			for (let i = 0; i < group.files.length; i += chunk) {
+				const slice = group.files.slice(i, i + chunk);
+				const draft: Omit<FileTask, "bytes"> = {
+					rules: group.rules,
+					label: group.rules.map((rule) => rule.id).join(", "),
+					files: slice,
+					context: [
+						"Check each of these files, relative to your working directory:",
+						slice.map((file) => `- ${file}`).join("\n"),
+					].join("\n\n"),
+					instructions: MARKERS,
+				};
+				tasks.push({
+					...draft,
+					bytes: slice.reduce(
+						(bytes, file) => bytes + (size.get(file) ?? 0),
+						Buffer.byteLength(prompt(draft)),
+					),
+				});
+			}
+		}
+		return tasks;
+	}
+
+	/**
+	 * What one task's findings mean, ready to print. Sync, so a caller can turn
+	 * them around inside a `finished` handler the moment the agent returns.
+	 */
+	violations(task: FileTask, findings: Finding[], dir: string): Violation[] {
+		const violations: Violation[] = [];
+		for (const finding of findings) {
+			const rule = task.rules.find(
+				(candidate) => candidate.id === finding.rule,
+			);
+			if (!rule) {
+				continue; // the harness already said so, and dropped it
+			}
+			if (finding.file === undefined || finding.line === undefined) {
+				// These rules are all about somewhere in particular, so a finding with
+				// nowhere to point is one nobody can act on.
+				this.log.error(
+					`agent located no file for "${finding.rule}" on ${task.label}`,
+				);
+				continue;
+			}
+			const source = this.lines.get(finding.file);
+			if (source === undefined) {
+				// The task named the files to read, and the plan read every one of
+				// them. A finding somewhere else is one nothing here can quote or
+				// check a marker against, so it is said aloud rather than reported.
+				this.log.error(
+					`agent reported "${finding.rule}" in ${finding.file}, which ${task.label} was not given`,
+				);
+				continue;
+			}
+			// The prompt asks the agent to honor markers; this is what enforces it.
+			if (exemptions(source, rule.id)(finding.line)) {
+				continue;
+			}
+			violations.push({
+				id: rule.id,
+				level: rule.level,
+				file: join(dir, finding.file),
+				line: finding.line,
+				message: finding.message,
+				// From disk, not from the agent: the quoted line is the reader's
+				// evidence, and evidence a model wrote is no evidence at all.
+				code: source[finding.line - 1]?.trim() ?? "",
+			});
+		}
+		return violations.sort(cmp);
+	}
+}
+
+/** What the prompt says about `judge-ignore`, which is this caller's
+ * convention and no business of the harness's. */
+const MARKERS = [
+	"Code excuses itself from a rule with a comment naming that rule's id:",
+	"",
+	"- `judge-ignore <id>: <reason>` excuses the line it sits above, " +
+		"and everything indented under that line.",
+	"- `judge-ignore-file <id>: <reason>` excuses the whole file.",
+	"",
+	"Report nothing an excused line does against the rule the marker names. " +
+		"A marker excuses only that one rule, and a marker naming an id not " +
+		"listed above excuses nothing here.",
+].join("\n");
+
+const cmp = (left: Violation, right: Violation): number =>
+	left.file.localeCompare(right.file) || left.line - right.line;

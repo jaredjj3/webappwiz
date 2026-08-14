@@ -7,7 +7,7 @@
       "devDependencies": {
         "@biomejs/biome": "^2.5.7",
         "@types/bun": "latest",
-        "@webappwiz/judge": "workspace:*",
+        "@webappwiz/rules": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^7",
@@ -61,12 +61,15 @@
       },
       "dependencies": {
         "@webappwiz/cmd": "workspace:*",
-        "@webappwiz/judge": "workspace:*",
         "@webappwiz/log": "workspace:*",
+        "@webappwiz/md": "workspace:*",
         "@webappwiz/rules": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
         "@webappwiz/time": "workspace:*",
+      },
+      "peerDependencies": {
+        "typescript": "^7",
       },
     },
     "packages/cmd": {
@@ -94,24 +97,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/time": "workspace:*",
-      },
-    },
-    "packages/judge": {
-      "name": "@webappwiz/judge",
-      "version": "0.0.0",
-      "bin": {
-        "judge": "./cli.ts",
-      },
-      "dependencies": {
-        "@webappwiz/events": "workspace:*",
-        "@webappwiz/log": "workspace:*",
-        "@webappwiz/md": "workspace:*",
-        "@webappwiz/rules": "workspace:*",
-        "@webappwiz/sys": "workspace:*",
-        "@webappwiz/time": "workspace:*",
-      },
-      "peerDependencies": {
-        "typescript": "^7",
       },
     },
     "packages/log": {
@@ -174,18 +159,6 @@
         "@webappwiz/sys": "workspace:*",
       },
     },
-    "packages/signoff": {
-      "name": "@webappwiz/signoff",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/log": "workspace:*",
-        "@webappwiz/rules": "workspace:*",
-        "@webappwiz/sys": "workspace:*",
-      },
-      "peerDependencies": {
-        "typescript": "^7",
-      },
-    },
     "packages/sys": {
       "name": "@webappwiz/sys",
       "version": "0.0.0",
@@ -211,8 +184,8 @@
       "dependencies": {
         "@webappwiz/cli": "workspace:*",
         "@webappwiz/cmd": "workspace:*",
-        "@webappwiz/judge": "workspace:*",
         "@webappwiz/log": "workspace:*",
+        "@webappwiz/rules": "workspace:*",
         "@webappwiz/ship": "workspace:*",
         "@webappwiz/sys": "workspace:*",
         "@webappwiz/t": "workspace:*",
@@ -357,8 +330,6 @@
 
     "@webappwiz/http": ["@webappwiz/http@workspace:packages/http"],
 
-    "@webappwiz/judge": ["@webappwiz/judge@workspace:packages/judge"],
-
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
 
     "@webappwiz/md": ["@webappwiz/md@workspace:packages/md"],
@@ -370,8 +341,6 @@
     "@webappwiz/rules": ["@webappwiz/rules@workspace:packages/rules"],
 
     "@webappwiz/ship": ["@webappwiz/ship@workspace:packages/ship"],
-
-    "@webappwiz/signoff": ["@webappwiz/signoff@workspace:packages/signoff"],
 
     "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
 

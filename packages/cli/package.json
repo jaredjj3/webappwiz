@@ -13,11 +13,14 @@
 	},
 	"dependencies": {
 		"@webappwiz/cmd": "workspace:*",
-		"@webappwiz/judge": "workspace:*",
 		"@webappwiz/log": "workspace:*",
+		"@webappwiz/md": "workspace:*",
 		"@webappwiz/rules": "workspace:*",
 		"@webappwiz/sys": "workspace:*",
 		"@webappwiz/t": "workspace:*",
 		"@webappwiz/time": "workspace:*"
+	},
+	"peerDependencies": {
+		"typescript": "^7"
 	}
 }

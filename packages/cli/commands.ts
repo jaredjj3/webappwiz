@@ -8,7 +8,7 @@ import { JudgeCommands } from "./judge";
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
 import { version } from "./package.json";
-import { WEBAPPWIZ_RULES } from "./rules";
+import { SIGNOFF_RULES, WEBAPPWIZ_RULES } from "./rules";
 import { Skills } from "./skills";
 import { update } from "./update";
 
@@ -43,10 +43,18 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 		.action((opts, { log, fs }) => update(log, fs, opts));
 
 	// `judge` and `rules` are siblings rather than one nested in the other: the
-	// config is shared, with `wiz fix` enforcing the rules that carry a check and
-	// `judge` the ones only an agent can decide, so neither owns the rule set.
+	// rule set is shared, with `wiz fix` enforcing the rules that carry a check
+	// and `judge` the ones only an agent can decide, so neither owns it.
 	const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
-		new JudgeCommands(log, fs, ps, clock, glob, WEBAPPWIZ_RULES);
+		new JudgeCommands(
+			log,
+			fs,
+			ps,
+			clock,
+			glob,
+			WEBAPPWIZ_RULES,
+			SIGNOFF_RULES,
+		);
 
 	app
 		.command("judge")
@@ -87,7 +95,7 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 
 	const rules = app
 		.group("rules")
-		.description("list, print, and audit the rules judge is made of");
+		.description("list and print the rules, to run or to read yourself");
 
 	rules
 		.command("ls")
@@ -99,25 +107,6 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 		.description("print one rule in full, by the id `rules ls` gives it")
 		.arg("id", t.string(), { description: "rule id" })
 		.action((opts, deps) => judge(deps).show(opts));
-
-	rules
-		.command("audit")
-		.description(
-			"check the config: is it sound, and which rules need no agent at all",
-		)
-		.option("strict", t.boolean(), {
-			default: false,
-			description: "treat warnings as errors",
-		})
-		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
-			default: undefined,
-			description: "model to ask with (default: the config's agent)",
-		})
-		.option("exec", t.optional(t.string()), {
-			default: undefined,
-			description: "command the prompt is passed to, instead of --agent",
-		})
-		.action((opts, deps) => judge(deps).audit(opts));
 
 	const skillsGroup = app
 		.group("skills")
