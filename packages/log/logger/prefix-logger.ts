@@ -1,10 +1,15 @@
+import { ConsoleLogger } from "./console-logger";
 import type { Logger } from "./logger";
 
 export class PrefixLogger implements Logger {
+	private log: Logger;
+
 	constructor(
 		private prefix: string,
-		private log: Logger,
-	) {}
+		log?: Logger,
+	) {
+		this.log = log ?? new ConsoleLogger();
+	}
 
 	info(message: unknown, ...optionalParams: unknown[]): void {
 		this.log.info(`${this.prefix} ${message}`, ...optionalParams);

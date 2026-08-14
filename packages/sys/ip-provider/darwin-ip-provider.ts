@@ -1,9 +1,13 @@
+import { NodePs } from "../ps/node-ps";
 import type { Ps } from "../ps/ps";
 import type { IpProvider } from "./ip-provider";
 
 export class DarwinIpProvider implements IpProvider {
-	constructor(private readonly ps: Ps) {
-		if (ps.platform !== "darwin") {
+	private readonly ps: Ps;
+
+	constructor(ps?: Ps) {
+		this.ps = ps ?? new NodePs();
+		if (this.ps.platform !== "darwin") {
 			throw new Error("DarwinIpProvider is only supported on macOS");
 		}
 	}

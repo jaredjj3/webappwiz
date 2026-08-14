@@ -1,10 +1,15 @@
+import { ConsoleLogger } from "./console-logger";
 import type { Logger } from "./logger";
 
 export class MdcLogger implements Logger {
+	private log: Logger;
+
 	constructor(
 		private context: Record<string, unknown>,
-		private log: Logger,
-	) {}
+		log?: Logger,
+	) {
+		this.log = log ?? new ConsoleLogger();
+	}
 
 	info(message: unknown, ...optionalParams: unknown[]): void {
 		this.log.info(this.withMdcPrefix(message), ...optionalParams);

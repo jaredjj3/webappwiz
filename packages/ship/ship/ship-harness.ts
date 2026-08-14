@@ -17,10 +17,10 @@ export class ShipHarness {
 	readonly registry = new FakeRegistry();
 	readonly github = new FakeGithub();
 	readonly ship = new LockstepShip(
-		new MemoryLogger(),
 		this.workspace,
 		this.git,
 		this.registry,
 		this.github,
+		new MemoryLogger(),
 	);
 }

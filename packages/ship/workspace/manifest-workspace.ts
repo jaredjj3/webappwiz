@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import type { Fs } from "@webappwiz/sys";
+import { type Fs, NodeFs } from "@webappwiz/sys";
 import type { Package } from "../plan";
 import type { Workspace } from "./workspace";
 
@@ -15,18 +15,23 @@ interface Manifest {
  * whole workspace, and the root manifest is where it lives.
  */
 export class ManifestWorkspace implements Workspace {
+	private readonly fs: Fs;
+
 	constructor(
-		private readonly fs: Fs,
 		/** The directory whose package.json declares the workspaces. */
 		readonly root: string,
-	) {}
+		fs?: Fs,
+	) {
+		this.fs = fs ?? new NodeFs();
+	}
 
 	/** Finds the workspace `from` sits in, climbing until a manifest claims one. */
-	static async at(fs: Fs, from: string): Promise<ManifestWorkspace> {
+	static async at(from: string, fs?: Fs): Promise<ManifestWorkspace> {
+		const files = fs ?? new NodeFs();
 		for (let dir = from; ; dir = dirname(dir)) {
-			const manifest = await read(fs, dir);
+			const manifest = await read(files, dir);
 			if (manifest?.workspaces !== undefined) {
-				return new ManifestWorkspace(fs, dir);
+				return new ManifestWorkspace(dir, files);
 			}
 			if (dirname(dir) === dir) {
 				throw new Error(`no workspace above ${from}`);

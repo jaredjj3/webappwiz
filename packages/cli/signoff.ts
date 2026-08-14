@@ -1,4 +1,4 @@
-import { color, type Logger } from "@webappwiz/log";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import {
 	type Agent,
 	agentCommand,
@@ -8,8 +8,8 @@ import {
 	type Task,
 	prompt as taskPrompt,
 } from "@webappwiz/rules";
-import type { Ps } from "@webappwiz/sys";
-import type { Clock } from "@webappwiz/time";
+import { NodePs, type Ps } from "@webappwiz/sys";
+import { type Clock, SystemClock } from "@webappwiz/time";
 import { diff } from "./changed";
 import { ask, type Confirm } from "./judge";
 import { mode } from "./mode";
@@ -40,14 +40,22 @@ export interface SignoffOptions {
  * so it reads the same to a merge gate as to whoever ran it.
  */
 export class Signoff {
+	private log: Logger;
+	private ps: Ps;
+	private clock: Clock;
+
 	constructor(
-		private log: Logger,
-		private ps: Ps,
-		private clock: Clock,
 		private rules: Rule[],
 		private defaultAgent: string,
+		log?: Logger,
+		ps?: Ps,
+		clock?: Clock,
 		private confirmer: Confirm = ask,
-	) {}
+	) {
+		this.log = log ?? new ConsoleLogger();
+		this.ps = ps ?? new NodePs();
+		this.clock = clock ?? new SystemClock();
+	}
 
 	async run(opts: SignoffOptions): Promise<void> {
 		if (mode(opts) === "print") {
@@ -55,7 +63,7 @@ export class Signoff {
 			return;
 		}
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
-		const { patch, added } = await diff(this.ps, dir, opts.since);
+		const { patch, added } = await diff(dir, opts.since, this.ps);
 		if (patch === "" && added.length === 0) {
 			this.log.info(`nothing has changed since ${opts.since}`);
 			return;

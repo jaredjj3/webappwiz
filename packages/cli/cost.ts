@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { Fs } from "@webappwiz/sys";
+import { type Fs, NodeFs } from "@webappwiz/sys";
 
 /**
  * Input price in dollars per million tokens, for each model `--agent` names.
@@ -42,9 +42,10 @@ const FILE = join(".wiz", "judge-cost.json");
  * missing or unreadable file is empty rather than an error: a calibration is a
  * convenience, and losing it costs the caller a worse estimate, not a run.
  */
-export async function overheads(fs: Fs, dir: string): Promise<Overheads> {
+export async function overheads(dir: string, fs?: Fs): Promise<Overheads> {
+	const files = fs ?? new NodeFs();
 	try {
-		const parsed: unknown = JSON.parse(await fs.read(join(dir, FILE)));
+		const parsed: unknown = JSON.parse(await files.read(join(dir, FILE)));
 		if (typeof parsed !== "object" || parsed === null) {
 			return {};
 		}
@@ -64,14 +65,18 @@ export async function overheads(fs: Fs, dir: string): Promise<Overheads> {
  * since each is a separate measurement.
  */
 export async function calibrate(
-	fs: Fs,
 	dir: string,
 	agent: string,
 	call: number,
+	fs?: Fs,
 ): Promise<void> {
-	const recorded = { ...(await overheads(fs, dir)), [agent]: call };
-	await fs.mkdir(join(dir, ".wiz"));
-	await fs.write(join(dir, FILE), `${JSON.stringify(recorded, null, "\t")}\n`);
+	const files = fs ?? new NodeFs();
+	const recorded = { ...(await overheads(dir, files)), [agent]: call };
+	await files.mkdir(join(dir, ".wiz"));
+	await files.write(
+		join(dir, FILE),
+		`${JSON.stringify(recorded, null, "\t")}\n`,
+	);
 }
 
 /**

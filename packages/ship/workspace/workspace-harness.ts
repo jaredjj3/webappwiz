@@ -28,7 +28,7 @@ export class WorkspaceHarness {
 
 	/** The workspace rooted at `/repo`, which is the one every test reads. */
 	get workspace(): ManifestWorkspace {
-		return new ManifestWorkspace(this.fs, "/repo");
+		return new ManifestWorkspace("/repo", this.fs);
 	}
 
 	async write(dir: string, manifest: object): Promise<void> {

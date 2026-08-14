@@ -1,4 +1,4 @@
-import { color, type Logger } from "@webappwiz/log";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import {
 	type Agent,
 	type AgentOptions,
@@ -12,8 +12,15 @@ import {
 	prompt as taskPrompt,
 	type Violation,
 } from "@webappwiz/rules";
-import type { Fs, Glob, Ps } from "@webappwiz/sys";
-import type { Clock } from "@webappwiz/time";
+import {
+	type Fs,
+	type Glob,
+	NodeFs,
+	NodeGlob,
+	NodePs,
+	type Ps,
+} from "@webappwiz/sys";
+import { type Clock, SystemClock } from "@webappwiz/time";
 import { changed } from "./changed";
 import { calibrate, floor, overheads, predict } from "./cost";
 import { mode } from "./mode";
@@ -81,16 +88,28 @@ export const ask: Confirm = {
 };
 
 export class JudgeCommands {
+	private log: Logger;
+	private fs: Fs;
+	private ps: Ps;
+	private clock: Clock;
+	private glob: Glob;
+
 	constructor(
-		private log: Logger,
-		private fs: Fs,
-		private ps: Ps,
-		private clock: Clock,
-		private glob: Glob,
 		private rules: RuleSet,
 		private signoffRules: Rule[] = [],
+		log?: Logger,
+		fs?: Fs,
+		ps?: Ps,
+		clock?: Clock,
+		glob?: Glob,
 		private confirmer: Confirm = ask,
-	) {}
+	) {
+		this.log = log ?? new ConsoleLogger();
+		this.fs = fs ?? new NodeFs();
+		this.ps = ps ?? new NodePs();
+		this.clock = clock ?? new SystemClock();
+		this.glob = glob ?? new NodeGlob();
+	}
 
 	/**
 	 * Lists every rule there is, one row each, ids first for citing. The rules a
@@ -157,7 +176,7 @@ export class JudgeCommands {
 		const only =
 			opts.since === undefined
 				? undefined
-				: await changed(this.ps, dir, opts.since);
+				: await changed(dir, opts.since, this.ps);
 		if (only?.size === 0) {
 			// Ahead of planning, so a no-op run says one clear thing rather than
 			// one "matches no files" per rule.
@@ -190,7 +209,7 @@ export class JudgeCommands {
 				rules.length,
 				calls,
 				predicted,
-				await overheads(this.fs, this.ps.cwd()),
+				await overheads(this.ps.cwd(), this.fs),
 			)) {
 				this.log.info(line);
 			}
@@ -205,7 +224,7 @@ export class JudgeCommands {
 		// one package of it should leave the measurement where the next run of any
 		// scope will find it.
 		const root = this.ps.cwd();
-		const measured = await overheads(this.fs, root);
+		const measured = await overheads(root, this.fs);
 		const started = this.clock.now();
 		// Priced whether or not it is over budget: what a run will cost is worth
 		// knowing every time, not only on the runs that trip a limit.
@@ -322,7 +341,7 @@ export class JudgeCommands {
 			return;
 		}
 		try {
-			await calibrate(this.fs, root, agent, call);
+			await calibrate(root, agent, call, this.fs);
 		} catch (error) {
 			this.log.error(`could not record what this run cost: ${error}`);
 		}

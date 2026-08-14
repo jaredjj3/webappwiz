@@ -1,9 +1,13 @@
-import type { Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/sys";
 import type { Github } from "./github";
 
 /** GitHub releases, via the `gh` CLI. */
 export class CliGithub implements Github {
-	constructor(private readonly ps: Ps) {}
+	private readonly ps: Ps;
+
+	constructor(ps?: Ps) {
+		this.ps = ps ?? new NodePs();
+	}
 
 	/** Whether gh has credentials. GH_TOKEN counts, so a server needs no login. */
 	async authed(): Promise<boolean> {

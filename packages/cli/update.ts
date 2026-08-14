@@ -1,6 +1,6 @@
 import { basename } from "node:path";
-import type { Logger } from "@webappwiz/log";
-import { type Fs, walk } from "@webappwiz/sys";
+import { ConsoleLogger, type Logger } from "@webappwiz/log";
+import { type Fs, NodeFs, walk } from "@webappwiz/sys";
 
 /**
  * A `"@webappwiz/x": "1.2.3"` dependency entry, captured either side of the
@@ -23,25 +23,27 @@ export interface UpdateOptions {
  * other. They are released together, so there is only ever one right answer.
  */
 export async function update(
-	log: Logger,
-	fs: Fs,
 	opts: UpdateOptions,
+	log?: Logger,
+	fs?: Fs,
 ): Promise<void> {
+	const out = log ?? new ConsoleLogger();
+	const files = fs ?? new NodeFs();
 	let count = 0;
-	for await (const path of walk(fs, opts.dir)) {
+	for await (const path of walk(opts.dir, files)) {
 		if (basename(path) !== "package.json") {
 			continue;
 		}
 		// substitution, not parse-and-stringify: rewriting the JSON would
 		// reflow manifests we have no business reformatting.
-		const before = await fs.read(path);
+		const before = await files.read(path);
 		const after = before.replace(DEPENDENCY, `$1${opts.version}$2`);
 		if (after === before) {
 			continue;
 		}
-		await fs.write(path, after);
-		log.info(`updated ${path}`);
+		await files.write(path, after);
+		out.info(`updated ${path}`);
 		count++;
 	}
-	log.info(`${count} package.json pinned to ${opts.version}`);
+	out.info(`${count} package.json pinned to ${opts.version}`);
 }

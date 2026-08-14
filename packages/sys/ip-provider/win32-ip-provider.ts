@@ -1,9 +1,13 @@
+import { NodePs } from "../ps/node-ps";
 import type { Ps } from "../ps/ps";
 import type { IpProvider } from "./ip-provider";
 
 export class Win32IpProvider implements IpProvider {
-	constructor(private readonly ps: Ps) {
-		if (ps.platform !== "win32") {
+	private readonly ps: Ps;
+
+	constructor(ps?: Ps) {
+		this.ps = ps ?? new NodePs();
+		if (this.ps.platform !== "win32") {
 			throw new Error("Win32IpProvider is only supported on Windows");
 		}
 	}

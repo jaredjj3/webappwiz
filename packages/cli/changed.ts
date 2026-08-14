@@ -1,4 +1,4 @@
-import type { Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/sys";
 
 /**
  * The files git says are new or changed in `dir` since `ref`, named the way a
@@ -9,10 +9,11 @@ import type { Ps } from "@webappwiz/sys";
  * file that is gone has nothing to read and nothing to report.
  */
 export async function changed(
-	ps: Ps,
 	dir: string,
 	ref: string,
+	ps?: Ps,
 ): Promise<Set<string>> {
+	const proc = ps ?? new NodePs();
 	const files = new Set<string>();
 	for (const argv of [
 		// against the ref rather than between two commits, so work in the tree
@@ -21,7 +22,7 @@ export async function changed(
 		// and the files git has never been told about, which no diff reaches
 		["ls-files", "--others", "--exclude-standard"],
 	]) {
-		for (const line of (await git(ps, dir, argv)).split("\n")) {
+		for (const line of (await git(proc, dir, argv)).split("\n")) {
 			if (line !== "") {
 				files.add(line);
 			}
@@ -39,13 +40,14 @@ export async function changed(
  * an agent with the working directory in front of it, and it can open them.
  */
 export async function diff(
-	ps: Ps,
 	dir: string,
 	ref: string,
+	ps?: Ps,
 ): Promise<{ patch: string; added: string[] }> {
-	const patch = await git(ps, dir, ["diff", "--relative", ref]);
+	const proc = ps ?? new NodePs();
+	const patch = await git(proc, dir, ["diff", "--relative", ref]);
 	const added = (
-		await git(ps, dir, ["ls-files", "--others", "--exclude-standard"])
+		await git(proc, dir, ["ls-files", "--others", "--exclude-standard"])
 	)
 		.split("\n")
 		.filter((line) => line !== "");

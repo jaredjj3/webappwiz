@@ -1,5 +1,12 @@
-import { color, type Logger } from "@webappwiz/log";
-import type { Fs, Glob, Ps } from "@webappwiz/sys";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
+import {
+	type Fs,
+	type Glob,
+	NodeFs,
+	NodeGlob,
+	NodePs,
+	type Ps,
+} from "@webappwiz/sys";
 import { Checker } from "./checker";
 import type { FileRule } from "./rule";
 
@@ -9,13 +16,23 @@ import type { FileRule } from "./rule";
  * what the checks escalate is `wiz judge`'s job, on demand.
  */
 export class Check {
+	private readonly log: Logger;
+	private readonly fs: Fs;
+	private readonly ps: Ps;
+	private readonly glob: Glob;
+
 	constructor(
-		private readonly log: Logger,
-		private readonly fs: Fs,
-		private readonly ps: Ps,
-		private readonly glob: Glob,
 		private readonly rules: FileRule[],
-	) {}
+		log?: Logger,
+		fs?: Fs,
+		ps?: Ps,
+		glob?: Glob,
+	) {
+		this.log = log ?? new ConsoleLogger();
+		this.fs = fs ?? new NodeFs();
+		this.ps = ps ?? new NodePs();
+		this.glob = glob ?? new NodeGlob();
+	}
 
 	/** True when no rule reported an error. */
 	async run(): Promise<boolean> {

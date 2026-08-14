@@ -1,4 +1,4 @@
-import { color, type Logger } from "@webappwiz/log";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import type { Git } from "../git/git";
 import type { Github } from "../github/github";
 import type { Package, Plan, Problem } from "../plan";
@@ -9,13 +9,17 @@ import type { Ship } from "./ship";
 
 /** Releases the whole workspace at one version, in lockstep. */
 export class LockstepShip implements Ship {
+	private readonly log: Logger;
+
 	constructor(
-		private readonly log: Logger,
 		private readonly workspace: Workspace,
 		private readonly git: Git,
 		private readonly registry: Registry,
 		private readonly github: Github,
-	) {}
+		log?: Logger,
+	) {
+		this.log = log ?? new ConsoleLogger();
+	}
 
 	async plan(type: Bump): Promise<Plan> {
 		const current = await this.workspace.version();

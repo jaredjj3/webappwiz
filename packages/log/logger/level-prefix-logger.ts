@@ -1,3 +1,4 @@
+import { ConsoleLogger } from "./console-logger";
 import type { Logger } from "./logger";
 import { PrefixLogger } from "./prefix-logger";
 
@@ -5,9 +6,10 @@ export class LevelPrefixLogger implements Logger {
 	private infoLogger: PrefixLogger;
 	private errorLogger: PrefixLogger;
 
-	constructor(log: Logger) {
-		this.infoLogger = new PrefixLogger("[INFO]", log);
-		this.errorLogger = new PrefixLogger("[ERROR]", log);
+	constructor(log?: Logger) {
+		const inner = log ?? new ConsoleLogger();
+		this.infoLogger = new PrefixLogger("[INFO]", inner);
+		this.errorLogger = new PrefixLogger("[ERROR]", inner);
 	}
 
 	info(message: unknown, ...optionalParams: unknown[]): void {

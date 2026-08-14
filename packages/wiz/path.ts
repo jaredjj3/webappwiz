@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
-import type { Logger } from "@webappwiz/log";
-import type { Fs, Ps } from "@webappwiz/sys";
+import { ConsoleLogger, type Logger } from "@webappwiz/log";
+import { type Fs, NodeFs, NodePs, type Ps } from "@webappwiz/sys";
 
 // Tag every line we add so `remove` can find and delete exactly ours.
 const TAG = "# webappwiz";
@@ -14,11 +14,15 @@ export interface PathOptions {
 }
 
 export class Path {
-	constructor(
-		private readonly log: Logger,
-		private readonly fs: Fs,
-		private readonly ps: Ps,
-	) {}
+	private readonly log: Logger;
+	private readonly fs: Fs;
+	private readonly ps: Ps;
+
+	constructor(log?: Logger, fs?: Fs, ps?: Ps) {
+		this.log = log ?? new ConsoleLogger();
+		this.fs = fs ?? new NodeFs();
+		this.ps = ps ?? new NodePs();
+	}
 
 	/** Exactly one of `add` or `remove` must be set; anything else throws. */
 	async run(opts: PathOptions): Promise<void> {

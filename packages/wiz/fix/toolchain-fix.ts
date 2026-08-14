@@ -1,16 +1,22 @@
-import { color, type Logger } from "@webappwiz/log";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import type { Check } from "@webappwiz/rules";
-import type { Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/sys";
 
 import type { Fix, FixOptions } from "./fix";
 
 /** Runs biome, the config's checks, and the type checker, in that order. */
 export class ToolchainFix implements Fix {
+	private readonly log: Logger;
+	private readonly ps: Ps;
+
 	constructor(
-		private readonly log: Logger,
-		private readonly ps: Ps,
 		private readonly checks: Pick<Check, "run">,
-	) {}
+		log?: Logger,
+		ps?: Ps,
+	) {
+		this.log = log ?? new ConsoleLogger();
+		this.ps = ps ?? new NodePs();
+	}
 
 	/** Pass `check: true` to report problems without writing fixes. */
 	async run(opts: FixOptions): Promise<void> {

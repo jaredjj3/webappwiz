@@ -1,12 +1,16 @@
-import type { Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/sys";
 import type { Git } from "./git";
 
 /** Speaks git by spawning the CLI. */
 export class CliGit implements Git {
+	private readonly ps: Ps;
+
 	constructor(
-		private readonly ps: Ps,
 		private readonly root: string,
-	) {}
+		ps?: Ps,
+	) {
+		this.ps = ps ?? new NodePs();
+	}
 
 	async clean(): Promise<boolean> {
 		return (await this.out("status", "--porcelain")) === "";

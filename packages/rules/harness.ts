@@ -1,7 +1,7 @@
 import { Dispatcher, type Events } from "@webappwiz/events";
-import type { Logger } from "@webappwiz/log";
-import type { Ps } from "@webappwiz/sys";
-import type { Clock, Duration } from "@webappwiz/time";
+import { ConsoleLogger, type Logger } from "@webappwiz/log";
+import { NodePs, type Ps } from "@webappwiz/sys";
+import { type Clock, type Duration, SystemClock } from "@webappwiz/time";
 import type { Agent } from "./agent";
 import { DEFAULT_CONCURRENCY } from "./config";
 import type { Finding } from "./finding";
@@ -59,11 +59,15 @@ export class Harness {
 	/** Fires `finished` per task, so a caller can print findings as they land. */
 	readonly events: Events<HarnessEvents> = this.dispatcher.events;
 
-	constructor(
-		private log: Logger,
-		private ps: Ps,
-		private clock: Clock,
-	) {}
+	private log: Logger;
+	private ps: Ps;
+	private clock: Clock;
+
+	constructor(log?: Logger, ps?: Ps, clock?: Clock) {
+		this.log = log ?? new ConsoleLogger();
+		this.ps = ps ?? new NodePs();
+		this.clock = clock ?? new SystemClock();
+	}
 
 	/**
 	 * Spawns an agent for each task, `concurrency` of them at a time,

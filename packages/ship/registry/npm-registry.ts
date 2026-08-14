@@ -1,9 +1,13 @@
-import type { Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/sys";
 import type { Registry } from "./registry";
 
 /** The npm registry, reached through the npm and bun CLIs. */
 export class NpmRegistry implements Registry {
-	constructor(private readonly ps: Ps) {}
+	private readonly ps: Ps;
+
+	constructor(ps?: Ps) {
+		this.ps = ps ?? new NodePs();
+	}
 
 	/** Whether npm has credentials. NPM_TOKEN counts, so a server needs no login. */
 	async authed(): Promise<boolean> {

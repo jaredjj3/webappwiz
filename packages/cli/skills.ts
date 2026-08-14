@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
-import { color, type Logger } from "@webappwiz/log";
-import { type Fs, walk } from "@webappwiz/sys";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
+import { type Fs, NodeFs, walk } from "@webappwiz/sys";
 import { table } from "./table";
 
 /** The directory holding the skills this package ships. */
@@ -27,10 +27,13 @@ export interface AddOptions extends ProjectOptions {
 /** The `skills` command group: what agent skills there are, and which of them
  * a project holds in `.agents/skills`. */
 export class Skills {
-	constructor(
-		private log: Logger,
-		private fs: Fs,
-	) {}
+	private log: Logger;
+	private fs: Fs;
+
+	constructor(log?: Logger, fs?: Fs) {
+		this.log = log ?? new ConsoleLogger();
+		this.fs = fs ?? new NodeFs();
+	}
 
 	/**
 	 * What there is to install, and what the project has of it. The version a
@@ -98,7 +101,7 @@ export class Skills {
 		// a copy, not a merge: replacing whatever is there is what makes the
 		// version in a skill's frontmatter mean anything
 		const from = `${source}/${name}`;
-		for await (const file of walk(this.fs, from)) {
+		for await (const file of walk(from, this.fs)) {
 			const target = `${dir}/.agents/skills/${name}${file.slice(from.length)}`;
 			await this.fs.mkdir(dirname(target));
 			await this.fs.write(target, await this.fs.read(file));

@@ -20,9 +20,9 @@ export type WizDeps = CommandDeps;
 
 const toolchainFix = ({ log, fs, ps, glob }: WizDeps): ToolchainFix =>
 	new ToolchainFix(
+		new Check(WEBAPPWIZ_RULES.rules, log, fs, ps, glob),
 		log,
 		ps,
-		new Check(log, fs, ps, glob, WEBAPPWIZ_RULES.rules),
 	);
 
 export const wiz = cli<WizDeps>("wiz");
@@ -55,15 +55,15 @@ wiz
 	.arg("bump", t.string(), { description: "patch, minor, or major" })
 	.action(async (opts, deps) => {
 		const { log, fs, ps } = deps;
-		const workspace = await ManifestWorkspace.at(fs, ps.cwd());
+		const workspace = await ManifestWorkspace.at(ps.cwd(), fs);
 		const release = new LockstepShip(
-			log,
 			workspace,
-			new CliGit(ps, workspace.root),
+			new CliGit(workspace.root, ps),
 			new NpmRegistry(ps),
 			new CliGithub(ps),
+			log,
 		);
-		await ship(log, ps, release, toolchainFix(deps), opts);
+		await ship(release, toolchainFix(deps), opts, log, ps);
 	});
 
 wiz
@@ -73,6 +73,6 @@ wiz
 		default: "",
 		description: "only test this package (default: all)",
 	})
-	.action((opts, { fs, ps }) => test(fs, ps, opts));
+	.action((opts, { fs, ps }) => test(opts, fs, ps));
 
 commands(wiz.group("cli").description("run @webappwiz/cli against a project"));

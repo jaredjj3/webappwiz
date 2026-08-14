@@ -1,7 +1,7 @@
 import { join } from "node:path";
-import type { Logger } from "@webappwiz/log";
+import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import type { Fs, Glob } from "@webappwiz/sys";
-import { walk } from "@webappwiz/sys";
+import { NodeFs, NodeGlob, walk } from "@webappwiz/sys";
 import { Checker } from "./checker";
 import type { Finding } from "./finding";
 import { exemptions } from "./ignore";
@@ -62,11 +62,15 @@ export class Files {
 	// exactly the files the agent is told to look at.
 	private lines = new Map<string, string[]>();
 
-	constructor(
-		private log: Logger,
-		private fs: Fs,
-		private glob: Glob,
-	) {}
+	private log: Logger;
+	private fs: Fs;
+	private glob: Glob;
+
+	constructor(log?: Logger, fs?: Fs, glob?: Glob) {
+		this.log = log ?? new ConsoleLogger();
+		this.fs = fs ?? new NodeFs();
+		this.glob = glob ?? new NodeGlob();
+	}
 
 	/**
 	 * The tasks a run would spawn, without spawning any of them. Planning runs
@@ -84,7 +88,7 @@ export class Files {
 		const all: string[] = [];
 		const size = new Map<string, number>();
 		const files: Array<{ path: string; text: string }> = [];
-		for await (const path of walk(this.fs, dir)) {
+		for await (const path of walk(dir, this.fs)) {
 			const file = path.slice(dir.length + 1); // dir-relative, like the globs
 			if (only && !only.has(file)) {
 				continue;

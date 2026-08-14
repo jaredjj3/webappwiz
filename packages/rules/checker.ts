@@ -1,4 +1,4 @@
-import type { Glob } from "@webappwiz/sys";
+import { type Glob, NodeGlob } from "@webappwiz/sys";
 import type { Diagnostic } from "./diagnostic";
 import { exemptions } from "./ignore";
 import type { FileRule, FileText } from "./rule";
@@ -23,10 +23,14 @@ export interface Checked {
  * an agent's job: reported here, run by whoever pays for the agent.
  */
 export class Checker {
+	private readonly glob: Glob;
+
 	constructor(
 		private readonly rules: FileRule[],
-		private readonly glob: Glob,
-	) {}
+		glob?: Glob,
+	) {
+		this.glob = glob ?? new NodeGlob();
+	}
 
 	/** Whether any rule wants this file: lets a caller skip reading the rest. */
 	matches(path: string): boolean {

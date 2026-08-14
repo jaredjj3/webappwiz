@@ -1,8 +1,10 @@
 import { rmSync } from "node:fs";
-import { color, type Logger } from "@webappwiz/log";
+import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import { Duration, sleep } from "@webappwiz/time";
 import type { Fs } from "../fs/fs";
+import { NodeFs } from "../fs/node-fs";
 import type { Ps } from "../ps/ps";
+import { NodePs } from "../ps/node-ps";
 import type { Lock } from "./lock";
 
 interface Holder {
@@ -29,13 +31,20 @@ export class FileLock implements Lock {
 	private readonly stalenessMs: number;
 	private readonly pollMs: number;
 
+	private readonly fs: Fs;
+	private readonly ps: Ps;
+	private readonly log: Logger;
+
 	constructor(
-		private readonly fs: Fs,
-		private readonly ps: Ps,
-		private readonly log: Logger,
 		readonly path: string,
+		fs?: Fs,
+		ps?: Ps,
+		log?: Logger,
 		{ stalenessMs = 60_000, pollMs = 2_000 }: FileLockOptions = {},
 	) {
+		this.fs = fs ?? new NodeFs();
+		this.ps = ps ?? new NodePs();
+		this.log = log ?? new ConsoleLogger();
 		this.stalenessMs = stalenessMs;
 		this.pollMs = pollMs;
 	}
