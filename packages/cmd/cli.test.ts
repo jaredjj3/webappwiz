@@ -8,22 +8,44 @@ import {
 import { FakePs } from "@webappwiz/sys/testing";
 import { t } from "@webappwiz/t";
 import { cli } from "./cli";
-import { CliHarness } from "./cli-harness";
 import type { Deps } from "./deps";
+
+/** One command at the top level, for the help the program prints. */
+function plain() {
+	const wiz = cli("wiz");
+	wiz
+		.command("a")
+		.description("does a")
+		.action(() => {});
+	return wiz;
+}
+
+/** One command under a group, for the help a group prints. */
+function grouped() {
+	const wiz = cli("wiz");
+	wiz
+		.group("skills")
+		.description("manage skills")
+		.command("add")
+		.description("add one");
+	return wiz;
+}
 
 describe("cli", () => {
 	// errors exit the process, so tests record the exit and read the logger instead
 	let log: MemoryLogger;
 	let ps: FakePs;
 	let deps: Deps;
-	let harness: CliHarness;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
 		deps = { log, ps };
-		harness = new CliHarness();
 	});
+
+	/** Everything written to the logger so far, uncoloured, as one string. */
+	const help = () =>
+		log.entries.map((entry) => color.strip(entry.message)).join("\n");
 
 	it("dispatches to the named command with parsed, typed opts", () => {
 		let got: { name: string; count: number } | undefined;
@@ -55,31 +77,31 @@ describe("cli", () => {
 	});
 
 	it("prints program help for no args", () => {
-		harness.plain.run(harness.deps, []);
+		plain().run(deps, []);
 
-		expect(harness.help()).toContain("Usage: wiz <command> [options]");
-		expect(harness.help()).toContain("a  does a");
-		expect(harness.help()).toContain(
+		expect(help()).toContain("Usage: wiz <command> [options]");
+		expect(help()).toContain("a  does a");
+		expect(help()).toContain(
 			"Run `wiz <command> --help` for a command's options.",
 		);
 	});
 
 	it("prints program help for --help", () => {
-		harness.plain.run(harness.deps, ["--help"]);
+		plain().run(deps, ["--help"]);
 
-		expect(harness.help()).toContain("Usage: wiz <command> [options]");
+		expect(help()).toContain("Usage: wiz <command> [options]");
 	});
 
 	it("prints program help for -h", () => {
-		harness.plain.run(harness.deps, ["-h"]);
+		plain().run(deps, ["-h"]);
 
-		expect(harness.help()).toContain("Usage: wiz <command> [options]");
+		expect(help()).toContain("Usage: wiz <command> [options]");
 	});
 
 	it("prints program help for a command it does not have", () => {
-		harness.plain.run(harness.deps, ["nope"]);
+		plain().run(deps, ["nope"]);
 
-		expect(harness.help()).toContain("Usage: wiz <command> [options]");
+		expect(help()).toContain("Usage: wiz <command> [options]");
 	});
 
 	it("writes command help to the injected logger, not the console", () => {
@@ -163,33 +185,33 @@ describe("cli", () => {
 	});
 
 	it("lists a group on the program's own help", () => {
-		harness.wiz.run(harness.deps, []);
+		grouped().run(deps, []);
 
-		expect(harness.help()).toContain("skills  manage skills");
+		expect(help()).toContain("skills  manage skills");
 	});
 
 	it("lists a group's commands when the group is named alone", () => {
-		harness.wiz.run(harness.deps, ["skills"]);
+		grouped().run(deps, ["skills"]);
 
-		expect(harness.help()).toContain("Usage: wiz skills <command> [options]");
-		expect(harness.help()).toContain("add  add one");
-		expect(harness.help()).toContain(
+		expect(help()).toContain("Usage: wiz skills <command> [options]");
+		expect(help()).toContain("add  add one");
+		expect(help()).toContain(
 			"Run `wiz skills <command> --help` for a command's options.",
 		);
 	});
 
 	it("prints a group's help for --help", () => {
-		harness.wiz.run(harness.deps, ["skills", "--help"]);
+		grouped().run(deps, ["skills", "--help"]);
 
-		expect(harness.help()).toContain("Usage: wiz skills <command> [options]");
-		expect(harness.help()).toContain("add  add one");
+		expect(help()).toContain("Usage: wiz skills <command> [options]");
+		expect(help()).toContain("add  add one");
 	});
 
 	it("prints a group's help for a subcommand it does not have", () => {
-		harness.wiz.run(harness.deps, ["skills", "x"]);
+		grouped().run(deps, ["skills", "x"]);
 
-		expect(harness.help()).toContain("Usage: wiz skills <command> [options]");
-		expect(harness.help()).toContain("add  add one");
+		expect(help()).toContain("Usage: wiz skills <command> [options]");
+		expect(help()).toContain("add  add one");
 	});
 
 	it("names the full path in a subcommand's own help", () => {
