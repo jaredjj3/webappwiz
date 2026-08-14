@@ -17,14 +17,14 @@ describe("test", () => {
 	});
 
 	it("runs bun test once, from the workspace root", async () => {
-		await test(fs, ps, { package: "" });
+		await test({ package: "" }, fs, ps);
 
 		expect(ps.getCalls()).toEqual(["bun test --pass-with-no-tests --parallel"]);
 		expect(ps.getCallDirs()).toEqual(["/tree"]);
 	});
 
 	it("filters to the named package", async () => {
-		await test(fs, ps, { package: "log" });
+		await test({ package: "log" }, fs, ps);
 
 		expect(ps.getCalls()).toEqual([
 			"bun test --pass-with-no-tests --parallel packages/log/",
@@ -32,7 +32,7 @@ describe("test", () => {
 	});
 
 	it("rejects a package that does not exist", async () => {
-		await expect(test(fs, ps, { package: "nope" })).rejects.toThrow(
+		await expect(test({ package: "nope" }, fs, ps)).rejects.toThrow(
 			"no such package: nope",
 		);
 		expect(ps.getCalls()).toEqual([]);
@@ -41,13 +41,13 @@ describe("test", () => {
 	it("fails when bun test fails", async () => {
 		ps.exit(1); // FakePs returns this exit code from every spawn
 
-		await expect(test(fs, ps, { package: "" })).rejects.toThrow("Tests failed");
+		await expect(test({ package: "" }, fs, ps)).rejects.toThrow("Tests failed");
 	});
 
 	it("climbs to the workspace root when run from inside a package", async () => {
 		ps.setCwd("/tree/packages/log");
 
-		await test(fs, ps, { package: "log" });
+		await test({ package: "log" }, fs, ps);
 
 		expect(ps.getCallDirs()).toEqual(["/tree"]);
 	});
@@ -58,7 +58,7 @@ describe("test", () => {
 		await fs.mkdir("/worktree/packages/log");
 		ps.setCwd("/worktree");
 
-		await test(fs, ps, { package: "log" });
+		await test({ package: "log" }, fs, ps);
 
 		expect(ps.getCallDirs()).toEqual(["/worktree"]);
 	});
@@ -67,7 +67,7 @@ describe("test", () => {
 		await fs.mkdir("/loose/packages/log");
 		ps.setCwd("/loose");
 
-		await test(fs, ps, { package: "log" });
+		await test({ package: "log" }, fs, ps);
 
 		expect(ps.getCallDirs()).toEqual(["/loose"]);
 	});
@@ -76,7 +76,7 @@ describe("test", () => {
 		await fs.write("/tree/packages/log/package.json", '{"name": "log"}');
 		ps.setCwd("/tree/packages/log");
 
-		await test(fs, ps, { package: "log" });
+		await test({ package: "log" }, fs, ps);
 
 		expect(ps.getCallDirs()).toEqual(["/tree"]);
 	});

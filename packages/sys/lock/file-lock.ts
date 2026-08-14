@@ -3,8 +3,8 @@ import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import { Duration, sleep } from "@webappwiz/time";
 import type { Fs } from "../fs/fs";
 import { NodeFs } from "../fs/node-fs";
-import type { Ps } from "../ps/ps";
 import { NodePs } from "../ps/node-ps";
+import type { Ps } from "../ps/ps";
 import type { Lock } from "./lock";
 
 interface Holder {

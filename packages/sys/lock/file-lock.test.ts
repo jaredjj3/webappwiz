@@ -34,8 +34,8 @@ describe("FileLock", () => {
 
 	it("blocks a second acquire until the first releases", async () => {
 		const order: string[] = [];
-		const first = new FileLock(fs, ps, log, path, { pollMs: 10 });
-		const second = new FileLock(fs, ps, log, path, { pollMs: 10 });
+		const first = new FileLock(path, fs, ps, log, { pollMs: 10 });
+		const second = new FileLock(path, fs, ps, log, { pollMs: 10 });
 
 		await first.acquire();
 		order.push("first-in");
@@ -69,7 +69,7 @@ describe("FileLock", () => {
 		);
 		ps.kill(dead);
 
-		const lock = new FileLock(fs, ps, log, path, { pollMs: 10 });
+		const lock = new FileLock(path, fs, ps, log, { pollMs: 10 });
 		await lock.acquire();
 
 		expect(
@@ -91,7 +91,7 @@ describe("FileLock", () => {
 			}),
 		);
 
-		const lock = new FileLock(fs, ps, log, path, {
+		const lock = new FileLock(path, fs, ps, log, {
 			stalenessMs: 50,
 			pollMs: 10,
 		});
@@ -104,7 +104,7 @@ describe("FileLock", () => {
 	});
 
 	it("removes the lock and exits on SIGINT", async () => {
-		await new FileLock(fs, ps, log, path, { pollMs: 10 }).acquire();
+		await new FileLock(path, fs, ps, log, { pollMs: 10 }).acquire();
 		expect(await fs.exists(path)).toBe(true);
 
 		ps.dispatch("SIGINT");
@@ -114,14 +114,14 @@ describe("FileLock", () => {
 	});
 
 	it("removes a lock nobody released on process exit", async () => {
-		await new FileLock(fs, ps, log, path, { pollMs: 10 }).acquire();
+		await new FileLock(path, fs, ps, log, { pollMs: 10 }).acquire();
 		ps.dispatch("exit");
 
 		expect(await fs.exists(path)).toBe(false);
 	});
 
 	it("leaves a lock held by another process alone when calling releaseIfOurs", async () => {
-		const other = new FileLock(fs, ps, log, path, { pollMs: 10 });
+		const other = new FileLock(path, fs, ps, log, { pollMs: 10 });
 		await other.acquire();
 		await fs.write(
 			`${path}/holder.json`,
@@ -132,7 +132,7 @@ describe("FileLock", () => {
 			}),
 		);
 
-		await new FileLock(fs, ps, log, path, { pollMs: 10 }).releaseIfOurs();
+		await new FileLock(path, fs, ps, log, { pollMs: 10 }).releaseIfOurs();
 
 		expect(await fs.exists(path)).toBe(true);
 		await other.release();

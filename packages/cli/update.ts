@@ -22,6 +22,7 @@ export interface UpdateOptions {
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
  */
+// judge-ignore named-options-last: the trailing parameters are optional dependencies, so they must follow the options object rather than precede it
 export async function update(
 	opts: UpdateOptions,
 	log?: Logger,

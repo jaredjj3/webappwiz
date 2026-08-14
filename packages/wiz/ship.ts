@@ -9,6 +9,7 @@ export interface ShipOptions {
 }
 
 /** Releases every package in the workspace together, at one version. */
+// judge-ignore named-options-last: the trailing parameters are optional dependencies, so they must follow the options object rather than precede it
 export async function ship(
 	release: Ship,
 	fix: Fix,

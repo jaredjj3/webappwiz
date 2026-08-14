@@ -46,15 +46,7 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 	// rule set is shared, with `wiz fix` enforcing the rules that carry a check
 	// and `judge` the ones only an agent can decide, so neither owns it.
 	const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
-		new JudgeCommands(
-			WEBAPPWIZ_RULES,
-			SIGNOFF_RULES,
-			log,
-			fs,
-			ps,
-			clock,
-			glob,
-		);
+		new JudgeCommands(WEBAPPWIZ_RULES, SIGNOFF_RULES, log, fs, ps, clock, glob);
 
 	app
 		.command("judge")
@@ -121,13 +113,9 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 			description: "confirm before reading more than this many tokens",
 		})
 		.action((opts, { log, ps, clock }) =>
-			new Signoff(
-				SIGNOFF_RULES,
-				WEBAPPWIZ_RULES.agent,
-				log,
-				ps,
-				clock,
-			).run(opts),
+			new Signoff(SIGNOFF_RULES, WEBAPPWIZ_RULES.agent, log, ps, clock).run(
+				opts,
+			),
 		);
 
 	const rules = app

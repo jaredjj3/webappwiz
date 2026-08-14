@@ -11,8 +11,8 @@ describe("workspace", () => {
 
 	it("climbs to the manifest that declares the workspaces", async () => {
 		const workspace = await ManifestWorkspace.at(
-			harness.fs,
 			"/repo/packages/one",
+			harness.fs,
 		);
 
 		expect(workspace.root).toBe("/repo");
@@ -20,7 +20,7 @@ describe("workspace", () => {
 
 	it("says so when nothing above is a workspace", async () => {
 		await expect(
-			ManifestWorkspace.at(harness.fs, "/elsewhere"),
+			ManifestWorkspace.at("/elsewhere", harness.fs),
 		).rejects.toThrow("no workspace above /elsewhere");
 	});
 

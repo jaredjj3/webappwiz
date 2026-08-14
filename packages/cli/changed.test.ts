@@ -12,7 +12,7 @@ describe("changed", () => {
 	it("asks git about the ref and about files git has never seen", async () => {
 		ps.setCaptureOutput("", "");
 
-		await changed(ps, "/p", "main");
+		await changed("/p", "main", ps);
 
 		expect(ps.getCalls()).toEqual([
 			"git -C /p diff --name-only --diff-filter=d --relative main",
@@ -23,7 +23,7 @@ describe("changed", () => {
 	it("names files the way a rule's glob does, relative to the directory", async () => {
 		ps.setCaptureOutput("src/a.ts\nsrc/b.ts\n", "");
 
-		expect([...(await changed(ps, "/p", "main"))]).toEqual([
+		expect([...(await changed("/p", "main", ps))]).toEqual([
 			"src/a.ts",
 			"src/b.ts",
 		]);
@@ -32,20 +32,20 @@ describe("changed", () => {
 	it("counts a file once when it is both changed and untracked", async () => {
 		ps.setCaptureOutput("src/a.ts\n", "");
 
-		expect((await changed(ps, "/p", "main")).size).toBe(1);
+		expect((await changed("/p", "main", ps)).size).toBe(1);
 	});
 
 	it("is empty when git reports nothing", async () => {
 		ps.setCaptureOutput("\n", "");
 
-		expect((await changed(ps, "/p", "main")).size).toBe(0);
+		expect((await changed("/p", "main", ps)).size).toBe(0);
 	});
 
 	it("fails loudly when the ref is not one git knows", async () => {
 		ps.exit(128);
 		ps.setCaptureOutput("", "fatal: bad revision 'nope'");
 
-		expect(changed(ps, "/p", "nope")).rejects.toThrow(
+		expect(changed("/p", "nope", ps)).rejects.toThrow(
 			"git diff failed in /p: fatal: bad revision 'nope'",
 		);
 	});

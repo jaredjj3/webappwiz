@@ -6,11 +6,8 @@ export interface TestOptions {
 	package: string;
 }
 
-export async function test(
-	opts: TestOptions,
-	fs?: Fs,
-	ps?: Ps,
-): Promise<void> {
+// judge-ignore named-options-last: the trailing parameters are optional dependencies, so they must follow the options object rather than precede it
+export async function test(opts: TestOptions, fs?: Fs, ps?: Ps): Promise<void> {
 	const files = fs ?? new NodeFs();
 	const proc = ps ?? new NodePs();
 	// the tree you are standing in, not the one `wiz` was installed from: a git

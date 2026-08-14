@@ -35,7 +35,7 @@ describe("check", () => {
 		ps.setCaptureOutput("a.ts\n", "");
 		await fs.write("a.ts", "export class A {}\n");
 
-		expect(await new Check(log, fs, ps, new NodeGlob(), [oneClass]).run()).toBe(
+		expect(await new Check([oneClass], log, fs, ps, new NodeGlob()).run()).toBe(
 			true,
 		);
 		expect(ps.getCalls()).toEqual(["git ls-files"]);
@@ -46,7 +46,7 @@ describe("check", () => {
 		ps.setCaptureOutput("a.ts\n", "");
 		await fs.write("a.ts", "class A {}\nclass B {}\n");
 
-		expect(await new Check(log, fs, ps, new NodeGlob(), [oneClass]).run()).toBe(
+		expect(await new Check([oneClass], log, fs, ps, new NodeGlob()).run()).toBe(
 			false,
 		);
 		expect(log.entries).toHaveLength(1);
@@ -56,7 +56,7 @@ describe("check", () => {
 	it("never reads a file no rule wants", async () => {
 		ps.setCaptureOutput("a.png\n", "");
 
-		expect(await new Check(log, fs, ps, new NodeGlob(), [oneClass]).run()).toBe(
+		expect(await new Check([oneClass], log, fs, ps, new NodeGlob()).run()).toBe(
 			true,
 		);
 	});
@@ -65,7 +65,7 @@ describe("check", () => {
 		ps.exit(1);
 
 		await expect(
-			new Check(log, fs, ps, new NodeGlob(), [oneClass]).run(),
+			new Check([oneClass], log, fs, ps, new NodeGlob()).run(),
 		).rejects.toThrow("git ls-files");
 	});
 });
