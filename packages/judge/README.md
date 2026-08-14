@@ -115,11 +115,10 @@ name one:
 - `named-options-last` (`code-then-agent`): an options object goes last and
   its type is named; the check sees an options parameter that is neither, the
   agent judges parameters that should have been one.
-- `tests-read-like-sentences` (`code-then-agent`): one describe per test
-  file, titles completing "it ..."; the check counts the describes, the agent
-  reads the titles.
-- `simple-test-setup` (`code-then-agent`): a test file opens on what is
-  tested; the check sees tests a loop generates, the agent judges the rest.
+- `simple-test-setup` (`code-then-agent`): one describe per test file, titles
+  completing "it ...", setup behind `beforeEach` or a harness; the check
+  counts the describes and sees tests a loop generates, the agent reads the
+  titles and judges the setup.
 - `fakes-over-mocks`, `comments-say-why-not-what`,
   `doc-comments-address-users`, `one-dir-per-interface`,
   `reactive-over-use-state`, `dev-servers-find-a-port`: `agent`.

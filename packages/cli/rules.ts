@@ -13,7 +13,6 @@ import {
 	ParametersDeclareFields,
 	ReactiveOverUseState,
 	SimpleTestSetup,
-	TestsReadLikeSentences,
 } from "@webappwiz/judge";
 
 /**
@@ -33,7 +32,6 @@ export const WEBAPPWIZ_RULES = defineJudge({
 		new ClassesOverFunctionExports(),
 		new ObjectsOverCallbacks(),
 		new NamedOptionsLast(),
-		new TestsReadLikeSentences(),
 		new SimpleTestSetup(),
 		new FakesOverMocks(),
 		new CommentsSayWhyNotWhat(),

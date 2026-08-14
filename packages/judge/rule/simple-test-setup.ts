@@ -10,15 +10,19 @@ export class SimpleTestSetup implements Rule {
 		SyntaxKind.DoKeyword,
 	]);
 	private static readonly TESTS = new Set(["it", "test"]);
-	private static readonly MESSAGE =
+	private static readonly DESCRIBES = new Set(["describe"]);
+	private static readonly LOOPED =
 		"test registered by a loop: write each test out so it reads on its own";
+	private static readonly REPEATED =
+		"more than one describe call in this file: a test file makes exactly one";
 
 	readonly id = "simple-test-setup";
 	readonly files = "**/*.test.ts";
 	readonly level = "error";
 	readonly document = doc;
-	// The check sees tests a loop generates, which are certain. Whether setup
-	// drowns the behavior under test still needs the agent.
+	// The check sees tests a loop generates and every describe after the first,
+	// which are certain. Whether a title completes "it ..." naturally, and
+	// whether setup drowns the behavior under test, still need the agent.
 
 	check({ text }: FileText): Verdict {
 		const all = tokens(text);
@@ -26,6 +30,7 @@ export class SimpleTestSetup implements Rule {
 		// The token stream is flat, so the only way to know a loop body ended is
 		// the depth its opening brace sat at coming back around.
 		const loops: number[] = [];
+		let describes = 0;
 		for (const [i, token] of all.entries()) {
 			if (
 				token.kind === SyntaxKind.CloseBraceToken &&
@@ -37,8 +42,17 @@ export class SimpleTestSetup implements Rule {
 				if (body !== null) {
 					loops.push(body);
 				}
-			} else if (loops.length > 0 && this.isTestCall(all, i)) {
-				found.push(new Hit(token.line, token.column, SimpleTestSetup.MESSAGE));
+			} else if (this.isCall(all, i, SimpleTestSetup.DESCRIBES)) {
+				if (describes++ > 0) {
+					found.push(
+						new Hit(token.line, token.column, SimpleTestSetup.REPEATED),
+					);
+				}
+			} else if (
+				loops.length > 0 &&
+				this.isCall(all, i, SimpleTestSetup.TESTS)
+			) {
+				found.push(new Hit(token.line, token.column, SimpleTestSetup.LOOPED));
 			}
 		}
 		return { findings: found, escalate: true };
@@ -68,13 +82,13 @@ export class SimpleTestSetup implements Rule {
 		return body?.kind === SyntaxKind.OpenBraceToken ? body.depth : null;
 	}
 
-	/** Whether the token at `at` registers a test, `it(` and modified forms
-	 * like `it.each(` alike. */
-	private isTestCall(all: Token[], at: number): boolean {
+	/** Whether the token at `at` calls one of `names`, `it(` and modified forms
+	 * like `it.each(` or `describe.concurrent(` alike. */
+	private isCall(all: Token[], at: number, names: Set<string>): boolean {
 		const token = all[at];
 		if (
 			token?.kind !== SyntaxKind.Identifier ||
-			!SimpleTestSetup.TESTS.has(token.text) ||
+			!names.has(token.text) ||
 			all[at - 1]?.kind === SyntaxKind.DotToken
 		) {
 			return false;

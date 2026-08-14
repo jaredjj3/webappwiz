@@ -31,6 +31,5 @@ export { ParametersDeclareFields } from "./rule/parameters-declare-fields";
 export { ReactiveOverUseState } from "./rule/reactive-over-use-state";
 export type { FileText, Rule, Verdict } from "./rule/rule";
 export { SimpleTestSetup } from "./rule/simple-test-setup";
-export { TestsReadLikeSentences } from "./rule/tests-read-like-sentences";
 export { RuleDocument } from "./rule-document";
 export { SyntaxKind, type Token, tokens } from "./scan";
