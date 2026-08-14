@@ -1,9 +1,4 @@
-export class AssertError extends Error {
-	constructor(message?: string) {
-		super(message ?? "assertion failed");
-		this.name = "AssertError";
-	}
-}
+import { AssertError } from "./assert-error";
 
 /**
  * Assertions that narrow the type of what they are given, for the invariants a

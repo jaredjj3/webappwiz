@@ -93,6 +93,10 @@
         "@webappwiz/disposable": "workspace:*",
       },
     },
+    "packages/geometry": {
+      "name": "@webappwiz/geometry",
+      "version": "0.0.0",
+    },
     "packages/http": {
       "name": "@webappwiz/http",
       "version": "0.0.0",
@@ -338,6 +342,8 @@
     "@webappwiz/disposable": ["@webappwiz/disposable@workspace:packages/disposable"],
 
     "@webappwiz/events": ["@webappwiz/events@workspace:packages/events"],
+
+    "@webappwiz/geometry": ["@webappwiz/geometry@workspace:packages/geometry"],
 
     "@webappwiz/http": ["@webappwiz/http@workspace:packages/http"],
 

@@ -1,0 +1,9 @@
+{
+	"name": "@webappwiz/geometry",
+	"version": "0.0.0",
+	"type": "module",
+	"module": "index.ts",
+	"exports": {
+		".": "./index.ts"
+	}
+}

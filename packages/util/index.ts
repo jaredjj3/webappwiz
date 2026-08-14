@@ -1,7 +1,8 @@
 // judge-ignore-file one-dir-per-interface: this is the package entry point named in
 // package.json exports, not a barrel sitting inside an interface's directory
 export { aborts } from "./aborts";
-export { AssertError, assert } from "./assert";
+export { assert } from "./assert";
+export { AssertError } from "./assert-error";
 export { type ClassValue, cx } from "./cx";
 export { Debouncer } from "./debouncer";
 export { ensure } from "./ensure";

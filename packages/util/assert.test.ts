@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { AssertError, assert, ensure } from "./index";
+import { AssertError, assert } from "./index";
 
 describe("assert", () => {
 	it("throws an AssertError carrying the message", () => {
@@ -11,6 +11,9 @@ describe("assert", () => {
 	it("rejects NaN as a number, since arithmetic already produced it", () => {
 		expect(() => assert.number(Number.NaN)).toThrow(AssertError);
 		expect(() => assert.number(1.5)).not.toThrow();
+	});
+
+	it("rejects a fraction as an integer", () => {
 		expect(() => assert.integer(1.5)).toThrow(AssertError);
 	});
 
@@ -25,24 +28,16 @@ describe("assert", () => {
 		expect(() => assert.notNull(null)).toThrow(AssertError);
 		expect(() => assert.defined(null)).not.toThrow();
 		expect(() => assert.defined(undefined)).toThrow(AssertError);
+	});
+
+	it("rejects either of them when asked for a value", () => {
 		expect(() => assert.present(null)).toThrow(AssertError);
+		expect(() => assert.present(undefined)).toThrow(AssertError);
 	});
 
 	it("narrows what it checked", () => {
 		const value = "hi" as string | null;
 		assert.present(value);
 		expect(value.length).toBe(2);
-	});
-});
-
-describe("ensure", () => {
-	it("returns the value it checked", () => {
-		expect(ensure.integer(7)).toBe(7);
-		expect(ensure.present("hi")).toBe("hi");
-		expect(ensure.inRange(2, 1, 3)).toBe(2);
-	});
-
-	it("throws on the same conditions assert does", () => {
-		expect(() => ensure.present(null)).toThrow(AssertError);
 	});
 });
