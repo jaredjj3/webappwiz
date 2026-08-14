@@ -130,6 +130,7 @@ describe("report", () => {
 			"  reading   589K+ tokens",
 			"  cost      $1.23+",
 			"  agent     claude -p --model haiku",
+			"",
 		]);
 	});
 
@@ -143,6 +144,7 @@ describe("report", () => {
 			"  calls     52",
 			"  reading   589K+ tokens",
 			"  agent     claude -p --model haiku",
+			"",
 		]);
 	});
 
@@ -169,6 +171,7 @@ describe("report", () => {
 			"  rules     7",
 			"  calls     52",
 			"  reading   589K+ tokens",
+			"",
 		]);
 	});
 

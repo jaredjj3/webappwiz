@@ -87,7 +87,6 @@ export function estimate(
 	}
 	return [
 		...planned({ files, rules, calls, estimate: tokens }),
-		"",
 		...table(rows).map((line) => `  ${line}`),
 		"",
 		color.gray(
@@ -159,9 +158,10 @@ export function planned({
 	if (agent !== undefined) {
 		rows.push([color.dim("agent"), agent]);
 	}
-	// A blank line first: this is the top of everything a run prints, and it
-	// wants air between the table and whatever the shell left above it.
-	return ["", ...table(rows).map((line) => `  ${line}`)];
+	// A blank line either side: this is the top of everything a run prints, and
+	// it wants air between the table, whatever the shell left above it, and the
+	// findings that follow.
+	return ["", ...table(rows).map((line) => `  ${line}`), ""];
 }
 
 /** A finished task as the report prints it: what the call covered, what it
