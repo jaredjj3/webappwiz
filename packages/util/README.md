@@ -60,21 +60,9 @@ const debouncer = new Debouncer(new SystemTimer(), Duration.ms(300));
 input.addEventListener("input", () => debouncer.call(() => search(input.value)));
 ```
 
-A `TaskQueue` is the same idea one level up: somewhere to say "this needs doing
-again" without saying when.
-
-```ts
-import { ConflatedTaskQueue } from "@webappwiz/util";
-
-const queue = new ConflatedTaskQueue(() => save(document));
-editor.on("change", () => queue.trigger());
-```
-
-`ConflatedTaskQueue` collapses triggers arriving during a run into one rerun,
-so work asked for a hundred times happens twice: now, and once with the latest
-state. `DebouncedTaskQueue` and `ThrottledTaskQueue` take a `Debouncer` or
-`Throttler` and pace it that way instead. `@webappwiz/browser` adds a
-`RafTaskQueue` that runs on animation frames.
+`@webappwiz/task` is the same idea one level up: somewhere to say "this needs
+doing again" without saying when. Its queues take a `Debouncer` or a
+`Throttler` to decide how a burst of triggers becomes runs.
 
 ## Ids
 

@@ -1,18 +1,17 @@
 {
-	"name": "@webappwiz/browser",
+	"name": "@webappwiz/task",
 	"version": "0.0.0",
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts",
-		"./dom": "./dom.ts"
+		"./browser": "./browser.ts"
 	},
 	"dependencies": {
+		"@webappwiz/browser": "workspace:*",
 		"@webappwiz/disposable": "workspace:*",
 		"@webappwiz/events": "workspace:*",
-		"@webappwiz/time": "workspace:*"
-	},
-	"devDependencies": {
-		"@happy-dom/global-registrator": "^20.3.1"
+		"@webappwiz/time": "workspace:*",
+		"@webappwiz/util": "workspace:*"
 	}
 }

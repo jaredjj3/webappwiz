@@ -18,7 +18,6 @@ export {
 } from "./device";
 export { download } from "./download";
 export { type Frame, raf } from "./raf";
-export { RafTaskQueue } from "./raf-task-queue";
 export {
 	type RevealOptions,
 	Scroll,

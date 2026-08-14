@@ -1,6 +1,6 @@
 import type { Disposable } from "@webappwiz/disposable";
 import { Dispatcher } from "@webappwiz/events";
-import type { Debouncer } from "../debouncer";
+import type { Debouncer } from "@webappwiz/util";
 import type {
 	Task,
 	TaskQueue,

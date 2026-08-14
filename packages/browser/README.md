@@ -49,19 +49,16 @@ the viewport says otherwise.
 ## Frames
 
 ```ts
-import { AnimationLoop, RafTaskQueue, raf } from "@webappwiz/browser";
+import { AnimationLoop, raf } from "@webappwiz/browser";
 
 const loop = new AnimationLoop(clock);
 loop.events.on("frame", ({ dt }) => cursor.advance(dt));
 loop.start();
-
-const queue = new RafTaskQueue(clock, () => redraw());
-element.addEventListener("pointermove", () => queue.trigger());
 ```
 
 `raf` is one frame, awaitable and cancellable. `AnimationLoop` keeps asking for
-the next one. `RafTaskQueue` is the `TaskQueue` of `@webappwiz/util` paced by
-frames, so work triggered by a stream of events happens once per frame at most.
+the next one. For work that a stream of events triggers, `RafTaskQueue` in
+`@webappwiz/task/browser` paces it to one run per frame.
 
 ## Observers
 

@@ -1,12 +1,8 @@
+import { type Frame, raf } from "@webappwiz/browser";
 import { type Disposable, Disposer } from "@webappwiz/disposable";
 import type { Clock } from "@webappwiz/time";
-import {
-	ConflatedTaskQueue,
-	type Task,
-	type TaskQueue,
-	type TaskQueueState,
-} from "@webappwiz/util";
-import { type Frame, raf } from "./raf";
+import { ConflatedTaskQueue } from "./task-queue/conflated-task-queue";
+import type { Task, TaskQueue, TaskQueueState } from "./task-queue/task-queue";
 
 /**
  * A `TaskQueue` that runs its task on an animation frame, so work triggered by

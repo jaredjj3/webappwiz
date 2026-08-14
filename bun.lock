@@ -61,7 +61,6 @@
         "@webappwiz/disposable": "workspace:*",
         "@webappwiz/events": "workspace:*",
         "@webappwiz/time": "workspace:*",
-        "@webappwiz/util": "workspace:*",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.3.1",
@@ -197,6 +196,17 @@
     "packages/t": {
       "name": "@webappwiz/t",
       "version": "0.0.0",
+    },
+    "packages/task": {
+      "name": "@webappwiz/task",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/browser": "workspace:*",
+        "@webappwiz/disposable": "workspace:*",
+        "@webappwiz/events": "workspace:*",
+        "@webappwiz/time": "workspace:*",
+        "@webappwiz/util": "workspace:*",
+      },
     },
     "packages/time": {
       "name": "@webappwiz/time",
@@ -396,6 +406,8 @@
     "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
 
     "@webappwiz/t": ["@webappwiz/t@workspace:packages/t"],
+
+    "@webappwiz/task": ["@webappwiz/task@workspace:packages/task"],
 
     "@webappwiz/time": ["@webappwiz/time@workspace:packages/time"],
 
