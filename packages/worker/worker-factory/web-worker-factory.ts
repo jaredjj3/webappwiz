@@ -34,6 +34,7 @@ export class WebWorkerFactory<Input, Output>
 	private readonly readyTimeout: Duration;
 	private readonly ackTimeout: Duration;
 
+	// judge-ignore objects-over-callbacks: `construct` is a Worker constructor, which is exactly what a bundler's `?worker` import hands you; an interface around it would be a file that says `new`
 	constructor(
 		private readonly construct: new () => globalThis.Worker,
 		private readonly ids: IdProvider,
