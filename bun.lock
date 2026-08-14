@@ -114,6 +114,7 @@
       "dependencies": {
         "@webappwiz/disposable": "workspace:*",
         "@webappwiz/events": "workspace:*",
+        "@webappwiz/util": "workspace:*",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.3.1",
@@ -177,6 +178,15 @@
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/disposable": "workspace:*",
+      },
+    },
+    "packages/util": {
+      "name": "@webappwiz/util",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/disposable": "workspace:*",
+        "@webappwiz/events": "workspace:*",
+        "@webappwiz/time": "workspace:*",
       },
     },
     "packages/wiz": {
@@ -348,6 +358,8 @@
     "@webappwiz/t": ["@webappwiz/t@workspace:packages/t"],
 
     "@webappwiz/time": ["@webappwiz/time@workspace:packages/time"],
+
+    "@webappwiz/util": ["@webappwiz/util@workspace:packages/util"],
 
     "ansi-regex": ["ansi-regex@5.0.1", "", {}, "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ=="],
 

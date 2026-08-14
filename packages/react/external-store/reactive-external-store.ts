@@ -1,6 +1,6 @@
 import { Disposer } from "@webappwiz/disposable";
 import type { Eventful, EventMapOf } from "@webappwiz/events";
-import { shallowEqual } from "../shallow-equal";
+import { shallowEqual } from "@webappwiz/util";
 import type { ExternalStore } from "./external-store";
 
 /**

@@ -9,7 +9,8 @@
 	},
 	"dependencies": {
 		"@webappwiz/disposable": "workspace:*",
-		"@webappwiz/events": "workspace:*"
+		"@webappwiz/events": "workspace:*",
+		"@webappwiz/util": "workspace:*"
 	},
 	"peerDependencies": {
 		"react": "^19"
