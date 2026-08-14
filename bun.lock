@@ -165,6 +165,13 @@
         "@webappwiz/sys": "workspace:*",
       },
     },
+    "packages/store": {
+      "name": "@webappwiz/store",
+      "version": "0.0.0",
+      "dependencies": {
+        "@webappwiz/time": "workspace:*",
+      },
+    },
     "packages/sys": {
       "name": "@webappwiz/sys",
       "version": "0.0.0",
@@ -358,6 +365,8 @@
     "@webappwiz/rules": ["@webappwiz/rules@workspace:packages/rules"],
 
     "@webappwiz/ship": ["@webappwiz/ship@workspace:packages/ship"],
+
+    "@webappwiz/store": ["@webappwiz/store@workspace:packages/store"],
 
     "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
 
