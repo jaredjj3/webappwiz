@@ -13,7 +13,7 @@ const ship = new Ship(
 	new Git(workspace.root),
 	new Registry(),
 	new Github(),
-	log,
+	{ log },
 );
 
 const plan = await ship.plan("patch");
