@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 // `screen` is deliberately unused: it binds to `document.body` when this module
 // is imported, which happens before `./dom` registers one. The queries that
 // `render` hands back bind on call instead.
-import "./dom";
+import "@webappwiz/browser/dom";
 import { Markdown } from "./markdown";
 
 describe("Markdown", () => {

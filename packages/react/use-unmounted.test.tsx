@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import { renderHook } from "@testing-library/react";
-import "./dom";
+import "@webappwiz/browser/dom";
 import { useUnmounted } from "./use-unmounted";
 
 describe("useUnmounted", () => {

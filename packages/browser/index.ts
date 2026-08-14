@@ -1,0 +1,31 @@
+// judge-ignore-file one-dir-per-interface: this is the package entry point named in
+// package.json exports, not a barrel sitting inside an interface's directory
+export {
+	AnimationLoop,
+	type AnimationLoopEventMap,
+} from "./animation-loop";
+export type {
+	BackgroundObserver,
+	BackgroundObserverEventMap,
+} from "./background-observer/background-observer";
+export { WindowBackgroundObserver } from "./background-observer/window-background-observer";
+export {
+	type BrowserName,
+	Device,
+	type DeviceOptions,
+	type Os,
+} from "./device";
+export { download } from "./download";
+export { type Frame, raf } from "./raf";
+export { RafTaskQueue } from "./raf-task-queue";
+export {
+	type RevealOptions,
+	Scroll,
+	type ScrollTarget,
+	scrollBehavior,
+} from "./scroll";
+export type {
+	UserActivationObserver,
+	UserActivationObserverEventMap,
+} from "./user-activation-observer/user-activation-observer";
+export { WindowUserActivationObserver } from "./user-activation-observer/window-user-activation-observer";

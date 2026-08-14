@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { renderHook } from "@testing-library/react";
-import "./dom";
+import "@webappwiz/browser/dom";
 import { useDisposerEffect } from "./use-disposer-effect";
 
 describe("useDisposerEffect", () => {

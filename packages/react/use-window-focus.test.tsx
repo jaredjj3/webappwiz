@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
-import "./dom";
+import "@webappwiz/browser/dom";
 import { useWindowFocus } from "./use-window-focus";
 
 function fire(type: "focus" | "blur"): void {

@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import { renderHook } from "@testing-library/react";
 import { StrictMode } from "react";
-import "./dom";
+import "@webappwiz/browser/dom";
 import { useMounted } from "./use-mounted";
 
 describe("useMounted", () => {
