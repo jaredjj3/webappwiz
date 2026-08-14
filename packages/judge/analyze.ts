@@ -205,9 +205,11 @@ export class Analyzer {
 		}
 		files.sort((left, right) => left.path.localeCompare(right.path));
 		const { escalations } = checker.check(files);
-		const wanted = new Map<Rule, string[]>();
+		// Seeded in rule order, so tasks land in the order the config lists the
+		// rules rather than the order the walk found their files.
+		const wanted = new Map<Rule, string[]>(rules.map((rule) => [rule, []]));
 		for (const { rule, path } of escalations) {
-			wanted.set(rule, [...(wanted.get(rule) ?? []), path]);
+			wanted.get(rule)?.push(path);
 		}
 		for (const rule of rules) {
 			if (!all.some((file) => this.glob.matches(rule.files, file))) {
@@ -219,6 +221,9 @@ export class Analyzer {
 		// task costs, and they are read once, not once per rule.
 		const groups = new Map<string, { rules: Rule[]; files: string[] }>();
 		for (const [rule, escalated] of wanted) {
+			if (escalated.length === 0) {
+				continue;
+			}
 			const key = escalated.join("\n");
 			const group = groups.get(key) ?? { rules: [], files: escalated };
 			group.rules.push(rule);

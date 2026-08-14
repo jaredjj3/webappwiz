@@ -11,7 +11,9 @@ describe("tests-read-like-sentences", () => {
 			'describe("c", () => {});',
 		].join("\n");
 
-		expect(new TestsReadLikeSentences().check({ path: "t.ts", text: text }).findings).toEqual([
+		expect(
+			new TestsReadLikeSentences().check({ path: "t.ts", text: text }).findings,
+		).toEqual([
 			{ line: 2, column: 1, message: expect.stringContaining("exactly one") },
 			{ line: 3, column: 1, message: expect.stringContaining("exactly one") },
 		]);
@@ -21,8 +23,12 @@ describe("tests-read-like-sentences", () => {
 		const one = 'describe.concurrent("a", () => {});';
 		const two = `${one}\ndescribe("b", () => {});`;
 
-		expect(new TestsReadLikeSentences().check({ path: "t.ts", text: one }).findings).toEqual([]);
-		expect(new TestsReadLikeSentences().check({ path: "t.ts", text: two }).findings).toHaveLength(1);
+		expect(
+			new TestsReadLikeSentences().check({ path: "t.ts", text: one }).findings,
+		).toEqual([]);
+		expect(
+			new TestsReadLikeSentences().check({ path: "t.ts", text: two }).findings,
+		).toHaveLength(1);
 	});
 
 	it("ignores describe outside a call: imports, members, strings", () => {
@@ -33,6 +39,8 @@ describe("tests-read-like-sentences", () => {
 			'describe("real", () => {});',
 		].join("\n");
 
-		expect(new TestsReadLikeSentences().check({ path: "t.ts", text: text }).findings).toEqual([]);
+		expect(
+			new TestsReadLikeSentences().check({ path: "t.ts", text: text }).findings,
+		).toEqual([]);
 	});
 });

@@ -5,9 +5,10 @@ import { OneClassPerFile } from "./one-class-per-file";
 // here is where a finding points, and the scanner edges no document should have to teach.
 describe("one-class-per-file", () => {
 	it("points at the second class, not the first", () => {
-		const findings = new OneClassPerFile().check({ path: "t.ts", text: 
-			"class A {}\n\nexport class B {}\n",
-		 }).findings;
+		const findings = new OneClassPerFile().check({
+			path: "t.ts",
+			text: "class A {}\n\nexport class B {}\n",
+		}).findings;
 
 		expect(findings).toEqual([
 			{ line: 3, column: 8, message: expect.stringContaining("own file") },
@@ -23,7 +24,9 @@ describe("one-class-per-file", () => {
 			"export class D {}",
 		].join("\n");
 
-		expect(new OneClassPerFile().check({ path: "t.ts", text: text }).findings).toEqual([]);
+		expect(
+			new OneClassPerFile().check({ path: "t.ts", text: text }).findings,
+		).toEqual([]);
 	});
 
 	it("keeps counting top-level classes after a template substitution", () => {
@@ -34,7 +37,9 @@ describe("one-class-per-file", () => {
 			"class B {}",
 		].join("\n");
 
-		expect(new OneClassPerFile().check({ path: "t.ts", text: text }).findings).toEqual([
+		expect(
+			new OneClassPerFile().check({ path: "t.ts", text: text }).findings,
+		).toEqual([
 			{ line: 3, column: 1, message: expect.stringContaining("own file") },
 		]);
 	});
@@ -48,6 +53,8 @@ describe("one-class-per-file", () => {
 			"}",
 		].join("\n");
 
-		expect(new OneClassPerFile().check({ path: "t.ts", text: text }).findings).toEqual([]);
+		expect(
+			new OneClassPerFile().check({ path: "t.ts", text: text }).findings,
+		).toEqual([]);
 	});
 });

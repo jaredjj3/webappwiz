@@ -40,8 +40,8 @@ describe("Analyzer", () => {
 		);
 
 		expect(tasks.map((task) => [task.label, task.files])).toEqual([
-			["**/*.ts", ["src/a.ts", "src/b.ts"]],
-			["**/*.md", ["README.md"]],
+			["Classes", ["src/a.ts", "src/b.ts"]],
+			["Docs", ["README.md"]],
 		]);
 	});
 
@@ -167,7 +167,7 @@ describe("Analyzer", () => {
 		const violations = await analyzer.analyze([rule("Classes")], "/p", agent);
 
 		expect(violations).toEqual([]);
-		expect(errors()[0]).toBe('agent located no file for "Classes" on **/*.ts');
+		expect(errors()[0]).toBe('agent located no file for "Classes" on Classes');
 	});
 
 	it("hands each task's violations over as its agent returns", async () => {
@@ -184,7 +184,7 @@ describe("Analyzer", () => {
 
 		await analyzer.analyze([rule("Classes")], "/p", agent, { chunk: 1 });
 
-		expect(handed).toEqual(["**/*.ts [Classes] 1/2", "**/*.ts [Classes] 2/2"]);
+		expect(handed).toEqual(["Classes [Classes] 1/2", "Classes [Classes] 2/2"]);
 	});
 
 	it("passes the price the agent reported through to its own event", async () => {

@@ -29,7 +29,7 @@ export { OneClassPerFile } from "./rule/one-class-per-file";
 export { OneDirPerInterface } from "./rule/one-dir-per-interface";
 export { ParametersDeclareFields } from "./rule/parameters-declare-fields";
 export { ReactiveOverUseState } from "./rule/reactive-over-use-state";
-export { type FileText, type Rule, type Verdict } from "./rule/rule";
+export type { FileText, Rule, Verdict } from "./rule/rule";
 export { SimpleTestSetup } from "./rule/simple-test-setup";
 export { TestsReadLikeSentences } from "./rule/tests-read-like-sentences";
 export { RuleDocument } from "./rule-document";

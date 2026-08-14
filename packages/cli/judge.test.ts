@@ -137,7 +137,7 @@ describe("JudgeCommands", () => {
 		);
 
 		expect(commands(oneRule).judge(judging)).rejects.toThrow("1 error");
-		expect(printed()).toContain("✗ [1/1] **/*.ts (1 rule, 1 file): 1 problem");
+		expect(printed()).toContain("✗ [1/1] one (1 rule, 1 file): 1 problem");
 		expect(printed()).toContain(
 			"/p/a.ts:2  error  the file declares a second class (one)",
 		);
@@ -214,7 +214,7 @@ describe("JudgeCommands", () => {
 
 		await commands(oneRule).judge({ ...judging, prompt: true });
 
-		expect(printed()).toContain("=== **/*.ts: one (1 file) ===");
+		expect(printed()).toContain("=== one (1 file) ===");
 		expect(printed()).toContain("exactly 1 rule");
 		expect(printed()).toContain("- a.ts");
 		expect(ps.getCalls()).toEqual([]);
@@ -240,7 +240,7 @@ describe("JudgeCommands", () => {
 
 		// a partial check's rule still needs the agent; a full check's does not,
 		// and the two survivors share their glob's one task
-		expect(printed()).toContain("=== **/*.ts: two, three (1 file) ===");
+		expect(printed()).toContain("=== two, three (1 file) ===");
 		expect(printed()).not.toContain("Rule `one`");
 	});
 
@@ -313,7 +313,7 @@ describe("JudgeCommands", () => {
 			prompt: true,
 		});
 
-		expect(printed()).toContain("=== **/*.ts: one (1 file) ===");
+		expect(printed()).toContain("=== one (1 file) ===");
 		expect(printed()).toContain("- a.ts");
 		expect(printed()).not.toContain("- b.ts");
 	});

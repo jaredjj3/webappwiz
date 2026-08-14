@@ -25,7 +25,9 @@ describe("tests-not-weakened", () => {
 	const rule = new TestsNotWeakened();
 
 	it("stops a deleted test whose subject the change leaves behind", () => {
-		const { findings: found } = rule.check(changeset(deleted("src/parse.test.ts")));
+		const { findings: found } = rule.check(
+			changeset(deleted("src/parse.test.ts")),
+		);
 
 		expect(found).toEqual([
 			{
@@ -95,7 +97,9 @@ describe("tests-not-weakened", () => {
 	});
 
 	it("knows a tsx test from the file it tests", () => {
-		const { findings: found } = rule.check(changeset(deleted("src/app.test.tsx")));
+		const { findings: found } = rule.check(
+			changeset(deleted("src/app.test.tsx")),
+		);
 
 		expect(found[0]?.message).toBe(
 			"test file deleted while src/app.tsx survives",
