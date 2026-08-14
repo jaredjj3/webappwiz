@@ -7,8 +7,8 @@ import { NamedOptionsLast } from "./named-options-last";
 describe("named-options-last", () => {
 	it("points at an options parameter typed in place or left mid-list", () => {
 		const text = [
-			"export function retry(options: Options, task: Task): void {",
-			"\trun((options: { now: boolean }, next: Next) => task(next));",
+			"export function retry(opts: Options, task: Task): void {",
+			"\trun((opts: { now: boolean }, next: Next) => task(next));",
 			"}",
 		].join("\n");
 
@@ -18,6 +18,17 @@ describe("named-options-last", () => {
 			{ line: 1, column: 23, message: expect.stringContaining("goes last") },
 			{ line: 2, column: 7, message: expect.stringContaining("in place") },
 			{ line: 2, column: 7, message: expect.stringContaining("goes last") },
+		]);
+	});
+
+	it("points at an options parameter spelled out in full", () => {
+		const text =
+			"export function write(path: string, options: WriteOptions): void {}";
+
+		expect(
+			new NamedOptionsLast().check({ path: "t.ts", text: text }).findings,
+		).toEqual([
+			{ line: 1, column: 37, message: expect.stringContaining("`opts`") },
 		]);
 	});
 
@@ -43,8 +54,8 @@ describe("named-options-last", () => {
 
 	it("allows options last, past a rest parameter or a type argument", () => {
 		const text = [
-			"function keep(options: Options, ...rest: string[]): void {}",
-			"function label(options: Record<string, string>): void {}",
+			"function keep(opts: Options, ...rest: string[]): void {}",
+			"function label(opts: Record<string, string>): void {}",
 		].join("\n");
 
 		expect(

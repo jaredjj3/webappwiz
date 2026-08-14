@@ -19,7 +19,7 @@ describe("Signoff", () => {
 		{ id: "three", document: ruleDoc("Three") },
 	];
 	const signoff = (confirm?: Confirm) =>
-		new Signoff(rules, "haiku", log, ps, clock, confirm);
+		new Signoff(rules, "haiku", { log, ps, clock, confirmer: confirm });
 	// budget high enough that only the test about budgets ever meets it
 	const weighing = { dir: "/p", since: "main", budget: 1_000_000 };
 	const patch = "diff --git a/a.ts b/a.ts\n+class A {}";
@@ -58,7 +58,7 @@ describe("Signoff", () => {
 	});
 
 	it("says there are none rather than printing nothing", async () => {
-		await new Signoff([], "haiku", log, ps, clock).run({
+		await new Signoff([], "haiku", { log, ps, clock }).run({
 			...weighing,
 			print: true,
 		});

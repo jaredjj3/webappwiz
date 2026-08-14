@@ -40,13 +40,20 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 			default: version,
 			description: "version to pin to",
 		})
-		.action((opts, { log, fs }) => update(opts, log, fs));
+		.action((opts, { log, fs }) => update({ ...opts, log, fs }));
 
 	// `judge` and `rules` are siblings rather than one nested in the other: the
 	// rule set is shared, with `wiz fix` enforcing the rules that carry a check
 	// and `judge` the ones only an agent can decide, so neither owns it.
 	const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
-		new JudgeCommands(WEBAPPWIZ_RULES, SIGNOFF_RULES, log, fs, ps, clock, glob);
+		new JudgeCommands(WEBAPPWIZ_RULES, {
+			signoffRules: SIGNOFF_RULES,
+			log,
+			fs,
+			ps,
+			clock,
+			glob,
+		});
 
 	app
 		.command("judge")
@@ -113,9 +120,11 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 			description: "confirm before reading more than this many tokens",
 		})
 		.action((opts, { log, ps, clock }) =>
-			new Signoff(SIGNOFF_RULES, WEBAPPWIZ_RULES.agent, log, ps, clock).run(
-				opts,
-			),
+			new Signoff(SIGNOFF_RULES, WEBAPPWIZ_RULES.agent, {
+				log,
+				ps,
+				clock,
+			}).run(opts),
 		);
 
 	const rules = app
@@ -144,7 +153,7 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 			default: ".",
 			description: "project to inspect (default: .)",
 		})
-		.action((opts, { log, fs }) => new Skills(log, fs).ls(opts));
+		.action((opts, { log, fs }) => new Skills({ log, fs }).ls(opts));
 
 	skillsGroup
 		.command("add")
@@ -154,7 +163,7 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 			default: ".",
 			description: "project to add it to (default: .)",
 		})
-		.action((opts, { log, fs }) => new Skills(log, fs).add(opts));
+		.action((opts, { log, fs }) => new Skills({ log, fs }).add(opts));
 
 	skillsGroup
 		.command("update")
@@ -163,5 +172,5 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 			default: ".",
 			description: "project to refresh (default: .)",
 		})
-		.action((opts, { log, fs }) => new Skills(log, fs).update(opts));
+		.action((opts, { log, fs }) => new Skills({ log, fs }).update(opts));
 }

@@ -1,15 +1,20 @@
 import { NodePs, type Ps } from "@webappwiz/sys";
 import type { Git } from "./git";
 
+/** What a `CliGit` spawns through; the real process by default. */
+export interface CliGitOptions {
+	ps?: Ps;
+}
+
 /** Speaks git by spawning the CLI. */
 export class CliGit implements Git {
 	private readonly ps: Ps;
 
 	constructor(
 		private readonly root: string,
-		ps?: Ps,
+		opts: CliGitOptions = {},
 	) {
-		this.ps = ps ?? new NodePs();
+		this.ps = opts.ps ?? new NodePs();
 	}
 
 	async clean(): Promise<boolean> {

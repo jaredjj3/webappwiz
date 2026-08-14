@@ -4,22 +4,23 @@ import { type Fs, NodeFs, NodePs, type Ps } from "@webappwiz/sys";
 export interface TestOptions {
 	/** One package to test, by name; empty runs the whole workspace. */
 	package: string;
+	fs?: Fs;
+	ps?: Ps;
 }
 
-// judge-ignore named-options-last: the trailing parameters are optional dependencies, so they must follow the options object rather than precede it
-export async function test(opts: TestOptions, fs?: Fs, ps?: Ps): Promise<void> {
-	const files = fs ?? new NodeFs();
-	const proc = ps ?? new NodePs();
+export async function test(opts: TestOptions): Promise<void> {
+	const fs = opts.fs ?? new NodeFs();
+	const ps = opts.ps ?? new NodePs();
 	// the tree you are standing in, not the one `wiz` was installed from: a git
 	// worktree has its own copy of both, and testing the other one passes while
 	// saying nothing about your work
-	const root = await workspaceRoot(files, proc.cwd());
+	const root = await workspaceRoot(fs, ps.cwd());
 
 	// one run from the root, so bun reports every failure together instead of
 	// scrolling the early packages' errors off the top
 	const filter: string[] = [];
 	if (opts.package !== "") {
-		if (!(await files.exists(`${root}/packages/${opts.package}`))) {
+		if (!(await fs.exists(`${root}/packages/${opts.package}`))) {
 			throw new Error(`no such package: ${opts.package}`);
 		}
 		filter.push(`packages/${opts.package}/`);
@@ -27,7 +28,7 @@ export async function test(opts: TestOptions, fs?: Fs, ps?: Ps): Promise<void> {
 
 	// a worker per file; suites opt into within-file concurrency themselves,
 	// since most still share a fixture built in beforeEach
-	const { exitCode } = await proc.spawn(
+	const { exitCode } = await ps.spawn(
 		["bun", "test", "--pass-with-no-tests", "--parallel", ...filter],
 		{ cwd: root },
 	);

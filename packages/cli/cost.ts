@@ -42,10 +42,18 @@ const FILE = join(".wiz", "judge-cost.json");
  * missing or unreadable file is empty rather than an error: a calibration is a
  * convenience, and losing it costs the caller a worse estimate, not a run.
  */
-export async function overheads(dir: string, fs?: Fs): Promise<Overheads> {
-	const files = fs ?? new NodeFs();
+export interface OverheadsOptions {
+	/** What the record is read through; the real filesystem by default. */
+	fs?: Fs;
+}
+
+export async function overheads(
+	dir: string,
+	opts: OverheadsOptions = {},
+): Promise<Overheads> {
+	const fs = opts.fs ?? new NodeFs();
 	try {
-		const parsed: unknown = JSON.parse(await files.read(join(dir, FILE)));
+		const parsed: unknown = JSON.parse(await fs.read(join(dir, FILE)));
 		if (typeof parsed !== "object" || parsed === null) {
 			return {};
 		}
@@ -64,19 +72,21 @@ export async function overheads(dir: string, fs?: Fs): Promise<Overheads> {
  * `--estimate` has something better than one. Other agents are left alone,
  * since each is a separate measurement.
  */
+export interface CalibrateOptions {
+	/** What the record is written through; the real filesystem by default. */
+	fs?: Fs;
+}
+
 export async function calibrate(
 	dir: string,
 	agent: string,
 	call: number,
-	fs?: Fs,
+	opts: CalibrateOptions = {},
 ): Promise<void> {
-	const files = fs ?? new NodeFs();
-	const recorded = { ...(await overheads(dir, files)), [agent]: call };
-	await files.mkdir(join(dir, ".wiz"));
-	await files.write(
-		join(dir, FILE),
-		`${JSON.stringify(recorded, null, "\t")}\n`,
-	);
+	const fs = opts.fs ?? new NodeFs();
+	const recorded = { ...(await overheads(dir, { fs })), [agent]: call };
+	await fs.mkdir(join(dir, ".wiz"));
+	await fs.write(join(dir, FILE), `${JSON.stringify(recorded, null, "\t")}\n`);
 }
 
 /**

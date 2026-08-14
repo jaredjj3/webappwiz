@@ -39,6 +39,8 @@ export class NamedOptionsLast implements FileRule {
 	private static readonly LAST =
 		"options parameter comes before another parameter: an options object " +
 		"goes last, after what the call cannot omit";
+	private static readonly NAME =
+		"options parameter is named `options`: call it `opts`";
 
 	readonly id = "named-options-last";
 	readonly files = "**/*.ts";
@@ -63,6 +65,9 @@ export class NamedOptionsLast implements FileRule {
 				// settings, and naming it is a different argument to have.
 				if (name === undefined || !NamedOptionsLast.OPTIONS.has(name.text)) {
 					continue;
+				}
+				if (name.text === "options") {
+					found.push(new Hit(name.line, name.column, NamedOptionsLast.NAME));
 				}
 				if (param.inline) {
 					found.push(new Hit(name.line, name.column, NamedOptionsLast.INLINE));

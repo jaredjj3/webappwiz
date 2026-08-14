@@ -7,6 +7,11 @@ import { type Bump, bump } from "../version";
 import type { Workspace } from "../workspace/workspace";
 import type { Ship } from "./ship";
 
+/** Where a `LockstepShip` reports progress; the console by default. */
+export interface LockstepShipOptions {
+	log?: Logger;
+}
+
 /** Releases the whole workspace at one version, in lockstep. */
 export class LockstepShip implements Ship {
 	private readonly log: Logger;
@@ -16,9 +21,9 @@ export class LockstepShip implements Ship {
 		private readonly git: Git,
 		private readonly registry: Registry,
 		private readonly github: Github,
-		log?: Logger,
+		opts: LockstepShipOptions = {},
 	) {
-		this.log = log ?? new ConsoleLogger();
+		this.log = opts.log ?? new ConsoleLogger();
 	}
 
 	async plan(type: Bump): Promise<Plan> {

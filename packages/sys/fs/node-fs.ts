@@ -10,9 +10,9 @@ export class NodeFs implements Fs {
 		);
 	}
 
-	async mkdir(path: string, options?: MkdirOptions): Promise<void> {
+	async mkdir(path: string, opts?: MkdirOptions): Promise<void> {
 		await fs.mkdir(normalize(path), {
-			recursive: options?.recursive ?? true,
+			recursive: opts?.recursive ?? true,
 		});
 	}
 
@@ -36,7 +36,7 @@ export class NodeFs implements Fs {
 		return fs.stat(normalize(path));
 	}
 
-	rm(path: string, options?: RmOptions): Promise<void> {
-		return fs.rm(normalize(path), options);
+	rm(path: string, opts?: RmOptions): Promise<void> {
+		return fs.rm(normalize(path), opts);
 	}
 }

@@ -17,7 +17,14 @@ describe("JudgeCommands", () => {
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
 	const commands = (config: RuleSet, confirm?: Confirm) =>
-		new JudgeCommands(config, [], log, fs, ps, clock, new NodeGlob(), confirm);
+		new JudgeCommands(config, {
+			log,
+			fs,
+			ps,
+			clock,
+			glob: new NodeGlob(),
+			confirmer: confirm,
+		});
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
 	const oneRule = defineRules({ rules: [one()] });
 	// budget high enough that only the tests about budgets ever meet it
@@ -44,15 +51,14 @@ describe("JudgeCommands", () => {
 	});
 
 	it("lists the rules only a reader applies beside the ones a run checks", () => {
-		new JudgeCommands(
-			oneRule,
-			[{ id: "two", document: ruleDoc("Two") }],
+		new JudgeCommands(oneRule, {
+			signoffRules: [{ id: "two", document: ruleDoc("Two") }],
 			log,
 			fs,
 			ps,
 			clock,
-			new NodeGlob(),
-		).ls();
+			glob: new NodeGlob(),
+		}).ls();
 
 		expect(printed()).toContain("one   One    judge");
 		expect(printed()).toContain("two   Two    signoff");

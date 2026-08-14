@@ -21,6 +21,6 @@ export class ShipHarness {
 		this.git,
 		this.registry,
 		this.github,
-		new MemoryLogger(),
+		{ log: new MemoryLogger() },
 	);
 }

@@ -1,14 +1,19 @@
 import { ConsoleLogger } from "./console-logger";
 import type { Logger } from "./logger";
 
+/** What an `MdcLogger` writes through; the console by default. */
+export interface MdcLoggerOptions {
+	log?: Logger;
+}
+
 export class MdcLogger implements Logger {
 	private log: Logger;
 
 	constructor(
 		private context: Record<string, unknown>,
-		log?: Logger,
+		opts: MdcLoggerOptions = {},
 	) {
-		this.log = log ?? new ConsoleLogger();
+		this.log = opts.log ?? new ConsoleLogger();
 	}
 
 	info(message: unknown, ...optionalParams: unknown[]): void {
@@ -20,7 +25,7 @@ export class MdcLogger implements Logger {
 	}
 
 	withContext(context: Record<string, unknown>): MdcLogger {
-		return new MdcLogger({ ...this.context, ...context }, this.log);
+		return new MdcLogger({ ...this.context, ...context }, { log: this.log });
 	}
 
 	private withMdcPrefix(message: unknown): string {

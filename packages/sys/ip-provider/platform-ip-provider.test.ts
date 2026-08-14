@@ -8,6 +8,8 @@ describe("PlatformIpProvider", () => {
 		const ps = new FakePs();
 		ps.platform = "freebsd";
 
-		expect(() => new PlatformIpProvider(ps)).toThrow("Unsupported platform");
+		expect(() => new PlatformIpProvider({ ps: ps })).toThrow(
+			"Unsupported platform",
+		);
 	});
 });

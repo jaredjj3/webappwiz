@@ -13,14 +13,14 @@ describe("DarwinIpProvider", () => {
 	it("reads the trimmed address from ipconfig", async () => {
 		ps.setCaptureOutput("192.168.1.42\n", "");
 
-		expect(await new DarwinIpProvider(ps).get()).toBe("192.168.1.42");
+		expect(await new DarwinIpProvider({ ps: ps }).get()).toBe("192.168.1.42");
 		expect(ps.getCalls()).toEqual(["ipconfig getifaddr en0"]);
 	});
 
 	it("rejects instead of returning an empty address when the output is blank", async () => {
 		ps.setCaptureOutput("  \n", "");
 
-		expect(new DarwinIpProvider(ps).get()).rejects.toThrow(
+		expect(new DarwinIpProvider({ ps: ps }).get()).rejects.toThrow(
 			"no IP address found",
 		);
 	});
@@ -29,6 +29,8 @@ describe("DarwinIpProvider", () => {
 		ps.exit(1);
 		ps.setCaptureOutput("192.168.1.42", "");
 
-		expect(new DarwinIpProvider(ps).get()).rejects.toThrow("failed to get");
+		expect(new DarwinIpProvider({ ps: ps }).get()).rejects.toThrow(
+			"failed to get",
+		);
 	});
 });

@@ -15,6 +15,14 @@ import type { FileRule } from "./rule";
  * finding, `path:line:column rule message`. Only the free half runs here:
  * what the checks escalate is `wiz judge`'s job, on demand.
  */
+/** What a `Check` runs through; the real ones by default. */
+export interface CheckOptions {
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+	glob?: Glob;
+}
+
 export class Check {
 	private readonly log: Logger;
 	private readonly fs: Fs;
@@ -23,15 +31,12 @@ export class Check {
 
 	constructor(
 		private readonly rules: FileRule[],
-		log?: Logger,
-		fs?: Fs,
-		ps?: Ps,
-		glob?: Glob,
+		opts: CheckOptions = {},
 	) {
-		this.log = log ?? new ConsoleLogger();
-		this.fs = fs ?? new NodeFs();
-		this.ps = ps ?? new NodePs();
-		this.glob = glob ?? new NodeGlob();
+		this.log = opts.log ?? new ConsoleLogger();
+		this.fs = opts.fs ?? new NodeFs();
+		this.ps = opts.ps ?? new NodePs();
+		this.glob = opts.glob ?? new NodeGlob();
 	}
 
 	/** True when no rule reported an error. */
@@ -40,7 +45,7 @@ export class Check {
 		if (listed.exitCode !== 0) {
 			throw new Error("git ls-files failed: checks run in a git repository");
 		}
-		const checker = new Checker(this.rules, this.glob);
+		const checker = new Checker(this.rules, { glob: this.glob });
 		const paths = listed.stdout
 			.split("\n")
 			.filter((path) => path !== "" && checker.matches(path));

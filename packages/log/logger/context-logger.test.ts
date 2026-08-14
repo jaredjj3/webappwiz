@@ -10,7 +10,7 @@ describe("MdcLogger", () => {
 	});
 
 	it("prefixes messages with context and merges context with withContext", () => {
-		const logger = new MdcLogger({ foo: "bar" }, memoryLogger);
+		const logger = new MdcLogger({ foo: "bar" }, { log: memoryLogger });
 		const withMoreContext = logger.withContext({ baz: "bam" });
 		const error = new Error("boom");
 
@@ -38,7 +38,7 @@ describe("MdcLogger", () => {
 	it("overrides existing keys when calling withContext", () => {
 		const logger = new MdcLogger(
 			{ foo: "bar", baz: "bam" },
-			memoryLogger,
+			{ log: memoryLogger },
 		).withContext({
 			foo: "updated",
 		});

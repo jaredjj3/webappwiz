@@ -5,7 +5,7 @@ import { LevelPrefixLogger, MemoryLogger } from "../index";
 describe("LevelPrefixLogger", () => {
 	it("prefixes info and error messages by level", () => {
 		const memoryLogger = new MemoryLogger();
-		const logger = new LevelPrefixLogger(memoryLogger);
+		const logger = new LevelPrefixLogger({ log: memoryLogger });
 		const error = new Error("boom");
 
 		logger.info("ready", 1);

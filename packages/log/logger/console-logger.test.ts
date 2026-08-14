@@ -8,7 +8,7 @@ describe("ConsoleLogger", () => {
 
 	beforeEach(() => {
 		out = new FakeConsole();
-		logger = new ConsoleLogger(out);
+		logger = new ConsoleLogger({ out: out });
 	});
 
 	it("forwards info to the console's log", () => {

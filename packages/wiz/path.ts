@@ -8,9 +8,16 @@ const TAG = "# webappwiz";
 const binDir = resolve(import.meta.dirname, "../../bin");
 
 /** Which way to move `bin/`: exactly one of these is set. */
-export interface PathOptions {
+export interface PathRunOptions {
 	add: boolean;
 	remove: boolean;
+}
+
+/** What a `Path` works through; the real ones by default. */
+export interface PathOptions {
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
 }
 
 export class Path {
@@ -18,14 +25,14 @@ export class Path {
 	private readonly fs: Fs;
 	private readonly ps: Ps;
 
-	constructor(log?: Logger, fs?: Fs, ps?: Ps) {
-		this.log = log ?? new ConsoleLogger();
-		this.fs = fs ?? new NodeFs();
-		this.ps = ps ?? new NodePs();
+	constructor(opts: PathOptions = {}) {
+		this.log = opts.log ?? new ConsoleLogger();
+		this.fs = opts.fs ?? new NodeFs();
+		this.ps = opts.ps ?? new NodePs();
 	}
 
 	/** Exactly one of `add` or `remove` must be set; anything else throws. */
-	async run(opts: PathOptions): Promise<void> {
+	async run(opts: PathRunOptions): Promise<void> {
 		if (opts.add === opts.remove) {
 			throw new Error("must specify one of --add or --remove");
 		}

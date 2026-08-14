@@ -87,7 +87,22 @@ export const ask: Confirm = {
 		/^y(es)?$/i.test((prompt(`${question} [y/N]`) ?? "").trim()),
 };
 
+/** What a `JudgeCommands` runs through, and what else it lists. */
+export interface JudgeCommandsOptions {
+	/** Rules only a reader applies, listed beside the ones a run checks. */
+	signoffRules?: Rule[];
+	/** Who is asked before a run goes over budget; the terminal by default. */
+	confirmer?: Confirm;
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+	clock?: Clock;
+	glob?: Glob;
+}
+
 export class JudgeCommands {
+	private signoffRules: Rule[];
+	private confirmer: Confirm;
 	private log: Logger;
 	private fs: Fs;
 	private ps: Ps;
@@ -96,19 +111,15 @@ export class JudgeCommands {
 
 	constructor(
 		private rules: RuleSet,
-		private signoffRules: Rule[] = [],
-		log?: Logger,
-		fs?: Fs,
-		ps?: Ps,
-		clock?: Clock,
-		glob?: Glob,
-		private confirmer: Confirm = ask,
+		opts: JudgeCommandsOptions = {},
 	) {
-		this.log = log ?? new ConsoleLogger();
-		this.fs = fs ?? new NodeFs();
-		this.ps = ps ?? new NodePs();
-		this.clock = clock ?? new SystemClock();
-		this.glob = glob ?? new NodeGlob();
+		this.signoffRules = opts.signoffRules ?? [];
+		this.confirmer = opts.confirmer ?? ask;
+		this.log = opts.log ?? new ConsoleLogger();
+		this.fs = opts.fs ?? new NodeFs();
+		this.ps = opts.ps ?? new NodePs();
+		this.clock = opts.clock ?? new SystemClock();
+		this.glob = opts.glob ?? new NodeGlob();
 	}
 
 	/**
@@ -176,14 +187,14 @@ export class JudgeCommands {
 		const only =
 			opts.since === undefined
 				? undefined
-				: await changed(dir, opts.since, this.ps);
+				: await changed(dir, opts.since, { ps: this.ps });
 		if (only?.size === 0) {
 			// Ahead of planning, so a no-op run says one clear thing rather than
 			// one "matches no files" per rule.
 			this.log.info(`nothing has changed since ${opts.since}`);
 			return;
 		}
-		const files = new Files(this.log, this.fs, this.glob);
+		const files = new Files({ log: this.log, fs: this.fs, glob: this.glob });
 		const tasks = await files.plan(rules, dir, {
 			chunk: opts.chunk,
 			only,
@@ -209,7 +220,7 @@ export class JudgeCommands {
 				rules.length,
 				calls,
 				predicted,
-				await overheads(this.ps.cwd(), this.fs),
+				await overheads(this.ps.cwd(), { fs: this.fs }),
 			)) {
 				this.log.info(line);
 			}
@@ -224,7 +235,7 @@ export class JudgeCommands {
 		// one package of it should leave the measurement where the next run of any
 		// scope will find it.
 		const root = this.ps.cwd();
-		const measured = await overheads(root, this.fs);
+		const measured = await overheads(root, { fs: this.fs });
 		const started = this.clock.now();
 		// Priced whether or not it is over budget: what a run will cost is worth
 		// knowing every time, not only on the runs that trip a limit.
@@ -254,7 +265,11 @@ export class JudgeCommands {
 		let spent = 0;
 		let billed = false;
 		const found: Violation[][] = [];
-		const harness = new Harness(this.log, this.ps, this.clock);
+		const harness = new Harness({
+			log: this.log,
+			ps: this.ps,
+			clock: this.clock,
+		});
 		harness.events.on("finished", (task) => {
 			if (task.cost !== undefined) {
 				spent += task.cost;
@@ -341,7 +356,7 @@ export class JudgeCommands {
 			return;
 		}
 		try {
-			await calibrate(root, agent, call, this.fs);
+			await calibrate(root, agent, call, { fs: this.fs });
 		} catch (error) {
 			this.log.error(`could not record what this run cost: ${error}`);
 		}

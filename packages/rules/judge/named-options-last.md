@@ -6,11 +6,21 @@ has to pass followed by the choices it is making, and a new setting costs one
 more key rather than one more position every existing caller has to count
 past.
 
-Write the options type out and give it a name. An inline object type states
-the shape where nobody else can reach it: a caller cannot declare a value of
-it, an implementation cannot spread it, and a reader learns the settings by
-parsing a signature. A named type sitting beside the function is the one place
-to say what the options are and what each of them means.
+The parameter is named `opts`. Its type is written out and named after what it
+configures: `WriteOptions` for `write`, `FetcherOptions` for `new Fetcher`. An
+inline object type states the shape where nobody else can reach it: a caller
+cannot declare a value of it, an implementation cannot spread it, and a reader
+learns the settings by parsing a signature. A named type sitting beside the
+function is the one place to say what the options are and what each of them
+means.
+
+An optional dependency belongs in `opts` too. A dependency the caller has to
+supply stays a parameter of its own, where the signature can insist on it; one
+that falls back to a real implementation is something the caller is choosing,
+and it sits in `opts` with the rest of what can be left out, resolved in the
+body rather than in the signature. Trailing such a dependency positionally is
+what makes a caller write `undefined` to reach the parameter behind it, and
+these are the parameters callers omit most often.
 
 ## Good
 
@@ -22,8 +32,8 @@ export interface WriteOptions {
 	mode?: number;
 }
 
-export function write(path: string, data: string, options: WriteOptions): void {
-	files.write(path, data, options.encoding ?? "utf8");
+export function write(path: string, data: string, opts: WriteOptions): void {
+	files.write(path, data, opts.encoding ?? "utf8");
 }
 ```
 
@@ -34,9 +44,34 @@ taking every default passes nothing:
 export class Fetcher {
 	constructor(
 		private readonly http: Http,
-		private readonly options: RetryOptions = {},
+		private readonly opts: RetryOptions = {},
 	) {}
 }
+```
+
+Optional dependencies ride in the same object, defaulted in the body, so the
+caller that wants only the setting sets only the setting:
+
+```ts
+export interface ReaderOptions {
+	encoding?: string;
+	fs?: Fs;
+}
+
+export class Reader {
+	private readonly fs: Fs;
+
+	constructor(
+		private readonly path: string,
+		opts: ReaderOptions = {},
+	) {
+		this.fs = opts.fs ?? new NodeFs();
+	}
+}
+
+new Reader("/etc/hosts");
+new Reader("/etc/hosts", { encoding: "latin1" });
+new Reader("/etc/hosts", { fs: new FakeFs() });
 ```
 
 ## Bad
@@ -44,20 +79,13 @@ export class Fetcher {
 Options ahead of the arguments the call cannot omit:
 
 ```ts
-export function write(
-	options: WriteOptions,
-	path: string,
-	data: string,
-): void {}
+export function write(opts: WriteOptions, path: string, data: string): void {}
 ```
 
 The type written in place, so no caller can name what it is passing:
 
 ```ts
-export function write(
-	path: string,
-	options: { encoding?: string; mode?: number },
-): void {}
+export function write(path: string, opts: { encoding?: string; mode?: number }): void {}
 ```
 
 Settings spread across positional parameters, where every call site counts
@@ -71,4 +99,13 @@ export function write(
 	mode: number,
 	append: boolean,
 ): void {}
+```
+
+Optional dependencies trailing the options object, which is what puts
+`undefined` in a call that only wanted the setting after it:
+
+```ts
+export function read(path: string, opts: ReadOptions, fs?: Fs): void {}
+
+read("/etc/hosts", { encoding: "latin1" }, new FakeFs());
 ```

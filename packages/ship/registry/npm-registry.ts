@@ -2,11 +2,16 @@ import { NodePs, type Ps } from "@webappwiz/sys";
 import type { Registry } from "./registry";
 
 /** The npm registry, reached through the npm and bun CLIs. */
+/** What a `NpmRegistry` spawns through; the real process by default. */
+export interface NpmRegistryOptions {
+	ps?: Ps;
+}
+
 export class NpmRegistry implements Registry {
 	private readonly ps: Ps;
 
-	constructor(ps?: Ps) {
-		this.ps = ps ?? new NodePs();
+	constructor(opts: NpmRegistryOptions = {}) {
+		this.ps = opts.ps ?? new NodePs();
 	}
 
 	/** Whether npm has credentials. NPM_TOKEN counts, so a server needs no login. */

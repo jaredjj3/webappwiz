@@ -24,15 +24,21 @@ export interface AddOptions extends ProjectOptions {
 	skill: string;
 }
 
+/** What a `Skills` works through; the real ones by default. */
+export interface SkillsOptions {
+	log?: Logger;
+	fs?: Fs;
+}
+
 /** The `skills` command group: what agent skills there are, and which of them
  * a project holds in `.agents/skills`. */
 export class Skills {
 	private log: Logger;
 	private fs: Fs;
 
-	constructor(log?: Logger, fs?: Fs) {
-		this.log = log ?? new ConsoleLogger();
-		this.fs = fs ?? new NodeFs();
+	constructor(opts: SkillsOptions = {}) {
+		this.log = opts.log ?? new ConsoleLogger();
+		this.fs = opts.fs ?? new NodeFs();
 	}
 
 	/**
@@ -101,7 +107,7 @@ export class Skills {
 		// a copy, not a merge: replacing whatever is there is what makes the
 		// version in a skill's frontmatter mean anything
 		const from = `${source}/${name}`;
-		for await (const file of walk(from, this.fs)) {
+		for await (const file of walk(from, { fs: this.fs })) {
 			const target = `${dir}/.agents/skills/${name}${file.slice(from.length)}`;
 			await this.fs.mkdir(dirname(target));
 			await this.fs.write(target, await this.fs.read(file));

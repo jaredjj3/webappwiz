@@ -29,10 +29,10 @@ describe("Files", () => {
 	const judge = async (
 		rules: FileRule[],
 		dir: string,
-		options: PlanOptions = {},
+		opts: PlanOptions = {},
 	): Promise<Violation[]> => {
-		const tasks = await files.plan(rules, dir, options);
-		const harness = new Harness(log, ps, new FakeClock());
+		const tasks = await files.plan(rules, dir, opts);
+		const harness = new Harness({ log, ps, clock: new FakeClock() });
 		const found: Violation[][] = [];
 		harness.events.on("finished", ({ at, findings }) => {
 			const task = tasks[at];
@@ -48,7 +48,7 @@ describe("Files", () => {
 		fs = new FakeFs();
 		ps = new FakePs();
 		log = new MemoryLogger();
-		files = new Files(log, fs, new NodeGlob());
+		files = new Files({ log: log, fs: fs, glob: new NodeGlob() });
 		await fs.mkdir("/p/src");
 		await fs.write("/p/src/a.ts", "class A {}");
 		await fs.write("/p/src/b.ts", "class B {}");

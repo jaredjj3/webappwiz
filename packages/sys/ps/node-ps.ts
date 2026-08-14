@@ -3,6 +3,11 @@ import { constants, hostname } from "node:os";
 import type { ProcessLike } from "../process-like/process-like";
 import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 
+/** What a `NodePs` speaks to; the running process by default. */
+export interface NodePsOptions {
+	proc?: ProcessLike;
+}
+
 export class NodePs implements Ps {
 	platform: NodeJS.Platform;
 	pid: number;
@@ -10,8 +15,8 @@ export class NodePs implements Ps {
 	args: string[];
 	private readonly proc: ProcessLike;
 
-	constructor(proc?: ProcessLike) {
-		this.proc = proc ?? process;
+	constructor(opts: NodePsOptions = {}) {
+		this.proc = opts.proc ?? process;
 		this.platform = this.proc.platform;
 		this.pid = this.proc.pid;
 		// argv[0] is the runtime and argv[1] the entry point; a cli parses neither

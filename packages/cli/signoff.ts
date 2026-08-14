@@ -15,7 +15,7 @@ import { ask, type Confirm } from "./judge";
 import { mode } from "./mode";
 import { count, divider, overBudget, tokens, usd } from "./report";
 
-export interface SignoffOptions {
+export interface SignoffRunOptions {
 	/** The directory whose change is being weighed. */
 	dir: string;
 	agent?: string;
@@ -39,7 +39,17 @@ export interface SignoffOptions {
  * could not answer them. Exits 1 with a reason when the change needs a person,
  * so it reads the same to a merge gate as to whoever ran it.
  */
+/** What a `Signoff` runs through. */
+export interface SignoffOptions {
+	/** Who is asked before a run goes over budget; the terminal by default. */
+	confirmer?: Confirm;
+	log?: Logger;
+	ps?: Ps;
+	clock?: Clock;
+}
+
 export class Signoff {
+	private confirmer: Confirm;
 	private log: Logger;
 	private ps: Ps;
 	private clock: Clock;
@@ -47,23 +57,21 @@ export class Signoff {
 	constructor(
 		private rules: Rule[],
 		private defaultAgent: string,
-		log?: Logger,
-		ps?: Ps,
-		clock?: Clock,
-		private confirmer: Confirm = ask,
+		opts: SignoffOptions = {},
 	) {
-		this.log = log ?? new ConsoleLogger();
-		this.ps = ps ?? new NodePs();
-		this.clock = clock ?? new SystemClock();
+		this.confirmer = opts.confirmer ?? ask;
+		this.log = opts.log ?? new ConsoleLogger();
+		this.ps = opts.ps ?? new NodePs();
+		this.clock = opts.clock ?? new SystemClock();
 	}
 
-	async run(opts: SignoffOptions): Promise<void> {
+	async run(opts: SignoffRunOptions): Promise<void> {
 		if (mode(opts) === "print") {
 			this.print();
 			return;
 		}
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
-		const { patch, added } = await diff(dir, opts.since, this.ps);
+		const { patch, added } = await diff(dir, opts.since, { ps: this.ps });
 		if (patch === "" && added.length === 0) {
 			this.log.info(`nothing has changed since ${opts.since}`);
 			return;
@@ -96,7 +104,11 @@ export class Signoff {
 		agent: Agent,
 		dir: string,
 	): Promise<Finding[]> {
-		const harness = new Harness(this.log, this.ps, this.clock);
+		const harness = new Harness({
+			log: this.log,
+			ps: this.ps,
+			clock: this.clock,
+		});
 		harness.events.on("finished", ({ took, cost }) => {
 			const spent = cost === undefined ? "" : `  ${usd(cost)}`;
 			this.log.info(color.gray(`read in ${took.human()}${spent}`));

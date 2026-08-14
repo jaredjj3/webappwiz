@@ -260,7 +260,7 @@ describe("cli", () => {
 	it("prints usage through the logger it is run with", () => {
 		const out = new FakeConsole();
 
-		cli("wiz").run({ log: new ConsoleLogger(out), ps }, []);
+		cli("wiz").run({ log: new ConsoleLogger({ out: out }), ps }, []);
 
 		expect(color.strip(out.logged.flat().join("\n"))).toContain(
 			"Usage: wiz <command> [options]",

@@ -24,34 +24,37 @@ describe("cost", () => {
 	});
 
 	it("reads back what a run recorded", async () => {
-		await calibrate("/p", "haiku", 2.5, fs);
+		await calibrate("/p", "haiku", 2.5, { fs: fs });
 
-		expect(await overheads("/p", fs)).toEqual({ haiku: 2.5 });
+		expect(await overheads("/p", { fs: fs })).toEqual({ haiku: 2.5 });
 	});
 
 	it("keeps each agent's measurement when another is recorded", async () => {
-		await calibrate("/p", "haiku", 2.5, fs);
-		await calibrate("/p", "opus", 1.8, fs);
+		await calibrate("/p", "haiku", 2.5, { fs: fs });
+		await calibrate("/p", "opus", 1.8, { fs: fs });
 
-		expect(await overheads("/p", fs)).toEqual({ haiku: 2.5, opus: 1.8 });
+		expect(await overheads("/p", { fs: fs })).toEqual({
+			haiku: 2.5,
+			opus: 1.8,
+		});
 	});
 
 	it("replaces an agent's earlier measurement with the newer one", async () => {
-		await calibrate("/p", "haiku", 2.5, fs);
-		await calibrate("/p", "haiku", 1.9, fs);
+		await calibrate("/p", "haiku", 2.5, { fs: fs });
+		await calibrate("/p", "haiku", 1.9, { fs: fs });
 
-		expect(await overheads("/p", fs)).toEqual({ haiku: 1.9 });
+		expect(await overheads("/p", { fs: fs })).toEqual({ haiku: 1.9 });
 	});
 
 	it("has measured nothing before a run has finished there", async () => {
-		expect(await overheads("/p", fs)).toEqual({});
+		expect(await overheads("/p", { fs: fs })).toEqual({});
 	});
 
 	it("measures nothing rather than throwing on a file it cannot read", async () => {
 		await fs.mkdir("/p/.wiz");
 		await fs.write("/p/.wiz/judge-cost.json", "not json {");
 
-		expect(await overheads("/p", fs)).toEqual({});
+		expect(await overheads("/p", { fs: fs })).toEqual({});
 	});
 
 	it("charges the measured overhead once per call, not once per run", () => {
@@ -76,6 +79,6 @@ describe("cost", () => {
 			'{"haiku": "2.5", "sonnet": 0, "opus": 1.8}',
 		);
 
-		expect(await overheads("/p", fs)).toEqual({ opus: 1.8 });
+		expect(await overheads("/p", { fs: fs })).toEqual({ opus: 1.8 });
 	});
 });

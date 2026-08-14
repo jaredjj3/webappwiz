@@ -13,7 +13,7 @@ describe("FileHostMapper", () => {
 	beforeEach(async () => {
 		fs = new FakeFs();
 		ps = new FakePs(); // darwin; the windows case builds its own below
-		mapper = FileHostMapper.default(fs, ps, new MemoryLogger());
+		mapper = FileHostMapper.default({ fs, ps, log: new MemoryLogger() });
 		await fs.write("/etc/hosts", HOSTS);
 	});
 
@@ -47,11 +47,11 @@ describe("FileHostMapper", () => {
 	it("writes directly on windows and rejects unknown platforms", async () => {
 		const windows = new FakePs();
 		windows.platform = "win32";
-		const windowsMapper = FileHostMapper.default(
+		const windowsMapper = FileHostMapper.default({
 			fs,
-			windows,
-			new MemoryLogger(),
-		);
+			ps: windows,
+			log: new MemoryLogger(),
+		});
 		const hostsPath = "C:\\Windows\\System32\\drivers\\etc\\hosts";
 		await fs.write(hostsPath, HOSTS);
 
@@ -63,7 +63,11 @@ describe("FileHostMapper", () => {
 		const other = new FakePs();
 		other.platform = "freebsd";
 		expect(() =>
-			FileHostMapper.default(new FakeFs(), other, new MemoryLogger()),
+			FileHostMapper.default({
+				fs: new FakeFs(),
+				ps: other,
+				log: new MemoryLogger(),
+			}),
 		).toThrow("Unsupported platform");
 	});
 

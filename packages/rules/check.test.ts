@@ -35,9 +35,14 @@ describe("check", () => {
 		ps.setCaptureOutput("a.ts\n", "");
 		await fs.write("a.ts", "export class A {}\n");
 
-		expect(await new Check([oneClass], log, fs, ps, new NodeGlob()).run()).toBe(
-			true,
-		);
+		expect(
+			await new Check([oneClass], {
+				log: log,
+				fs: fs,
+				ps: ps,
+				glob: new NodeGlob(),
+			}).run(),
+		).toBe(true);
 		expect(ps.getCalls()).toEqual(["git ls-files"]);
 		expect(log.entries).toHaveLength(0);
 	});
@@ -46,9 +51,14 @@ describe("check", () => {
 		ps.setCaptureOutput("a.ts\n", "");
 		await fs.write("a.ts", "class A {}\nclass B {}\n");
 
-		expect(await new Check([oneClass], log, fs, ps, new NodeGlob()).run()).toBe(
-			false,
-		);
+		expect(
+			await new Check([oneClass], {
+				log: log,
+				fs: fs,
+				ps: ps,
+				glob: new NodeGlob(),
+			}).run(),
+		).toBe(false);
 		expect(log.entries).toHaveLength(1);
 		expect(String(log.entries[0]?.message)).toContain("a.ts:2:1");
 	});
@@ -56,16 +66,26 @@ describe("check", () => {
 	it("never reads a file no rule wants", async () => {
 		ps.setCaptureOutput("a.png\n", "");
 
-		expect(await new Check([oneClass], log, fs, ps, new NodeGlob()).run()).toBe(
-			true,
-		);
+		expect(
+			await new Check([oneClass], {
+				log: log,
+				fs: fs,
+				ps: ps,
+				glob: new NodeGlob(),
+			}).run(),
+		).toBe(true);
 	});
 
 	it("refuses to run outside a git repository", async () => {
 		ps.exit(1);
 
 		await expect(
-			new Check([oneClass], log, fs, ps, new NodeGlob()).run(),
+			new Check([oneClass], {
+				log: log,
+				fs: fs,
+				ps: ps,
+				glob: new NodeGlob(),
+			}).run(),
 		).rejects.toThrow("git ls-files");
 	});
 });

@@ -6,19 +6,18 @@ import type { Fix } from "./fix/fix";
 export interface ShipOptions {
 	/** How far to move the version: patch, minor or major. */
 	bump: string;
+	log?: Logger;
+	ps?: Ps;
 }
 
 /** Releases every package in the workspace together, at one version. */
-// judge-ignore named-options-last: the trailing parameters are optional dependencies, so they must follow the options object rather than precede it
 export async function ship(
 	release: Ship,
 	fix: Fix,
 	opts: ShipOptions,
-	log?: Logger,
-	ps?: Ps,
 ): Promise<void> {
-	const out = log ?? new ConsoleLogger();
-	const proc = ps ?? new NodePs();
+	const log = opts.log ?? new ConsoleLogger();
+	const ps = opts.ps ?? new NodePs();
 	if (!isBump(opts.bump)) {
 		throw new Error(
 			`unknown version bump "${opts.bump}" (expected patch, minor or major)`,
@@ -28,15 +27,15 @@ export async function ship(
 	// gate there is. Run it before anything is stamped or pushed.
 	await fix.run({ check: true });
 
-	const plan = await recover(await release.plan(opts.bump), out, proc, release);
+	const plan = await recover(await release.plan(opts.bump), log, ps, release);
 	if (plan.problems.length > 0) {
 		for (const problem of plan.problems) {
-			out.error(color.red(problem.message));
+			log.error(color.red(problem.message));
 		}
 		throw new Error("not ready to release");
 	}
-	if (!confirm(plan, out)) {
-		out.info(color.red("aborted"));
+	if (!confirm(plan, log)) {
+		log.info(color.red("aborted"));
 		return;
 	}
 	await release.run(plan);

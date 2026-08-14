@@ -5,7 +5,7 @@ import { MemoryLogger, PrefixLogger } from "../index";
 describe("PrefixLogger", () => {
 	it("prefixes info and error messages", () => {
 		const memoryLogger = new MemoryLogger();
-		const logger = new PrefixLogger("[worker]", memoryLogger);
+		const logger = new PrefixLogger("[worker]", { log: memoryLogger });
 		const error = new Error("boom");
 
 		logger.info("ready", 1, true);

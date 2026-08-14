@@ -15,6 +15,8 @@ export interface UpdateOptions {
 	dir: string;
 	/** The version every `@webappwiz/*` entry is set to. */
 	version: string;
+	log?: Logger;
+	fs?: Fs;
 }
 
 /**
@@ -22,29 +24,24 @@ export interface UpdateOptions {
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
  */
-// judge-ignore named-options-last: the trailing parameters are optional dependencies, so they must follow the options object rather than precede it
-export async function update(
-	opts: UpdateOptions,
-	log?: Logger,
-	fs?: Fs,
-): Promise<void> {
-	const out = log ?? new ConsoleLogger();
-	const files = fs ?? new NodeFs();
+export async function update(opts: UpdateOptions): Promise<void> {
+	const log = opts.log ?? new ConsoleLogger();
+	const fs = opts.fs ?? new NodeFs();
 	let count = 0;
-	for await (const path of walk(opts.dir, files)) {
+	for await (const path of walk(opts.dir, { fs })) {
 		if (basename(path) !== "package.json") {
 			continue;
 		}
 		// substitution, not parse-and-stringify: rewriting the JSON would
 		// reflow manifests we have no business reformatting.
-		const before = await files.read(path);
+		const before = await fs.read(path);
 		const after = before.replace(DEPENDENCY, `$1${opts.version}$2`);
 		if (after === before) {
 			continue;
 		}
-		await files.write(path, after);
-		out.info(`updated ${path}`);
+		await fs.write(path, after);
+		log.info(`updated ${path}`);
 		count++;
 	}
-	out.info(`${count} package.json pinned to ${opts.version}`);
+	log.info(`${count} package.json pinned to ${opts.version}`);
 }

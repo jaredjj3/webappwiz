@@ -8,12 +8,17 @@ import { NodePs, type Ps } from "@webappwiz/sys";
  * Deletions are left out. A violation quotes the offending line from disk, so a
  * file that is gone has nothing to read and nothing to report.
  */
+export interface ChangedOptions {
+	/** What git is spawned through; the real process by default. */
+	ps?: Ps;
+}
+
 export async function changed(
 	dir: string,
 	ref: string,
-	ps?: Ps,
+	opts: ChangedOptions = {},
 ): Promise<Set<string>> {
-	const proc = ps ?? new NodePs();
+	const ps = opts.ps ?? new NodePs();
 	const files = new Set<string>();
 	for (const argv of [
 		// against the ref rather than between two commits, so work in the tree
@@ -22,7 +27,7 @@ export async function changed(
 		// and the files git has never been told about, which no diff reaches
 		["ls-files", "--others", "--exclude-standard"],
 	]) {
-		for (const line of (await git(proc, dir, argv)).split("\n")) {
+		for (const line of (await git(ps, dir, argv)).split("\n")) {
 			if (line !== "") {
 				files.add(line);
 			}
@@ -39,15 +44,20 @@ export async function changed(
  * The new files are named rather than shown because a reader of this patch is
  * an agent with the working directory in front of it, and it can open them.
  */
+export interface DiffOptions {
+	/** What git is spawned through; the real process by default. */
+	ps?: Ps;
+}
+
 export async function diff(
 	dir: string,
 	ref: string,
-	ps?: Ps,
+	opts: DiffOptions = {},
 ): Promise<{ patch: string; added: string[] }> {
-	const proc = ps ?? new NodePs();
-	const patch = await git(proc, dir, ["diff", "--relative", ref]);
+	const ps = opts.ps ?? new NodePs();
+	const patch = await git(ps, dir, ["diff", "--relative", ref]);
 	const added = (
-		await git(proc, dir, ["ls-files", "--others", "--exclude-standard"])
+		await git(ps, dir, ["ls-files", "--others", "--exclude-standard"])
 	)
 		.split("\n")
 		.filter((line) => line !== "");

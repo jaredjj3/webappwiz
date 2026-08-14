@@ -3,13 +3,13 @@
  */
 export interface Fs {
 	exists(path: string): Promise<boolean>;
-	mkdir(path: string, options?: MkdirOptions): Promise<void>;
+	mkdir(path: string, opts?: MkdirOptions): Promise<void>;
 	read(path: string): Promise<string>;
 	write(path: string, data: string): Promise<void>;
 	rename(from: string, to: string): Promise<void>;
 	readdir(path: string): Promise<string[]>;
 	stat(path: string): Promise<StatResult>;
-	rm(path: string, options?: RmOptions): Promise<void>;
+	rm(path: string, opts?: RmOptions): Promise<void>;
 }
 
 export interface MkdirOptions {

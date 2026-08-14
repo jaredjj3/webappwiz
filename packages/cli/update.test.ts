@@ -26,7 +26,7 @@ describe("update", () => {
 			manifest({ "@webappwiz/log": "^0.2.0", "left-pad": "1.0.0" }),
 		);
 
-		await update({ dir: "/p", version: "1.0.0" }, log, fs);
+		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
 
 		expect(await fs.read("/p/package.json")).toContain(
 			'"@webappwiz/t": "1.0.0"',
@@ -42,7 +42,7 @@ describe("update", () => {
 			manifest({ "@webappwiz/t": "workspace:*" }),
 		);
 
-		await update({ dir: "/p", version: "1.0.0" }, log, fs);
+		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
 
 		expect(await fs.read("/p/package.json")).toContain('"workspace:*"');
 	});
@@ -51,7 +51,7 @@ describe("update", () => {
 		const own = JSON.stringify({ name: "@webappwiz/t", version: "0.1.0" });
 		await fs.write("/p/package.json", own);
 
-		await update({ dir: "/p", version: "1.0.0" }, log, fs);
+		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
 
 		expect(await fs.read("/p/package.json")).toEqual(own);
 	});
@@ -62,7 +62,7 @@ describe("update", () => {
 		await fs.mkdir("/p/node_modules/x");
 		await fs.write("/p/node_modules/x/package.json", vendored);
 
-		await update({ dir: "/p", version: "1.0.0" }, log, fs);
+		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
 
 		expect(await fs.read("/p/node_modules/x/package.json")).toEqual(vendored);
 	});

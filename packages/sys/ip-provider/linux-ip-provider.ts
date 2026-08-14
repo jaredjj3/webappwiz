@@ -1,12 +1,12 @@
 import { NodePs } from "../ps/node-ps";
 import type { Ps } from "../ps/ps";
-import type { IpProvider } from "./ip-provider";
+import type { IpProvider, IpProviderOptions } from "./ip-provider";
 
 export class LinuxIpProvider implements IpProvider {
 	private readonly ps: Ps;
 
-	constructor(ps?: Ps) {
-		this.ps = ps ?? new NodePs();
+	constructor(opts: IpProviderOptions = {}) {
+		this.ps = opts.ps ?? new NodePs();
 		if (this.ps.platform !== "linux") {
 			throw new Error("LinuxIpProvider is only supported on Linux");
 		}

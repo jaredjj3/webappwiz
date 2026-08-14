@@ -1,14 +1,19 @@
 import { ConsoleLogger } from "./console-logger";
 import type { Logger } from "./logger";
 
+/** What a `PrefixLogger` writes through; the console by default. */
+export interface PrefixLoggerOptions {
+	log?: Logger;
+}
+
 export class PrefixLogger implements Logger {
 	private log: Logger;
 
 	constructor(
 		private prefix: string,
-		log?: Logger,
+		opts: PrefixLoggerOptions = {},
 	) {
-		this.log = log ?? new ConsoleLogger();
+		this.log = opts.log ?? new ConsoleLogger();
 	}
 
 	info(message: unknown, ...optionalParams: unknown[]): void {

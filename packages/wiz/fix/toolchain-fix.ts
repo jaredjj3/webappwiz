@@ -4,6 +4,12 @@ import { NodePs, type Ps } from "@webappwiz/sys";
 
 import type { Fix, FixOptions } from "./fix";
 
+/** What a `ToolchainFix` runs through; the real ones by default. */
+export interface ToolchainFixOptions {
+	log?: Logger;
+	ps?: Ps;
+}
+
 /** Runs biome, the config's checks, and the type checker, in that order. */
 export class ToolchainFix implements Fix {
 	private readonly log: Logger;
@@ -11,11 +17,10 @@ export class ToolchainFix implements Fix {
 
 	constructor(
 		private readonly checks: Pick<Check, "run">,
-		log?: Logger,
-		ps?: Ps,
+		opts: ToolchainFixOptions = {},
 	) {
-		this.log = log ?? new ConsoleLogger();
-		this.ps = ps ?? new NodePs();
+		this.log = opts.log ?? new ConsoleLogger();
+		this.ps = opts.ps ?? new NodePs();
 	}
 
 	/** Pass `check: true` to report problems without writing fixes. */

@@ -11,9 +11,9 @@ export class FakeFs implements Fs {
 		return this.store.has(normalize(path));
 	}
 
-	async mkdir(path: string, options?: MkdirOptions): Promise<void> {
+	async mkdir(path: string, opts?: MkdirOptions): Promise<void> {
 		const target = normalize(path);
-		if (options?.recursive === false && this.store.has(target)) {
+		if (opts?.recursive === false && this.store.has(target)) {
 			throw new Error(`Path already exists: ${path}`);
 		}
 		this.store.set(target, DIRECTORY);
@@ -59,13 +59,13 @@ export class FakeFs implements Fs {
 		};
 	}
 
-	async rm(path: string, options?: RmOptions): Promise<void> {
+	async rm(path: string, opts?: RmOptions): Promise<void> {
 		const target = normalize(path);
-		if (!options?.force && !this.store.has(target)) {
+		if (!opts?.force && !this.store.has(target)) {
 			throw new Error(`Path does not exist: ${path}`);
 		}
 		this.store.delete(target);
-		if (options?.recursive) {
+		if (opts?.recursive) {
 			for (const key of this.store.keys()) {
 				if (key.startsWith(`${target}/`)) {
 					this.store.delete(key);

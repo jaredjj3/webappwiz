@@ -23,13 +23,13 @@ export class Service<C extends Contract> {
 	constructor(
 		private contract: C,
 		private handlers: Handlers<C>,
-		private options: ServiceOptions = {},
+		private opts: ServiceOptions = {},
 	) {}
 
 	/** Bound, so it survives being passed around detached from the instance. */
 	readonly fetch = async (req: Request): Promise<Response> => {
 		const res = await this.dispatch(req);
-		const { cors } = this.options;
+		const { cors } = this.opts;
 		if (cors !== undefined) {
 			// without this a cross-origin caller cannot read the headers handlers set
 			res.headers.set(
@@ -47,7 +47,7 @@ export class Service<C extends Contract> {
 	};
 
 	private async dispatch(req: Request): Promise<Response> {
-		if (this.options.cors !== undefined && req.method === "OPTIONS") {
+		if (this.opts.cors !== undefined && req.method === "OPTIONS") {
 			return new Response(null, {
 				status: 204,
 				headers: {

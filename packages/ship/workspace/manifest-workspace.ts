@@ -14,24 +14,32 @@ interface Manifest {
  * The package.json files a release reads and stamps. One version covers the
  * whole workspace, and the root manifest is where it lives.
  */
+/** What a `ManifestWorkspace` reads through; the real filesystem by default. */
+export interface ManifestWorkspaceOptions {
+	fs?: Fs;
+}
+
 export class ManifestWorkspace implements Workspace {
 	private readonly fs: Fs;
 
 	constructor(
 		/** The directory whose package.json declares the workspaces. */
 		readonly root: string,
-		fs?: Fs,
+		opts: ManifestWorkspaceOptions = {},
 	) {
-		this.fs = fs ?? new NodeFs();
+		this.fs = opts.fs ?? new NodeFs();
 	}
 
 	/** Finds the workspace `from` sits in, climbing until a manifest claims one. */
-	static async at(from: string, fs?: Fs): Promise<ManifestWorkspace> {
-		const files = fs ?? new NodeFs();
+	static async at(
+		from: string,
+		opts: ManifestWorkspaceOptions = {},
+	): Promise<ManifestWorkspace> {
+		const fs = opts.fs ?? new NodeFs();
 		for (let dir = from; ; dir = dirname(dir)) {
-			const manifest = await read(files, dir);
+			const manifest = await read(fs, dir);
 			if (manifest?.workspaces !== undefined) {
-				return new ManifestWorkspace(dir, files);
+				return new ManifestWorkspace(dir, { fs });
 			}
 			if (dirname(dir) === dir) {
 				throw new Error(`no workspace above ${from}`);

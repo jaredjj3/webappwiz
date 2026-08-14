@@ -53,6 +53,13 @@ export interface RunOptions {
  * its findings mean. It assembles a prompt, spawns the agent, checks that the
  * rules it reports are rules it was given, and hands the findings back.
  */
+/** What a `Harness` runs through; the real ones by default. */
+export interface HarnessOptions {
+	log?: Logger;
+	ps?: Ps;
+	clock?: Clock;
+}
+
 export class Harness {
 	private dispatcher = new Dispatcher<HarnessEvents>();
 
@@ -63,10 +70,10 @@ export class Harness {
 	private ps: Ps;
 	private clock: Clock;
 
-	constructor(log?: Logger, ps?: Ps, clock?: Clock) {
-		this.log = log ?? new ConsoleLogger();
-		this.ps = ps ?? new NodePs();
-		this.clock = clock ?? new SystemClock();
+	constructor(opts: HarnessOptions = {}) {
+		this.log = opts.log ?? new ConsoleLogger();
+		this.ps = opts.ps ?? new NodePs();
+		this.clock = opts.clock ?? new SystemClock();
 	}
 
 	/**

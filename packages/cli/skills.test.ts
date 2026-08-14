@@ -19,7 +19,7 @@ describe("skills", () => {
 	beforeEach(async () => {
 		fs = new FakeFs();
 		log = new MemoryLogger();
-		skills = new Skills(log, fs);
+		skills = new Skills({ log: log, fs: fs });
 		await fs.mkdir(source);
 		for (const name of ["arbor", "other"]) {
 			await fs.mkdir(`${source}/${name}`);

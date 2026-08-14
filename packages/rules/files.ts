@@ -56,6 +56,13 @@ export const DEFAULT_CHUNK = 25;
  * harness underneath knows none of it, and this does not wrap it: a caller
  * plans here, runs there, and turns the findings back here.
  */
+/** What a `Files` reads through; the real ones by default. */
+export interface FilesOptions {
+	log?: Logger;
+	fs?: Fs;
+	glob?: Glob;
+}
+
 export class Files {
 	// Every file the plan read, by dir-relative path, so turning findings into
 	// violations needs no second pass over the disk. Planning has already read
@@ -66,10 +73,10 @@ export class Files {
 	private fs: Fs;
 	private glob: Glob;
 
-	constructor(log?: Logger, fs?: Fs, glob?: Glob) {
-		this.log = log ?? new ConsoleLogger();
-		this.fs = fs ?? new NodeFs();
-		this.glob = glob ?? new NodeGlob();
+	constructor(opts: FilesOptions = {}) {
+		this.log = opts.log ?? new ConsoleLogger();
+		this.fs = opts.fs ?? new NodeFs();
+		this.glob = opts.glob ?? new NodeGlob();
 	}
 
 	/**
@@ -84,11 +91,11 @@ export class Files {
 		dir: string,
 		{ chunk = DEFAULT_CHUNK, only }: PlanOptions = {},
 	): Promise<FileTask[]> {
-		const checker = new Checker(rules, this.glob);
+		const checker = new Checker(rules, { glob: this.glob });
 		const all: string[] = [];
 		const size = new Map<string, number>();
 		const files: Array<{ path: string; text: string }> = [];
-		for await (const path of walk(dir, this.fs)) {
+		for await (const path of walk(dir, { fs: this.fs })) {
 			const file = path.slice(dir.length + 1); // dir-relative, like the globs
 			if (only && !only.has(file)) {
 				continue;

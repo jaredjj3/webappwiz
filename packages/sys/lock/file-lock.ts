@@ -18,6 +18,9 @@ export interface FileLockOptions {
 	stalenessMs?: number;
 	/** How often to re-check a lock that is already taken. */
 	pollMs?: number;
+	fs?: Fs;
+	ps?: Ps;
+	log?: Logger;
 }
 
 /**
@@ -37,16 +40,13 @@ export class FileLock implements Lock {
 
 	constructor(
 		readonly path: string,
-		fs?: Fs,
-		ps?: Ps,
-		log?: Logger,
-		{ stalenessMs = 60_000, pollMs = 2_000 }: FileLockOptions = {},
+		opts: FileLockOptions = {},
 	) {
-		this.fs = fs ?? new NodeFs();
-		this.ps = ps ?? new NodePs();
-		this.log = log ?? new ConsoleLogger();
-		this.stalenessMs = stalenessMs;
-		this.pollMs = pollMs;
+		this.fs = opts.fs ?? new NodeFs();
+		this.ps = opts.ps ?? new NodePs();
+		this.log = opts.log ?? new ConsoleLogger();
+		this.stalenessMs = opts.stalenessMs ?? 60_000;
+		this.pollMs = opts.pollMs ?? 2_000;
 	}
 
 	async acquire(): Promise<void> {

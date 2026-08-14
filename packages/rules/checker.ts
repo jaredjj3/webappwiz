@@ -22,14 +22,19 @@ export interface Checked {
  * caller. The checks are free and settle what they can. What they escalate is
  * an agent's job: reported here, run by whoever pays for the agent.
  */
+/** What a `Checker` matches paths with; `node:path` globbing by default. */
+export interface CheckerOptions {
+	glob?: Glob;
+}
+
 export class Checker {
 	private readonly glob: Glob;
 
 	constructor(
 		private readonly rules: FileRule[],
-		glob?: Glob,
+		opts: CheckerOptions = {},
 	) {
-		this.glob = glob ?? new NodeGlob();
+		this.glob = opts.glob ?? new NodeGlob();
 	}
 
 	/** Whether any rule wants this file: lets a caller skip reading the rest. */

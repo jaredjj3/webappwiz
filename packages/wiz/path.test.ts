@@ -18,7 +18,7 @@ describe("path", () => {
 		fs = new FakeFs();
 		ps = new FakePs();
 		ps.setEnv({ HOME: "/home/wiz", SHELL: "/bin/zsh" });
-		path = new Path(log, fs, ps);
+		path = new Path({ log: log, fs: fs, ps: ps });
 	});
 
 	it("appends a tagged export to the shell profile", async () => {

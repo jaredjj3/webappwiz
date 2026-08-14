@@ -9,7 +9,7 @@ import type { Duration } from "@webappwiz/time";
  * ends up listening for it.
  */
 export interface HttpServer {
-	serve(handler: Handler, options: ServeOptions): Promise<Listening>;
+	serve(handler: Handler, opts: ServeOptions): Promise<Listening>;
 }
 
 export type Handler = (request: Request) => Response | Promise<Response>;

@@ -31,7 +31,7 @@ describe("Harness", () => {
 		ps = new FakePs();
 		log = new MemoryLogger();
 		clock = new FakeClock();
-		harness = new Harness(log, ps, clock);
+		harness = new Harness({ log: log, ps: ps, clock: clock });
 	});
 
 	it("builds a prompt from the rule documents, the context and the contract", () => {

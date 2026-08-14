@@ -6,8 +6,13 @@ export {
 	type AgentOptions,
 	agentCommand,
 } from "./agent";
-export { Check } from "./check";
-export { type Checked, Checker, type Escalation } from "./checker";
+export { Check, type CheckOptions } from "./check";
+export {
+	type Checked,
+	Checker,
+	type CheckerOptions,
+	type Escalation,
+} from "./checker";
 export {
 	DEFAULT_AGENT,
 	DEFAULT_CONCURRENCY,
@@ -20,6 +25,7 @@ export type { Diagnostic } from "./diagnostic";
 export {
 	DEFAULT_CHUNK,
 	Files,
+	type FilesOptions,
 	type FileTask,
 	type PlanOptions,
 	type Violation,
@@ -29,6 +35,7 @@ export {
 	type Finished,
 	Harness,
 	type HarnessEvents,
+	type HarnessOptions,
 	type RunOptions,
 } from "./harness";
 export { Hit } from "./hit";

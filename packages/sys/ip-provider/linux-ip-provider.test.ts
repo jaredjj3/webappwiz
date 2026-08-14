@@ -14,10 +14,12 @@ describe("LinuxIpProvider", () => {
 		ps.platform = "linux";
 		ps.setCaptureOutput("10.0.0.5 10.0.0.6 \n", "");
 
-		expect(await new LinuxIpProvider(ps).get()).toBe("10.0.0.5");
+		expect(await new LinuxIpProvider({ ps: ps }).get()).toBe("10.0.0.5");
 	});
 
 	it("throws when constructed on another platform", () => {
-		expect(() => new LinuxIpProvider(ps)).toThrow("only supported on Linux");
+		expect(() => new LinuxIpProvider({ ps: ps })).toThrow(
+			"only supported on Linux",
+		);
 	});
 });

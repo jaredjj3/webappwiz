@@ -8,6 +8,13 @@ import type { HostMapper } from "./host-mapper";
 const HOSTS_PATH_UNIX = "/etc/hosts";
 const HOSTS_PATH_WINDOWS = "C:\\Windows\\System32\\drivers\\etc\\hosts";
 
+/** What a `FileHostMapper` works through; the real ones by default. */
+export interface FileHostMapperOptions {
+	fs?: Fs;
+	ps?: Ps;
+	log?: Logger;
+}
+
 export class FileHostMapper implements HostMapper {
 	private readonly fs: Fs;
 	private readonly ps: Ps;
@@ -15,25 +22,23 @@ export class FileHostMapper implements HostMapper {
 
 	constructor(
 		private readonly path: string,
-		fs?: Fs,
-		ps?: Ps,
-		log?: Logger,
+		opts: FileHostMapperOptions = {},
 	) {
-		this.fs = fs ?? new NodeFs();
-		this.ps = ps ?? new NodePs();
-		this.log = log ?? new ConsoleLogger();
+		this.fs = opts.fs ?? new NodeFs();
+		this.ps = opts.ps ?? new NodePs();
+		this.log = opts.log ?? new ConsoleLogger();
 	}
 
-	static default(fs?: Fs, ps?: Ps, log?: Logger): FileHostMapper {
-		const proc = ps ?? new NodePs();
-		switch (proc.platform) {
+	static default(opts: FileHostMapperOptions = {}): FileHostMapper {
+		const ps = opts.ps ?? new NodePs();
+		switch (ps.platform) {
 			case "darwin":
 			case "linux":
-				return new FileHostMapper(HOSTS_PATH_UNIX, fs, proc, log);
+				return new FileHostMapper(HOSTS_PATH_UNIX, { ...opts, ps });
 			case "win32":
-				return new FileHostMapper(HOSTS_PATH_WINDOWS, fs, proc, log);
+				return new FileHostMapper(HOSTS_PATH_WINDOWS, { ...opts, ps });
 			default:
-				throw new Error(`Unsupported platform: ${proc.platform}`);
+				throw new Error(`Unsupported platform: ${ps.platform}`);
 		}
 	}
 

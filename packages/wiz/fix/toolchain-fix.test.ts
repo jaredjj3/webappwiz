@@ -14,7 +14,7 @@ describe("fix", () => {
 		log = new MemoryLogger();
 		ps = new FakePs();
 		clean = true;
-		fix = new ToolchainFix({ run: async () => clean }, log, ps);
+		fix = new ToolchainFix({ run: async () => clean }, { log: log, ps: ps });
 	});
 
 	it("writes fixes by default, then checks and typechecks", async () => {

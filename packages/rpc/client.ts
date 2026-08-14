@@ -25,26 +25,26 @@ export class Client<C extends Contract> {
 	constructor(
 		private contract: C,
 		private baseUrl: string,
-		private options: ClientOptions = {},
+		private opts: ClientOptions = {},
 	) {}
 
 	async call<K extends keyof C & string>(
 		name: K,
 		input: In<C[K]>,
-		options: ClientOptions = {},
+		opts: ClientOptions = {},
 	): Promise<Out<C[K]>> {
 		const method = this.contract[name];
 		if (method === undefined) {
 			throw new Error(`unknown method: ${name}`);
 		}
-		const headers = new Headers(this.options.headers);
-		for (const [key, value] of new Headers(options.headers)) {
+		const headers = new Headers(this.opts.headers);
+		for (const [key, value] of new Headers(opts.headers)) {
 			headers.set(key, value);
 		}
 		const init = {
 			headers,
-			signal: options.signal ?? this.options.signal,
-			credentials: options.credentials ?? this.options.credentials,
+			signal: opts.signal ?? this.opts.signal,
+			credentials: opts.credentials ?? this.opts.credentials,
 		};
 		let res: Response;
 		if (method.type === "query") {

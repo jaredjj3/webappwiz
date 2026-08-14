@@ -13,19 +13,23 @@ describe("NodePs", () => {
 	it("drops the runtime and the entry point from args", () => {
 		proc.argv = ["/bin/bun", "/repo/cli.ts", "judge", "--dir", "packages"];
 
-		expect(new NodePs(proc).args).toEqual(["judge", "--dir", "packages"]);
+		expect(new NodePs({ proc: proc }).args).toEqual([
+			"judge",
+			"--dir",
+			"packages",
+		]);
 	});
 
 	it("reports no args when only the runtime and entry point were given", () => {
 		proc.argv = ["/bin/bun", "/repo/cli.ts"];
 
-		expect(new NodePs(proc).args).toEqual([]);
+		expect(new NodePs({ proc: proc }).args).toEqual([]);
 	});
 
 	it("adds to the environment rather than replacing it when given env", async () => {
 		proc.env = { INHERITED: "kept" };
 
-		const { stdout } = await new NodePs(proc).spawnCapture(SHOW, {
+		const { stdout } = await new NodePs({ proc: proc }).spawnCapture(SHOW, {
 			env: { ADDED: "new" },
 		});
 
@@ -35,7 +39,7 @@ describe("NodePs", () => {
 	it("prefers the caller's value over the inherited one", async () => {
 		proc.env = { INHERITED: "kept", ADDED: "old" };
 
-		const { stdout } = await new NodePs(proc).spawnCapture(SHOW, {
+		const { stdout } = await new NodePs({ proc: proc }).spawnCapture(SHOW, {
 			env: { ADDED: "new" },
 		});
 
@@ -45,7 +49,7 @@ describe("NodePs", () => {
 	it("inherits the whole environment when no env is passed", async () => {
 		proc.env = { INHERITED: "kept" };
 
-		const { stdout } = await new NodePs(proc).spawnCapture(SHOW);
+		const { stdout } = await new NodePs({ proc: proc }).spawnCapture(SHOW);
 
 		expect(stdout).toBe("kept|");
 	});
@@ -53,7 +57,7 @@ describe("NodePs", () => {
 	it("reports 128 plus the signal when a command is killed", async () => {
 		proc.env = {};
 
-		const { exitCode } = await new NodePs(proc).spawnCapture([
+		const { exitCode } = await new NodePs({ proc: proc }).spawnCapture([
 			"sh",
 			"-c",
 			"kill -9 $$",

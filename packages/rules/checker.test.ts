@@ -24,9 +24,9 @@ describe("checker", () => {
 	const glob = new NodeGlob();
 
 	it("stamps path, rule, and severity onto findings", () => {
-		const { diagnostics, escalations } = new Checker([noX], glob).check([
-			{ path: "docs/a.md", text: "ok\nx marks the spot" },
-		]);
+		const { diagnostics, escalations } = new Checker([noX], {
+			glob: glob,
+		}).check([{ path: "docs/a.md", text: "ok\nx marks the spot" }]);
 
 		expect(diagnostics).toEqual([
 			{
@@ -49,7 +49,7 @@ describe("checker", () => {
 			document: noX.document,
 			check: () => ({ findings: [], escalate: true }),
 		};
-		const checker = new Checker([agentRule], glob);
+		const checker = new Checker([agentRule], { glob: glob });
 
 		const { diagnostics, escalations } = checker.check([
 			{ path: "docs/a.md", text: "x" },
@@ -64,16 +64,16 @@ describe("checker", () => {
 	});
 
 	it("only runs a rule on files its glob wants", () => {
-		const { diagnostics, escalations } = new Checker([noX], glob).check([
-			{ path: "src/x.ts", text: "x everywhere x" },
-		]);
+		const { diagnostics, escalations } = new Checker([noX], {
+			glob: glob,
+		}).check([{ path: "src/x.ts", text: "x everywhere x" }]);
 
 		expect(diagnostics).toEqual([]);
 		expect(escalations).toEqual([]);
 	});
 
 	it("tells a caller which paths matter", () => {
-		const checker = new Checker([noX], glob);
+		const checker = new Checker([noX], { glob: glob });
 
 		expect(checker.matches("docs/a.md")).toBe(true);
 		expect(checker.matches("src/a.ts")).toBe(false);
@@ -82,7 +82,7 @@ describe("checker", () => {
 	it("keeps a check's own helpers reachable", () => {
 		// The checker holds the rule, never a function pulled off it, so a check
 		// written as a method still has its class around it.
-		const { diagnostics } = new Checker([new Counting()], glob).check([
+		const { diagnostics } = new Checker([new Counting()], { glob }).check([
 			{ path: "a.md", text: "one\ntwo" },
 		]);
 
@@ -92,7 +92,7 @@ describe("checker", () => {
 	});
 
 	it("drops findings a judge-ignore excuses", () => {
-		const { diagnostics } = new Checker([noX], glob).check([
+		const { diagnostics } = new Checker([noX], { glob: glob }).check([
 			{
 				path: "a.md",
 				text: "<!-- judge-ignore no-x: the topic is x itself -->\nx\nclean",
@@ -103,7 +103,7 @@ describe("checker", () => {
 	});
 
 	it("drops every finding when the file is excused", () => {
-		const { diagnostics } = new Checker([noX], glob).check([
+		const { diagnostics } = new Checker([noX], { glob: glob }).check([
 			{
 				path: "a.md",
 				text: "x\nx\n<!-- judge-ignore-file no-x: an x demo -->",

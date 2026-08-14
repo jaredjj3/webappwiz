@@ -19,11 +19,10 @@ import { test } from "./test";
 export type WizDeps = CommandDeps;
 
 const toolchainFix = ({ log, fs, ps, glob }: WizDeps): ToolchainFix =>
-	new ToolchainFix(
-		new Check(WEBAPPWIZ_RULES.rules, log, fs, ps, glob),
+	new ToolchainFix(new Check(WEBAPPWIZ_RULES.rules, { log, fs, ps, glob }), {
 		log,
 		ps,
-	);
+	});
 
 export const wiz = cli<WizDeps>("wiz");
 
@@ -47,7 +46,7 @@ wiz
 		default: false,
 		description: "remove bin/ from your PATH",
 	})
-	.action((opts, { log, fs, ps }) => new Path(log, fs, ps).run(opts));
+	.action((opts, { log, fs, ps }) => new Path({ log, fs, ps }).run(opts));
 
 wiz
 	.command("ship")
@@ -55,15 +54,15 @@ wiz
 	.arg("bump", t.string(), { description: "patch, minor, or major" })
 	.action(async (opts, deps) => {
 		const { log, fs, ps } = deps;
-		const workspace = await ManifestWorkspace.at(ps.cwd(), fs);
+		const workspace = await ManifestWorkspace.at(ps.cwd(), { fs });
 		const release = new LockstepShip(
 			workspace,
-			new CliGit(workspace.root, ps),
-			new NpmRegistry(ps),
-			new CliGithub(ps),
-			log,
+			new CliGit(workspace.root, { ps }),
+			new NpmRegistry({ ps }),
+			new CliGithub({ ps }),
+			{ log },
 		);
-		await ship(release, toolchainFix(deps), opts, log, ps);
+		await ship(release, toolchainFix(deps), { ...opts, log, ps });
 	});
 
 wiz
@@ -73,6 +72,6 @@ wiz
 		default: "",
 		description: "only test this package (default: all)",
 	})
-	.action((opts, { fs, ps }) => test(opts, fs, ps));
+	.action((opts, { fs, ps }) => test({ ...opts, fs, ps }));
 
 commands(wiz.group("cli").description("run @webappwiz/cli against a project"));
