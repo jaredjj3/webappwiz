@@ -1,5 +1,7 @@
-export default {
-	testCommand: "./bin/wiz test",
+import { defineConfig } from "@webappwiz/arbor/config";
+
+export default defineConfig({
 	postCheckout: "bun install",
 	postRewrite: "bun install",
-};
+	preMerge: "./bin/wiz test",
+});

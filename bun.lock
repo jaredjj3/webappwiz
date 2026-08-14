@@ -7,6 +7,7 @@
       "devDependencies": {
         "@biomejs/biome": "^2.5.7",
         "@types/bun": "latest",
+        "@webappwiz/arbor": "workspace:*",
         "@webappwiz/rules": "workspace:*",
       },
       "peerDependencies": {
