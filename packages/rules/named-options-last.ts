@@ -1,13 +1,7 @@
-import {
-	type FileRule,
-	type FileText,
-	Hit,
-	SyntaxKind,
-	type Token,
-	tokens,
-	type Verdict,
-} from "@webappwiz/rules";
+import { Hit } from "./hit";
 import doc from "./named-options-last.md" with { type: "text" };
+import type { FileRule, FileText, Verdict } from "./rule";
+import { SyntaxKind, type Token, tokens } from "./scan";
 
 /** One slot of a parameter list, read as far as this check needs it. */
 interface Parameter {

@@ -1,12 +1,7 @@
-import {
-	type FileRule,
-	type FileText,
-	Hit,
-	SyntaxKind,
-	tokens,
-	type Verdict,
-} from "@webappwiz/rules";
+import { Hit } from "./hit";
 import doc from "./one-class-per-file.md" with { type: "text" };
+import type { FileRule, FileText, Verdict } from "./rule";
+import { SyntaxKind, tokens } from "./scan";
 
 export class OneClassPerFile implements FileRule {
 	// `class` after one of these is a class expression, not a declaration.

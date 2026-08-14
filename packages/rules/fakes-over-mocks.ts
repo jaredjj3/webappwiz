@@ -1,5 +1,5 @@
-import type { FileRule, Verdict } from "@webappwiz/rules";
 import doc from "./fakes-over-mocks.md" with { type: "text" };
+import type { FileRule, Verdict } from "./rule";
 
 export class FakesOverMocks implements FileRule {
 	readonly id = "fakes-over-mocks";

@@ -1,13 +1,7 @@
-import {
-	type FileRule,
-	type FileText,
-	Hit,
-	SyntaxKind,
-	type Token,
-	tokens,
-	type Verdict,
-} from "@webappwiz/rules";
 import doc from "./classes-over-function-exports.md" with { type: "text" };
+import { Hit } from "./hit";
+import type { FileRule, FileText, Verdict } from "./rule";
+import { SyntaxKind, type Token, tokens } from "./scan";
 
 export class ClassesOverFunctionExports implements FileRule {
 	// Modifiers that may sit between `export` and `function`.

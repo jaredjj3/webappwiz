@@ -1,5 +1,5 @@
 import type { Cli, Deps } from "@webappwiz/cmd";
-import { AGENTS } from "@webappwiz/rules";
+import { AGENTS, SIGNOFF_RULES, WEBAPPWIZ_RULES } from "@webappwiz/rules";
 import type { Fs, Glob } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import type { Clock } from "@webappwiz/time";
@@ -8,7 +8,6 @@ import { JudgeCommands } from "./judge";
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
 import { version } from "./package.json";
-import { SIGNOFF_RULES, WEBAPPWIZ_RULES } from "./rules";
 import { Skills } from "./skills";
 import { update } from "./update";
 

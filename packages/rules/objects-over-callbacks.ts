@@ -1,13 +1,7 @@
-import {
-	type FileRule,
-	type FileText,
-	Hit,
-	SyntaxKind,
-	type Token,
-	tokens,
-	type Verdict,
-} from "@webappwiz/rules";
+import { Hit } from "./hit";
 import doc from "./objects-over-callbacks.md" with { type: "text" };
+import type { FileRule, FileText, Verdict } from "./rule";
+import { SyntaxKind, type Token, tokens } from "./scan";
 
 export class ObjectsOverCallbacks implements FileRule {
 	private static readonly MESSAGE =

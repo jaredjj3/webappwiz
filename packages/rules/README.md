@@ -6,9 +6,10 @@ spawning the agent, keeping a bounded number of calls in flight, parsing
 findings back out of whatever the agent wrapped them in, and choosing which
 files to send in the first place.
 
-It owns no rules. A caller hands it a rule set and reads violations back; what
-those rules say is the caller's business, and webappwiz's own set lives in
-[`@webappwiz/cli`](../cli).
+It also owns webappwiz's own rules: a class and a markdown document each, named
+one by one in [`rules.ts`](./rules.ts) as `WEBAPPWIZ_RULES` and
+`SIGNOFF_RULES`. Nothing here reaches for them implicitly. A caller hands in a
+rule set, that list or its own, and reads violations back.
 
 ## A rule
 

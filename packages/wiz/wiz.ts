@@ -1,8 +1,7 @@
 import type { CommandDeps } from "@webappwiz/cli/commands";
 import { commands } from "@webappwiz/cli/commands";
-import { WEBAPPWIZ_RULES } from "@webappwiz/cli/rules";
 import { cli } from "@webappwiz/cmd";
-import { Check } from "@webappwiz/rules";
+import { Check, WEBAPPWIZ_RULES } from "@webappwiz/rules";
 import {
 	CliGit,
 	CliGithub,

@@ -1,19 +1,20 @@
-import { defineRules, type Rule } from "@webappwiz/rules";
-import { ClassesOverFunctionExports } from "./rule/classes-over-function-exports";
-import { CommentsSayWhyNotWhat } from "./rule/comments-say-why-not-what";
-import { DevServersFindAPort } from "./rule/dev-servers-find-a-port";
-import { DocCommentsAddressUsers } from "./rule/doc-comments-address-users";
-import { FakesOverMocks } from "./rule/fakes-over-mocks";
-import { NamedOptionsLast } from "./rule/named-options-last";
-import { NoEmDashes } from "./rule/no-em-dashes";
-import { ObjectsOverCallbacks } from "./rule/objects-over-callbacks";
-import { OneClassPerFile } from "./rule/one-class-per-file";
-import { OneDirPerInterface } from "./rule/one-dir-per-interface";
-import { ParametersDeclareFields } from "./rule/parameters-declare-fields";
-import { ReactiveOverUseState } from "./rule/reactive-over-use-state";
-import { SimpleTestSetup } from "./rule/simple-test-setup";
-import { TestsNotWeakened } from "./signoff/tests-not-weakened";
-import { VisualWorkTested } from "./signoff/visual-work-tested";
+import { ClassesOverFunctionExports } from "./classes-over-function-exports";
+import { CommentsSayWhyNotWhat } from "./comments-say-why-not-what";
+import { defineRules } from "./config";
+import { DevServersFindAPort } from "./dev-servers-find-a-port";
+import { DocCommentsAddressUsers } from "./doc-comments-address-users";
+import { FakesOverMocks } from "./fakes-over-mocks";
+import { NamedOptionsLast } from "./named-options-last";
+import { NoEmDashes } from "./no-em-dashes";
+import { ObjectsOverCallbacks } from "./objects-over-callbacks";
+import { OneClassPerFile } from "./one-class-per-file";
+import { OneDirPerInterface } from "./one-dir-per-interface";
+import { ParametersDeclareFields } from "./parameters-declare-fields";
+import { ReactiveOverUseState } from "./reactive-over-use-state";
+import type { Rule } from "./rule";
+import { SimpleTestSetup } from "./simple-test-setup";
+import { TestsNotWeakened } from "./tests-not-weakened";
+import { VisualWorkTested } from "./visual-work-tested";
 
 /**
  * Every rule webappwiz judges itself by, named one by one. There is no preset

@@ -1,10 +1,6 @@
-import {
-	type FileRule,
-	type FileText,
-	Hit,
-	type Verdict,
-} from "@webappwiz/rules";
+import { Hit } from "./hit";
 import doc from "./no-em-dashes.md" with { type: "text" };
+import type { FileRule, FileText, Verdict } from "./rule";
 
 export class NoEmDashes implements FileRule {
 	// Escaped, since this file is one the rule reads.
