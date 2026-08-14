@@ -156,7 +156,7 @@ describe("JudgeCommands", () => {
 			print: true,
 		});
 
-		expect(printed()).toContain("=== one (1 file) ===");
+		expect(printed()).toContain("--- one (1 file) ---");
 		expect(printed()).toContain("exactly 1 rule");
 		expect(printed()).toContain("- a.ts");
 		expect(ps.getCalls()).toEqual([]);
@@ -186,7 +186,7 @@ describe("JudgeCommands", () => {
 
 		// a partial check's rule still needs the agent; a full check's does not,
 		// and the two survivors share their glob's one task
-		expect(printed()).toContain("=== two, three (1 file) ===");
+		expect(printed()).toContain("--- two, three (1 file) ---");
 		expect(printed()).not.toContain("Rule `one`");
 	});
 
@@ -249,7 +249,7 @@ describe("JudgeCommands", () => {
 			print: true,
 		});
 
-		expect(printed()).toContain("=== one (1 file) ===");
+		expect(printed()).toContain("--- one (1 file) ---");
 		expect(printed()).toContain("- a.ts");
 		expect(printed()).not.toContain("- b.ts");
 	});

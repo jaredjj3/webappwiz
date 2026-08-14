@@ -7,6 +7,24 @@ import { table } from "./table";
 export const count = (total: number, word: string): string =>
 	`${total} ${word}${total === 1 ? "" : "s"}`;
 
+/**
+ * Where one printed document stops and the next starts, named so a reader
+ * knows which one they are in without scrolling back.
+ *
+ * What `--print` writes is pages of markdown with headings of its own, so a
+ * heading is not enough to mark a boundary. Unnamed, this is the closing line
+ * the last document wants as much as the others want an opening one.
+ */
+export const divider = (name?: string): string => {
+	if (name === undefined) {
+		return color.dim("-".repeat(72));
+	}
+	const opening = `--- ${name} `;
+	// A task carrying a dozen rule ids is named past the width, and a line that
+	// stopped at the name would read as a heading rather than as a rule off.
+	return color.dim(opening.padEnd(Math.max(72, opening.length + 3), "-"));
+};
+
 const compact = new Intl.NumberFormat("en", { notation: "compact" });
 
 /**

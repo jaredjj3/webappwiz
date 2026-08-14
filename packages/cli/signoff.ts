@@ -13,7 +13,7 @@ import type { Clock } from "@webappwiz/time";
 import { diff } from "./changed";
 import { ask, type Confirm } from "./judge";
 import { mode } from "./mode";
-import { count, overBudget, tokens, usd } from "./report";
+import { count, divider, overBudget, tokens, usd } from "./report";
 
 export interface SignoffOptions {
 	/** The directory whose change is being weighed. */
@@ -160,17 +160,9 @@ export class Signoff {
 			this.log.info(`\n${divider(rule.id)}\n`);
 			this.log.info(rule.document.trim());
 		}
-		// A rule's document is markdown with headings of its own, so where one
-		// ends is not otherwise visible: the last one wants a closing line as
-		// much as the others want an opening one.
 		this.log.info(`\n${divider()}`);
 	}
 }
-
-/** Where one rule stops and the next starts, named so a reader knows which
- * document they are in without scrolling back to the heading. */
-const divider = (id?: string): string =>
-	color.dim(id === undefined ? "-".repeat(72) : `--- ${id} `.padEnd(72, "-"));
 
 /** What these rules are for, which the prompt's "report every violation" does
  * not say on its own: a signoff rule is broken by a change that should have

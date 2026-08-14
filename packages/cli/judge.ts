@@ -19,6 +19,7 @@ import { calibrate, floor, overheads, predict } from "./cost";
 import { mode } from "./mode";
 import {
 	count,
+	divider,
 	estimate,
 	finished,
 	overBudget,
@@ -171,10 +172,11 @@ export class JudgeCommands {
 		if (how === "print") {
 			for (const task of tasks) {
 				this.log.info(
-					`=== ${task.label} (${count(task.files.length, "file")}) ===`,
+					`\n${divider(`${task.label} (${count(task.files.length, "file")})`)}\n`,
 				);
 				this.log.info(taskPrompt(task));
 			}
+			this.log.info(`\n${divider()}`);
 			return;
 		}
 		const read = new Set(tasks.flatMap((task) => task.files)).size;

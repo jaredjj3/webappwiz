@@ -3,6 +3,7 @@ import { color } from "@webappwiz/log";
 import type { Violation } from "@webappwiz/rules";
 import { Duration } from "@webappwiz/time";
 import {
+	divider,
 	estimate,
 	finding,
 	finished,
@@ -179,6 +180,19 @@ describe("report", () => {
 		expect(tokens(4000)).toBe(1000);
 		expect(tokens(1)).toBe(1);
 		expect(tokens(0)).toBe(0);
+	});
+
+	it("names the document a divider opens, and rules off to one width", () => {
+		expect(color.strip(divider("one, two (3 files)"))).toBe(
+			`--- one, two (3 files) ${"-".repeat(49)}`,
+		);
+		expect(color.strip(divider())).toBe("-".repeat(72));
+	});
+
+	it("rules off past the width rather than stopping at a long name", () => {
+		const name = "a".repeat(80);
+
+		expect(color.strip(divider(name))).toBe(`--- ${name} ---`);
 	});
 
 	it("says both numbers and the flag when a run is over budget", () => {
