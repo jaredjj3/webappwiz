@@ -1,8 +1,8 @@
 import { Hit } from "../hit";
 import doc from "./no-em-dashes.md" with { type: "text" };
-import type { Checked } from "./rule";
+import type { FileText, Rule, Verdict } from "./rule";
 
-export class NoEmDashes implements Checked {
+export class NoEmDashes implements Rule {
 	// Escaped, since this file is one the rule reads.
 	private static readonly EM = "\u2014";
 	private static readonly EN = "\u2013";
@@ -14,10 +14,9 @@ export class NoEmDashes implements Checked {
 	readonly id = "no-em-dashes";
 	readonly files = "**/*.{ts,md}";
 	readonly level = "error";
-	readonly checkedBy = "code";
 	readonly document = doc;
 
-	check(text: string): Hit[] {
+	check({ text }: FileText): Verdict {
 		const findings: Hit[] = [];
 		for (const [i, line] of text.split("\n").entries()) {
 			for (const match of line.matchAll(/[\u2013\u2014]/g)) {
@@ -35,7 +34,7 @@ export class NoEmDashes implements Checked {
 				);
 			}
 		}
-		return findings;
+		return { findings };
 	}
 
 	/** Whether the dash at `column` of `line` sits between two digits. */

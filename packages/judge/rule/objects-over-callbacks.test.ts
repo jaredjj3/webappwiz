@@ -11,7 +11,7 @@ describe("objects-over-callbacks", () => {
 			"}",
 		].join("\n");
 
-		expect(new ObjectsOverCallbacks().check(text)).toEqual([
+		expect(new ObjectsOverCallbacks().check({ path: "t.ts", text: text }).findings).toEqual([
 			{
 				line: 2,
 				column: 2,
@@ -27,7 +27,7 @@ describe("objects-over-callbacks", () => {
 			"}",
 		].join("\n");
 
-		expect(new ObjectsOverCallbacks().check(text)).toHaveLength(1);
+		expect(new ObjectsOverCallbacks().check({ path: "t.ts", text: text }).findings).toHaveLength(1);
 	});
 
 	it("does not mistake an arrow in the body for a parameter", () => {
@@ -39,12 +39,12 @@ describe("objects-over-callbacks", () => {
 			"}",
 		].join("\n");
 
-		expect(new ObjectsOverCallbacks().check(text)).toEqual([]);
+		expect(new ObjectsOverCallbacks().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("leaves function parameters outside constructors to the agent", () => {
 		const text = "function retry(run: () => void) { run(); }";
 
-		expect(new ObjectsOverCallbacks().check(text)).toEqual([]);
+		expect(new ObjectsOverCallbacks().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 });

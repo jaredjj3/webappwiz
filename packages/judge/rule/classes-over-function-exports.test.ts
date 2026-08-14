@@ -14,7 +14,7 @@ describe("classes-over-function-exports", () => {
 			"}",
 		].join("\n");
 
-		expect(new ClassesOverFunctionExports().check(text)).toEqual([
+		expect(new ClassesOverFunctionExports().check({ path: "t.ts", text: text }).findings).toEqual([
 			{
 				line: 4,
 				column: 14,
@@ -33,7 +33,7 @@ describe("classes-over-function-exports", () => {
 			"}",
 		].join("\n");
 
-		expect(new ClassesOverFunctionExports().check(text)).toEqual([]);
+		expect(new ClassesOverFunctionExports().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("leaves non-exported functions alone", () => {
@@ -42,6 +42,6 @@ describe("classes-over-function-exports", () => {
 			"function b(now: () => Date) { return now(); }",
 		].join("\n");
 
-		expect(new ClassesOverFunctionExports().check(text)).toEqual([]);
+		expect(new ClassesOverFunctionExports().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 });

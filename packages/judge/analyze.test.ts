@@ -178,7 +178,7 @@ describe("Analyzer", () => {
 		const handed: string[] = [];
 		analyzer.events.on("finished", (task) =>
 			handed.push(
-				`${task.glob} [${task.rules.join(",")}] ${task.done}/${task.total}`,
+				`${task.label} [${task.rules.join(",")}] ${task.done}/${task.total}`,
 			),
 		);
 

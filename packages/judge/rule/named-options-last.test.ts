@@ -12,7 +12,7 @@ describe("named-options-last", () => {
 			"}",
 		].join("\n");
 
-		expect(new NamedOptionsLast().check(text)).toEqual([
+		expect(new NamedOptionsLast().check({ path: "t.ts", text: text }).findings).toEqual([
 			{ line: 1, column: 23, message: expect.stringContaining("goes last") },
 			{ line: 2, column: 7, message: expect.stringContaining("in place") },
 			{ line: 2, column: 7, message: expect.stringContaining("goes last") },
@@ -26,13 +26,13 @@ describe("named-options-last", () => {
 			"pick(ready ? options : fallback, path);",
 		].join("\n");
 
-		expect(new NamedOptionsLast().check(text)).toEqual([]);
+		expect(new NamedOptionsLast().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("leaves an object type in place on a parameter that is not options", () => {
 		const text = "rows.map((row: { task: string }) => row.task);";
 
-		expect(new NamedOptionsLast().check(text)).toEqual([]);
+		expect(new NamedOptionsLast().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("allows options last, past a rest parameter or a type argument", () => {
@@ -41,6 +41,6 @@ describe("named-options-last", () => {
 			"function label(options: Record<string, string>): void {}",
 		].join("\n");
 
-		expect(new NamedOptionsLast().check(text)).toEqual([]);
+		expect(new NamedOptionsLast().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 });

@@ -1,9 +1,9 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
-import type { PartlyChecked } from "./rule";
+import type { FileText, Rule, Verdict } from "./rule";
 import doc from "./simple-test-setup.md" with { type: "text" };
 
-export class SimpleTestSetup implements PartlyChecked {
+export class SimpleTestSetup implements Rule {
 	private static readonly LOOPS = new Set<SyntaxKind>([
 		SyntaxKind.ForKeyword,
 		SyntaxKind.WhileKeyword,
@@ -16,12 +16,11 @@ export class SimpleTestSetup implements PartlyChecked {
 	readonly id = "simple-test-setup";
 	readonly files = "**/*.test.ts";
 	readonly level = "error";
-	readonly checkedBy = "code-then-agent";
 	readonly document = doc;
 	// The check sees tests a loop generates, which are certain. Whether setup
 	// drowns the behavior under test still needs the agent.
 
-	check(text: string): Hit[] {
+	check({ text }: FileText): Verdict {
 		const all = tokens(text);
 		const found: Hit[] = [];
 		// The token stream is flat, so the only way to know a loop body ended is
@@ -42,7 +41,7 @@ export class SimpleTestSetup implements PartlyChecked {
 				found.push(new Hit(token.line, token.column, SimpleTestSetup.MESSAGE));
 			}
 		}
-		return found;
+		return { findings: found, escalate: true };
 	}
 
 	/** The brace depth of the loop body opening after the keyword at `at`, or

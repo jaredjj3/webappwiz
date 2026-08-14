@@ -160,10 +160,10 @@ export function planned({
 
 /**
  * A finished task, as it should print the moment its agent returns: a status
- * line naming the glob its rules share, then one finding per violation.
+ * line naming the task's rules, then one finding per violation.
  */
 export function finished({
-	glob,
+	label,
 	rules,
 	files,
 	violations,
@@ -173,7 +173,7 @@ export function finished({
 	total,
 }: Finished): string[] {
 	const heading =
-		`${color.gray(`[${done}/${total}]`)} ${glob} ` +
+		`${color.gray(`[${done}/${total}]`)} ${label} ` +
 		color.gray(`(${count(rules.length, "rule")}, ${count(files, "file")})`);
 	// No dollars rather than a zero when the agent reported none: an `--exec`
 	// command costing nothing and one that never said are different things.

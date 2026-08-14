@@ -64,7 +64,7 @@ describe("report", () => {
 
 	it("names the glob, its rule count and what it cost when a task finds nothing", () => {
 		const lines = finished({
-			glob: "**/*.ts",
+			label: "**/*.ts",
 			rules: ["doc-comments-address-users"],
 			files: 25,
 			violations: [],
@@ -80,7 +80,7 @@ describe("report", () => {
 
 	it("heads a task's findings with how many it found", () => {
 		const lines = finished({
-			glob: "**/*.ts",
+			label: "**/*.ts",
 			rules: ["comments-say-why-not-what", "doc-comments-address-users"],
 			files: 4,
 			violations: [violation(), violation({ line: 9 })],
@@ -181,7 +181,7 @@ describe("report", () => {
 
 	it("says what a task cost beside how long it took", () => {
 		const lines = finished({
-			glob: "**/*.ts",
+			label: "**/*.ts",
 			rules: ["doc-comments-address-users"],
 			files: 25,
 			violations: [],

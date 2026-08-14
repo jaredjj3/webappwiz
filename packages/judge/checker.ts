@@ -1,55 +1,59 @@
 import type { Glob } from "@webappwiz/sys";
 import type { Diagnostic } from "./diagnostic";
 import { exemptions } from "./ignore";
-import {
-	type Checked,
-	hasCheck,
-	type PartlyChecked,
-	type Rule,
-} from "./rule/rule";
+import type { FileText, Rule } from "./rule/rule";
 
-export interface FileText {
+/** One file a rule's check wants an agent to read. */
+export interface Escalation {
+	rule: Rule;
+	/** The file's path, as the caller named it. */
 	path: string;
-	text: string;
+}
+
+/** Everything one pass of the checks settled, and what they escalated. */
+export interface Checked {
+	diagnostics: Diagnostic[];
+	/** Every file a rule asked an agent to read, in file order. */
+	escalations: Escalation[];
 }
 
 /**
  * Runs rules' checks over in-memory files; listing and reading stay with the
- * caller. Rules without a check are an agent's job, not this one's, and are
- * skipped.
+ * caller. The checks are free and settle what they can. What they escalate is
+ * an agent's job: reported here, run by whoever pays for the agent.
  */
 export class Checker {
-	private readonly checked: Array<Checked | PartlyChecked>;
-
 	constructor(
-		rules: Rule[],
+		private readonly rules: Rule[],
 		private readonly glob: Glob,
-	) {
-		this.checked = rules.filter(hasCheck);
-	}
+	) {}
 
-	/** Whether any check wants this file: lets a caller skip reading the rest. */
+	/** Whether any rule wants this file: lets a caller skip reading the rest. */
 	matches(path: string): boolean {
-		return this.checked.some((rule) => this.glob.matches(rule.files, path));
+		return this.rules.some((rule) => this.glob.matches(rule.files, path));
 	}
 
-	check(files: FileText[]): Diagnostic[] {
+	check(files: FileText[]): Checked {
 		const diagnostics: Diagnostic[] = [];
-		for (const { path, text } of files) {
-			for (const rule of this.checked) {
-				if (!this.glob.matches(rule.files, path)) {
+		const escalations: Escalation[] = [];
+		for (const file of files) {
+			for (const rule of this.rules) {
+				if (!this.glob.matches(rule.files, file.path)) {
 					continue;
 				}
-				const findings = rule.check(text);
+				const { findings, escalate } = rule.check(file);
+				if (escalate) {
+					escalations.push({ rule, path: file.path });
+				}
 				if (findings.length === 0) {
 					continue;
 				}
-				const excused = exemptions(text.split("\n"), rule.id);
+				const excused = exemptions(file.text.split("\n"), rule.id);
 				for (const finding of findings) {
 					if (!excused(finding.line)) {
 						diagnostics.push({
 							...finding,
-							path,
+							path: file.path,
 							rule: rule.id,
 							severity: rule.level,
 						});
@@ -57,6 +61,6 @@ export class Checker {
 				}
 			}
 		}
-		return diagnostics;
+		return { diagnostics, escalations };
 	}
 }

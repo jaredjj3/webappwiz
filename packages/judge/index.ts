@@ -10,7 +10,7 @@ export {
 	type Violation,
 } from "./analyze";
 export { Check } from "./check";
-export { Checker, type FileText } from "./checker";
+export { type Checked, Checker, type Escalation } from "./checker";
 export { type Config, type ConfigInput, defineJudge } from "./config";
 export { diagnose } from "./diagnose";
 export type { ConfigDiagnostic, Diagnostic, Level } from "./diagnostic";
@@ -29,14 +29,7 @@ export { OneClassPerFile } from "./rule/one-class-per-file";
 export { OneDirPerInterface } from "./rule/one-dir-per-interface";
 export { ParametersDeclareFields } from "./rule/parameters-declare-fields";
 export { ReactiveOverUseState } from "./rule/reactive-over-use-state";
-export {
-	type Checked,
-	hasCheck,
-	needsAgent,
-	type PartlyChecked,
-	type Reviewed,
-	type Rule,
-} from "./rule/rule";
+export { type FileText, type Rule, type Verdict } from "./rule/rule";
 export { SimpleTestSetup } from "./rule/simple-test-setup";
 export { TestsReadLikeSentences } from "./rule/tests-read-like-sentences";
 export { RuleDocument } from "./rule-document";

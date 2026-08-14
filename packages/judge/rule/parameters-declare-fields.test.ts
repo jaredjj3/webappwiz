@@ -15,7 +15,7 @@ describe("parameters-declare-fields", () => {
 			"}",
 		].join("\n");
 
-		expect(new ParametersDeclareFields().check(text)).toEqual([
+		expect(new ParametersDeclareFields().check({ path: "t.ts", text: text }).findings).toEqual([
 			{
 				line: 5,
 				column: 3,
@@ -33,7 +33,7 @@ describe("parameters-declare-fields", () => {
 			"}",
 		].join("\n");
 
-		expect(new ParametersDeclareFields().check(text)).toEqual([]);
+		expect(new ParametersDeclareFields().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("does not read a type argument as a parameter name", () => {
@@ -48,7 +48,7 @@ describe("parameters-declare-fields", () => {
 			"}",
 		].join("\n");
 
-		expect(new ParametersDeclareFields().check(text)).toEqual([]);
+		expect(new ParametersDeclareFields().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("leaves an assignment the constructor decides to the body", () => {
@@ -66,7 +66,7 @@ describe("parameters-declare-fields", () => {
 			"}",
 		].join("\n");
 
-		expect(new ParametersDeclareFields().check(text)).toEqual([]);
+		expect(new ParametersDeclareFields().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("does not mistake a method's own copy for a constructor's", () => {
@@ -80,7 +80,7 @@ describe("parameters-declare-fields", () => {
 			"}",
 		].join("\n");
 
-		expect(new ParametersDeclareFields().check(text)).toEqual([]);
+		expect(new ParametersDeclareFields().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("catches every copy a wide constructor makes", () => {
@@ -96,6 +96,6 @@ describe("parameters-declare-fields", () => {
 			"}",
 		].join("\n");
 
-		expect(new ParametersDeclareFields().check(text)).toHaveLength(2);
+		expect(new ParametersDeclareFields().check({ path: "t.ts", text: text }).findings).toHaveLength(2);
 	});
 });

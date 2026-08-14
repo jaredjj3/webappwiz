@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { Finding } from "@webappwiz/rules";
 import type { Changeset } from "./changeset";
-import type { Checked, Reviewed } from "./rule/rule";
+import type { Rule } from "./rule/rule";
 import { Signoff } from "./signoff";
 
 const changeset: Changeset = {
@@ -9,31 +8,29 @@ const changeset: Changeset = {
 	changes: [{ path: "src/a.ts", status: "modified", added: ["const a = 1;"] }],
 };
 
-const objects: Checked = {
+const objects: Rule = {
 	id: "objects",
-	checkedBy: "code",
 	document: "# Objects",
-	check: (): Finding[] => [{ rule: "objects", message: "it objects" }],
+	check: () => ({ findings: [{ rule: "objects", message: "it objects" }] }),
 };
 
-const quiet: Checked = {
+const quiet: Rule = {
 	id: "quiet",
-	checkedBy: "code",
 	document: "# Quiet",
-	check: (): Finding[] => [],
+	check: () => ({ findings: [] }),
 };
 
-const read: Reviewed = {
+const read: Rule = {
 	id: "read",
-	checkedBy: "agent",
 	document: "# Read",
+	check: () => ({ findings: [], escalate: true }),
 };
 
 describe("Signoff", () => {
 	it("ships a change no rule objects to", () => {
 		const decision = new Signoff([quiet]).check(changeset);
 
-		expect(decision).toEqual({ ships: true, reasons: [] });
+		expect(decision).toEqual({ ships: true, reasons: [], unreviewed: [] });
 	});
 
 	it("stops a change on one rule's objection, whatever the others say", () => {
@@ -47,11 +44,12 @@ describe("Signoff", () => {
 		expect(new Signoff([]).check(changeset).ships).toBe(true);
 	});
 
-	it("leaves a rule only an agent can settle to the agent", () => {
-		// No check to run, so the local pass has nothing to say about it yet.
+	it("names a rule its check escalated, and ships without waiting on it", () => {
+		// The agent's reading is advisory here: an unpaid run still decides.
 		expect(new Signoff([read]).check(changeset)).toEqual({
 			ships: true,
 			reasons: [],
+			unreviewed: ["read"],
 		});
 	});
 });

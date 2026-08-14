@@ -9,13 +9,6 @@ export {
 	deleted,
 	type Status,
 } from "./changeset";
-export {
-	type Checked,
-	hasCheck,
-	needsAgent,
-	type PartlyChecked,
-	type Reviewed,
-	type Rule,
-} from "./rule/rule";
+export type { Rule } from "./rule/rule";
 export { TestsNotWeakened } from "./rule/tests-not-weakened";
 export { type Decision, Signoff } from "./signoff";

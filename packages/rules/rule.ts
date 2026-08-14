@@ -1,15 +1,28 @@
+import type { Finding } from "./finding";
+
+/** What one check concluded about one unit. */
+export interface Verdict<F = Finding> {
+	/** What code is sure of. Empty is a clean pass, not an abstention. */
+	findings: F[];
+	/** True when an agent should read this unit against the rule's document. */
+	escalate?: boolean;
+}
+
 /**
- * What the harness needs of a rule: a name to file findings under, and the
- * prose an agent reads.
+ * One rule: the document a human reads and an agent receives verbatim, and
+ * the code half of its check.
  *
- * Everything else about a rule belongs to whoever runs it. A rule that code
- * alone can decide, the files it applies to, how loudly a violation reports:
- * all of that varies by caller, and none of it is the harness's business.
- * Callers extend this with what they need.
+ * A unit is whatever one check reads and one finding cites: a file for a
+ * linter, a changeset for a gate. The library never looks inside it; only
+ * rules do. Every kind of rule is a return value rather than a type: code
+ * settles a unit by returning findings, an agent-judged rule returns
+ * `{ findings: [], escalate: true }`, and a hybrid returns both.
  */
-export interface Rule {
+export interface Rule<Unit, F = Finding> {
 	/** Kebab case: what a report cites, and what a finding is filed under. */
 	readonly id: string;
 	/** The rule's markdown, handed to the agent verbatim. */
 	readonly document: string;
+	/** The whole check, code's half of it: sync, pure, one unit at a time. */
+	check(unit: Unit): Verdict<F>;
 }

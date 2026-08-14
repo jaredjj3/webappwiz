@@ -4,7 +4,7 @@ import {
 	type ConfigDiagnostic,
 	diagnose,
 	Mechanizer,
-	needsAgent,
+	type Rule,
 	RuleDocument,
 	type Task,
 } from "@webappwiz/judge";
@@ -65,6 +65,12 @@ export interface JudgeOptions {
 const estimated = (tasks: Task[]): number =>
 	tokens(tasks.reduce((bytes, task) => bytes + task.bytes, 0));
 
+/** Whether a rule ever asks for an agent, probed with an empty file. A rule
+ * escalating conditionally per file dodges the probe, and pays an agent only
+ * when its own judgment says a file is worth one, which is its point. */
+const escalates = (rule: Rule): boolean =>
+	rule.check({ path: "", text: "" }).escalate === true;
+
 /**
  * Answers on the terminal, and answers no without one: a run nobody is watching
  * should stop and say the number rather than block forever waiting to be told
@@ -105,11 +111,11 @@ export class JudgeCommands {
 			this.report(config.rules.length, diagnostics, opts.strict);
 		}
 		const mechanizer = new Mechanizer(this.log, this.ps);
-		// Rules carrying a check are already mechanized: only the agent-judged
-		// ones are worth asking about.
+		// Rules whose checks settle everything are already mechanized: only what
+		// escalates to an agent is worth asking about.
 		diagnostics.push(
 			...(await mechanizer.check(
-				config.rules.filter((rule) => rule.checkedBy === "agent"),
+				config.rules.filter(escalates),
 				this.agent(config, opts),
 			)),
 		);
@@ -119,7 +125,7 @@ export class JudgeCommands {
 	/** Lists the rule set, one row each, ids first for citing. */
 	ls(): void {
 		const { rules } = this.sound();
-		const rows = [["ID", "RULE", "LEVEL", "FILES", "CHECK", "GOOD", "BAD"]];
+		const rows = [["ID", "RULE", "LEVEL", "FILES", "GOOD", "BAD"]];
 		for (const rule of rules) {
 			const doc = new RuleDocument(rule);
 			rows.push([
@@ -127,8 +133,6 @@ export class JudgeCommands {
 				doc.title,
 				rule.level,
 				rule.files,
-				// which rules cost tokens: a rule judged by code alone is free
-				rule.checkedBy,
 				String(doc.good.length),
 				String(doc.bad.length),
 			]);
@@ -185,9 +189,9 @@ export class JudgeCommands {
 			);
 		}
 		const config = this.sound();
-		// A rule judged by code alone is already enforced locally, for free; an
-		// agent reads only the rules, or the parts of them, no check decides.
-		const rules = config.rules.filter(needsAgent);
+		// Every rule goes in: planning runs the free checks first and sends the
+		// agent only the files they escalated.
+		const rules = config.rules;
 		const dir = opts.dir.replace(/\/+$/, "") || "/";
 		const only =
 			opts.since === undefined
@@ -212,8 +216,7 @@ export class JudgeCommands {
 				only,
 			})) {
 				this.log.info(
-					`=== ${task.label}: ${task.rules.map((rule) => rule.id).join(", ")} ` +
-						`(${count(task.files.length, "file")}) ===`,
+					`=== ${task.label} (${count(task.files.length, "file")}) ===`,
 				);
 				this.log.info(analyzer.prompt(task));
 			}

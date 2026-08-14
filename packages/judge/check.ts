@@ -5,8 +5,8 @@ import type { Rule } from "./rule/rule";
 
 /**
  * Checks every git-tracked file a rule's glob wants and reports one line per
- * finding, `path:line:column rule message`. Only rules with checks run here;
- * the agent-judged rest is `webappwiz judge`'s job, on demand.
+ * finding, `path:line:column rule message`. Only the free half runs here:
+ * what the checks escalate is `webappwiz judge`'s job, on demand.
  */
 export class Check {
 	constructor(
@@ -30,7 +30,7 @@ export class Check {
 		const files = await Promise.all(
 			paths.map(async (path) => ({ path, text: await this.fs.read(path) })),
 		);
-		const diagnostics = checker.check(files);
+		const { diagnostics } = checker.check(files);
 		for (const diagnostic of diagnostics) {
 			const paint = diagnostic.severity === "error" ? color.red : color.yellow;
 			this.log.info(

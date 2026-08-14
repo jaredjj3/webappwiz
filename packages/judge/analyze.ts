@@ -10,9 +10,10 @@ import {
 } from "@webappwiz/rules";
 import { type Fs, type Glob, type Ps, walk } from "@webappwiz/sys";
 import type { Clock, Duration } from "@webappwiz/time";
+import { Checker } from "./checker";
 import type { Level } from "./diagnostic";
 import { exemptions } from "./ignore";
-import type { Rule } from "./rule/rule";
+import type { FileText, Rule } from "./rule/rule";
 
 /** One agent call: the harness's task, plus the files judge chose for it. */
 export interface Task extends HarnessTask {
@@ -39,8 +40,8 @@ export interface Violation {
 
 /** One task's worth of violations, handed over the moment its agent returns. */
 export interface Finished {
-	/** The glob the task's rules share, as the report heads it. */
-	glob: string;
+	/** The task's rule ids, joined, as the report heads it. */
+	label: string;
 	/** The ids of the rules the task checked. */
 	rules: string[];
 	/** How many files this task's agent was told to read. */
@@ -153,7 +154,7 @@ export class Analyzer {
 				this.violations(task, finished.findings, dir).then((violations) => {
 					found[finished.at] = violations;
 					this.dispatcher.dispatch("finished", {
-						glob: task.label,
+						label: task.label,
 						rules: finished.rules,
 						files: task.files.length,
 						violations,
@@ -174,45 +175,64 @@ export class Analyzer {
 		return found.flat();
 	}
 
-	/** The tasks a run would spawn, without spawning any of them. */
+	/**
+	 * The tasks a run would spawn, without spawning any of them. Planning runs
+	 * every rule's check first, free, and builds tasks from exactly what those
+	 * checks escalated: the agent reads the files no check could settle, and
+	 * nothing else. What the checks found locally is `wiz check`'s report, not
+	 * this run's, and is dropped here.
+	 */
 	async plan(
 		rules: Rule[],
 		dir: string,
 		{ chunk = DEFAULT_CHUNK, only }: AnalyzeOptions = {},
 	): Promise<Task[]> {
+		const checker = new Checker(rules, this.glob);
 		const all: string[] = [];
 		const size = new Map<string, number>();
+		const files: FileText[] = [];
 		for await (const path of walk(this.fs, dir)) {
 			const file = path.slice(dir.length + 1); // dir-relative, like the globs
 			if (only && !only.has(file)) {
 				continue;
 			}
 			all.push(file);
+			if (!checker.matches(file)) {
+				continue;
+			}
 			size.set(file, (await this.fs.stat(path)).size);
+			files.push({ path: file, text: await this.fs.read(path) });
 		}
-		all.sort();
-		// Grouped by the glob's exact text: rules over the same files ride in one
-		// task and the files are read once, not once per rule.
-		const groups = new Map<string, Rule[]>();
+		files.sort((left, right) => left.path.localeCompare(right.path));
+		const { escalations } = checker.check(files);
+		const wanted = new Map<Rule, string[]>();
+		for (const { rule, path } of escalations) {
+			wanted.set(rule, [...(wanted.get(rule) ?? []), path]);
+		}
 		for (const rule of rules) {
-			groups.set(rule.files, [...(groups.get(rule.files) ?? []), rule]);
+			if (!all.some((file) => this.glob.matches(rule.files, file))) {
+				// stderr, so the report on stdout stays parseable
+				this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
+			}
+		}
+		// Rules escalating the same files ride in one task: the files are what a
+		// task costs, and they are read once, not once per rule.
+		const groups = new Map<string, { rules: Rule[]; files: string[] }>();
+		for (const [rule, escalated] of wanted) {
+			const key = escalated.join("\n");
+			const group = groups.get(key) ?? { rules: [], files: escalated };
+			group.rules.push(rule);
+			groups.set(key, group);
 		}
 		const tasks: Task[] = [];
-		for (const [pattern, group] of groups) {
-			const files = all.filter((file) => this.glob.matches(pattern, file));
-			if (files.length === 0) {
-				for (const rule of group) {
-					// stderr, so the report on stdout stays parseable
-					this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
-				}
-			}
+		for (const group of groups.values()) {
 			// chunks are counted in files, not tokens: switch to a byte budget when
 			// repos with a few huge files start overflowing a task.
-			for (let i = 0; i < files.length; i += chunk) {
-				const slice = files.slice(i, i + chunk);
+			for (let i = 0; i < group.files.length; i += chunk) {
+				const slice = group.files.slice(i, i + chunk);
 				const draft: Omit<Task, "bytes"> = {
-					rules: group,
-					label: pattern,
+					rules: group.rules,
+					label: group.rules.map((rule) => rule.id).join(", "),
 					files: slice,
 					context: [
 						"Check each of these files, relative to your working directory:",

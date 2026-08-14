@@ -1,29 +1,29 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
-import type { PartlyChecked } from "./rule";
+import type { FileText, Rule, Verdict } from "./rule";
 import doc from "./tests-read-like-sentences.md" with { type: "text" };
 
-export class TestsReadLikeSentences implements PartlyChecked {
+export class TestsReadLikeSentences implements Rule {
 	private static readonly MESSAGE =
 		"more than one describe call in this file: a test file makes exactly one";
 
 	readonly id = "tests-read-like-sentences";
 	readonly files = "**/*.test.ts";
 	readonly level = "error";
-	readonly checkedBy = "code-then-agent";
 	readonly document = doc;
 	// The check counts describe calls, where a second one is certain. Whether
 	// a title completes "it ..." naturally still needs the agent.
 
-	check(text: string): Hit[] {
+	check({ text }: FileText): Verdict {
 		const all = tokens(text);
-		return all
+		const findings = all
 			.filter((_, i) => this.isDescribeCall(all, i))
 			.slice(1)
 			.map(
 				(token) =>
 					new Hit(token.line, token.column, TestsReadLikeSentences.MESSAGE),
 			);
+		return { findings, escalate: true };
 	}
 
 	/** Whether the token at `at` opens a describe call, `describe(` and

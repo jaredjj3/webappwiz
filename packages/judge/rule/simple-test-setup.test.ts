@@ -14,7 +14,7 @@ describe("simple-test-setup", () => {
 			"}",
 		].join("\n");
 
-		expect(new SimpleTestSetup().check(text)).toEqual([
+		expect(new SimpleTestSetup().check({ path: "t.ts", text: text }).findings).toEqual([
 			{ line: 3, column: 3, message: expect.stringContaining("loop") },
 			{ line: 5, column: 2, message: expect.stringContaining("loop") },
 		]);
@@ -32,7 +32,7 @@ describe("simple-test-setup", () => {
 			"});",
 		].join("\n");
 
-		expect(new SimpleTestSetup().check(text)).toEqual([]);
+		expect(new SimpleTestSetup().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 
 	it("ignores identifiers that only look like tests: members, strings", () => {
@@ -43,6 +43,6 @@ describe("simple-test-setup", () => {
 			"}",
 		].join("\n");
 
-		expect(new SimpleTestSetup().check(text)).toEqual([]);
+		expect(new SimpleTestSetup().check({ path: "t.ts", text: text }).findings).toEqual([]);
 	});
 });

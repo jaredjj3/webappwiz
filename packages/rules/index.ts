@@ -19,5 +19,5 @@ export {
 	type HarnessEvents,
 	type RunOptions,
 } from "./harness";
-export type { Rule } from "./rule";
+export type { Rule, Verdict } from "./rule";
 export type { Task } from "./task";

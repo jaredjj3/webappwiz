@@ -1,9 +1,9 @@
 import { Hit } from "../hit";
 import { SyntaxKind, tokens } from "../scan";
 import doc from "./one-class-per-file.md" with { type: "text" };
-import type { Checked } from "./rule";
+import type { FileText, Rule, Verdict } from "./rule";
 
-export class OneClassPerFile implements Checked {
+export class OneClassPerFile implements Rule {
 	// `class` after one of these is a class expression, not a declaration.
 	private static readonly EXPRESSION_LEAD = new Set<SyntaxKind>([
 		SyntaxKind.EqualsToken,
@@ -19,12 +19,11 @@ export class OneClassPerFile implements Checked {
 	readonly id = "one-class-per-file";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly checkedBy = "code";
 	readonly document = doc;
 
-	check(text: string): Hit[] {
+	check({ text }: FileText): Verdict {
 		const all = tokens(text);
-		return all
+		const findings = all
 			.filter(
 				(token, i) =>
 					token.kind === SyntaxKind.ClassKeyword &&
@@ -37,5 +36,6 @@ export class OneClassPerFile implements Checked {
 			.map(
 				(token) => new Hit(token.line, token.column, OneClassPerFile.MESSAGE),
 			);
+		return { findings };
 	}
 }

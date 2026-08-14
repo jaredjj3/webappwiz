@@ -1,5 +1,3 @@
-import type { Rule } from "./rule";
-
 /**
  * One agent call: the rules it applies, and the material it applies them to.
  *
@@ -8,8 +6,9 @@ import type { Rule } from "./rule";
  * get an answer about it.
  */
 export interface Task {
-	/** The rules this call judges, whose documents go into the prompt. */
-	rules: Rule[];
+	/** The rules this call judges: the ids findings are filed under, and the
+	 * documents that go into the prompt. All the harness needs of a rule. */
+	rules: Array<{ id: string; document: string }>;
 	/** The material, rendered by the caller: a list of files to read, a diff,
 	 * anything the prompt should carry. */
 	context: string;

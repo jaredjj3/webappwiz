@@ -224,11 +224,13 @@ describe("JudgeCommands", () => {
 		await fs.write("/p/a.ts", "class A {}");
 		const config = defineJudge({
 			rules: [
-				testRule("one", { document: ruleDoc("One"), check: () => [] }),
+				testRule("one", {
+					document: ruleDoc("One"),
+					check: () => ({ findings: [] }),
+				}),
 				testRule("two", {
 					document: ruleDoc("Two"),
-					check: () => [],
-					checkedBy: "code-then-agent",
+					check: () => ({ findings: [], escalate: true }),
 				}),
 				testRule("three", { document: ruleDoc("Three") }),
 			],
@@ -244,7 +246,12 @@ describe("JudgeCommands", () => {
 
 	it("audits only the rules no check enforces", async () => {
 		const config = defineJudge({
-			rules: [testRule("one", { document: ruleDoc("One"), check: () => [] })],
+			rules: [
+				testRule("one", {
+					document: ruleDoc("One"),
+					check: () => ({ findings: [] }),
+				}),
+			],
 		});
 
 		await commands(config).audit(needsAgent);

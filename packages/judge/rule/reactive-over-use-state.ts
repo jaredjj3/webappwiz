@@ -1,10 +1,13 @@
 import doc from "./reactive-over-use-state.md" with { type: "text" };
-import type { Reviewed } from "./rule";
+import type { Rule, Verdict } from "./rule";
 
-export class ReactiveOverUseState implements Reviewed {
+export class ReactiveOverUseState implements Rule {
 	readonly id = "reactive-over-use-state";
 	readonly files = "**/*.{ts,tsx}";
 	readonly level = "warning";
-	readonly checkedBy = "agent";
 	readonly document = doc;
+
+	check(): Verdict {
+		return { findings: [], escalate: true };
+	}
 }

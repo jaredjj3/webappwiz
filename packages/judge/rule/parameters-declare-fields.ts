@@ -1,9 +1,9 @@
 import { Hit } from "../hit";
 import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./parameters-declare-fields.md" with { type: "text" };
-import type { Checked } from "./rule";
+import type { FileText, Rule, Verdict } from "./rule";
 
-export class ParametersDeclareFields implements Checked {
+export class ParametersDeclareFields implements Rule {
 	/** A parameter starting with one of these already declares its field, or
 	 * cannot: a parameter property, or a rest parameter. */
 	private static readonly DECLARES = new Set<SyntaxKind>([
@@ -40,10 +40,9 @@ export class ParametersDeclareFields implements Checked {
 	readonly id = "parameters-declare-fields";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly checkedBy = "code";
 	readonly document = doc;
 
-	check(text: string): Hit[] {
+	check({ text }: FileText): Verdict {
 		const all = tokens(text);
 		const found: Hit[] = [];
 		for (const [i, token] of all.entries()) {
@@ -59,7 +58,7 @@ export class ParametersDeclareFields implements Checked {
 				found.push(...this.copies(all, close + 1, plain));
 			}
 		}
-		return found;
+		return { findings: found };
 	}
 
 	/** The index of the parenthesis closing the list opening at `at`, or the

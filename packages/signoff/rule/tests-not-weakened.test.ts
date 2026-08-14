@@ -25,7 +25,7 @@ describe("tests-not-weakened", () => {
 	const rule = new TestsNotWeakened();
 
 	it("stops a deleted test whose subject the change leaves behind", () => {
-		const found = rule.check(changeset(deleted("src/parse.test.ts")));
+		const { findings: found } = rule.check(changeset(deleted("src/parse.test.ts")));
 
 		expect(found).toEqual([
 			{
@@ -37,7 +37,7 @@ describe("tests-not-weakened", () => {
 	});
 
 	it("lets a test go when the code it tested goes with it", () => {
-		const found = rule.check(
+		const { findings: found } = rule.check(
 			changeset(deleted("src/parse.test.ts"), deleted("src/parse.ts")),
 		);
 
@@ -45,11 +45,11 @@ describe("tests-not-weakened", () => {
 	});
 
 	it("says nothing about a deleted file that was never a test", () => {
-		expect(rule.check(changeset(deleted("src/parse.ts")))).toEqual([]);
+		expect(rule.check(changeset(deleted("src/parse.ts"))).findings).toEqual([]);
 	});
 
 	it("stops a test the change turns off", () => {
-		const found = rule.check(
+		const { findings: found } = rule.check(
 			changeset(added("src/parse.test.ts", "\tit.skip('parses', () => {")),
 		);
 
@@ -59,7 +59,7 @@ describe("tests-not-weakened", () => {
 	});
 
 	it("stops a suite the change narrows to one case", () => {
-		const found = rule.check(
+		const { findings: found } = rule.check(
 			changeset(added("src/parse.test.ts", "\tdescribe.only('parse', () => {")),
 		);
 
@@ -69,7 +69,7 @@ describe("tests-not-weakened", () => {
 	});
 
 	it("points at the added line that silenced the test", () => {
-		const found = rule.check(
+		const { findings: found } = rule.check(
 			changeset(
 				added("src/parse.test.ts", "const x = 1;", "it.only('x', () =>"),
 			),
@@ -79,7 +79,7 @@ describe("tests-not-weakened", () => {
 	});
 
 	it("leaves alone a skip the change did not add", () => {
-		const found = rule.check(
+		const { findings: found } = rule.check(
 			changeset(added("src/parse.test.ts", "it('parses', () => {")),
 		);
 
@@ -87,7 +87,7 @@ describe("tests-not-weakened", () => {
 	});
 
 	it("reads a test written with test.skip as readily as it.skip", () => {
-		const found = rule.check(
+		const { findings: found } = rule.check(
 			changeset(added("src/parse.test.ts", "test.skip('parses', () => {")),
 		);
 
@@ -95,7 +95,7 @@ describe("tests-not-weakened", () => {
 	});
 
 	it("knows a tsx test from the file it tests", () => {
-		const found = rule.check(changeset(deleted("src/app.test.tsx")));
+		const { findings: found } = rule.check(changeset(deleted("src/app.test.tsx")));
 
 		expect(found[0]?.message).toBe(
 			"test file deleted while src/app.tsx survives",

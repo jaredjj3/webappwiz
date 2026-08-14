@@ -1,17 +1,16 @@
-import type { Finding } from "@webappwiz/rules";
+import type { Finding, Verdict } from "@webappwiz/rules";
 import { type Changeset, deleted } from "../changeset";
-import type { Checked } from "./rule";
+import type { Rule } from "./rule";
 import doc from "./tests-not-weakened.md" with { type: "text" };
 
 /** `.skip` and `.only` on any of the runners a suite is written with. */
 const SILENCED = /\b(?:it|test|describe|suite)\b[\w.]*\.(skip|only)\s*\(/;
 
-export class TestsNotWeakened implements Checked {
+export class TestsNotWeakened implements Rule {
 	readonly id = "tests-not-weakened";
-	readonly checkedBy = "code";
 	readonly document = doc;
 
-	check(changeset: Changeset): Finding[] {
+	check(changeset: Changeset): Verdict {
 		const gone = deleted(changeset);
 		const findings: Finding[] = [];
 		for (const change of changeset.changes) {
@@ -42,7 +41,7 @@ export class TestsNotWeakened implements Checked {
 				}
 			}
 		}
-		return findings;
+		return { findings };
 	}
 
 	/** The file a test file tests, or undefined when the path is not a test. */
