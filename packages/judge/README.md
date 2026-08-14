@@ -18,19 +18,18 @@ to a human and to an agent, in `## Good` and `## Bad` examples.
 ```ts
 // rule/one-class-per-file.ts
 import doc from "./one-class-per-file.md" with { type: "text" };
-import type { Checked } from "./rule";
+import type { FileText, Rule, Verdict } from "./rule";
 
-export class OneClassPerFile implements Checked {
+export class OneClassPerFile implements Rule {
 	private static readonly MESSAGE =
 		"more than one class in this file: give each its own file";
 
 	readonly id = "one-class-per-file";
 	readonly files = "**/*.ts";
 	readonly level = "error";
-	readonly checkedBy = "code";
 	readonly document = doc;
 
-	check(text: string): Hit[] {
+	check({ text }: FileText): Verdict {
 		...
 	}
 }
@@ -56,18 +55,18 @@ class Bar {}
 ​```
 ```
 
-A rule says what checks it, and the type it implements makes that binding:
+Every kind of rule is one method returning a verdict, `{ findings,
+escalate? }`, rather than a type in a taxonomy:
 
-| `checkedBy` | implements | what settles it | what it costs |
-| --- | --- | --- | --- |
-| `"code"` | `Checked` | a token scan, outright | free, on every `wiz fix` |
-| `"code-then-agent"` | `PartlyChecked` | the check what it can see, an agent the rest | both |
-| `"agent"` | `Reviewed` | an agent reading the code | billed, on demand |
+| the check returns | what settles it | what it costs |
+| --- | --- | --- |
+| `{ findings }` | a token scan, outright | free, on every `wiz fix` |
+| `{ findings, escalate: true }` | the check what it can see, an agent the rest | both |
+| `{ findings: [], escalate: true }` | an agent reading the code | billed, on demand |
 
-`Checked` and `PartlyChecked` require a `check`; `Reviewed` has none. So a rule
-cannot claim a check it does not implement or hide one it does, and consumers
-discriminate on `checkedBy` rather than guessing from which fields are
-present.
+`escalate` is per file, so a rule can scan cheaply and send an agent only the
+files its own judgment says are worth one. What a check finds is reported at
+once; what it escalates is exactly what a paid run reads, and nothing else.
 
 ## The rule set
 
@@ -226,8 +225,9 @@ no-fixme  warning  a linter could enforce this without an agent:
 ```
 
 A tool only wins if it decides every case the rule covers, exceptions
-included, so a rule a check would half-enforce stays with the agent, as a
-`PartlyChecked` rule at most. The finding is a warning rather than an error
+included, so a rule a check would half-enforce stays with the agent, its
+check escalating what it cannot see. The finding is a warning rather than an
+error
 because writing the check is a judgment you make once, not something to fail
 a build on by surprise: `--strict` is how you make it fail once you have
 decided. Rules already carrying a full check are not asked about at all.
@@ -251,23 +251,23 @@ Those commands are a thin shell over this package. `diagnose` reports what is
 wrong with a rule set's own rules; `RuleDocument` parses one rule's markdown, for a report that wants
 its title or its examples; `Checker`
 runs the checks over in-memory files and `Check` over the git-tracked tree;
-`Mechanizer` asks an agent which agent rules a tool could enforce instead,
-and answers in the same `ConfigDiagnostic` shape, so the two print as one
-report; `Analyzer` plans one task per agent rule and chunk of matching files,
-hands each to an agent, and returns what came back, calling you as each task
-lands so a caller can print findings as they arrive. Rendering is the
-caller's: a violation carries the rule's id and level, the file and line, the
-message, and that line of source read from disk.
+`Mechanizer` asks an agent which escalating rules a tool could enforce
+instead, and answers in the same `ConfigDiagnostic` shape, so the two print
+as one report; `Analyzer` runs every rule's check first, free, groups the
+files they escalated into chunked tasks, hands each to an agent, and returns
+what came back, calling you as each task lands so a caller can print findings
+as they arrive. Rendering is the caller's: a violation carries the rule's id
+and level, the file and line, the message, and that line of source read from
+disk.
 
 ```ts
 const config = RULES;
 const analyzer = new Analyzer(log, fs, ps, clock);
 analyzer.events.on("finished", (task) =>
-	console.log(task.glob, task.violations.length),
+	console.log(task.label, task.violations.length),
 );
-const rules = config.rules.filter(needsAgent);
 const violations = await analyzer.run(
-	await analyzer.plan(rules, ".", { chunk: 25 }),
+	await analyzer.plan(config.rules, ".", { chunk: 25 }),
 	".",
 	agentCommand({ agent: config.agent }),
 	config.concurrency,

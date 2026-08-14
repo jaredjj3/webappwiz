@@ -43,16 +43,11 @@ whole change.
 
 ## A rule
 
-`checkedBy` says what settles the rule, which is also what makes `check`
-required or absent:
-
-| `checkedBy` | implements | what settles it | what it costs |
-| --- | --- | --- | --- |
-| `"code"` | `Checked` | reading the changeset | nothing |
-| `"code-then-agent"` | `PartlyChecked` | the check what it can, an agent the rest | one call |
-| `"agent"` | `Reviewed` | an agent reading the change | one call |
-
-Checks run first, so a change stopped by a free rule never pays for an agent.
+A rule is one `check(changeset)` returning a verdict, `{ findings,
+escalate? }`. Findings are what code is sure a person has to look at;
+`escalate: true` says an agent should read the change against the rule's
+document too. The decision names escalated rules as `unreviewed` rather than
+paying for them, so a change stopped by code never costs a call.
 
 The document is what a human reads and an agent receives verbatim. Its
 sections are `## Ships` and `## Needs review`, rather than judge's

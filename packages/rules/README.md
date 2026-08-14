@@ -18,15 +18,20 @@ and no code at all otherwise, which is the point.
 ## A rule
 
 ```ts
-export interface Rule {
+export interface Rule<Unit, F = Finding> {
 	readonly id: string;
 	readonly document: string;
+	check(unit: Unit): Verdict<F>;
 }
 ```
 
-That is the whole of what the harness needs. Which files a rule applies to,
-how loudly it reports, whether code alone can decide it: all of that varies by
-caller, so callers extend this with what they need and keep it to themselves.
+A unit is whatever one check reads and one finding cites: judge's is one
+file, signoff's the whole changeset. The check is the whole of a rule's code
+half, and its verdict, `{ findings, escalate? }`, says what code settled and
+whether an agent should read the unit against the document too. A task only
+carries `id` and `document`; which units a rule applies to and how loudly it
+reports vary by caller, so callers extend this with what they need and keep
+it to themselves.
 
 ## A task
 
