@@ -9,7 +9,7 @@ bunx @webappwiz/cli skills add arbor   # install an agent skill
 bunx @webappwiz/cli skills update      # refresh the ones already installed
 bunx @webappwiz/cli rules ls           # every rule there is
 bunx @webappwiz/cli judge .            # check a directory against them
-bunx @webappwiz/cli signoff            # the rules to weigh before merging
+bunx @webappwiz/cli signoff            # does this change need a person?
 ```
 
 ## rules
@@ -29,20 +29,27 @@ visual-work-tested  Visual work is tested      signoff
 agent is handed verbatim.
 
 The `SET` column is which of the two lists a rule is in. `judge` rules are what
-`judge` checks files against. `signoff` rules have no glob and no check because
-no command runs them: they are documents an agent reads and applies itself
-before merging, and they are listed here so it can find them.
+`judge` checks files against, file by file. `signoff` rules have no glob and no
+level because they are about a change rather than a file: `signoff` weighs them,
+and what they answer is whether it needs a person rather than where the code is
+wrong.
 
 ## signoff
 
-Prints every signoff rule in full, which is the whole of running them. An agent
-about to merge its own work reads them and decides whether the change needs a
-person; a project points its agent instructions at this one command rather than
-at a list of rule ids that goes stale the next time a rule is added.
+Weighs a change against the signoff rules and exits 1 with a reason when one of
+them wants a person to look before it merges. One agent call over the whole
+diff, since that is what these rules are about.
 
 ```bash
-bunx @webappwiz/cli signoff
+bunx @webappwiz/cli signoff                    # everything since main
+bunx @webappwiz/cli signoff --since HEAD~3     # measured against another ref
+bunx @webappwiz/cli signoff --print            # the rules, to apply yourself
 ```
+
+`--print` is the cheapest signoff there is: the agent about to merge reads the
+rules and weighs its own change, spawning nothing. A project points its agent
+instructions at that rather than at a list of rule ids, which goes stale the
+next time a rule is added.
 
 ## judge
 
@@ -52,14 +59,15 @@ of files.
 ```bash
 bunx @webappwiz/cli judge . --agent haiku
 bunx @webappwiz/cli judge . --estimate        # what would this read, and cost
-bunx @webappwiz/cli judge . --prompt          # print the prompts, spawn nothing
+bunx @webappwiz/cli judge . --print           # print the prompts, spawn nothing
 bunx @webappwiz/cli judge . --since main      # only what changed
 ```
 
 Each rule's code half runs first, free, and only what it escalates reaches an
 agent. `--budget` caps what a run may read before it asks whether you meant it;
 `--estimate` answers that without having to guess a budget low enough to be
-refused. Code excuses itself from a rule with a `judge-ignore <id>: <reason>`
+refused. `--print`, `--estimate` and running are three things to do with one
+plan, so passing two of them is an error rather than one quietly winning. Code excuses itself from a rule with a `judge-ignore <id>: <reason>`
 comment above the line, or `judge-ignore-file <id>: <reason>` for the file.
 
 ## update

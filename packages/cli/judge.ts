@@ -16,6 +16,7 @@ import type { Fs, Glob, Ps } from "@webappwiz/sys";
 import type { Clock } from "@webappwiz/time";
 import { changed } from "./changed";
 import { calibrate, floor, overheads, predict } from "./cost";
+import { mode } from "./mode";
 import {
 	count,
 	estimate,
@@ -42,8 +43,8 @@ export interface JudgeOptions {
 	dir: string;
 	agent?: string;
 	exec?: string;
-	/** Print the prompts and spawn nothing. */
-	prompt?: boolean;
+	/** Print the prompts to the logger and spawn nothing. */
+	print?: boolean;
 	/** Print what a run would read and stop. */
 	estimate?: boolean;
 	/** Files per task. */
@@ -135,30 +136,9 @@ export class JudgeCommands {
 	}
 
 	/**
-	 * Prints every signoff rule in full, for the agent about to merge to read
-	 * and apply to its own change. Nothing runs these, so this is the whole of
-	 * running them: one command rather than a list of ids in a project's agent
-	 * instructions, which would go stale the next time a rule is added.
-	 */
-	signoff(): void {
-		if (this.signoffRules.length === 0) {
-			this.log.info("no signoff rules");
-			return;
-		}
-		this.log.info(
-			"Weigh your change against each rule below. Anything that needs " +
-				"review goes to a person instead of trunk.",
-		);
-		for (const rule of this.signoffRules) {
-			this.log.info("");
-			this.show({ id: rule.id });
-		}
-	}
-
-	/**
 	 * Runs the rules over a directory with the agent you name, as `agent` or
-	 * `exec`; there is no default. Exits 1 on any error. Under `prompt` it
-	 * spawns nothing and prints the prompts instead, for an agent that would
+	 * `exec`, falling back to the config's. Exits 1 on any error. Under `print`
+	 * it spawns nothing and prints the prompts instead, for an agent that would
 	 * rather hand them to subagents of its own.
 	 *
 	 * `since` narrows the run to what git says has changed, and `budget` caps
@@ -167,18 +147,7 @@ export class JudgeCommands {
 	 * without having to guess a budget low enough to be refused.
 	 */
 	async judge(opts: JudgeOptions): Promise<void> {
-		if (
-			opts.estimate &&
-			(opts.agent !== undefined || opts.exec !== undefined || opts.prompt)
-		) {
-			// All three say what to do with the plan, and --estimate is already
-			// doing something else with it. Letting one quietly win would leave a
-			// caller unsure which of the two things they asked for they got.
-			throw new Error(
-				"--estimate measures a run instead of making one, so it takes no " +
-					"--agent, --exec or --prompt",
-			);
-		}
+		const how = mode(opts);
 		const config = this.rules;
 		// Every rule goes in: planning runs the free checks first and sends the
 		// agent only the files they escalated.
@@ -199,7 +168,7 @@ export class JudgeCommands {
 			chunk: opts.chunk,
 			only,
 		});
-		if (opts.prompt) {
+		if (how === "print") {
 			for (const task of tasks) {
 				this.log.info(
 					`=== ${task.label} (${count(task.files.length, "file")}) ===`,
@@ -211,7 +180,7 @@ export class JudgeCommands {
 		const read = new Set(tasks.flatMap((task) => task.files)).size;
 		const predicted = estimated(tasks);
 		const calls = tasks.length;
-		if (opts.estimate) {
+		if (how === "estimate") {
 			// No budget check: being asked to approve a number is what running
 			// --estimate is instead of.
 			for (const line of estimate(

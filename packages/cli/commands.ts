@@ -8,6 +8,7 @@ import { JudgeCommands } from "./judge";
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
 import { version } from "./package.json";
+import { Signoff } from "./signoff";
 import { Skills } from "./skills";
 import { update } from "./update";
 
@@ -62,7 +63,7 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 			default: undefined,
 			description: "command the prompt is passed to, instead of --agent",
 		})
-		.option("prompt", t.boolean(), {
+		.option("print", t.boolean(), {
 			default: false,
 			description: "print the prompts and run no agent at all",
 		})
@@ -86,8 +87,36 @@ export function commands<D extends CommandDeps>(app: Cli<D>): void {
 
 	app
 		.command("signoff")
-		.description("print the rules to weigh yourself before merging a change")
-		.action((_opts, deps) => judge(deps).signoff());
+		.description("weigh a change against the rules that ask for a person")
+		.arg("dir", t.string(), {
+			default: ".",
+			description: "directory whose change is weighed (default: .)",
+		})
+		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
+			default: undefined,
+			description: "model to weigh it with (default: the config's agent)",
+		})
+		.option("exec", t.optional(t.string()), {
+			default: undefined,
+			description: "command the prompt is passed to, instead of --agent",
+		})
+		.option("print", t.boolean(), {
+			default: false,
+			description: "print the rules to apply yourself, and run no agent",
+		})
+		.option("since", t.string(), {
+			default: "main",
+			description: "the ref the change is measured against",
+		})
+		.option("budget", t.number(), {
+			default: 200_000,
+			description: "confirm before reading more than this many tokens",
+		})
+		.action((opts, { log, ps, clock }) =>
+			new Signoff(log, ps, clock, SIGNOFF_RULES, WEBAPPWIZ_RULES.agent).run(
+				opts,
+			),
+		);
 
 	const rules = app
 		.group("rules")

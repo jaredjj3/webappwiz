@@ -5,7 +5,8 @@ After making code changes:
 
 Before merging code yourself:
 
-- `bin/wiz cli signoff` print the rules, and apply each one to your change.
+- `bin/wiz cli signoff --print` print the rules, and apply each one to your
+  change yourself.
 
 If a rule says your change needs review, escalate instead of merging. Skip this
 when the user has already asked to sign off the work themselves.

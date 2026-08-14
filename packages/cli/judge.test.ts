@@ -67,24 +67,6 @@ describe("JudgeCommands", () => {
 		);
 	});
 
-	it("prints every signoff rule in full for the agent about to merge", () => {
-		new JudgeCommands(log, fs, ps, clock, new NodeGlob(), oneRule, [
-			{ id: "two", document: ruleDoc("Two") },
-			{ id: "three", document: ruleDoc("Three") },
-		]).signoff();
-
-		expect(printed()).toContain("Weigh your change against each rule below");
-		expect(printed()).toContain("# Two");
-		expect(printed()).toContain("# Three");
-		expect(printed()).not.toContain("# One"); // judged by a run, not a reader
-	});
-
-	it("says there are none rather than printing nothing", () => {
-		commands(oneRule).signoff();
-
-		expect(printed()).toContain("no signoff rules");
-	});
-
 	it("prints what the agent found as a report of its own", async () => {
 		await fs.write("/p/a.ts", "class A {}\nclass B {}");
 		ps.setCaptureOutput(
@@ -165,10 +147,14 @@ describe("JudgeCommands", () => {
 		expect(ps.getCalls()[0]).toStartWith('sh -c codex exec "$@" sh ');
 	});
 
-	it("prints the prompts and spawns nothing under --prompt", async () => {
+	it("prints the prompts and spawns nothing under --print", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 
-		await commands(oneRule).judge({ ...judging, prompt: true });
+		await commands(oneRule).judge({
+			...judging,
+			agent: undefined,
+			print: true,
+		});
 
 		expect(printed()).toContain("=== one (1 file) ===");
 		expect(printed()).toContain("exactly 1 rule");
@@ -192,7 +178,11 @@ describe("JudgeCommands", () => {
 			],
 		});
 
-		await commands(config).judge({ ...judging, prompt: true });
+		await commands(config).judge({
+			...judging,
+			agent: undefined,
+			print: true,
+		});
 
 		// a partial check's rule still needs the agent; a full check's does not,
 		// and the two survivors share their glob's one task
@@ -254,8 +244,9 @@ describe("JudgeCommands", () => {
 
 		await commands(oneRule).judge({
 			...judging,
+			agent: undefined,
 			since: "main",
-			prompt: true,
+			print: true,
 		});
 
 		expect(printed()).toContain("=== one (1 file) ===");
@@ -306,36 +297,10 @@ describe("JudgeCommands", () => {
 		expect(printed()).toContain(["  files     1", "  rules     1"].join("\n"));
 	});
 
-	it("refuses --estimate together with --agent", async () => {
+	it("refuses a flag that prints together with one that runs", async () => {
 		await expect(
-			commands(oneRule).judge({
-				...judging,
-				estimate: true,
-				agent: "haiku",
-			}),
-		).rejects.toThrow("--estimate measures a run instead of making one");
-	});
-
-	it("refuses --estimate together with --exec", async () => {
-		await expect(
-			commands(oneRule).judge({
-				...judging,
-				estimate: true,
-				agent: undefined,
-				exec: "codex exec",
-			}),
-		).rejects.toThrow("--estimate measures a run instead of making one");
-	});
-
-	it("refuses --estimate together with --prompt", async () => {
-		await expect(
-			commands(oneRule).judge({
-				...judging,
-				estimate: true,
-				agent: undefined,
-				prompt: true,
-			}),
-		).rejects.toThrow("--estimate measures a run instead of making one");
+			commands(oneRule).judge({ ...judging, print: true }),
+		).rejects.toThrow("--print and --agent are different things");
 	});
 
 	it("says so and stops when nothing has changed since the ref", async () => {

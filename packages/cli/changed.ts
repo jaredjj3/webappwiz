@@ -21,22 +21,49 @@ export async function changed(
 		// and the files git has never been told about, which no diff reaches
 		["ls-files", "--others", "--exclude-standard"],
 	]) {
-		const { exitCode, stdout, stderr } = await ps.spawnCapture([
-			"git",
-			"-C",
-			dir,
-			...argv,
-		]);
-		if (exitCode !== 0) {
-			throw new Error(
-				`git ${argv[0]} failed in ${dir}: ${stderr.trim() || `exit ${exitCode}`}`,
-			);
-		}
-		for (const line of stdout.split("\n")) {
+		for (const line of (await git(ps, dir, argv)).split("\n")) {
 			if (line !== "") {
 				files.add(line);
 			}
 		}
 	}
 	return files;
+}
+
+/**
+ * The change itself, as a patch: everything in `dir` that differs from `ref`,
+ * committed or not, and the paths of the files git has never been told about,
+ * which no diff reaches.
+ *
+ * The new files are named rather than shown because a reader of this patch is
+ * an agent with the working directory in front of it, and it can open them.
+ */
+export async function diff(
+	ps: Ps,
+	dir: string,
+	ref: string,
+): Promise<{ patch: string; added: string[] }> {
+	const patch = await git(ps, dir, ["diff", "--relative", ref]);
+	const added = (
+		await git(ps, dir, ["ls-files", "--others", "--exclude-standard"])
+	)
+		.split("\n")
+		.filter((line) => line !== "");
+	return { patch: patch.trim(), added };
+}
+
+/** One git command, or the reason it would not answer. */
+async function git(ps: Ps, dir: string, argv: string[]): Promise<string> {
+	const { exitCode, stdout, stderr } = await ps.spawnCapture([
+		"git",
+		"-C",
+		dir,
+		...argv,
+	]);
+	if (exitCode !== 0) {
+		throw new Error(
+			`git ${argv[0]} failed in ${dir}: ${stderr.trim() || `exit ${exitCode}`}`,
+		);
+	}
+	return stdout;
 }

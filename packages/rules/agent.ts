@@ -48,7 +48,7 @@ export const agentCommand = (opts: AgentOptions): Agent => {
 		throw new Error(
 			"a run needs an agent, so say which: --agent " +
 				`<${Object.keys(AGENTS).join("|")}>, --exec <command>, ` +
-				"or --prompt to print the prompts and run nothing",
+				"or --print to print the prompts and run nothing",
 		);
 	}
 	const name = opts.agent;
