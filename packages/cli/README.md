@@ -14,7 +14,7 @@ bunx @webappwiz/cli judge .            # check a directory against them
 ## rules
 
 Every rule webappwiz judges itself by lives in
-[`@webappwiz/rules`](../rules/rules.ts) as a constant, one class each. There is
+[`@webappwiz/rules`](../rules/judge.ts) as a constant, one class each. There is
 no config file and no preset: a rule is in that list or it does not exist.
 
 ```

@@ -1,4 +1,4 @@
-import type { Rule } from "./rule";
+import type { Rule } from "../rule";
 import doc from "./tests-not-weakened.md" with { type: "text" };
 
 /**

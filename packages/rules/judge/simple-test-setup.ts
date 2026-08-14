@@ -1,6 +1,6 @@
-import { Hit } from "./hit";
-import type { FileRule, FileText, Verdict } from "./rule";
-import { SyntaxKind, type Token, tokens } from "./scan";
+import { Hit } from "../hit";
+import type { FileRule, FileText, Verdict } from "../rule";
+import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./simple-test-setup.md" with { type: "text" };
 
 export class SimpleTestSetup implements FileRule {

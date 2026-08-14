@@ -33,8 +33,9 @@ export {
 } from "./harness";
 export { Hit } from "./hit";
 export { exemptions } from "./ignore";
+export { WEBAPPWIZ_RULES } from "./judge";
 export { prompt } from "./prompt";
 export type { FileRule, FileText, Level, Rule, Verdict } from "./rule";
-export { SIGNOFF_RULES, WEBAPPWIZ_RULES } from "./rules";
 export { SyntaxKind, type Token, tokens } from "./scan";
+export { SIGNOFF_RULES } from "./signoff";
 export type { Task } from "./task";

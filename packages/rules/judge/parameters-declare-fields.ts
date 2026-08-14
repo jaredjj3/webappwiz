@@ -1,7 +1,7 @@
-import { Hit } from "./hit";
+import { Hit } from "../hit";
+import type { FileRule, FileText, Verdict } from "../rule";
+import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./parameters-declare-fields.md" with { type: "text" };
-import type { FileRule, FileText, Verdict } from "./rule";
-import { SyntaxKind, type Token, tokens } from "./scan";
 
 export class ParametersDeclareFields implements FileRule {
 	/** A parameter starting with one of these already declares its field, or

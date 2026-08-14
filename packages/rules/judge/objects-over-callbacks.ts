@@ -1,7 +1,7 @@
-import { Hit } from "./hit";
+import { Hit } from "../hit";
+import type { FileRule, FileText, Verdict } from "../rule";
+import { SyntaxKind, type Token, tokens } from "../scan";
 import doc from "./objects-over-callbacks.md" with { type: "text" };
-import type { FileRule, FileText, Verdict } from "./rule";
-import { SyntaxKind, type Token, tokens } from "./scan";
 
 export class ObjectsOverCallbacks implements FileRule {
 	private static readonly MESSAGE =

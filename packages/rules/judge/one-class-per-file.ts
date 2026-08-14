@@ -1,7 +1,7 @@
-import { Hit } from "./hit";
+import { Hit } from "../hit";
+import type { FileRule, FileText, Verdict } from "../rule";
+import { SyntaxKind, tokens } from "../scan";
 import doc from "./one-class-per-file.md" with { type: "text" };
-import type { FileRule, FileText, Verdict } from "./rule";
-import { SyntaxKind, tokens } from "./scan";
 
 export class OneClassPerFile implements FileRule {
 	// `class` after one of these is a class expression, not a declaration.

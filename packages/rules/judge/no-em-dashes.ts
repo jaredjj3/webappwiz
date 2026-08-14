@@ -1,6 +1,6 @@
-import { Hit } from "./hit";
+import { Hit } from "../hit";
+import type { FileRule, FileText, Verdict } from "../rule";
 import doc from "./no-em-dashes.md" with { type: "text" };
-import type { FileRule, FileText, Verdict } from "./rule";
 
 export class NoEmDashes implements FileRule {
 	// Escaped, since this file is one the rule reads.

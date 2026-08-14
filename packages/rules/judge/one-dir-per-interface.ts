@@ -1,5 +1,5 @@
+import type { FileRule, Verdict } from "../rule";
 import doc from "./one-dir-per-interface.md" with { type: "text" };
-import type { FileRule, Verdict } from "./rule";
 
 export class OneDirPerInterface implements FileRule {
 	readonly id = "one-dir-per-interface";
