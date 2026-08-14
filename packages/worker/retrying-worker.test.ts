@@ -5,7 +5,7 @@ import {
 	RetryingWorker,
 	type Worker,
 	type WorkerFactory,
-} from "../index";
+} from "./index";
 
 /** A factory whose first `failures` workers reject whatever they are sent. */
 class FlakyFactory implements WorkerFactory<string, string> {

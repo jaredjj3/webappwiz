@@ -1,7 +1,7 @@
 import { Disposer } from "@webappwiz/disposable";
 import type { Duration, Timer } from "@webappwiz/time";
 import { assert, type IdProvider } from "@webappwiz/util";
-import type { WorkerMessage } from "../protocol";
+import type { WorkerMessage } from "./protocol";
 import type { Worker } from "./worker";
 
 /**

@@ -1,7 +1,7 @@
 import { Duration, type Timer } from "@webappwiz/time";
 import type { IdProvider } from "@webappwiz/util";
-import type { WorkerMessage } from "../protocol";
-import { WebWorker } from "../worker/web-worker";
+import type { WorkerMessage } from "./protocol";
+import { WebWorker } from "./web-worker";
 import type { WorkerFactory } from "./worker-factory";
 
 export interface WebWorkerFactoryOptions {

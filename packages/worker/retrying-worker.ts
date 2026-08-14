@@ -1,6 +1,6 @@
 import { assert } from "@webappwiz/util";
-import type { WorkerFactory } from "../worker-factory/worker-factory";
 import type { Worker } from "./worker";
+import type { WorkerFactory } from "./worker-factory";
 
 export interface RetryOptions {
 	/** How many times to build a fresh worker and try again. Defaults to 1. */

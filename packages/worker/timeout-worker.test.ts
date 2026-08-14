@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { Duration } from "@webappwiz/time";
 import { FakeTimer } from "@webappwiz/time/testing";
 
-import { FakeWorker, TimeoutWorker } from "../index";
+import { FakeWorker, TimeoutWorker } from "./index";
 
 describe("TimeoutWorker", () => {
 	let timer: FakeTimer;
