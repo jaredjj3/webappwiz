@@ -84,7 +84,7 @@ export function estimate(
 		]);
 	}
 	return [
-		planned({ files, rules, calls, estimate: tokens }),
+		...planned({ files, rules, calls, estimate: tokens }),
 		"",
 		...table(rows).map((line) => `  ${line}`),
 		"",
@@ -134,36 +134,35 @@ export function planned({
 	concurrency,
 	cost,
 	agent,
-}: Planned): string {
-	// Each stat gets its own color, so the prose between them is grayed piece by
-	// piece: a foreground color resets to the default rather than to whatever it
-	// was nested in, so one gray around the whole line would not survive them.
-	const plan =
-		color.gray("checking ") +
-		color.blue(count(files, "file")) +
-		color.gray(" against ") +
-		color.green(count(rules, "rule")) +
-		color.gray(" in ") +
-		color.yellow(count(calls, "agent call")) +
-		(concurrency === undefined
-			? ""
-			: color.gray(`, ${concurrency} at a time`)) +
-		color.gray(", reading ") +
-		color.red(`${compact.format(estimate)}+ tokens`) +
-		(cost === undefined
-			? ""
-			: color.gray(" for ") + color.bold(`${usd(cost)}+`));
-	return agent === undefined
-		? plan
-		: `${plan}${color.gray(", using: ")}${color.bold(agent)}`;
+}: Planned): string[] {
+	// A table rather than a sentence: these are six numbers a reader scans for
+	// one of, and a line of prose makes them hunt for it every time.
+	const rows = [
+		["FILES", color.blue(String(files))],
+		["RULES", color.green(String(rules))],
+		[
+			"CALLS",
+			color.yellow(String(calls)) +
+				(concurrency === undefined
+					? ""
+					: color.gray(`, ${concurrency} at a time`)),
+		],
+		["READING", color.red(`${compact.format(estimate)}+ tokens`)],
+	];
+	if (cost !== undefined) {
+		rows.push(["COST", color.bold(`${usd(cost)}+`)]);
+	}
+	if (agent !== undefined) {
+		rows.push(["AGENT", color.bold(agent)]);
+	}
+	return table(rows).map((line) => `  ${line}`);
 }
 
 /**
  * A finished task, as it should print the moment its agent returns: a status
- * line naming the task's rules, then one finding per violation.
+ * line sizing the call, then one finding per violation.
  */
 export function finished({
-	label,
 	rules,
 	files,
 	violations,
@@ -172,8 +171,11 @@ export function finished({
 	done,
 	total,
 }: Finished): string[] {
+	// No rule ids: a task carries up to a dozen of them, they repeat on every
+	// line of the report, and the finding under the heading names the one that
+	// matters anyway.
 	const heading =
-		`${color.gray(`[${done}/${total}]`)} ${label} ` +
+		`${color.gray(`[${done}/${total}]`)} ` +
 		color.gray(`(${count(rules.length, "rule")}, ${count(files, "file")})`);
 	// No dollars rather than a zero when the agent reported none: an `--exec`
 	// command costing nothing and one that never said are different things.

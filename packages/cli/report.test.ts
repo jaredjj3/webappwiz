@@ -62,7 +62,7 @@ describe("report", () => {
 		);
 	});
 
-	it("names the glob, its rule count and what it cost when a task finds nothing", () => {
+	it("sizes a call, and says what it cost, when a task finds nothing", () => {
 		const lines = finished({
 			label: "**/*.ts",
 			rules: ["doc-comments-address-users"],
@@ -73,9 +73,21 @@ describe("report", () => {
 			total: 6,
 		});
 
-		expect(plain(lines)).toEqual([
-			"✓ [2/6] **/*.ts (1 rule, 25 files): clean in 8.3s",
-		]);
+		expect(plain(lines)).toEqual(["✓ [2/6] (1 rule, 25 files): clean in 8.3s"]);
+	});
+
+	it("leaves the rule ids out of a heading, since a finding names its own", () => {
+		const lines = finished({
+			label: "comments-say-why-not-what, doc-comments-address-users",
+			rules: ["comments-say-why-not-what", "doc-comments-address-users"],
+			files: 4,
+			violations: [],
+			took: Duration.secs(8.25),
+			done: 2,
+			total: 6,
+		});
+
+		expect(plain(lines)[0]).not.toContain("comments-say-why-not-what");
 	});
 
 	it("heads a task's findings with how many it found", () => {
@@ -90,7 +102,7 @@ describe("report", () => {
 		});
 
 		expect(plain(lines)[0]).toBe(
-			"✗ [3/6] **/*.ts (2 rules, 4 files): 2 problems in 41.0s",
+			"✗ [3/6] (2 rules, 4 files): 2 problems in 41.0s",
 		);
 		expect(plain(lines)).toHaveLength(5); // heading, then two findings and their quotes
 	});
@@ -112,32 +124,37 @@ describe("report", () => {
 		);
 	});
 
-	it("counts the agent calls a run is about to make, not its tasks", () => {
-		expect(color.strip(planned(plan))).toBe(
-			"checking 203 files against 7 rules in 52 agent calls, 4 at a time, " +
-				"reading 589K+ tokens for $1.23+, using: claude -p --model haiku",
-		);
+	it("tables what a run is about to do, counting agent calls rather than tasks", () => {
+		expect(plain(planned(plan))).toEqual([
+			"  FILES    203",
+			"  RULES    7",
+			"  CALLS    52, 4 at a time",
+			"  READING  589K+ tokens",
+			"  COST     $1.23+",
+			"  AGENT    claude -p --model haiku",
+		]);
 	});
 
 	it("leaves out the concurrency and the price when it has neither", () => {
 		expect(
-			color.strip(
-				planned({ ...plan, concurrency: undefined, cost: undefined }),
-			),
-		).toBe(
-			"checking 203 files against 7 rules in 52 agent calls, " +
-				"reading 589K+ tokens, using: claude -p --model haiku",
-		);
+			plain(planned({ ...plan, concurrency: undefined, cost: undefined })),
+		).toEqual([
+			"  FILES    203",
+			"  RULES    7",
+			"  CALLS    52",
+			"  READING  589K+ tokens",
+			"  AGENT    claude -p --model haiku",
+		]);
 	});
 
 	it("gives each count its own color, and the command another", () => {
-		const line = planned(plan);
+		const lines = planned(plan).join("\n");
 
-		expect(line).toContain(color.blue("203 files"));
-		expect(line).toContain(color.green("7 rules"));
-		expect(line).toContain(color.yellow("52 agent calls"));
-		expect(line).toContain(color.red("589K+ tokens"));
-		expect(line).toContain(color.bold("claude -p --model haiku"));
+		expect(lines).toContain(color.blue("203"));
+		expect(lines).toContain(color.green("7"));
+		expect(lines).toContain(color.yellow("52"));
+		expect(lines).toContain(color.red("589K+ tokens"));
+		expect(lines).toContain(color.bold("claude -p --model haiku"));
 	});
 
 	it("names no command when there is no agent to name", () => {
@@ -148,9 +165,12 @@ describe("report", () => {
 			cost: undefined,
 		};
 
-		expect(color.strip(planned(bare))).toBe(
-			"checking 203 files against 7 rules in 52 agent calls, reading 589K+ tokens",
-		);
+		expect(plain(planned(bare))).toEqual([
+			"  FILES    203",
+			"  RULES    7",
+			"  CALLS    52",
+			"  READING  589K+ tokens",
+		]);
 	});
 
 	it("counts four bytes to the token, rounding a partial token up", () => {
@@ -192,7 +212,7 @@ describe("report", () => {
 		});
 
 		expect(plain(lines)).toEqual([
-			"✓ [2/6] **/*.ts (1 rule, 25 files): clean in 8.3s  $0.0912",
+			"✓ [2/6] (1 rule, 25 files): clean in 8.3s  $0.0912",
 		]);
 	});
 
@@ -202,16 +222,21 @@ describe("report", () => {
 		);
 	});
 
-	it("prices a plan against every agent, floor first", () => {
+	it("prices a plan against every agent, floor first, under the plan itself", () => {
 		const lines = plain(estimate(203, 7, 52, 480_000, {}));
 
-		expect(lines[0]).toBe(
-			"checking 203 files against 7 rules in 52 agent calls, reading 480K+ tokens",
-		);
-		expect(lines[2]).toBe("  AGENT   FLOOR");
-		expect(lines[3]).toBe("  haiku   $0.48+");
-		expect(lines[4]).toBe("  sonnet  $1.44+");
-		expect(lines[5]).toBe("  opus    $2.40+");
+		expect(lines.slice(0, 4)).toEqual([
+			"  FILES    203",
+			"  RULES    7",
+			"  CALLS    52",
+			"  READING  480K+ tokens",
+		]);
+		expect(lines.slice(5, 9)).toEqual([
+			"  AGENT   FLOOR",
+			"  haiku   $0.48+",
+			"  sonnet  $1.44+",
+			"  opus    $2.40+",
+		]);
 	});
 
 	it("says a run is what turns the floor into a measurement", () => {
@@ -223,15 +248,15 @@ describe("report", () => {
 	it("adds the measured per-call overhead to the floor, once per call", () => {
 		const lines = plain(estimate(203, 7, 52, 480_000, { haiku: 0.065 }));
 
-		expect(lines[2]).toBe("  AGENT   FLOOR   MEASURED");
+		expect(lines[5]).toBe("  AGENT   FLOOR   MEASURED");
 		// $0.48 of files, and 52 calls charging $0.065 each on top of them
-		expect(lines[3]).toBe("  haiku   $0.48+  $3.86");
+		expect(lines[6]).toBe("  haiku   $0.48+  $3.86");
 	});
 
 	it("leaves the measurement blank for an agent no run has priced", () => {
 		const lines = plain(estimate(203, 7, 52, 480_000, { haiku: 0.065 }));
 
-		expect(lines[4]).toBe("  sonnet  $1.44+");
-		expect(lines[5]).toBe("  opus    $2.40+");
+		expect(lines[7]).toBe("  sonnet  $1.44+");
+		expect(lines[8]).toBe("  opus    $2.40+");
 	});
 });

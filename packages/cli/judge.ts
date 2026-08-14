@@ -265,17 +265,17 @@ export class JudgeCommands {
 			model === undefined
 				? undefined
 				: predict(model, predicted, calls, measured);
-		this.log.info(
-			planned({
-				files,
-				rules: rules.length,
-				calls,
-				estimate: predicted,
-				concurrency: config.concurrency,
-				cost,
-				agent: agent.label,
-			}),
-		);
+		for (const line of planned({
+			files,
+			rules: rules.length,
+			calls,
+			estimate: predicted,
+			concurrency: config.concurrency,
+			cost,
+			agent: agent.label,
+		})) {
+			this.log.info(line);
+		}
 		if (predicted > opts.budget) {
 			this.log.info(overBudget(predicted, opts.budget, cost));
 			if (!(await this.confirmer.confirm("Run anyway?"))) {

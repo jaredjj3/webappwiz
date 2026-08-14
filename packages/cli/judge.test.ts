@@ -137,7 +137,7 @@ describe("JudgeCommands", () => {
 		);
 
 		expect(commands(oneRule).judge(judging)).rejects.toThrow("1 error");
-		expect(printed()).toContain("✗ [1/1] one (1 rule, 1 file): 1 problem");
+		expect(printed()).toContain("✗ [1/1] (1 rule, 1 file): 1 problem");
 		expect(printed()).toContain(
 			"/p/a.ts:2  error  the file declares a second class (one)",
 		);
@@ -192,7 +192,7 @@ describe("JudgeCommands", () => {
 			"claude -p --output-format json --model haiku ",
 		);
 		expect(printed()).toContain(
-			"using: claude -p --output-format json --model haiku",
+			"AGENT    claude -p --output-format json --model haiku",
 		);
 	});
 
@@ -272,7 +272,7 @@ describe("JudgeCommands", () => {
 
 		await commands(oneRule).judge(judging);
 
-		expect(printed()).toMatch(/reading \d[\d.]*K?\+ tokens/);
+		expect(printed()).toMatch(/READING {2}\d[\d.]*K?\+ tokens/);
 	});
 
 	it("spawns nothing when the estimate is over budget and nobody says go", async () => {
@@ -327,9 +327,10 @@ describe("JudgeCommands", () => {
 			estimate: true,
 		});
 
-		expect(printed()).toMatch(
-			/^checking 1 file against 1 rule in 1 agent call, reading \d[\d.]*K?\+ tokens$/m,
+		expect(printed()).toContain(
+			["  FILES    1", "  RULES    1", "  CALLS    1"].join("\n"),
 		);
+		expect(printed()).toMatch(/READING {2}\d[\d.]*K?\+ tokens/);
 		expect(ps.getCalls()).toEqual([]);
 	});
 
@@ -342,7 +343,7 @@ describe("JudgeCommands", () => {
 			estimate: true,
 		});
 
-		expect(printed()).not.toContain("using:");
+		expect(printed()).not.toContain("claude -p");
 	});
 
 	it("measures only what changed when --estimate is given a --since", async () => {
@@ -357,7 +358,7 @@ describe("JudgeCommands", () => {
 			since: "main",
 		});
 
-		expect(printed()).toContain("checking 1 file against 1 rule");
+		expect(printed()).toContain(["  FILES    1", "  RULES    1"].join("\n"));
 	});
 
 	it("refuses --estimate together with --agent", async () => {

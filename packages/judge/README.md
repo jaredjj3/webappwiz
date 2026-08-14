@@ -174,11 +174,14 @@ agent; `rules show <id>` prints one in full.
 ## What a run costs
 
 A run says what it is about to read before it reads any of it, and
-`--estimate` prints that line and stops, spawning nothing:
+`--estimate` prints that table and stops, spawning nothing:
 
 ```bash
 webappwiz judge --estimate
-# checking 211 files against 7 rules in 9 agent calls, reading 165K+ tokens
+#   FILES    211
+#   RULES    7
+#   CALLS    9
+#   READING  165K+ tokens
 ```
 
 Because it runs nothing, `--estimate` takes no `--agent`, `--exec` or
