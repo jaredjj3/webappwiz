@@ -83,8 +83,9 @@ dead ends and how to verify go under `## Notes`. Update it as you go; a stale
 plan is worse than none.
 
 `arbor show <task>` prints the file and every way it departs from the
-expected shape; run it on your own task after writing the file. `ARBOR.md` is
-gitignored: never commit it, and never mention it in a commit message.
+expected shape; run it on your own task after writing the file. `add` excludes
+`ARBOR.md` from git for you: never commit it, and never mention it in a commit
+message.
 
 ## Committing
 
