@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import { type Fs, NodeFs, walk } from "@webappwiz/sys";
+import { Skills } from "./skills";
 
 /**
  * A `"@webappwiz/x": "1.2.3"` dependency entry, captured either side of the
@@ -23,6 +24,8 @@ export interface UpdateOptions {
  * Pins every `@webappwiz/*` dependency under `dir` to one version, so a project
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
+ * Installed skills are copies of files those packages ship, so they are
+ * refreshed too.
  */
 export async function update(opts: UpdateOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -44,4 +47,5 @@ export async function update(opts: UpdateOptions): Promise<void> {
 		count++;
 	}
 	log.info(`${count} package.json pinned to ${opts.version}`);
+	await new Skills({ log, fs }).update({ dir: opts.dir });
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakeFs } from "@webappwiz/sys/testing";
 
+import { source } from "./skills";
 import { update } from "./update";
 
 describe("update", () => {
@@ -11,10 +12,15 @@ describe("update", () => {
 	const manifest = (deps: Record<string, string>) =>
 		JSON.stringify({ name: "app", dependencies: deps }, null, "\t");
 
+	const skill = (version: string) =>
+		`---\nname: arbor\nversion: ${version}\n---\n\n# arbor\n`;
+
 	beforeEach(async () => {
 		fs = new FakeFs();
 		log = new MemoryLogger();
 		await fs.mkdir("/p");
+		await fs.mkdir(source);
+		await fs.write(`${source}/arbor.skill.md`, skill("1.0.0"));
 	});
 
 	it("pins every @webappwiz dependency it finds, at any depth", async () => {
@@ -54,6 +60,18 @@ describe("update", () => {
 		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
 
 		expect(await fs.read("/p/package.json")).toEqual(own);
+	});
+
+	it("refreshes the skills the project has installed", async () => {
+		await fs.write("/p/package.json", manifest({ "@webappwiz/t": "0.1.0" }));
+		await fs.mkdir("/p/.agents/skills/arbor");
+		await fs.write("/p/.agents/skills/arbor/SKILL.md", skill("0.9.0"));
+
+		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
+
+		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
+			skill("1.0.0"),
+		);
 	});
 
 	it("skips node_modules", async () => {
