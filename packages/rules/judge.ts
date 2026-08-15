@@ -11,6 +11,7 @@ import { OneClassPerFile } from "./judge/one-class-per-file";
 import { OneDirPerInterface } from "./judge/one-dir-per-interface";
 import { ParametersDeclareFields } from "./judge/parameters-declare-fields";
 import { ReactiveOverUseState } from "./judge/reactive-over-use-state";
+import { ResourcesAreDisposable } from "./judge/resources-are-disposable";
 import { SimpleTestSetup } from "./judge/simple-test-setup";
 
 /**
@@ -37,5 +38,6 @@ export const WEBAPPWIZ_RULES = defineRules({
 		new OneDirPerInterface(),
 		new DevServersFindAPort(),
 		new ReactiveOverUseState(),
+		new ResourcesAreDisposable(),
 	],
 });
