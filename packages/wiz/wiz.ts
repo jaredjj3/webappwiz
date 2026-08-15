@@ -1,7 +1,6 @@
 import type { CommandDeps } from "@webappwiz/cli/commands";
 import { commands } from "@webappwiz/cli/commands";
 import { cli } from "@webappwiz/cmd";
-import { Check, WEBAPPWIZ_RULES } from "@webappwiz/rules";
 import {
 	CliGit,
 	CliGithub,
@@ -10,19 +9,18 @@ import {
 	NpmRegistry,
 } from "@webappwiz/ship";
 import { t } from "@webappwiz/t";
-import { ToolchainFix } from "./fix/toolchain-fix";
+import type { Fixer } from "./fixer";
 import { Path } from "./path";
 import { ship } from "./ship";
 import { test } from "./test";
 
-/** Everything `wiz` is run with. The mounted `cli` commands need the same. */
-export type WizDeps = CommandDeps;
-
-const toolchainFix = ({ log, fs, ps, glob }: WizDeps): ToolchainFix =>
-	new ToolchainFix(new Check(WEBAPPWIZ_RULES.rules, { log, fs, ps, glob }), {
-		log,
-		ps,
-	});
+/**
+ * Everything `wiz` is run with: what the mounted `cli` commands need, and the
+ * `Fixer` that `fix` and `ship` put the workspace in order with.
+ */
+export interface WizDeps extends CommandDeps {
+	fixer: Fixer;
+}
 
 export const wiz = cli<WizDeps>("wiz");
 
@@ -33,7 +31,7 @@ wiz
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action((opts, deps) => toolchainFix(deps).run(opts));
+	.action((opts, { fixer }) => fixer.run(opts));
 
 wiz
 	.command("path")
@@ -52,8 +50,7 @@ wiz
 	.command("ship")
 	.description("release every package in the workspace at one version")
 	.arg("bump", t.string(), { description: "patch, minor, or major" })
-	.action(async (opts, deps) => {
-		const { log, fs, ps } = deps;
+	.action(async (opts, { log, fs, ps, fixer }) => {
 		const workspace = await ManifestWorkspace.at(ps.cwd(), { fs });
 		const release = new LockstepShip(
 			workspace,
@@ -62,7 +59,7 @@ wiz
 			new CliGithub({ ps }),
 			{ log },
 		);
-		await ship(release, toolchainFix(deps), { ...opts, log, ps });
+		await ship(release, fixer, { ...opts, log, ps });
 	});
 
 wiz

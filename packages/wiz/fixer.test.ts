@@ -2,19 +2,19 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakePs } from "@webappwiz/sys/testing";
 
-import { ToolchainFix } from "./toolchain-fix";
+import { Fixer } from "./fixer";
 
-describe("fix", () => {
+describe("fixer", () => {
 	let log: MemoryLogger;
 	let ps: FakePs;
 	let clean: boolean;
-	let fix: ToolchainFix;
+	let fix: Fixer;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
 		clean = true;
-		fix = new ToolchainFix({ run: async () => clean }, { log: log, ps: ps });
+		fix = new Fixer({ run: async () => clean }, { log: log, ps: ps });
 	});
 
 	it("writes fixes by default, then checks and typechecks", async () => {

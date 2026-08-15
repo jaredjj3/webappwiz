@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakeShip, fakePlan } from "@webappwiz/ship";
 import { FakePs } from "@webappwiz/sys/testing";
-import { FakeFix } from "./fix/fake-fix";
+import { Fixer } from "./fixer";
 import { ship } from "./ship";
 
 describe("ship", () => {
@@ -12,14 +12,18 @@ describe("ship", () => {
 		remedy: ["npm", "login"],
 	};
 
+	// The gate runs through the same FakePs the release does, so its commands
+	// show up in `getCalls()` ahead of anything the release itself spawns.
+	const GATE = ["bunx biome check .", "bunx tsc --noEmit"];
+
 	let log: MemoryLogger;
 	let ps: FakePs;
-	let fix: FakeFix;
+	let fix: Fixer;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
-		fix = new FakeFix();
+		fix = new Fixer({ run: async () => true }, { log, ps });
 	});
 
 	it("refuses a bump nobody has heard of", async () => {
@@ -28,6 +32,7 @@ describe("ship", () => {
 		await expect(
 			ship(release, fix, { ...{ bump: "sideways" }, log, ps }),
 		).rejects.toThrow('unknown version bump "sideways"');
+		expect(ps.getCalls()).toEqual([]);
 		expect(release.plans).toBe(0);
 	});
 
@@ -37,7 +42,7 @@ describe("ship", () => {
 		await expect(
 			ship(release, fix, { ...{ bump: "patch" }, log, ps }),
 		).rejects.toThrow("not ready to release");
-		expect(ps.getCalls()).toEqual(["npm login"]);
+		expect(ps.getCalls()).toEqual([...GATE, "npm login"]);
 		expect(release.plans).toBe(2);
 		expect(release.runs).toEqual([]);
 	});
@@ -49,7 +54,7 @@ describe("ship", () => {
 		await expect(
 			ship(release, fix, { ...{ bump: "patch" }, log, ps }),
 		).rejects.toThrow("not ready to release");
-		expect(ps.getCalls()).toEqual([]);
+		expect(ps.getCalls()).toEqual(GATE);
 		expect(release.plans).toBe(1);
 	});
 });

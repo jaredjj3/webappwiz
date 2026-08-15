@@ -2,22 +2,25 @@ import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import type { Check } from "@webappwiz/rules";
 import { NodePs, type Ps } from "@webappwiz/sys";
 
-import type { Fix, FixOptions } from "./fix";
-
-/** What a `ToolchainFix` runs through; the real ones by default. */
-export interface ToolchainFixOptions {
+/** What a `Fixer` runs through; the real ones by default. */
+export interface FixerOptions {
 	log?: Logger;
 	ps?: Ps;
 }
 
+export interface FixOptions {
+	/** Report problems without writing fixes, as CI wants it. */
+	check: boolean;
+}
+
 /** Runs biome, the config's checks, and the type checker, in that order. */
-export class ToolchainFix implements Fix {
+export class Fixer {
 	private readonly log: Logger;
 	private readonly ps: Ps;
 
 	constructor(
 		private readonly checks: Pick<Check, "run">,
-		opts: ToolchainFixOptions = {},
+		opts: FixerOptions = {},
 	) {
 		this.log = opts.log ?? new ConsoleLogger();
 		this.ps = opts.ps ?? new NodePs();

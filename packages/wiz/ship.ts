@@ -1,7 +1,7 @@
 import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import { isBump, type Plan, type Ship } from "@webappwiz/ship";
 import { NodePs, type Ps } from "@webappwiz/sys";
-import type { Fix } from "./fix/fix";
+import type { Fixer } from "./fixer";
 
 export interface ShipOptions {
 	/** How far to move the version: patch, minor or major. */
@@ -13,7 +13,7 @@ export interface ShipOptions {
 /** Releases every package in the workspace together, at one version. */
 export async function ship(
 	release: Ship,
-	fix: Fix,
+	fixer: Fixer,
 	opts: ShipOptions,
 ): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -25,7 +25,7 @@ export async function ship(
 	}
 	// These packages publish their source, so a typecheck is the only compile
 	// gate there is. Run it before anything is stamped or pushed.
-	await fix.run({ check: true });
+	await fixer.run({ check: true });
 
 	const plan = await recover(await release.plan(opts.bump), log, ps, release);
 	if (plan.problems.length > 0) {
