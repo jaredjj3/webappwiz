@@ -98,10 +98,8 @@ not squashing.
 
 Merge only work you verified yourself. Escalate instead when verification
 needs a person: external services, destructive migrations, anything tests
-cannot confirm, or whatever the signoff rules stop (`wiz rules ls` and
-`wiz rules show <id>`; nothing runs them for you, so apply them yourself).
-And if the user asked to see the work before it lands, escalate regardless of
-what the rules say.
+cannot confirm. And if the user asked to see the work before it lands,
+escalate regardless.
 
 1. `arbor escalate <reason>`.
 2. Under `## Blocked` in `ARBOR.md`, state what needs verifying, ending in a
