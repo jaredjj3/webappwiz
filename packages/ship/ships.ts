@@ -1,12 +1,12 @@
 import { type Fs, NodePs, type Ps } from "@webappwiz/system";
-import { CliGithub, type CliGithubOptions } from "../github/cli-github";
-import { NpmRegistry, type NpmRegistryOptions } from "../registry/npm-registry";
-import type { Registry } from "../registry/registry";
-import { ManifestWorkspace } from "../workspace/manifest-workspace";
-import { GithubShip } from "./github-ship";
-import { LockstepShip } from "./lockstep-ship";
-import { RegistryShip } from "./registry-ship";
-import type { Ship } from "./ship";
+import { CliGithub, type CliGithubOptions } from "./github/cli-github";
+import { NpmRegistry, type NpmRegistryOptions } from "./registry/npm-registry";
+import type { Registry } from "./registry/registry";
+import { GithubShip } from "./ship/github-ship";
+import { LockstepShip } from "./ship/lockstep-ship";
+import { RegistryShip } from "./ship/registry-ship";
+import type { Ship } from "./ship/ship";
+import { ManifestWorkspace } from "./workspace/manifest-workspace";
 
 /** What `ships.workspace` reads the roster through; the real system by default. */
 export interface WorkspaceShipOptions {

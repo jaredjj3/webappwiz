@@ -7,7 +7,7 @@ import { FakeRegistry } from "./registry/fake-registry";
 import { Runner } from "./runner";
 import { GithubShip } from "./ship/github-ship";
 import type { Ship } from "./ship/ship";
-import { ships } from "./ship/ships";
+import { ships } from "./ships";
 import { FakeWorkspace } from "./workspace/fake-workspace";
 
 describe("runner", () => {
@@ -140,7 +140,7 @@ describe("runner", () => {
 		expect(workspace.stamped).toEqual(["1.2.4"]);
 	});
 
-	it("reports a dirty tree and the wrong branch without a remedy", async () => {
+	it("reports a dirty tree and the wrong branch", async () => {
 		git.dirty = true;
 		git.current = "task/ship";
 

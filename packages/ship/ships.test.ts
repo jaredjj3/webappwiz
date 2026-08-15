@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { FakeRegistry } from "../registry/fake-registry";
+import { FakeRegistry } from "./registry/fake-registry";
 import { ships } from "./ships";
 
 describe("ships", () => {

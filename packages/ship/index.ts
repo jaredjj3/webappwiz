@@ -7,6 +7,6 @@ export type { Registry } from "./registry/registry";
 export type { Release } from "./release/release";
 export { Runner, type RunnerOptions } from "./runner";
 export type { Ship } from "./ship/ship";
-export { ships, type WorkspaceShipOptions } from "./ship/ships";
+export { ships, type WorkspaceShipOptions } from "./ships";
 export { type Bump, isBump } from "./version";
 export type { Package, Workspace } from "./workspace/workspace";
