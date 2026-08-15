@@ -6,6 +6,10 @@ export class BunBundler implements Bundler {
 		const built = await Bun.build({
 			entrypoints: [entrypoint],
 			target: "browser",
+			// Left to throw, a failure arrives as an AggregateError that says only
+			// "Bundle failed": which import went missing is in the logs, and the
+			// person reading the terminal needs that to know it is their install.
+			throw: false,
 		});
 		const [output] = built.outputs;
 		if (output === undefined) {
