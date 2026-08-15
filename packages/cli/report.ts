@@ -20,7 +20,7 @@ export const divider = (name?: string): string => {
 		return color.dim("-".repeat(72));
 	}
 	const opening = `--- ${name} `;
-	// A task carrying a dozen rule ids is named past the width, and a line that
+	// A review carrying a dozen rule ids is named past the width, and a line that
 	// stopped at the name would read as a heading rather than as a rule off.
 	return color.dim(opening.padEnd(Math.max(72, opening.length + 3), "-"));
 };
@@ -29,7 +29,7 @@ const compact = new Intl.NumberFormat("en", { notation: "compact" });
 
 /**
  * Four decimals, because a single agent call costs cents: a run's total wants
- * two and one task wants four, and one format both can live in beats a reader
+ * two and one review wants four, and one format both can live in beats a reader
  * having to notice which of two they are looking at.
  */
 const money = new Intl.NumberFormat("en", {
@@ -126,7 +126,7 @@ export function estimate(
 }
 
 /**
- * The plan, before the first agent starts. Counts calls rather than tasks
+ * The plan, before the first agent starts. Counts calls rather than reviews
  * because a call is what a run is billed for, and it is the denominator of the
  * `[n/total]` headings below. Without an `agent` it is the whole of what
  * `--estimate` prints, so it names no command it is not going to run.
@@ -182,24 +182,24 @@ export function planned({
 	return ["", ...table(rows).map((line) => `  ${line}`), ""];
 }
 
-/** A finished task as the report prints it: what the call covered, what it
+/** A finished review as the report prints it: what the call covered, what it
  * found, and what it cost. */
 export interface Finished {
-	/** The ids of the rules the task checked. */
+	/** The ids of the rules the review checked. */
 	rules: string[];
-	/** How many files this task's agent was told to read. */
+	/** How many files this review's agent was told to read. */
 	files: number;
 	violations: Violation[];
-	/** How long this task's agent took. */
+	/** How long this review's agent took. */
 	took: Duration;
-	/** Dollars this task's call was billed, when the agent reported a figure. */
+	/** Dollars this review's call was billed, when the agent reported a figure. */
 	cost?: number;
 	done: number;
 	total: number;
 }
 
 /**
- * A finished task, as it should print the moment its agent returns: a status
+ * A finished review, as it should print the moment its agent returns: a status
  * line sizing the call, then one finding per violation.
  */
 export function finished({
@@ -211,7 +211,7 @@ export function finished({
 	done,
 	total,
 }: Finished): string[] {
-	// No rule ids: a task carries up to a dozen of them, they repeat on every
+	// No rule ids: a review carries up to a dozen of them, they repeat on every
 	// line of the report, and the finding under the heading names the one that
 	// matters anyway.
 	const heading =

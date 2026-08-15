@@ -7,7 +7,7 @@
  * answer.
  */
 export interface Finding {
-	/** The rule the finding is filed under, checked against the task's rules. */
+	/** The rule the finding is filed under, checked against the review's rules. */
 	rule: string;
 	/** How this code breaks the rule. Never what to do about it. */
 	message: string;

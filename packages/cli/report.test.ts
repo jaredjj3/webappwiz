@@ -63,7 +63,7 @@ describe("report", () => {
 		);
 	});
 
-	it("sizes a call, and says what it cost, when a task finds nothing", () => {
+	it("sizes a call, and says what it cost, when a review finds nothing", () => {
 		const lines = finished({
 			rules: ["doc-comments-address-users"],
 			files: 25,
@@ -89,7 +89,7 @@ describe("report", () => {
 		expect(plain(lines)[0]).not.toContain("comments-say-why-not-what");
 	});
 
-	it("heads a task's findings with how many it found", () => {
+	it("heads a review's findings with how many it found", () => {
 		const lines = finished({
 			rules: ["comments-say-why-not-what", "doc-comments-address-users"],
 			files: 4,
@@ -122,7 +122,7 @@ describe("report", () => {
 		);
 	});
 
-	it("tables what a run is about to do, counting agent calls rather than tasks", () => {
+	it("tables what a run is about to do, counting agent calls rather than reviews", () => {
 		expect(plain(planned(plan))).toEqual([
 			"",
 			"  files     203",
@@ -215,7 +215,7 @@ describe("report", () => {
 		expect(usd(0.056097)).toBe("$0.0561");
 	});
 
-	it("says what a task cost beside how long it took", () => {
+	it("says what a review cost beside how long it took", () => {
 		const lines = finished({
 			rules: ["doc-comments-address-users"],
 			files: 25,

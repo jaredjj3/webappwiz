@@ -1,4 +1,4 @@
-/** What one task is handed to: the argv to spawn, and how reports name it. */
+/** What one review is handed to: the argv to spawn, and how reports name it. */
 export interface Agent {
 	argv: string[];
 	label: string;
@@ -18,7 +18,7 @@ export const AGENTS: Record<string, string[]> = {
 	opus: ["claude", "-p", "--output-format", "json", "--model", "opus"],
 };
 
-/** The two ways to say what runs a task, of which a caller passes one. */
+/** The two ways to say what runs a review, of which a caller passes one. */
 export interface AgentOptions {
 	/** A model to ask, keyed into `AGENTS`. */
 	agent?: string;

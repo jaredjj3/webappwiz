@@ -4,9 +4,9 @@ import {
 	agentCommand,
 	type Finding,
 	Harness,
+	type Review,
 	type Rule,
-	type Task,
-	prompt as taskPrompt,
+	prompt as reviewPrompt,
 } from "@webappwiz/rules";
 import { NodePs, type Ps } from "@webappwiz/system";
 import { type Clock, SystemClock } from "@webappwiz/time";
@@ -81,8 +81,8 @@ export class Signoff {
 				? { agent: opts.agent ?? this.defaultAgent }
 				: opts,
 		);
-		const task = this.task(patch, added, opts.since);
-		const predicted = tokens(task.bytes ?? 0);
+		const review = this.review(patch, added, opts.since);
+		const predicted = tokens(review.bytes ?? 0);
 		this.log.info(
 			`weighing ${opts.since}..working tree against ` +
 				`${count(this.rules.length, "rule")}, reading ` +
@@ -95,12 +95,12 @@ export class Signoff {
 				throw new Error("over budget");
 			}
 		}
-		this.say(await this.judge(task, agent, dir));
+		this.say(await this.judge(review, agent, dir));
 	}
 
 	/** The one call, and what it says about the change. */
 	private async judge(
-		task: Task,
+		review: Review,
 		agent: Agent,
 		dir: string,
 	): Promise<Finding[]> {
@@ -113,7 +113,7 @@ export class Signoff {
 			const spent = cost === undefined ? "" : `  ${usd(cost)}`;
 			this.log.info(color.gray(`read in ${took.human()}${spent}`));
 		});
-		return await harness.run([task], agent, { cwd: dir });
+		return await harness.run([review], agent, { cwd: dir });
 	}
 
 	/**
@@ -142,8 +142,8 @@ export class Signoff {
 
 	/** The change as the agent reads it, priced by the prompt: what a new file
 	 * costs to open is the agent's business and unknowable from here. */
-	private task(patch: string, added: string[], ref: string): Task {
-		const draft: Task = {
+	private review(patch: string, added: string[], ref: string): Review {
+		const draft: Review = {
 			rules: this.rules,
 			label: "signoff",
 			context: [
@@ -159,7 +159,7 @@ export class Signoff {
 			].join("\n\n"),
 			instructions: WEIGHING,
 		};
-		return { ...draft, bytes: Buffer.byteLength(taskPrompt(draft)) };
+		return { ...draft, bytes: Buffer.byteLength(reviewPrompt(draft)) };
 	}
 
 	/**

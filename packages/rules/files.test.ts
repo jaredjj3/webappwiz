@@ -31,16 +31,16 @@ describe("Files", () => {
 		dir: string,
 		opts: PlanOptions = {},
 	): Promise<Violation[]> => {
-		const tasks = await files.plan(rules, dir, opts);
+		const reviews = await files.plan(rules, dir, opts);
 		const harness = new Harness({ log, ps, clock: new FakeClock() });
 		const found: Violation[][] = [];
 		harness.events.on("finished", ({ at, findings }) => {
-			const task = tasks[at];
-			if (task) {
-				found[at] = files.violations(task, findings, dir);
+			const review = reviews[at];
+			if (review) {
+				found[at] = files.violations(review, findings, dir);
 			}
 		});
-		await harness.run(tasks, agent, { cwd: dir });
+		await harness.run(reviews, agent, { cwd: dir });
 		return found.flat();
 	};
 
@@ -56,27 +56,30 @@ describe("Files", () => {
 	});
 
 	it("matches each rule's glob against dir-relative paths", async () => {
-		const tasks = await files.plan(
+		const reviews = await files.plan(
 			[rule("Classes"), rule("Docs", "**/*.md")],
 			"/p",
 			{ chunk: 25 },
 		);
 
-		expect(tasks.map((task) => [task.label, task.files])).toEqual([
+		expect(reviews.map((review) => [review.label, review.files])).toEqual([
 			["Classes", ["src/a.ts", "src/b.ts"]],
 			["Docs", ["README.md"]],
 		]);
 	});
 
-	it("rides every rule sharing a glob in one task, reading the files once", async () => {
-		const tasks = await files.plan(
+	it("rides every rule sharing a glob in one review, reading the files once", async () => {
+		const reviews = await files.plan(
 			[rule("Classes"), rule("Callbacks"), rule("Docs", "**/*.md")],
 			"/p",
 			{ chunk: 25 },
 		);
 
 		expect(
-			tasks.map((task) => [task.rules.map((rule) => rule.id), task.files]),
+			reviews.map((review) => [
+				review.rules.map((rule) => rule.id),
+				review.files,
+			]),
 		).toEqual([
 			[
 				["Classes", "Callbacks"],
@@ -86,10 +89,10 @@ describe("Files", () => {
 		]);
 	});
 
-	it("chunks a rule's files into several tasks", async () => {
-		const tasks = await files.plan([rule("Classes")], "/p", { chunk: 1 });
+	it("chunks a rule's files into several reviews", async () => {
+		const reviews = await files.plan([rule("Classes")], "/p", { chunk: 1 });
 
-		expect(tasks.map((task) => task.files)).toEqual([
+		expect(reviews.map((review) => review.files)).toEqual([
 			["src/a.ts"],
 			["src/b.ts"],
 		]);
@@ -101,9 +104,9 @@ describe("Files", () => {
 		expect(errors()[0]).toBe('rule "Python" matches no files under /p');
 	});
 
-	it("gives each task a prompt holding the whole rule and only its files", async () => {
-		const [task] = await files.plan([rule("Classes")], "/p", { chunk: 1 });
-		const built = task ? prompt(task) : "";
+	it("gives each review a prompt holding the whole rule and only its files", async () => {
+		const [review] = await files.plan([rule("Classes")], "/p", { chunk: 1 });
+		const built = review ? prompt(review) : "";
 
 		expect(built).toContain("Rule `Classes`, verbatim:");
 		expect(built).toContain("# Classes"); // the rule md, verbatim
@@ -113,11 +116,11 @@ describe("Files", () => {
 		expect(built).toContain("judge-ignore <id>: <reason>");
 	});
 
-	it("prices a task by its prompt and the files it names", async () => {
-		const [task] = await files.plan([rule("Classes")], "/p", { chunk: 1 });
+	it("prices a review by its prompt and the files it names", async () => {
+		const [review] = await files.plan([rule("Classes")], "/p", { chunk: 1 });
 
-		expect(task?.bytes).toBeGreaterThan(
-			Buffer.byteLength(task ? prompt(task) : ""),
+		expect(review?.bytes).toBeGreaterThan(
+			Buffer.byteLength(review ? prompt(review) : ""),
 		);
 	});
 
@@ -180,7 +183,7 @@ describe("Files", () => {
 		expect(found?.code).toBe("");
 	});
 
-	it("drops a finding in a file the task was never given", async () => {
+	it("drops a finding in a file the review was never given", async () => {
 		ps.setCaptureOutput(
 			'[{"rule": "Classes", "file": "src/gone.ts", "line": 1, "message": "rename it"}]',
 			"",
@@ -203,7 +206,7 @@ describe("Files", () => {
 		expect(errors()[0]).toBe('agent located no file for "Classes" on Classes');
 	});
 
-	it("orders one task's violations by file and line", async () => {
+	it("orders one review's violations by file and line", async () => {
 		ps.setCaptureOutput(
 			'[{"rule": "Classes", "file": "src/b.ts", "line": 1, "message": "later"}, {"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "earlier"}]',
 			"",

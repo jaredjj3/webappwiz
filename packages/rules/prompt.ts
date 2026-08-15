@@ -1,27 +1,27 @@
 import { MarkdownWriter } from "@webappwiz/md";
-import type { Task } from "./task";
+import type { Review } from "./review";
 
 /**
- * The prompt one task is spawned with: the rules verbatim, the caller's
+ * The prompt one review is spawned with: the rules verbatim, the caller's
  * material, and the output contract the harness parses back.
  *
  * Standalone so a caller can print what a run would send, or price it, without
  * spawning anything or holding a harness to ask.
  */
-export function prompt(task: Task): string {
-	const count = task.rules.length;
+export function prompt(review: Review): string {
+	const count = review.rules.length;
 	const writer = new MarkdownWriter().text(
 		`You are checking against exactly ${count} ` +
 			`rule${count === 1 ? "" : "s"}, listed below. Apply only ` +
 			"these rules; ignore every other concern you notice.",
 	);
-	for (const rule of task.rules) {
+	for (const rule of review.rules) {
 		writer.text(`Rule \`${rule.id}\`, verbatim:`);
 		writer.code("markdown", rule.document);
 	}
-	writer.text(task.context);
-	if (task.instructions !== undefined) {
-		writer.text(task.instructions);
+	writer.text(review.context);
+	if (review.instructions !== undefined) {
+		writer.text(review.instructions);
 	}
 	return writer
 		.text(

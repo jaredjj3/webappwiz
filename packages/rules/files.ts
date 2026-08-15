@@ -6,13 +6,13 @@ import { Checker } from "./checker";
 import type { Finding } from "./finding";
 import { exemptions } from "./ignore";
 import { prompt } from "./prompt";
+import type { Review } from "./review";
 import type { FileRule, Level } from "./rule";
-import type { Task } from "./task";
 
-/** One agent call over files: the harness's task, plus what was chosen for it. */
-export interface FileTask extends Task {
+/** One agent call over files: the harness's review, plus what was chosen for it. */
+export interface FileReview extends Review {
 	rules: FileRule[];
-	/** The files this task's prompt tells the agent to read, dir-relative. */
+	/** The files this review's prompt tells the agent to read, dir-relative. */
 	files: string[];
 	/** Always priced: the size of every file named is known here. */
 	bytes: number;
@@ -34,7 +34,7 @@ export interface Violation {
 
 /** How much of the tree a run covers, and how finely it is cut up. */
 export interface PlanOptions {
-	/** Files per task. Chunks are counted in files, not tokens. */
+	/** Files per review. Chunks are counted in files, not tokens. */
 	chunk?: number;
 	/**
 	 * Narrows the run to these files, named the way the globs are, for a caller
@@ -44,11 +44,11 @@ export interface PlanOptions {
 	only?: Set<string>;
 }
 
-/** Files per task when a caller does not say. */
+/** Files per review when a caller does not say. */
 export const DEFAULT_CHUNK = 25;
 
 /**
- * Turns a directory and a set of rules into tasks the harness can run, and the
+ * Turns a directory and a set of rules into reviews the harness can run, and the
  * findings that come back into violations a report can print.
  *
  * Everything file-shaped lives here: choosing the files, chunking them,
@@ -80,8 +80,8 @@ export class Files {
 	}
 
 	/**
-	 * The tasks a run would spawn, without spawning any of them. Planning runs
-	 * every rule's check first, free, and builds tasks from exactly what those
+	 * The reviews a run would spawn, without spawning any of them. Planning runs
+	 * every rule's check first, free, and builds reviews from exactly what those
 	 * checks escalated: the agent reads the files no check could settle, and
 	 * nothing else. What the checks found locally is `wiz fix`'s report, not
 	 * this run's, and is dropped here.
@@ -90,7 +90,7 @@ export class Files {
 		rules: FileRule[],
 		dir: string,
 		{ chunk = DEFAULT_CHUNK, only }: PlanOptions = {},
-	): Promise<FileTask[]> {
+	): Promise<FileReview[]> {
 		const checker = new Checker(rules, { glob: this.glob });
 		const all: string[] = [];
 		const size = new Map<string, number>();
@@ -111,7 +111,7 @@ export class Files {
 		}
 		files.sort((left, right) => left.path.localeCompare(right.path));
 		const { escalations } = checker.check(files);
-		// Seeded in rule order, so tasks land in the order the config lists the
+		// Seeded in rule order, so reviews land in the order the config lists the
 		// rules rather than the order the walk found their files.
 		const wanted = new Map<FileRule, string[]>(rules.map((rule) => [rule, []]));
 		for (const { rule, path } of escalations) {
@@ -123,8 +123,8 @@ export class Files {
 				this.log.error(`rule "${rule.id}" matches no files under ${dir}`);
 			}
 		}
-		// Rules escalating the same files ride in one task: the files are what a
-		// task costs, and they are read once, not once per rule.
+		// Rules escalating the same files ride in one review: the files are what a
+		// review costs, and they are read once, not once per rule.
 		const groups = new Map<string, { rules: FileRule[]; files: string[] }>();
 		for (const [rule, escalated] of wanted) {
 			if (escalated.length === 0) {
@@ -135,13 +135,13 @@ export class Files {
 			group.rules.push(rule);
 			groups.set(key, group);
 		}
-		const tasks: FileTask[] = [];
+		const reviews: FileReview[] = [];
 		for (const group of groups.values()) {
 			// chunks are counted in files, not tokens: switch to a byte budget when
-			// repos with a few huge files start overflowing a task.
+			// repos with a few huge files start overflowing a review.
 			for (let i = 0; i < group.files.length; i += chunk) {
 				const slice = group.files.slice(i, i + chunk);
-				const draft: Omit<FileTask, "bytes"> = {
+				const draft: Omit<FileReview, "bytes"> = {
 					rules: group.rules,
 					label: group.rules.map((rule) => rule.id).join(", "),
 					files: slice,
@@ -151,7 +151,7 @@ export class Files {
 					].join("\n\n"),
 					instructions: MARKERS,
 				};
-				tasks.push({
+				reviews.push({
 					...draft,
 					bytes: slice.reduce(
 						(bytes, file) => bytes + (size.get(file) ?? 0),
@@ -160,17 +160,21 @@ export class Files {
 				});
 			}
 		}
-		return tasks;
+		return reviews;
 	}
 
 	/**
-	 * What one task's findings mean, ready to print. Sync, so a caller can turn
+	 * What one review's findings mean, ready to print. Sync, so a caller can turn
 	 * them around inside a `finished` handler the moment the agent returns.
 	 */
-	violations(task: FileTask, findings: Finding[], dir: string): Violation[] {
+	violations(
+		review: FileReview,
+		findings: Finding[],
+		dir: string,
+	): Violation[] {
 		const violations: Violation[] = [];
 		for (const finding of findings) {
-			const rule = task.rules.find(
+			const rule = review.rules.find(
 				(candidate) => candidate.id === finding.rule,
 			);
 			if (!rule) {
@@ -180,17 +184,17 @@ export class Files {
 				// These rules are all about somewhere in particular, so a finding with
 				// nowhere to point is one nobody can act on.
 				this.log.error(
-					`agent located no file for "${finding.rule}" on ${task.label}`,
+					`agent located no file for "${finding.rule}" on ${review.label}`,
 				);
 				continue;
 			}
 			const source = this.lines.get(finding.file);
 			if (source === undefined) {
-				// The task named the files to read, and the plan read every one of
+				// The review named the files to read, and the plan read every one of
 				// them. A finding somewhere else is one nothing here can quote or
 				// check a marker against, so it is said aloud rather than reported.
 				this.log.error(
-					`agent reported "${finding.rule}" in ${finding.file}, which ${task.label} was not given`,
+					`agent reported "${finding.rule}" in ${finding.file}, which ${review.label} was not given`,
 				);
 				continue;
 			}

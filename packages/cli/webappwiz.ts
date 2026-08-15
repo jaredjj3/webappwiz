@@ -80,7 +80,7 @@ webappwiz
 	})
 	.option("chunk", t.number(), {
 		default: 25,
-		description: "files per task",
+		description: "files per review",
 	})
 	.option("since", t.optional(t.string()), {
 		default: undefined,

@@ -3,13 +3,13 @@ import {
 	type Agent,
 	type AgentOptions,
 	agentCommand,
+	type FileReview,
 	type FileRule,
 	Files,
-	type FileTask,
 	Harness,
 	type Rule,
 	type RuleSet,
-	prompt as taskPrompt,
+	prompt as reviewPrompt,
 	type Violation,
 } from "@webappwiz/rules";
 import {
@@ -55,7 +55,7 @@ export interface JudgeOptions {
 	print?: boolean;
 	/** Print what a run would read and stop. */
 	estimate?: boolean;
-	/** Files per task. */
+	/** Files per review. */
 	chunk: number;
 	/** Narrows the run to what git says has changed since this ref. */
 	since?: string;
@@ -63,9 +63,9 @@ export interface JudgeOptions {
 	budget: number;
 }
 
-/** What a whole plan reads: every task's prompt and the files it names. */
-const estimated = (tasks: FileTask[]): number =>
-	tokens(tasks.reduce((bytes, task) => bytes + task.bytes, 0));
+/** What a whole plan reads: every review's prompt and the files it names. */
+const estimated = (reviews: FileReview[]): number =>
+	tokens(reviews.reduce((bytes, review) => bytes + review.bytes, 0));
 
 /** Whether a rule is one a run checks files against, rather than one only a
  * reader applies. */
@@ -195,23 +195,23 @@ export class JudgeCommands {
 			return;
 		}
 		const files = new Files({ log: this.log, fs: this.fs, glob: this.glob });
-		const tasks = await files.plan(rules, dir, {
+		const reviews = await files.plan(rules, dir, {
 			chunk: opts.chunk,
 			only,
 		});
 		if (how === "print") {
-			for (const task of tasks) {
+			for (const review of reviews) {
 				this.log.info(
-					`\n${divider(`${task.label} (${count(task.files.length, "file")})`)}\n`,
+					`\n${divider(`${review.label} (${count(review.files.length, "file")})`)}\n`,
 				);
-				this.log.info(taskPrompt(task));
+				this.log.info(reviewPrompt(review));
 			}
 			this.log.info(`\n${divider()}`);
 			return;
 		}
-		const read = new Set(tasks.flatMap((task) => task.files)).size;
-		const predicted = estimated(tasks);
-		const calls = tasks.length;
+		const read = new Set(reviews.flatMap((review) => review.files)).size;
+		const predicted = estimated(reviews);
+		const calls = reviews.length;
 		if (how === "estimate") {
 			// No budget check: being asked to approve a number is what running
 			// --estimate is instead of.
@@ -270,32 +270,32 @@ export class JudgeCommands {
 			ps: this.ps,
 			clock: this.clock,
 		});
-		harness.events.on("finished", (task) => {
-			if (task.cost !== undefined) {
-				spent += task.cost;
+		harness.events.on("finished", (review) => {
+			if (review.cost !== undefined) {
+				spent += review.cost;
 				billed = true;
 			}
-			const at = tasks[task.at];
+			const at = reviews[review.at];
 			if (!at) {
 				return;
 			}
-			// Sync, off what the plan already read, so a task's findings print the
+			// Sync, off what the plan already read, so a review's findings print the
 			// moment its agent returns rather than waiting on a second pass.
-			const violations = files.violations(at, task.findings, dir);
-			found[task.at] = violations;
+			const violations = files.violations(at, review.findings, dir);
+			found[review.at] = violations;
 			for (const line of finished({
-				rules: task.rules,
+				rules: review.rules,
 				files: at.files.length,
 				violations,
-				took: task.took,
-				cost: task.cost,
-				done: task.done,
-				total: task.total,
+				took: review.took,
+				cost: review.cost,
+				done: review.done,
+				total: review.total,
 			})) {
 				this.log.info(line);
 			}
 		});
-		await harness.run(tasks, agent, {
+		await harness.run(reviews, agent, {
 			cwd: dir,
 			concurrency: config.concurrency,
 		});

@@ -6,23 +6,23 @@ import type { Agent } from "./agent";
 import { DEFAULT_CONCURRENCY } from "./config";
 import type { Finding } from "./finding";
 import { prompt } from "./prompt";
-import type { Task } from "./task";
+import type { Review } from "./review";
 
-/** One task's worth of findings, handed over the moment its agent returns. */
+/** One review's worth of findings, handed over the moment its agent returns. */
 export interface Finished {
-	/** The task's place in the list `run` was given. Labels repeat when a caller
-	 * splits one subject across tasks, so this is what correlates an event back
-	 * to the task that caused it. */
+	/** The review's place in the list `run` was given. Labels repeat when a caller
+	 * splits one subject across reviews, so this is what correlates an event back
+	 * to the review that caused it. */
 	at: number;
-	/** The task's label, as the caller named it. */
+	/** The review's label, as the caller named it. */
 	label: string;
-	/** The ids of the rules the task checked. */
+	/** The ids of the rules the review checked. */
 	rules: string[];
 	findings: Finding[];
-	/** How long this task's agent took. */
+	/** How long this review's agent took. */
 	took: Duration;
 	/**
-	 * Dollars this task's call was billed, straight from the agent rather than
+	 * Dollars this review's call was billed, straight from the agent rather than
 	 * priced here. Undefined for an agent that does not report one, which is any
 	 * `--exec` command: reports leave the money off rather than guess it.
 	 */
@@ -33,7 +33,7 @@ export interface Finished {
 
 /** What a run reports as it goes, for a caller that prints as findings land. */
 export type HarnessEvents = {
-	/** One task, the moment its agent returns. */
+	/** One review, the moment its agent returns. */
 	finished: Finished;
 };
 
@@ -49,7 +49,7 @@ export interface RunOptions {
  * Runs rules past an agent and collects what it says, a bounded number of
  * calls at a time.
  *
- * The harness knows nothing about where a task's material came from or what
+ * The harness knows nothing about where a review's material came from or what
  * its findings mean. It assembles a prompt, spawns the agent, checks that the
  * rules it reports are rules it was given, and hands the findings back.
  */
@@ -63,7 +63,7 @@ export interface HarnessOptions {
 export class Harness {
 	private dispatcher = new Dispatcher<HarnessEvents>();
 
-	/** Fires `finished` per task, so a caller can print findings as they land. */
+	/** Fires `finished` per review, so a caller can print findings as they land. */
 	readonly events: Events<HarnessEvents> = this.dispatcher.events;
 
 	private log: Logger;
@@ -77,77 +77,77 @@ export class Harness {
 	}
 
 	/**
-	 * Spawns an agent for each task, `concurrency` of them at a time,
+	 * Spawns an agent for each review, `concurrency` of them at a time,
 	 * dispatching `finished` as each returns. Resolves with every finding once
-	 * the last agent is done, in task order.
+	 * the last agent is done, in review order.
 	 */
 	async run(
-		tasks: Task[],
+		reviews: Review[],
 		agent: Agent,
 		{ cwd, concurrency = DEFAULT_CONCURRENCY }: RunOptions = {},
 	): Promise<Finding[]> {
 		let done = 0;
 		let next = 0;
 		const found: Finding[][] = [];
-		// A worker per slot, each taking the next task as it frees up, so a slow
-		// task holds up only itself: the cap is the provider's rate limit, not
+		// A worker per slot, each taking the next review as it frees up, so a slow
+		// review holds up only itself: the cap is the provider's rate limit, not
 		// this machine's, since a call is latency and no local work.
 		const worker = async (): Promise<void> => {
-			for (let at = next++; at < tasks.length; at = next++) {
-				const task = tasks[at];
-				if (!task) {
+			for (let at = next++; at < reviews.length; at = next++) {
+				const review = reviews[at];
+				if (!review) {
 					return;
 				}
 				const started = this.clock.now();
-				const { findings, cost } = await this.spawn(task, agent, cwd);
+				const { findings, cost } = await this.spawn(review, agent, cwd);
 				done += 1;
 				this.dispatcher.dispatch("finished", {
 					at,
-					label: task.label,
-					rules: task.rules.map((rule) => rule.id),
+					label: review.label,
+					rules: review.rules.map((rule) => rule.id),
 					findings,
 					took: this.clock.now().subtract(started),
 					cost,
 					done,
-					total: tasks.length,
+					total: reviews.length,
 				});
 				found[at] = findings;
 			}
 		};
-		const slots = Math.max(1, Math.min(concurrency, tasks.length));
+		const slots = Math.max(1, Math.min(concurrency, reviews.length));
 		await Promise.all(Array.from({ length: slots }, worker));
 		return found.flat();
 	}
 
 	private async spawn(
-		task: Task,
+		review: Review,
 		agent: Agent,
 		cwd?: string,
 	): Promise<{ findings: Finding[]; cost?: number }> {
-		const argv = [...agent.argv, prompt(task)];
+		const argv = [...agent.argv, prompt(review)];
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(argv, {
 			cwd,
 		});
 		if (exitCode !== 0) {
 			this.log.error(
-				`agent exited ${exitCode} on ${task.label}: ${stderr.trim() || "no stderr"}`,
+				`agent exited ${exitCode} on ${review.label}: ${stderr.trim() || "no stderr"}`,
 			);
 			return { findings: [] };
 		}
 		const reported = parse(stdout);
 		if (reported === null) {
 			this.log.error(
-				`agent returned no JSON array on ${task.label}: ${stdout.trim().slice(0, 200)}`,
+				`agent returned no JSON array on ${review.label}: ${stdout.trim().slice(0, 200)}`,
 			);
 			return { findings: [] };
 		}
 		const findings: Finding[] = [];
 		for (const report of reported.findings) {
-			if (!task.rules.some((rule) => rule.id === report.rule)) {
+			if (!review.rules.some((rule) => rule.id === report.rule)) {
 				// Aloud, not dropped in silence: a finding filed under a misspelled
 				// id is still a finding somebody paid for.
 				this.log.error(
-					`agent reported unknown rule "${report.rule}" on ${task.label}`,
+					`agent reported unknown rule "${report.rule}" on ${review.label}`,
 				);
 				continue;
 			}

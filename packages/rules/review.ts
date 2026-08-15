@@ -7,7 +7,7 @@ import type { Rule } from "./rule";
  * walks a tree, globs a path or reads a diff; it is handed text and asked to
  * get an answer about it.
  */
-export interface Task {
+export interface Review {
 	/** The rules this call judges: the ids findings are filed under, and the
 	 * documents that go into the prompt. */
 	rules: Rule[];
@@ -17,7 +17,7 @@ export interface Task {
 	/** Prompt text only this caller needs, slotted in before the output
 	 * contract. Ignore markers, house conventions, whatever the rules assume. */
 	instructions?: string;
-	/** How reports name this task. */
+	/** How reports name this review. */
 	label: string;
 	/**
 	 * The prompt plus whatever it tells the agent to read. A floor on what the

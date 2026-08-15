@@ -5,12 +5,12 @@ import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
 import { Harness } from "./harness";
 import { prompt } from "./prompt";
-import type { Task } from "./task";
+import type { Review } from "./review";
 import { testRule } from "./testing";
 
 const agent = { argv: ["agent"], label: "agent" };
 
-const task = (label: string, ...ids: string[]): Task => ({
+const review = (label: string, ...ids: string[]): Review => ({
 	rules: ids.map((id) => testRule(id)),
 	context: `Judge this:\n\n${label}`,
 	label,
@@ -36,7 +36,7 @@ describe("Harness", () => {
 
 	it("builds a prompt from the rule documents, the context and the contract", () => {
 		const built = prompt({
-			...task("src/a.ts", "Classes"),
+			...review("src/a.ts", "Classes"),
 			instructions: "Honor judge-ignore markers.",
 		});
 
@@ -61,7 +61,7 @@ describe("Harness", () => {
 			return 0;
 		});
 
-		await harness.run([task("a"), task("b"), task("c")], agent, {
+		await harness.run([review("a"), review("b"), review("c")], agent, {
 			concurrency: 2,
 		});
 
@@ -72,7 +72,7 @@ describe("Harness", () => {
 	it("passes the prompt to the agent command as its last argument", async () => {
 		ps.setCaptureOutput("[]", "");
 
-		await harness.run([task("a", "Classes")], {
+		await harness.run([review("a", "Classes")], {
 			argv: ["claude", "-p"],
 			label: "claude -p",
 		});
@@ -95,7 +95,7 @@ describe("Harness", () => {
 		);
 		harness.events.on("finished", (finished) => billed.push(finished.cost));
 
-		const findings = await harness.run([task("a", "Classes")], agent);
+		const findings = await harness.run([review("a", "Classes")], agent);
 
 		expect(findings).toEqual([
 			{
@@ -114,7 +114,7 @@ describe("Harness", () => {
 			"",
 		);
 
-		const findings = await harness.run([task("a", "Classes")], agent);
+		const findings = await harness.run([review("a", "Classes")], agent);
 
 		expect(findings.map((finding) => finding.message)).toEqual([
 			"a second class",
@@ -127,7 +127,7 @@ describe("Harness", () => {
 			"",
 		);
 
-		const findings = await harness.run([task("changeset", "Scope")], agent);
+		const findings = await harness.run([review("changeset", "Scope")], agent);
 
 		expect(findings).toEqual([
 			{ rule: "Scope", message: "9 files changed, limit 5" },
@@ -142,15 +142,15 @@ describe("Harness", () => {
 		);
 		harness.events.on("finished", (finished) => billed.push(finished.cost));
 
-		await harness.run([task("a", "Classes")], agent);
+		await harness.run([review("a", "Classes")], agent);
 
 		expect(billed).toEqual([undefined]);
 	});
 
-	it("drops a finding filed under a rule the task was not checking", async () => {
+	it("drops a finding filed under a rule the review was not checking", async () => {
 		ps.setCaptureOutput('[{"rule": "Docs", "message": "a second class"}]', "");
 
-		const findings = await harness.run([task("a", "Classes")], agent);
+		const findings = await harness.run([review("a", "Classes")], agent);
 
 		expect(findings).toEqual([]);
 		expect(errors()[0]).toBe('agent reported unknown rule "Docs" on a');
@@ -159,12 +159,12 @@ describe("Harness", () => {
 	it("drops elements the agent malformed", async () => {
 		ps.setCaptureOutput('[{"file": "src/a.ts"}, "nonsense"]', "");
 
-		const findings = await harness.run([task("a", "Classes")], agent);
+		const findings = await harness.run([review("a", "Classes")], agent);
 
 		expect(findings).toEqual([]);
 	});
 
-	it("hands each task's findings over as its agent returns", async () => {
+	it("hands each review's findings over as its agent returns", async () => {
 		ps.setCaptureOutput(
 			'[{"rule": "Classes", "message": "a second class"}]',
 			"",
@@ -177,14 +177,14 @@ describe("Harness", () => {
 			),
 		);
 
-		await harness.run([task("a", "Classes"), task("b", "Classes")], agent, {
+		await harness.run([review("a", "Classes"), review("b", "Classes")], agent, {
 			concurrency: 1,
 		});
 
 		expect(handed).toEqual(["0 a [Classes] 1/2", "1 b [Classes] 2/2"]);
 	});
 
-	it("times each task from the moment its agent starts", async () => {
+	it("times each review from the moment its agent starts", async () => {
 		ps.setCaptureOutput("[]", "");
 		ps.simulate(async () => {
 			clock.advance(Duration.secs(3));
@@ -195,7 +195,7 @@ describe("Harness", () => {
 			took.push(finished.took.human()),
 		);
 
-		await harness.run([task("a", "Classes")], agent);
+		await harness.run([review("a", "Classes")], agent);
 
 		expect(took).toEqual(["3.0s"]);
 	});
@@ -203,7 +203,7 @@ describe("Harness", () => {
 	it("reports on stderr when the agent answers with no array at all", async () => {
 		ps.setCaptureOutput("I could not read the files.", "");
 
-		const findings = await harness.run([task("a", "Classes")], agent);
+		const findings = await harness.run([review("a", "Classes")], agent);
 
 		expect(findings).toEqual([]);
 		expect(errors()[0]).toContain("no JSON array on a");
@@ -213,7 +213,7 @@ describe("Harness", () => {
 		ps.exit(127);
 		ps.setCaptureOutput("", "command not found: claude");
 
-		const findings = await harness.run([task("a", "Classes")], {
+		const findings = await harness.run([review("a", "Classes")], {
 			argv: ["claude"],
 			label: "claude",
 		});

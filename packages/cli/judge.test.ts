@@ -197,7 +197,7 @@ describe("JudgeCommands", () => {
 		});
 
 		// a partial check's rule still needs the agent; a full check's does not,
-		// and the two survivors share their glob's one task
+		// and the two survivors share their glob's one review
 		expect(printed()).toContain("--- two, three (1 file) ---");
 		expect(printed()).not.toContain("Rule `one`");
 	});
