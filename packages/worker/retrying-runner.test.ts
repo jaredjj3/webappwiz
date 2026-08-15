@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 
-import {
-	FakeRunner,
-	RetryingRunner,
-	type Runner,
-	type RunnerFactory,
-} from "./index";
+import { RetryingRunner, type Runner, type RunnerFactory } from "./index";
+import { FakeRunner } from "./testing";
 
 /** A factory whose first `failures` runners reject whatever they are sent. */
 class FlakyFactory implements RunnerFactory<string, string> {

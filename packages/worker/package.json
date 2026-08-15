@@ -5,7 +5,8 @@
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts",
-		"./script": "./script.ts"
+		"./script": "./script.ts",
+		"./testing": "./testing.ts"
 	},
 	"dependencies": {
 		"@webappwiz/assert": "workspace:*",

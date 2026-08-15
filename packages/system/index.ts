@@ -23,6 +23,7 @@ export { Win32IpProvider } from "./ip-provider/win32-ip-provider";
 export { FileLock, type FileLockOptions } from "./lock/file-lock";
 export type { Lock } from "./lock/lock";
 export { MemoryLock } from "./lock/memory-lock";
+export type { ProcessLike } from "./process-like/process-like";
 export { NodePs, type NodePsOptions } from "./ps/node-ps";
 export type {
 	Ps,
