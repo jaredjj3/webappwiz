@@ -15,7 +15,7 @@ const release = releases.lockstep(
 	releases.github(),
 );
 
-await ship(release, "patch");
+await ship.patch(release);
 ```
 
 That is a whole release script. `releases` composes, `ship` runs, and nothing
@@ -54,7 +54,7 @@ For a workspace whose packages all go to npm, `releases.workspace()` reads the
 roster off your manifest instead:
 
 ```ts
-await ship(await releases.workspace(), "minor");
+await ship.minor(await releases.workspace());
 ```
 
 ## What a part is
@@ -87,11 +87,13 @@ class DockerRelease implements Release {
 
 ## Shipping
 
-`ship(release, bump, opts)` is the whole flow: print what would go out, ask,
-stamp every package, commit, and publish each part in turn. Give it a `log`,
-`ps` or `prompt` to put it somewhere other than a terminal, and a `workspace`
-or `git` to point it at a repository that is not the one around the working
-directory.
+`ship.patch`, `ship.minor` and `ship.major` each run the whole flow at the
+version their name picks: print what would go out, ask, stamp every package,
+commit, and publish each part in turn. `ship.resume` is the fourth, below.
+
+They all take `(release, opts)`. Give it a `log`, `ps` or `prompt` to put it
+somewhere other than a terminal, and a `workspace` or `git` to point it at a
+repository that is not the one around the working directory.
 
 Two things it will not do. It will not release from anywhere but the default
 branch, because switching for you would release code you were not looking at.
@@ -118,9 +120,29 @@ rather than failing, so a release under `CI` says which token to set instead of
 asking.
 
 Anything else that goes wrong throws, because there is nothing to decide about
-a publish that failed halfway. Run the release again: the version is already
-stamped and committed, every package the registry took is skipped, and the
-second run finishes it rather than burning a version.
+a publish that failed halfway. That is what `ship.resume` is for.
+
+## Finishing a release that died
+
+```ts
+await ship.resume(release);
+```
+
+`resume` releases at the version already stamped instead of picking a new one.
+Every part skips what it has already done, so whatever failed is retried and
+nothing goes out twice: `releases.npm` asks the registry, `releases.git()`
+leaves a tag that is already there, and `releases.github()` leaves notes that
+are already written.
+
+You say it, rather than `ship` guessing. Guessing means reading some marker to
+tell a release that finished from one that died, and every marker worth
+reading is written by a step that can itself fail. A person who just watched a
+release die knows it died, and the prompt names the version before anything
+moves.
+
+Getting it wrong is cheap in both directions. Resume a release that actually
+finished and every part skips, so nothing is published twice. Bump past one
+that died and you spend a version number.
 
 ## The tag comes last
 
@@ -129,14 +151,9 @@ version the registry never received leaves a permanent lie behind, so
 `releases.git()` goes after the packages it tags, and `releases.lockstep`
 refuses a declaration that puts it anywhere else.
 
-The tag is also what says a release finished, so `ship` refuses a declaration
-that never tags: without one, the next release reads the commit as one that
-died partway.
-
-That is what makes a failed release resumable. `ship` spots a release commit
-at HEAD with no tag, keeps the same version instead of bumping past it, and
-every package the registry already has is skipped. Running it again after a
-network failure finishes the job rather than burning a version.
+Beyond that ordering the tag is an artifact like any other. It decides nothing
+about what the next release does, so a part declared after it is as resumable
+as one declared before.
 
 ## What it leaves to you
 

@@ -9,5 +9,4 @@ export type { GitReleaseOptions } from "./release/git-release";
 export type { Release } from "./release/release";
 export { releases, type WorkspaceReleaseOptions } from "./releases";
 export { type ShipOptions, ship } from "./ship";
-export { type Bump, isBump } from "./version";
 export type { Package, Workspace } from "./workspace/workspace";

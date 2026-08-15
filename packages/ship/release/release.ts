@@ -5,7 +5,7 @@ import type { Cut } from "../cut";
  * notes. Compose them with `releases`, and `ship` the result.
  *
  * ```ts
- * await ship(releases.lockstep(releases.npm("@scope/foo"), releases.git()), "patch");
+ * await ship.patch(releases.lockstep(releases.npm("@scope/foo"), releases.git()));
  * ```
  */
 export interface Release {

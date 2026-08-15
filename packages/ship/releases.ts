@@ -28,7 +28,7 @@ export interface WorkspaceReleaseOptions {
  * 	releases.github(),
  * );
  *
- * await ship(release, "patch");
+ * await ship.patch(release);
  * ```
  */
 export class releases {

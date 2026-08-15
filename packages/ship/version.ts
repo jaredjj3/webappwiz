@@ -1,13 +1,6 @@
 /** How far a release moves the version. */
 export type Bump = "patch" | "minor" | "major";
 
-export const BUMPS: readonly Bump[] = ["patch", "minor", "major"];
-
-/** Narrows a string a user typed, so callers can reject it with their own words. */
-export function isBump(value: string): value is Bump {
-	return (BUMPS as readonly string[]).includes(value);
-}
-
 // Releases are plain major.minor.patch. Prereleases would need a policy for
 // what happens to the other packages, and no repo here has asked for one.
 const SEMVER = /^(\d+)\.(\d+)\.(\d+)$/;

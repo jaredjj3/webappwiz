@@ -8,7 +8,6 @@ export class FakeGit implements Git {
 	dirty = false;
 	current = "main";
 	trunk = "main";
-	subject = "Teach show to check the TODO";
 	readonly tags = new Set<string>();
 	readonly commits: string[] = [];
 	readonly pushes: string[] = [];
@@ -25,14 +24,6 @@ export class FakeGit implements Git {
 
 	async defaultBranch(): Promise<string> {
 		return this.trunk;
-	}
-
-	async headSubject(): Promise<string> {
-		return this.subject;
-	}
-
-	async hasTag(tag: string): Promise<boolean> {
-		return this.tags.has(tag);
 	}
 
 	async commitAll(message: string): Promise<void> {

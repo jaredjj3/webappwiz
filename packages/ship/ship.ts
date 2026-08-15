@@ -22,24 +22,60 @@ export interface ShipOptions {
 	prompt?: (message: string) => string | null;
 }
 
-/** The version a release is about to go out at. */
-interface Next {
-	current: string;
-	version: string;
-	/** True when the version repeats itself to finish a release that died partway. */
-	resuming: boolean;
+/**
+ * Releasing everything a `Release` declares, at one version: stamp every
+ * package, commit, publish each part in turn, and say what happened. Each
+ * verb asks before any of it, so pass a `prompt` to ask somewhere other than
+ * a terminal.
+ *
+ * ```ts
+ * const release = releases.lockstep(releases.npm("@scope/foo"), releases.git());
+ *
+ * await ship.patch(release);
+ * ```
+ */
+export class ship {
+	private constructor() {}
+
+	/** Releases at the next major version: 1.2.3 goes out as 2.0.0. */
+	static major(release: Release, opts: ShipOptions = {}): Promise<void> {
+		return run(release, "major", opts);
+	}
+
+	/** Releases at the next minor version: 1.2.3 goes out as 1.3.0. */
+	static minor(release: Release, opts: ShipOptions = {}): Promise<void> {
+		return run(release, "minor", opts);
+	}
+
+	/** Releases at the next patch version: 1.2.3 goes out as 1.2.4. */
+	static patch(release: Release, opts: ShipOptions = {}): Promise<void> {
+		return run(release, "patch", opts);
+	}
+
+	/**
+	 * Releases at the version already stamped, finishing one that died partway
+	 * rather than moving past it. Everything that went out the first time is
+	 * skipped, so this picks up where the failure was.
+	 */
+	static resume(release: Release, opts: ShipOptions = {}): Promise<void> {
+		return run(release, "resume", opts);
+	}
 }
 
-/**
- * Releases everything `release` declares, at `type`: stamp every package at
- * one version, commit, publish each part in turn, and say what happened.
- * Asks before any of it, so give it a `prompt` to ask somewhere other than a
- * terminal.
- */
-export async function ship(
+/** How far a run moves the version, or that it repeats the one already stamped. */
+type Step = Bump | "resume";
+
+/** The version a release is about to go out at, and how it got there. */
+interface Next {
+	step: Step;
+	current: string;
+	version: string;
+}
+
+async function run(
 	release: Release,
-	type: Bump,
-	opts: ShipOptions = {},
+	step: Step,
+	opts: ShipOptions,
 ): Promise<void> {
 	const ps = opts.ps ?? new NodePs();
 	const log = opts.log ?? new ConsoleLogger();
@@ -55,23 +91,23 @@ export async function ship(
 	}
 	declares(release, await workspace.packages());
 
-	const next = await version(workspace, git, type);
+	const current = await workspace.version();
+	const next: Next = {
+		step,
+		current,
+		version: step === "resume" ? current : bump(current, step),
+	};
 	const dirty = !(await git.clean());
-	if (!confirm(opts.prompt ?? prompt, log, release, type, next, dirty)) {
+	if (!confirm(opts.prompt ?? prompt, log, release, next, dirty)) {
 		log.info(color.red("aborted"));
 		return;
 	}
 
-	await workspace.setVersion(next.version);
-	await git.commitAll(`Release ${next.version}`);
-	const cut = new Cut(next.version, await workspace.packages(), { log });
-	await release.publish(cut);
-	if (!(await git.hasTag(cut.tag))) {
-		// Without a tag the next release reads this commit as one that died
-		// partway, and repeats the version rather than moving past it.
-		throw new Error(`nothing tagged ${cut.tag}: declare releases.git()`);
-	}
-	log.info(color.green(`shipped ${next.version}`));
+	const { version } = next;
+	await workspace.setVersion(version);
+	await git.commitAll(`Release ${version}`);
+	await release.publish(new Cut(version, await workspace.packages(), { log }));
+	log.info(color.green(`shipped ${version}`));
 }
 
 /**
@@ -107,30 +143,6 @@ function declares(release: Release, packages: Package[]): void {
 }
 
 /**
- * The version to release. A release commit at HEAD with no tag says the last
- * one died partway, and that version goes out again rather than being bumped
- * past: the tag is what says a release finished.
- */
-async function version(
-	workspace: Workspace,
-	git: Git,
-	type: Bump,
-): Promise<Next> {
-	const current = await workspace.version();
-	// ponytail: a release that tagged but failed to push reads as finished, and
-	// the next one moves past it. Compare against origin's tags if that ever
-	// costs anyone a version.
-	const resuming =
-		!(await git.hasTag(`v${current}`)) &&
-		(await git.headSubject()) === `Release ${current}`;
-	return {
-		current,
-		version: resuming ? current : bump(current, type),
-		resuming,
-	};
-}
-
-/**
  * Whether to go ahead. A dirty tree is named rather than refused: the release
  * commit takes every tracked change with it either way, so this is the moment
  * to say so to somebody who can answer.
@@ -139,14 +151,13 @@ function confirm(
 	ask: (message: string) => string | null,
 	log: Logger,
 	release: Release,
-	type: Bump,
 	next: Next,
 	dirty: boolean,
 ): boolean {
 	log.info(
-		next.resuming
+		next.step === "resume"
 			? `finishing the release of ${next.version}`
-			: `${next.current} -> ${next.version} (${type})`,
+			: `${next.current} -> ${next.version} (${next.step})`,
 	);
 	for (const name of release.packages) {
 		log.info(`  ${name}`);

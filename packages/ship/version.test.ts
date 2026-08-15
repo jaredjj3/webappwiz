@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { bump, isBump } from "./version";
+import { bump } from "./version";
 
 describe("version", () => {
 	it("bumps the patch", () => {
@@ -20,13 +20,5 @@ describe("version", () => {
 
 	it("refuses a prerelease rather than truncating it", () => {
 		expect(() => bump("1.2.3-beta.1", "patch")).toThrow("invalid version");
-	});
-
-	it("recognizes the three bump names", () => {
-		expect(["patch", "minor", "major"].every(isBump)).toBe(true);
-	});
-
-	it("rejects anything else as a bump", () => {
-		expect(isBump("PATCH")).toBe(false);
 	});
 });

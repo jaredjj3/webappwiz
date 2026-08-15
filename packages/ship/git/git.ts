@@ -5,11 +5,9 @@ export interface Git {
 	branch(): Promise<string>;
 	/** Where releases go out from. */
 	defaultBranch(): Promise<string>;
-	/** The subject line of the commit at HEAD, which says whether it is a release. */
-	headSubject(): Promise<string>;
-	hasTag(tag: string): Promise<boolean>;
 	/** Commits every tracked change. A clean tree is already committed, so it passes. */
 	commitAll(message: string): Promise<void>;
+	/** Tags the commit at HEAD. A tag already there is left where it is. */
 	tag(tag: string): Promise<void>;
 	push(ref: string): Promise<void>;
 }

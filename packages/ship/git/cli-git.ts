@@ -39,21 +39,6 @@ export class CliGit implements Git {
 			: "main";
 	}
 
-	/** The subject line of the commit at HEAD, which says whether it is a release. */
-	headSubject(): Promise<string> {
-		return this.out("log", "-1", "--format=%s");
-	}
-
-	async hasTag(tag: string): Promise<boolean> {
-		const { exitCode } = await this.run(
-			"rev-parse",
-			"--verify",
-			"--quiet",
-			`refs/tags/${tag}`,
-		);
-		return exitCode === 0;
-	}
-
 	/** Commits every tracked change. A clean tree is already committed, so it passes. */
 	async commitAll(message: string): Promise<void> {
 		if (await this.clean()) {
@@ -63,8 +48,14 @@ export class CliGit implements Git {
 	}
 
 	async tag(tag: string): Promise<void> {
-		if (await this.hasTag(tag)) {
-			return;
+		const { exitCode } = await this.run(
+			"rev-parse",
+			"--verify",
+			"--quiet",
+			`refs/tags/${tag}`,
+		);
+		if (exitCode === 0) {
+			return; // a resumed release finds its own tag already here
 		}
 		await this.out("tag", tag);
 	}

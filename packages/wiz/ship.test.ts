@@ -40,6 +40,14 @@ describe("ship", () => {
 		expect(ps.getCalls()).toEqual([]);
 	});
 
+	it("finishes a release that failed, at the version already stamped", async () => {
+		await ship(opts("resume"));
+
+		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
+			"1.2.3",
+		);
+	});
+
 	it("gates before it releases the workspace it found", async () => {
 		await ship(opts("patch"));
 
