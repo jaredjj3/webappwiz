@@ -12,6 +12,16 @@ describe("MarkdownWriter", () => {
 		expect(text).toBe("---\na: 1\n---\n\n# T\n\nprose\n");
 	});
 
+	it("writes a list as one block, checklists with empty boxes", () => {
+		const text = new MarkdownWriter()
+			.list("one", "two")
+			.checklist("three")
+			.list()
+			.toString();
+
+		expect(text).toBe("- one\n- two\n\n- [ ] three\n");
+	});
+
 	it("outfences backticks in the code", () => {
 		const text = new MarkdownWriter().code("md", "```ts\nx\n```").toString();
 

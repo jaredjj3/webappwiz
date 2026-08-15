@@ -26,5 +26,6 @@ const text = new MarkdownWriter()
 	.text("Each file exports at most one class.")
 	.heading(2, "Good")
 	.code("ts", "class Foo {}")
+	.checklist("split the second class out", "move its tests with it")
 	.toString();
 ```

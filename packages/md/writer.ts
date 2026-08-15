@@ -24,6 +24,19 @@ export class MarkdownWriter {
 		return this;
 	}
 
+	/** A bullet list, one item per line. No items writes nothing. */
+	list(...items: string[]): this {
+		if (items.length > 0) {
+			this.blocks.push(items.map((item) => `- ${item}`).join("\n"));
+		}
+		return this;
+	}
+
+	/** A bullet list of unchecked task items, `- [ ]` apiece. */
+	checklist(...items: string[]): this {
+		return this.list(...items.map((item) => `[ ] ${item}`));
+	}
+
 	/** A fenced block. The fence outruns any backtick run in the code. */
 	code(lang: string, code: string): this {
 		const runs = code.match(/`+/g) ?? [];
