@@ -30,13 +30,12 @@ manager:
 import { type Registry, ships } from "@webappwiz/ship";
 
 class CrateRegistry implements Registry {
-	async problems() {
-		return []; // whatever blocks publishing, with a remedy when one exists
-	}
 	async published(name: string, version: string) {
 		return false;
 	}
-	async publish(dir: string) {}
+	async publish(dir: string) {
+		// log in if that is what publishing here takes, then publish or throw
+	}
 }
 
 const release = ships.lockstep(
@@ -45,9 +44,8 @@ const release = ships.lockstep(
 );
 ```
 
-A registry answers three questions: what is blocking you, do you already have
-this version, and please publish this directory. Implement those and it
-composes with everything else.
+A registry answers two questions: do you already have this version, and please
+publish this directory. Implement those and it composes with everything else.
 
 For a workspace whose packages all go to npm, `ships.workspace()` reads the
 roster off your manifest instead:
@@ -58,59 +56,52 @@ await new Runner().ship(await ships.workspace(), "minor");
 
 ## What a ship is
 
-Three members, whether it publishes one package or a hundred:
+Two members, whether it publishes one package or a hundred:
 
 ```ts
 interface Ship {
 	readonly packages: readonly string[];
-	problems(): Promise<Problem[]>;
 	run(release: Release): Promise<void>;
 }
 ```
 
 `packages` is the declaration the runner cross-checks against your manifest,
-`problems` is what stands in the way, and `run` carries the step out inside a
-release that is already stamped and committed. Write your own and it drops
-into a `lockstep` beside the ones here.
+and `run` carries the step out inside a release that is already stamped and
+committed. Write your own and it drops into a `lockstep` beside the ones here.
 
 ## The runner
 
-`Runner` is the flow around a declaration: say what is in the way, run the
-remedy for each problem it can fix, look again, print what would go out, ask,
-and release it. Give it a `log`, `ps` or `prompt` to put it somewhere else,
-and a `workspace` or `git` to point it at a repository that is not the one
-around the working directory.
+`Runner` is the flow around a declaration: say what is in the way, print what
+would go out, ask, and release it. Give it a `log`, `ps` or `prompt` to put it
+somewhere else, and a `workspace` or `git` to point it at a repository that is
+not the one around the working directory.
 
 It owns the parts of a release that are nobody's step: choosing the version,
 stamping every package, committing, and pushing.
 
-## Problems belong to the caller
+What it checks before any of that is the state of this repository, and only
+that: a dirty tree, the wrong branch, and a declaration that has drifted from
+the manifest. That last one is why the declaration is safe to write by hand.
+Name a package that no longer exists, or add a public package and forget to
+declare it, and the runner says so before anything is stamped.
 
-Preflight failures come back as data, not exceptions, because how you recover
-depends on where you are running:
+## Logging in is part of publishing
 
-```ts
-for (const problem of await release.problems()) {
-	console.log(problem.message); // "not logged in to npm"
-	problem.remedy; // ["npm", "login"], or undefined
-}
-```
+Nothing asks you to be logged in beforehand. A step that needs credentials
+gets them where it needs them: `ships.npm` runs `npm login` when `npm whoami`
+comes back with nobody, and `ships.github()` runs `gh auth login` the same
+way. Publishing then carries on. There is no preflight to keep in step with
+what publishing actually does, and no remedy for a caller to relay.
 
-Each registry reports its own problems and names its own remedy, so a custom
-registry gets the same treatment npm does.
+Set `NPM_TOKEN` and `GH_TOKEN` and neither login ever runs. In CI, set them:
+`npm login` reads from a human, and where there is none it would sit waiting
+rather than failing, so a release under `CI` says which token to set instead of
+asking.
 
-A `remedy` is an interactive command. In a terminal, run it and look again:
-that is what `Runner` does, and it belongs there because that is the only
-place a TTY is guaranteed. In a server, do not run it. `npm login` with
-nothing to read from waits forever instead of failing, so show the command and
-let someone run it, or set `NPM_TOKEN` and `GH_TOKEN` in the environment and
-the problem never comes up.
-
-Problems with no remedy are diagnosis only: a dirty tree, the wrong branch, or
-a declaration that has drifted from the repository. That last one is why the
-declaration is safe to write by hand. Name a package that no longer exists, or
-add a public package and forget to declare it, and the runner says so before
-anything is stamped.
+Anything else that goes wrong throws, because there is nothing to decide about
+a publish that failed halfway. Run the release again: the version is already
+stamped and committed, every package the registry took is skipped, and the
+second run finishes it rather than burning a version.
 
 ## Interrupted releases
 

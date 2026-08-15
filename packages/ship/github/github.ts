@@ -1,12 +1,8 @@
-import type { Problem } from "../problem";
-
 /** The GitHub releases a release publishes. */
 export interface Github {
 	/**
-	 * What blocks releasing here, each problem carrying its remedy when one
-	 * exists. Empty means ready.
+	 * Publishes release notes for `tag`, or leaves the existing ones alone,
+	 * logging in along the way if that is what it takes.
 	 */
-	problems(): Promise<Problem[]>;
-	/** Publishes release notes for `tag`, or leaves the existing ones alone. */
 	release(tag: string): Promise<void>;
 }

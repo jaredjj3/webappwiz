@@ -92,7 +92,6 @@ describe("runner", () => {
 	});
 
 	it("tags a release nothing asked a tag for", async () => {
-		github.loggedIn = false;
 		const quiet = ships.lockstep(
 			ships.custom("@scope/one", registry),
 			ships.custom("@scope/two", registry),
@@ -152,30 +151,6 @@ describe("runner", () => {
 		expect(said()).toContain('on "task/ship": releases go out from "main"');
 		expect(ps.getCalls()).toEqual([]);
 		expect(registry.publishes).toEqual([]);
-	});
-
-	it("runs the command a problem carries, then looks again", async () => {
-		registry.loggedIn = false;
-
-		await expect(answering("y").ship(ship, "patch")).rejects.toThrow(
-			"not ready to release",
-		);
-		expect(ps.getCalls()).toEqual(["registry login"]);
-	});
-
-	it("says a shared registry's problem once, not once per package", async () => {
-		registry.loggedIn = false;
-
-		await expect(answering("y").ship(ship, "patch")).rejects.toThrow(
-			"not ready to release",
-		);
-		expect(
-			log.entries.filter(
-				(entry) =>
-					entry.level === "error" &&
-					String(entry.message).includes("not logged in to the registry"),
-			),
-		).toHaveLength(1);
 	});
 
 	it("reports a package the workspace has nothing public by the name of", async () => {

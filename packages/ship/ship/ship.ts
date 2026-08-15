@@ -1,4 +1,3 @@
-import type { Problem } from "../problem";
 import type { Release } from "../release/release";
 
 /**
@@ -14,14 +13,9 @@ export interface Ship {
 	 */
 	readonly packages: readonly string[];
 	/**
-	 * What blocks it, each problem carrying its remedy when one exists. Empty
-	 * means ready.
-	 */
-	problems(): Promise<Problem[]>;
-	/**
-	 * Carries it out. Run it again after a failure: everything that already
-	 * landed is skipped, so a second run finishes the release rather than
-	 * starting a new one.
+	 * Carries it out, throwing if it does not land. Run it again after a
+	 * failure: everything that already went out is skipped, so a second run
+	 * finishes the release rather than starting a new one.
 	 */
 	run(release: Release): Promise<void>;
 }

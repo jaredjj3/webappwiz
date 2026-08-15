@@ -1,4 +1,3 @@
-import type { Problem } from "../problem";
 import type { Release } from "../release/release";
 import type { Ship } from "./ship";
 
@@ -12,22 +11,6 @@ export class LockstepShip implements Ship {
 
 	get packages(): readonly string[] {
 		return this.steps.flatMap((step) => [...step.packages]);
-	}
-
-	/** Everything the steps report, each problem said once. */
-	async problems(): Promise<Problem[]> {
-		const problems: Problem[] = [];
-		const seen = new Set<string>();
-		for (const step of this.steps) {
-			for (const problem of await step.problems()) {
-				const key = `${problem.kind}: ${problem.message}`;
-				if (!seen.has(key)) {
-					seen.add(key);
-					problems.push(problem);
-				}
-			}
-		}
-		return problems;
 	}
 
 	async run(release: Release): Promise<void> {

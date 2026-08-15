@@ -1,5 +1,4 @@
 import { color } from "@webappwiz/log";
-import type { Problem } from "../problem";
 import type { Registry } from "../registry/registry";
 import type { Release } from "../release/release";
 import type { Ship } from "./ship";
@@ -13,10 +12,6 @@ export class RegistryShip implements Ship {
 		private readonly registry: Registry,
 	) {
 		this.packages = [name];
-	}
-
-	problems(): Promise<Problem[]> {
-		return this.registry.problems();
 	}
 
 	async run(release: Release): Promise<void> {

@@ -2,7 +2,6 @@
 // package.json exports, not a barrel sitting inside an interface's directory
 export type { CliGithubOptions } from "./github/cli-github";
 export type { Github } from "./github/github";
-export type { Problem } from "./problem";
 export type { NpmRegistryOptions } from "./registry/npm-registry";
 export type { Registry } from "./registry/registry";
 export type { Release } from "./release/release";

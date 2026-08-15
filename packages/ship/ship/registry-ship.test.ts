@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { FakeRegistry, REGISTRY_AUTH } from "../registry/fake-registry";
+import { FakeRegistry } from "../registry/fake-registry";
 import { FakeRelease } from "../release/fake-release";
 import { RegistryShip } from "./registry-ship";
 
@@ -28,14 +28,5 @@ describe("registry ship", () => {
 		await expect(ship.run(new FakeRelease())).rejects.toThrow(
 			'"@scope/gone" has no workspace package',
 		);
-	});
-
-	it("reports what the registry says is in the way", async () => {
-		const registry = new FakeRegistry();
-		registry.loggedIn = false;
-
-		const ship = new RegistryShip("@scope/one", registry);
-
-		expect(await ship.problems()).toEqual([REGISTRY_AUTH]);
 	});
 });

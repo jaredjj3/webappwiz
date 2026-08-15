@@ -4,8 +4,6 @@ import { FakeShip } from "./fake-ship";
 import { LockstepShip } from "./lockstep-ship";
 
 describe("lockstep ship", () => {
-	const AUTH = { kind: "auth", message: "not logged in" };
-
 	it("gathers every package its steps publish", () => {
 		const ship = new LockstepShip(
 			new FakeShip(["@scope/one"]),
@@ -24,14 +22,5 @@ describe("lockstep ship", () => {
 
 		expect(one.runs).toEqual([release]);
 		expect(two.runs).toEqual([release]);
-	});
-
-	it("says a problem two steps share once", async () => {
-		const ship = new LockstepShip(
-			new FakeShip(["@scope/one"], [AUTH]),
-			new FakeShip(["@scope/two"], [AUTH]),
-		);
-
-		expect(await ship.problems()).toEqual([AUTH]);
 	});
 });

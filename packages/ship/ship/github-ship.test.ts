@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { FakeGithub, GITHUB_AUTH } from "../github/fake-github";
+import { FakeGithub } from "../github/fake-github";
 import { FakeRelease } from "../release/fake-release";
 import { GithubShip } from "./github-ship";
 
@@ -14,12 +14,5 @@ describe("github ship", () => {
 		expect(ship.packages).toEqual([]);
 		expect(release.tagged).toBe(1);
 		expect(github.releases).toEqual(["v1.2.4"]);
-	});
-
-	it("reports what GitHub says is in the way", async () => {
-		const github = new FakeGithub();
-		github.loggedIn = false;
-
-		expect(await new GithubShip(github).problems()).toEqual([GITHUB_AUTH]);
 	});
 });

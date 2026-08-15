@@ -27,23 +27,15 @@ export class FakePs implements Ps {
 	}
 
 	async spawn(argv: string[], opts?: SpawnOptions): Promise<SpawnResult> {
-		if (!this.exited) {
-			this.record(argv, opts);
-			await this.simulation();
-		}
-		return { exitCode: this.exitCode };
+		return { exitCode: await this.run(argv, opts) };
 	}
 
 	async spawnCapture(
 		argv: string[],
 		opts?: SpawnOptions,
 	): Promise<SpawnCaptureResult> {
-		if (!this.exited) {
-			this.record(argv, opts);
-			await this.simulation();
-		}
 		return {
-			exitCode: this.exitCode,
+			exitCode: await this.run(argv, opts),
 			stdout: this.captureOutput.stdout,
 			stderr: this.captureOutput.stderr,
 		};
@@ -129,6 +121,18 @@ export class FakePs implements Ps {
 
 	isExited(): boolean {
 		return this.exited;
+	}
+
+	/**
+	 * What a spawn answers with: whatever the simulation returns, or the
+	 * process's own code once it has exited, since nothing runs after that.
+	 */
+	private async run(argv: string[], opts?: SpawnOptions): Promise<number> {
+		if (this.exited) {
+			return this.exitCode;
+		}
+		this.record(argv, opts);
+		return this.simulation();
 	}
 
 	private record(argv: string[], opts?: SpawnOptions): void {

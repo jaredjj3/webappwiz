@@ -2,7 +2,6 @@ import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import { type Fs, NodePs, type Ps } from "@webappwiz/system";
 import { CliGit } from "./git/cli-git";
 import type { Git } from "./git/git";
-import type { Problem } from "./problem";
 import { WorkspaceRelease } from "./release/workspace-release";
 import type { Ship } from "./ship/ship";
 import { type Bump, bump } from "./version";
@@ -32,10 +31,9 @@ interface Next {
 }
 
 /**
- * Ships a release from a terminal: say what stands in the way, run each
- * problem's remedy and look again, show what would go out, ask, and release
- * it. A terminal is the one place the remedies are safe: `npm login` wants a
- * human, and a server that ran it would hang instead of failing.
+ * Ships a release: say what stands in the way of one, show what would go out,
+ * ask, and release it. Give it a `prompt` to ask somewhere other than a
+ * terminal.
  */
 export class Runner {
 	private readonly log: Logger;
@@ -57,10 +55,10 @@ export class Runner {
 	 * run each step, tag and push.
 	 */
 	async ship(ship: Ship, type: Bump): Promise<void> {
-		const problems = await this.recover(ship);
+		const problems = await this.problems(ship);
 		if (problems.length > 0) {
 			for (const problem of problems) {
-				this.log.error(color.red(problem.message));
+				this.log.error(color.red(problem));
 			}
 			throw new Error("not ready to release");
 		}
@@ -87,69 +85,46 @@ export class Runner {
 		this.log.info(color.green(`shipped ${next.version}`));
 	}
 
-	/** Runs the commands that clear the problems carrying one, then looks again. */
-	private async recover(ship: Ship): Promise<Problem[]> {
-		const problems = await this.problems(ship);
-		const fixable = problems.filter((problem) => problem.remedy !== undefined);
-		if (fixable.length === 0) {
-			return problems;
-		}
-		for (const problem of fixable) {
-			const remedy = problem.remedy ?? [];
-			this.log.info(`${problem.message}: running \`${remedy.join(" ")}\``);
-			await this.ps.spawn(remedy);
-		}
-		return this.problems(ship);
-	}
-
-	/** Everything standing between this repository and the release. */
-	private async problems(ship: Ship): Promise<Problem[]> {
+	/**
+	 * What this repository has to sort out before a release, which is only ever
+	 * the state of the tree and the declaration. Whatever a step needs, it asks
+	 * for itself when it runs.
+	 */
+	private async problems(ship: Ship): Promise<string[]> {
 		const { workspace, git } = await this.collaborators();
-		const problems: Problem[] = [];
+		const problems: string[] = [];
 		if (!(await git.clean())) {
-			problems.push({
-				kind: "dirty",
-				message: "the tree has uncommitted changes: commit them first",
-			});
+			problems.push("the tree has uncommitted changes: commit them first");
 		}
 		const [branch, trunk] = [await git.branch(), await git.defaultBranch()];
 		if (branch !== trunk) {
-			problems.push({
-				kind: "branch",
-				message: `on "${branch}": releases go out from "${trunk}"`,
-			});
+			problems.push(`on "${branch}": releases go out from "${trunk}"`);
 		}
 		if (ship.packages.length === 0) {
-			problems.push({
-				kind: "empty",
-				message: "no packages are declared: there is nothing to publish",
-			});
+			problems.push("no packages are declared: there is nothing to publish");
 		}
 		problems.push(...this.roster(ship, await workspace.packages()));
-		problems.push(...(await ship.problems()));
 		return problems;
 	}
 
 	/** Where the declaration and the workspace's packages disagree. */
-	private roster(ship: Ship, packages: Package[]): Problem[] {
-		const problems: Problem[] = [];
+	private roster(ship: Ship, packages: Package[]): string[] {
+		const problems: string[] = [];
 		const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
 		const declared = new Set(ship.packages);
 		for (const name of declared) {
 			const pkg = byName.get(name);
 			if (pkg === undefined || pkg.private) {
-				problems.push({
-					kind: "unknown",
-					message: `"${name}" is declared but the workspace has no public package by that name`,
-				});
+				problems.push(
+					`"${name}" is declared but the workspace has no public package by that name`,
+				);
 			}
 		}
 		for (const pkg of packages) {
 			if (!pkg.private && !declared.has(pkg.name)) {
-				problems.push({
-					kind: "undeclared",
-					message: `"${pkg.name}" is public but not declared: declare it or mark it private`,
-				});
+				problems.push(
+					`"${pkg.name}" is public but not declared: declare it or mark it private`,
+				);
 			}
 		}
 		return problems;
