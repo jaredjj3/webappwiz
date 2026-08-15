@@ -8,7 +8,7 @@
 	},
 	"dependencies": {
 		"@webappwiz/log": "workspace:*",
-		"@webappwiz/sys": "workspace:*",
+		"@webappwiz/system": "workspace:*",
 		"@webappwiz/t": "workspace:*"
 	}
 }

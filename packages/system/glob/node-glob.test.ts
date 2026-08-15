@@ -23,9 +23,9 @@ describe("NodeGlob", () => {
 	});
 
 	it("anchors a pattern that leads with a directory", () => {
-		expect(glob.matches("packages/**/*.ts", "packages/sys/glob/glob.ts")).toBe(
-			true,
-		);
-		expect(glob.matches("packages/**/*.ts", "bin/sys/glob.ts")).toBe(false);
+		expect(
+			glob.matches("packages/**/*.ts", "packages/system/glob/glob.ts"),
+		).toBe(true);
+		expect(glob.matches("packages/**/*.ts", "bin/system/glob.ts")).toBe(false);
 	});
 });

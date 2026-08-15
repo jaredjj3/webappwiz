@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
-import { type Fs, NodeFs, walk } from "@webappwiz/sys";
+import { type Fs, NodeFs, walk } from "@webappwiz/system";
 import { Skills } from "./skills";
 
 /**

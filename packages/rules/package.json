@@ -12,7 +12,7 @@
 		"@webappwiz/events": "workspace:*",
 		"@webappwiz/log": "workspace:*",
 		"@webappwiz/md": "workspace:*",
-		"@webappwiz/sys": "workspace:*",
+		"@webappwiz/system": "workspace:*",
 		"@webappwiz/time": "workspace:*"
 	},
 	"peerDependencies": {

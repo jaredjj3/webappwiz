@@ -1,5 +1,5 @@
 {
-	"name": "@webappwiz/sys",
+	"name": "@webappwiz/system",
 	"version": "0.0.0",
 	"type": "module",
 	"module": "index.ts",

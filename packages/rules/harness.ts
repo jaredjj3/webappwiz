@@ -1,6 +1,6 @@
 import { Dispatcher, type Events } from "@webappwiz/events";
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
-import { NodePs, type Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/system";
 import { type Clock, type Duration, SystemClock } from "@webappwiz/time";
 import type { Agent } from "./agent";
 import { DEFAULT_CONCURRENCY } from "./config";

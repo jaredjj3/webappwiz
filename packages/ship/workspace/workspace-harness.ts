@@ -1,4 +1,4 @@
-import { FakeFs } from "@webappwiz/sys/testing";
+import { FakeFs } from "@webappwiz/system/testing";
 import { ManifestWorkspace } from "./manifest-workspace";
 
 /**

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { FakeFs, FakePs } from "@webappwiz/sys/testing";
+import { FakeFs, FakePs } from "@webappwiz/system/testing";
 
 import { test } from "./test";
 
@@ -11,7 +11,7 @@ describe("test", () => {
 		fs = new FakeFs();
 		ps = new FakePs();
 		await fs.write("/tree/package.json", '{"workspaces": ["packages/*"]}');
-		await fs.mkdir("/tree/packages/sys");
+		await fs.mkdir("/tree/packages/system");
 		await fs.mkdir("/tree/packages/log");
 		ps.setCwd("/tree");
 	});

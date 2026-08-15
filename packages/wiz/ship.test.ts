@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakeShip, fakePlan } from "@webappwiz/ship";
-import { FakePs } from "@webappwiz/sys/testing";
+import { FakePs } from "@webappwiz/system/testing";
 import { ship } from "./ship";
 
 describe("ship", () => {

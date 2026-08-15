@@ -1,4 +1,4 @@
-import { NodePs, type Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/system";
 import type { Git } from "./git";
 
 /** What a `CliGit` spawns through; the real process by default. */

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
-import { NodeGlob } from "@webappwiz/sys";
-import { FakeFs, FakePs } from "@webappwiz/sys/testing";
+import { NodeGlob } from "@webappwiz/system";
+import { FakeFs, FakePs } from "@webappwiz/system/testing";
 import { FakeClock } from "@webappwiz/time/testing";
 import { Files, type PlanOptions, type Violation } from "./files";
 import { Harness } from "./harness";

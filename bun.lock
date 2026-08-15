@@ -34,7 +34,7 @@
         "@webappwiz/md": "workspace:*",
         "@webappwiz/react": "workspace:*",
         "@webappwiz/ship": "workspace:*",
-        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/system": "workspace:*",
         "@webappwiz/t": "workspace:*",
         "@webappwiz/time": "workspace:*",
         "react": "^19.2.8",
@@ -86,7 +86,7 @@
         "@webappwiz/log": "workspace:*",
         "@webappwiz/md": "workspace:*",
         "@webappwiz/rules": "workspace:*",
-        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/system": "workspace:*",
         "@webappwiz/t": "workspace:*",
         "@webappwiz/time": "workspace:*",
       },
@@ -99,7 +99,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/log": "workspace:*",
-        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/system": "workspace:*",
         "@webappwiz/t": "workspace:*",
       },
     },
@@ -174,7 +174,7 @@
         "@webappwiz/events": "workspace:*",
         "@webappwiz/log": "workspace:*",
         "@webappwiz/md": "workspace:*",
-        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/system": "workspace:*",
         "@webappwiz/time": "workspace:*",
       },
       "peerDependencies": {
@@ -186,11 +186,11 @@
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/log": "workspace:*",
-        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/system": "workspace:*",
       },
     },
-    "packages/sys": {
-      "name": "@webappwiz/sys",
+    "packages/system": {
+      "name": "@webappwiz/system",
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/log": "workspace:*",
@@ -227,7 +227,7 @@
         "@webappwiz/log": "workspace:*",
         "@webappwiz/rules": "workspace:*",
         "@webappwiz/ship": "workspace:*",
-        "@webappwiz/sys": "workspace:*",
+        "@webappwiz/system": "workspace:*",
         "@webappwiz/t": "workspace:*",
         "@webappwiz/time": "workspace:*",
       },
@@ -402,7 +402,7 @@
 
     "@webappwiz/ship": ["@webappwiz/ship@workspace:packages/ship"],
 
-    "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
+    "@webappwiz/system": ["@webappwiz/system@workspace:packages/system"],
 
     "@webappwiz/t": ["@webappwiz/t@workspace:packages/t"],
 

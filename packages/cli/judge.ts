@@ -19,7 +19,7 @@ import {
 	NodeGlob,
 	NodePs,
 	type Ps,
-} from "@webappwiz/sys";
+} from "@webappwiz/system";
 import { type Clock, SystemClock } from "@webappwiz/time";
 import { changed } from "./changed";
 import { calibrate, floor, overheads, predict } from "./cost";

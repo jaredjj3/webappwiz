@@ -1,6 +1,6 @@
 import { cli, type Deps } from "@webappwiz/cmd";
 import { AGENTS } from "@webappwiz/rules";
-import type { Fs, Glob } from "@webappwiz/sys";
+import type { Fs, Glob } from "@webappwiz/system";
 import { t } from "@webappwiz/t";
 import type { Clock } from "@webappwiz/time";
 import { JudgeCommands } from "./judge";

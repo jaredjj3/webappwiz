@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { type Fs, NodeFs } from "@webappwiz/sys";
+import { type Fs, NodeFs } from "@webappwiz/system";
 
 /**
  * Input price in dollars per million tokens, for each model `--agent` names.

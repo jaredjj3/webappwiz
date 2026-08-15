@@ -1,4 +1,4 @@
-import { NodePs, type Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/system";
 import type { Registry } from "./registry";
 
 /** The npm registry, reached through the npm and bun CLIs. */

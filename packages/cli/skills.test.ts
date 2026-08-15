@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { color, MemoryLogger } from "@webappwiz/log";
-import { NodeFs } from "@webappwiz/sys";
-import { FakeFs } from "@webappwiz/sys/testing";
+import { NodeFs } from "@webappwiz/system";
+import { FakeFs } from "@webappwiz/system/testing";
 
 import { Skills, source, versionOf } from "./skills";
 

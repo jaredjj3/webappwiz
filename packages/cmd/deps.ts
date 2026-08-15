@@ -1,5 +1,5 @@
 import type { Logger } from "@webappwiz/log";
-import type { Ps } from "@webappwiz/sys";
+import type { Ps } from "@webappwiz/system";
 
 /**
  * The least a cli needs handed to it: somewhere to print help and errors, and

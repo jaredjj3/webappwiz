@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
-import { type Fs, NodeFs } from "@webappwiz/sys";
+import { type Fs, NodeFs } from "@webappwiz/system";
 import { table } from "./table";
 
 /** The directory holding the documents this package ships. Skills live there

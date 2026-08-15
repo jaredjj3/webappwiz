@@ -1,4 +1,4 @@
-import { NodeFs, NodeGlob } from "@webappwiz/sys";
+import { NodeFs, NodeGlob } from "@webappwiz/system";
 import { SystemClock } from "@webappwiz/time";
 import { wiz } from "./wiz";
 

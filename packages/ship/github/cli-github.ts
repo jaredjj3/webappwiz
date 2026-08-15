@@ -1,4 +1,4 @@
-import { NodePs, type Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/system";
 import type { Github } from "./github";
 
 /** GitHub releases, via the `gh` CLI. */

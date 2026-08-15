@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { type Fs, NodeFs } from "@webappwiz/sys";
+import { type Fs, NodeFs } from "@webappwiz/system";
 import type { Package } from "../plan";
 import type { Workspace } from "./workspace";
 

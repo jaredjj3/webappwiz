@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
-import { type Fs, NodeFs, NodePs, type Ps } from "@webappwiz/sys";
+import { type Fs, NodeFs, NodePs, type Ps } from "@webappwiz/system";
 
 // Tag every line we add so `remove` can find and delete exactly ours.
 const TAG = "# webappwiz";

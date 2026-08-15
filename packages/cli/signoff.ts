@@ -8,7 +8,7 @@ import {
 	type Task,
 	prompt as taskPrompt,
 } from "@webappwiz/rules";
-import { NodePs, type Ps } from "@webappwiz/sys";
+import { NodePs, type Ps } from "@webappwiz/system";
 import { type Clock, SystemClock } from "@webappwiz/time";
 import { diff } from "./changed";
 import { ask, type Confirm } from "./judge";

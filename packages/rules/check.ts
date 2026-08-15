@@ -6,7 +6,7 @@ import {
 	NodeGlob,
 	NodePs,
 	type Ps,
-} from "@webappwiz/sys";
+} from "@webappwiz/system";
 import { Checker } from "./checker";
 import type { FileRule } from "./rule";
 

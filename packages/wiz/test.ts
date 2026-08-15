@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { type Fs, NodeFs, NodePs, type Ps } from "@webappwiz/sys";
+import { type Fs, NodeFs, NodePs, type Ps } from "@webappwiz/system";
 
 export interface TestOptions {
 	/** One package to test, by name; empty runs the whole workspace. */

@@ -5,8 +5,8 @@ import {
 	FakeConsole,
 	MemoryLogger,
 } from "@webappwiz/log";
-import { NodePs } from "@webappwiz/sys";
-import { FakePs } from "@webappwiz/sys/testing";
+import { NodePs } from "@webappwiz/system";
+import { FakePs } from "@webappwiz/system/testing";
 import { t } from "@webappwiz/t";
 import { cli } from "./cli";
 import type { Deps } from "./deps";

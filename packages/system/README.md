@@ -1,11 +1,11 @@
-# @webappwiz/sys
+# @webappwiz/system
 
 Interfaces for the things that touch the machine, so code under test doesn't
 have to: `Fs` (filesystem), `Ps` (processes), `IpProvider`/`HostMapper`
 (loopback IPs and hostname mapping), plus `Lock`, built on those seams.
 
 ```ts
-import { NodeFs, NodePs } from "@webappwiz/sys";
+import { NodeFs, NodePs } from "@webappwiz/system";
 
 const fs = new NodeFs();
 const ps = new NodePs();
@@ -17,7 +17,7 @@ await ps.spawn(["echo", "hi"]);
 In tests, swap in the fakes:
 
 ```ts
-import { FakeFs, FakePs } from "@webappwiz/sys/testing";
+import { FakeFs, FakePs } from "@webappwiz/system/testing";
 ```
 
 A `Lock` is a mutex (`acquire`, `release`, `releaseIfOurs`). `acquire` blocks

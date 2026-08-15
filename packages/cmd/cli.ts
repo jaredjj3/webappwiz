@@ -1,5 +1,5 @@
 import { ConsoleLogger, color } from "@webappwiz/log";
-import { NodePs } from "@webappwiz/sys";
+import { NodePs } from "@webappwiz/system";
 import { Command } from "./command";
 import type { Deps } from "./deps";
 import type { AnyMiddleware, Middleware } from "./middleware";

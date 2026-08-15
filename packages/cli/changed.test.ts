@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { FakePs } from "@webappwiz/sys/testing";
+import { FakePs } from "@webappwiz/system/testing";
 import { changed } from "./changed";
 
 describe("changed", () => {

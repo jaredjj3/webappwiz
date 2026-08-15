@@ -10,7 +10,7 @@ import {
 	type Plan,
 	type Ship,
 } from "@webappwiz/ship";
-import { type Fs, NodePs, type Ps } from "@webappwiz/sys";
+import { type Fs, NodePs, type Ps } from "@webappwiz/system";
 import { fix } from "./fix";
 
 export interface ShipOptions {

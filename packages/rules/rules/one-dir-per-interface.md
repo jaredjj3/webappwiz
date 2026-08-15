@@ -18,7 +18,7 @@ interface and the directory.
 ## Good
 
 ```text
-packages/sys/fs/
+packages/system/fs/
 	fs.ts             # export interface Fs
 	node-fs.ts        # export class NodeFs implements Fs
 	node-fs.test.ts
@@ -41,8 +41,8 @@ packages/judge/rule/
 Implementations scattered across the tree:
 
 ```text
-packages/sys/fs.ts
-packages/sys/node-fs.ts
+packages/system/fs.ts
+packages/system/node-fs.ts
 packages/testing/fake-fs.ts
 ```
 
@@ -50,7 +50,7 @@ A directory named for something other than the interface, holding unrelated
 files, or re-exporting through a barrel:
 
 ```text
-packages/sys/filesystem/
+packages/system/filesystem/
 	index.ts
 	fs.ts
 	node-fs.ts
