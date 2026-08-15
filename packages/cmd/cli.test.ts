@@ -257,6 +257,42 @@ describe("cli", () => {
 		});
 	});
 
+	it("dispatches into a mounted cli like a group", () => {
+		const calls: string[] = [];
+		const sub = cli("webappwiz");
+		sub.command("update").action(() => calls.push("update"));
+		const wiz = cli("wiz");
+		wiz.mount("cli", sub);
+		wiz.run(deps, ["cli", "update"]);
+		expect(calls).toEqual(["update"]);
+	});
+
+	it("names a mounted cli's commands by the path they were reached through", () => {
+		const sub = cli("webappwiz");
+		sub.command("update").action(() => {});
+		const wiz = cli("wiz");
+		wiz.mount("cli", sub);
+
+		wiz.run(deps, ["cli", "update", "--help"]);
+		expect(help()).toContain("Usage: wiz cli update [options]");
+
+		sub.run(deps, ["update", "--help"]);
+		expect(help()).toContain("Usage: webappwiz update [options]");
+	});
+
+	it("lists a mounted cli under its own description", () => {
+		const sub = cli("webappwiz").description("run webappwiz");
+		sub.command("update").action(() => {});
+		const wiz = cli("wiz");
+		wiz.mount("cli", sub);
+
+		wiz.run(deps, []);
+		expect(help()).toContain("cli  run webappwiz");
+
+		wiz.run(deps, ["cli"]);
+		expect(help()).toContain("Usage: wiz cli <command> [options]");
+	});
+
 	it("prints usage through the logger it is run with", () => {
 		const out = new FakeConsole();
 

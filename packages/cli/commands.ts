@@ -1,4 +1,4 @@
-import type { Cli, Deps } from "@webappwiz/cmd";
+import { cli, type Deps } from "@webappwiz/cmd";
 import { AGENTS, SIGNOFF_RULES, WEBAPPWIZ_RULES } from "@webappwiz/rules";
 import type { Fs, Glob } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
@@ -20,157 +20,153 @@ export interface CommandDeps extends Deps {
 }
 
 /**
- * Adds webappwiz's commands to `app`, which can be a program or a command
- * group.
+ * The `webappwiz` program. Run on its own it is the `webappwiz` bin; mounted
+ * (`wiz.mount("cli", webappwiz)`) the same commands answer as `wiz cli`, so
+ * neither spelling shells out to the other.
  */
-export function commands<D extends CommandDeps>(app: Cli<D>): void {
-	// Hangs the commands off whatever it is given: the program itself when run
-	// as `webappwiz`, or a group when another cli mounts it (`wiz cli`). Nothing
-	// here knows which, so both spellings stay the same commands rather than one
-	// of them shelling out to the other.
+export const webappwiz = cli<CommandDeps>("webappwiz");
 
-	app
-		.command("update")
-		.description("pin every @webappwiz/* dependency in a tree to one version")
-		.arg("dir", t.string(), {
-			default: ".",
-			description: "directory to scan recursively (default: .)",
-		})
-		.option("version", t.string(), {
-			default: version,
-			description: "version to pin to",
-		})
-		.action((opts, { log, fs }) => update({ ...opts, log, fs }));
+webappwiz
+	.command("update")
+	.description("pin every @webappwiz/* dependency in a tree to one version")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "directory to scan recursively (default: .)",
+	})
+	.option("version", t.string(), {
+		default: version,
+		description: "version to pin to",
+	})
+	.action((opts, { log, fs }) => update({ ...opts, log, fs }));
 
-	// `judge` and `rules` are siblings rather than one nested in the other: the
-	// rule set is shared, with `wiz fix` enforcing the rules that carry a check
-	// and `judge` the ones only an agent can decide, so neither owns it.
-	const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
-		new JudgeCommands(WEBAPPWIZ_RULES, {
-			signoffRules: SIGNOFF_RULES,
+// `judge` and `rules` are siblings rather than one nested in the other: the
+// rule set is shared, with `wiz fix` enforcing the rules that carry a check
+// and `judge` the ones only an agent can decide, so neither owns it.
+const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
+	new JudgeCommands(WEBAPPWIZ_RULES, {
+		signoffRules: SIGNOFF_RULES,
+		log,
+		fs,
+		ps,
+		clock,
+		glob,
+	});
+
+webappwiz
+	.command("judge")
+	.description("check a directory against the config, one agent per glob")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "directory to judge (default: .)",
+	})
+	.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
+		default: undefined,
+		description: "model to check with (default: the config's agent)",
+	})
+	.option("exec", t.optional(t.string()), {
+		default: undefined,
+		description: "command the prompt is passed to, instead of --agent",
+	})
+	.option("print", t.boolean(), {
+		default: false,
+		description: "print the prompts and run no agent at all",
+	})
+	.option("estimate", t.boolean(), {
+		default: false,
+		description: "print what a run would read, and run nothing",
+	})
+	.option("chunk", t.number(), {
+		default: 25,
+		description: "files per task",
+	})
+	.option("since", t.optional(t.string()), {
+		default: undefined,
+		description: "only check files added or changed since this git ref",
+	})
+	.option("budget", t.number(), {
+		default: 200_000,
+		description: "confirm before reading more than this many tokens",
+	})
+	.action((opts, deps) => judge(deps).judge(opts));
+
+webappwiz
+	.command("signoff")
+	.description("weigh a change against the rules that ask for a person")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "directory whose change is weighed (default: .)",
+	})
+	.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
+		default: undefined,
+		description: "model to weigh it with (default: the config's agent)",
+	})
+	.option("exec", t.optional(t.string()), {
+		default: undefined,
+		description: "command the prompt is passed to, instead of --agent",
+	})
+	.option("print", t.boolean(), {
+		default: false,
+		description: "print the rules to apply yourself, and run no agent",
+	})
+	.option("since", t.string(), {
+		default: "main",
+		description: "the ref the change is measured against",
+	})
+	.option("budget", t.number(), {
+		default: 200_000,
+		description: "confirm before reading more than this many tokens",
+	})
+	.action((opts, { log, ps, clock }) =>
+		new Signoff(SIGNOFF_RULES, WEBAPPWIZ_RULES.agent, {
 			log,
-			fs,
 			ps,
 			clock,
-			glob,
-		});
+		}).run(opts),
+	);
 
-	app
-		.command("judge")
-		.description("check a directory against the config, one agent per glob")
-		.arg("dir", t.string(), {
-			default: ".",
-			description: "directory to judge (default: .)",
-		})
-		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
-			default: undefined,
-			description: "model to check with (default: the config's agent)",
-		})
-		.option("exec", t.optional(t.string()), {
-			default: undefined,
-			description: "command the prompt is passed to, instead of --agent",
-		})
-		.option("print", t.boolean(), {
-			default: false,
-			description: "print the prompts and run no agent at all",
-		})
-		.option("estimate", t.boolean(), {
-			default: false,
-			description: "print what a run would read, and run nothing",
-		})
-		.option("chunk", t.number(), {
-			default: 25,
-			description: "files per task",
-		})
-		.option("since", t.optional(t.string()), {
-			default: undefined,
-			description: "only check files added or changed since this git ref",
-		})
-		.option("budget", t.number(), {
-			default: 200_000,
-			description: "confirm before reading more than this many tokens",
-		})
-		.action((opts, deps) => judge(deps).judge(opts));
+const rules = webappwiz
+	.group("rules")
+	.description("list and print the rules, to run or to read yourself");
 
-	app
-		.command("signoff")
-		.description("weigh a change against the rules that ask for a person")
-		.arg("dir", t.string(), {
-			default: ".",
-			description: "directory whose change is weighed (default: .)",
-		})
-		.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
-			default: undefined,
-			description: "model to weigh it with (default: the config's agent)",
-		})
-		.option("exec", t.optional(t.string()), {
-			default: undefined,
-			description: "command the prompt is passed to, instead of --agent",
-		})
-		.option("print", t.boolean(), {
-			default: false,
-			description: "print the rules to apply yourself, and run no agent",
-		})
-		.option("since", t.string(), {
-			default: "main",
-			description: "the ref the change is measured against",
-		})
-		.option("budget", t.number(), {
-			default: 200_000,
-			description: "confirm before reading more than this many tokens",
-		})
-		.action((opts, { log, ps, clock }) =>
-			new Signoff(SIGNOFF_RULES, WEBAPPWIZ_RULES.agent, {
-				log,
-				ps,
-				clock,
-			}).run(opts),
-		);
+rules
+	.command("ls")
+	.description("list the rules")
+	.action((_opts, deps) => judge(deps).ls());
 
-	const rules = app
-		.group("rules")
-		.description("list and print the rules, to run or to read yourself");
+rules
+	.command("show")
+	.description("print one rule in full, by the id `rules ls` gives it")
+	.arg("id", t.string(), { description: "rule id" })
+	.action((opts, deps) => judge(deps).show(opts));
 
-	rules
-		.command("ls")
-		.description("list the rules")
-		.action((_opts, deps) => judge(deps).ls());
+const skillsGroup = webappwiz
+	.group("skills")
+	.description("manage webappwiz agent skills in .agents/skills");
 
-	rules
-		.command("show")
-		.description("print one rule in full, by the id `rules ls` gives it")
-		.arg("id", t.string(), { description: "rule id" })
-		.action((opts, deps) => judge(deps).show(opts));
+skillsGroup
+	.command("ls")
+	.description("list the skills there are, and what the project has of them")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to inspect (default: .)",
+	})
+	.action((opts, { log, fs }) => new Skills({ log, fs }).ls(opts));
 
-	const skillsGroup = app
-		.group("skills")
-		.description("manage webappwiz agent skills in .agents/skills");
+skillsGroup
+	.command("add")
+	.description("add a skill to a project")
+	.arg("skill", t.string(), { description: "skill name" })
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to add it to (default: .)",
+	})
+	.action((opts, { log, fs }) => new Skills({ log, fs }).add(opts));
 
-	skillsGroup
-		.command("ls")
-		.description("list the skills there are, and what the project has of them")
-		.arg("dir", t.string(), {
-			default: ".",
-			description: "project to inspect (default: .)",
-		})
-		.action((opts, { log, fs }) => new Skills({ log, fs }).ls(opts));
-
-	skillsGroup
-		.command("add")
-		.description("add a skill to a project")
-		.arg("skill", t.string(), { description: "skill name" })
-		.arg("dir", t.string(), {
-			default: ".",
-			description: "project to add it to (default: .)",
-		})
-		.action((opts, { log, fs }) => new Skills({ log, fs }).add(opts));
-
-	skillsGroup
-		.command("update")
-		.description("refresh the skills a project already has")
-		.arg("dir", t.string(), {
-			default: ".",
-			description: "project to refresh (default: .)",
-		})
-		.action((opts, { log, fs }) => new Skills({ log, fs }).update(opts));
-}
+skillsGroup
+	.command("update")
+	.description("refresh the skills a project already has")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to refresh (default: .)",
+	})
+	.action((opts, { log, fs }) => new Skills({ log, fs }).update(opts));

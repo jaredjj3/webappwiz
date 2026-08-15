@@ -1,5 +1,5 @@
 import type { CommandDeps } from "@webappwiz/cli/commands";
-import { commands } from "@webappwiz/cli/commands";
+import { webappwiz } from "@webappwiz/cli/commands";
 import { cli } from "@webappwiz/cmd";
 import { t } from "@webappwiz/t";
 import { fix } from "./fix";
@@ -49,4 +49,4 @@ wiz
 	})
 	.action((opts, { fs, ps }) => test({ ...opts, fs, ps }));
 
-commands(wiz.group("cli").description("run @webappwiz/cli against a project"));
+wiz.mount("cli", webappwiz.description("run @webappwiz/cli against a project"));

@@ -84,20 +84,19 @@ app skills --help      # lists add and update
 
 A failure anywhere in the tree is reported and exits once, at the root.
 
-Since `cli()` and `group()` hand back the same thing, a function that takes a
-`Cli` can register commands on either, which is how one program mounts
-another's commands as a subcommand instead of shelling out to it.
+`mount` hangs one cli on another, which is how one program carries another's
+commands as a subcommand instead of shelling out to it. Help names every
+command by the path it was reached through, so the same cli answers correctly
+under both spellings.
 
 ```ts
-export function commands<D extends AppDeps>(app: Cli<D>): void {
-	app.command("update").action(/* … */);
-}
+export const webappwiz = cli<AppDeps>("webappwiz");
+webappwiz.command("update").action(/* … */); // webappwiz update
 
-commands(cli<AppDeps>("webappwiz"));   // webappwiz update
-commands(wiz.group("cli"));            // wiz cli update
+wiz.mount("cli", webappwiz);                 // wiz cli update
 ```
 
-The type argument is what keeps that honest: a program can only mount commands
+The type argument is what keeps that honest: a program can only mount a cli
 whose dependencies it already promises to run with.
 
 ## Middleware

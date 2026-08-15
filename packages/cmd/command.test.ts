@@ -124,7 +124,7 @@ describe("Command", () => {
 
 	it("prints usage, options, and defaults and skips the action on --help", () => {
 		let ran = false;
-		new Command("greet", "wiz")
+		new Command("greet")
 			.description("greet someone")
 			.option("name", t.string(), { description: "who to greet" })
 			.option("count", t.number(), {
@@ -134,7 +134,7 @@ describe("Command", () => {
 			.action(() => {
 				ran = true;
 			})
-			.exec(["--help"], { log });
+			.exec(["--help"], { log }, [], "wiz greet");
 
 		expect(ran).toBe(false); // required --name is not enforced when asking for help
 		const text = log.entries
@@ -149,7 +149,7 @@ describe("Command", () => {
 	});
 
 	it("says nothing about the default of an option that defaults to undefined", () => {
-		new Command("greet", "wiz")
+		new Command("greet")
 			.option("name", t.optional(t.string()), {
 				default: undefined,
 				description: "who to greet",
@@ -226,11 +226,11 @@ describe("Command", () => {
 	});
 
 	it("shows arguments in the usage line and their own section in help", () => {
-		new Command("escalate", "arbor")
+		new Command("escalate")
 			.arg("reason", t.string(), { description: "why this needs a human" })
 			.arg("note", t.string(), { default: "" })
 			.action(() => {})
-			.exec(["--help"], { log });
+			.exec(["--help"], { log }, [], "arbor escalate");
 
 		const text = log.entries
 			.map((entry) => color.strip(entry.message))

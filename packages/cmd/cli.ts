@@ -13,7 +13,7 @@ import type { AnyMiddleware, Middleware } from "./middleware";
 interface Node<D> {
 	/** One row of the parent's help table, keyed by the name it registered under. */
 	helpLine(name: string, pad: number): string;
-	exec(argv: string[], deps: D, outer: AnyMiddleware[]): unknown;
+	exec(argv: string[], deps: D, outer: AnyMiddleware[], path: string): unknown;
 }
 
 /**
@@ -53,7 +53,7 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 	// unknown is the empty-options seed: `unknown & { name: string }` reduces to
 	// `{ name: string }`, so options accumulate cleanly as they're declared.
 	command(name: string): Command<unknown, C> {
-		const command = new Command<unknown, C>(name, this.name);
+		const command = new Command<unknown, C>(name);
 		// registered by reference; chain mutates the same object
 		this.cmds.set(name, command as unknown as Node<D>);
 		return command;
@@ -65,9 +65,20 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 	 * prints help exactly the way the root does; only its name is longer.
 	 */
 	group(name: string): Cli<D, C> {
-		const group = new Cli<D, C>(`${this.name} ${name}`);
+		const group = new Cli<D, C>(name);
 		this.cmds.set(name, group as Node<D>);
 		return group;
+	}
+
+	/**
+	 * Mounts another cli's commands under `name`. The mounted cli is built
+	 * standalone, as its own program; here it becomes a group, and help names
+	 * every command by the path it was reached through, not the name the
+	 * mounted cli was built with.
+	 */
+	mount(name: string, sub: Cli<D>): this {
+		this.cmds.set(name, sub as Node<D>);
+		return this;
 	}
 
 	/**
@@ -92,18 +103,30 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 	/**
 	 * Dispatch, with whatever middleware the levels above contribute. Errors are
 	 * left to propagate: only the root's `run` ends the process, so a group
-	 * nested three deep still fails once, at the top.
+	 * nested three deep still fails once, at the top. `path` is the spelling
+	 * that reached this cli, which only the caller knows: a mounted cli is
+	 * `wiz cli` in one program and `webappwiz` on its own.
 	 */
-	exec(argv: string[], deps: D, outer: AnyMiddleware[] = []): unknown {
+	exec(
+		argv: string[],
+		deps: D,
+		outer: AnyMiddleware[] = [],
+		path = this.name,
+	): unknown {
 		const [name, ...rest] = argv;
 		if (!name || name === "--help" || name === "-h") {
-			return this.help(deps);
+			return this.help(deps, path);
 		}
 		const cmd = this.cmds.get(name);
 		if (!cmd) {
-			return this.help(deps);
+			return this.help(deps, path);
 		}
-		return cmd.exec(rest, deps, [...outer, ...this.middleware]);
+		return cmd.exec(
+			rest,
+			deps,
+			[...outer, ...this.middleware],
+			`${path} ${name}`,
+		);
 	}
 
 	// padded before it is coloured: the trailing spaces land inside the escape
@@ -118,18 +141,16 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 		deps.ps.exit(1);
 	}
 
-	private help(deps: D): void {
+	private help(deps: D, path: string): void {
 		const entries = [...this.cmds];
 		const pad = Math.max(0, ...entries.map(([name]) => name.length));
 		const lines = [
-			`${color.bold("Usage:")} ${color.bold(this.name)} ${color.dim("<command> [options]")}`,
+			`${color.bold("Usage:")} ${color.bold(path)} ${color.dim("<command> [options]")}`,
 			"",
 			color.bold("Commands:"),
 			...entries.map(([name, command]) => command.helpLine(name, pad)),
 			"",
-			color.dim(
-				`Run \`${this.name} <command> --help\` for a command's options.`,
-			),
+			color.dim(`Run \`${path} <command> --help\` for a command's options.`),
 		];
 		deps.log.info(lines.join("\n"));
 	}

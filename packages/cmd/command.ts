@@ -32,10 +32,7 @@ export class Command<O, C extends object = object> {
 	private _action: Action<O, C> = () => {};
 	private hasAction = false;
 
-	constructor(
-		readonly name: string,
-		private program = "", // program name for the usage line; empty when run standalone
-	) {}
+	constructor(readonly name: string) {}
 
 	description(description: string): this {
 		this._description = description;
@@ -100,13 +97,16 @@ export class Command<O, C extends object = object> {
 
 	// Of the dependencies only the logger is this command's business; the rest of
 	// the object it just seeds the context with, for the middleware and action.
+	// `path` is the spelling that reached this command, for the usage line; the
+	// cli dispatching here passes it, a command run standalone is just its name.
 	exec(
 		argv: string[],
 		deps: Pick<Deps, "log">,
 		outer: AnyMiddleware[] = [],
+		path = this.name,
 	): unknown {
 		if (argv.includes("--help") || argv.includes("-h")) {
-			this.help(deps.log);
+			this.help(deps.log, path);
 			return;
 		}
 		const opts = this.parse(argv);
@@ -200,12 +200,12 @@ export class Command<O, C extends object = object> {
 		];
 	}
 
-	private help(log: Logger): void {
+	private help(log: Logger, path: string): void {
 		const args = this.args.map((arg) =>
 			arg.hasDefault ? `[${arg.name}]` : `<${arg.name}>`,
 		);
 		const usage = [
-			color.bold([this.program, this.name].filter(Boolean).join(" ")),
+			color.bold(path),
 			color.dim([...args, "[options]"].join(" ")),
 		].join(" ");
 		const lines = [`${color.bold("Usage:")} ${usage}`];
