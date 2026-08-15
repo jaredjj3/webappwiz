@@ -7,64 +7,42 @@ const TAG = "# webappwiz";
 
 const binDir = resolve(import.meta.dirname, "../../bin");
 
-/** Which way to move `bin/`: exactly one of these is set. */
-export interface PathRunOptions {
+export interface PathOptions {
+	/** Which way to move `bin/`: exactly one of these is set. */
 	add: boolean;
 	remove: boolean;
-}
-
-/** What a `Path` works through; the real ones by default. */
-export interface PathOptions {
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
 }
 
-export class Path {
-	private readonly log: Logger;
-	private readonly fs: Fs;
-	private readonly ps: Ps;
-
-	constructor(opts: PathOptions = {}) {
-		this.log = opts.log ?? new ConsoleLogger();
-		this.fs = opts.fs ?? new NodeFs();
-		this.ps = opts.ps ?? new NodePs();
+/** Exactly one of `add` or `remove` must be set; anything else throws. */
+export async function path(opts: PathOptions): Promise<void> {
+	if (opts.add === opts.remove) {
+		throw new Error("must specify one of --add or --remove");
 	}
+	const log = opts.log ?? new ConsoleLogger();
+	const fs = opts.fs ?? new NodeFs();
+	const ps = opts.ps ?? new NodePs();
 
-	/** Exactly one of `add` or `remove` must be set; anything else throws. */
-	async run(opts: PathRunOptions): Promise<void> {
-		if (opts.add === opts.remove) {
-			throw new Error("must specify one of --add or --remove");
-		}
-		await (opts.add ? this.add() : this.remove());
-	}
+	const shellName = (ps.env("SHELL") ?? "/bin/bash").split("/").pop();
+	const profile = resolve(ps.env("HOME") ?? "~", `.${shellName}rc`);
+	const current = await fs.read(profile).catch(() => "");
 
-	private async add(): Promise<void> {
-		const profile = this.profilePath();
-		const line = `export PATH="${binDir}:$PATH" ${TAG}`;
-		const current = await this.fs.read(profile).catch(() => "");
-		if (current.includes(line)) {
-			this.log.info(`Already on PATH in ${profile}`);
-			return;
-		}
-		await this.fs.write(profile, `${current}\n${line}\n`);
-		this.log.info(
-			`Added ${binDir} to ${profile}. Restart your shell to pick it up.`,
-		);
-	}
-
-	private async remove(): Promise<void> {
-		const profile = this.profilePath();
-		const current = await this.fs.read(profile).catch(() => "");
+	if (opts.remove) {
 		const kept = current.split("\n").filter((line) => !line.endsWith(TAG));
-		await this.fs.write(profile, kept.join("\n"));
-		this.log.info(
+		await fs.write(profile, kept.join("\n"));
+		log.info(
 			`Removed ${binDir} from ${profile}. Restart your shell to pick it up.`,
 		);
+		return;
 	}
 
-	private profilePath(): string {
-		const shellName = (this.ps.env("SHELL") ?? "/bin/bash").split("/").pop();
-		return resolve(this.ps.env("HOME") ?? "~", `.${shellName}rc`);
+	const line = `export PATH="${binDir}:$PATH" ${TAG}`;
+	if (current.includes(line)) {
+		log.info(`Already on PATH in ${profile}`);
+		return;
 	}
+	await fs.write(profile, `${current}\n${line}\n`);
+	log.info(`Added ${binDir} to ${profile}. Restart your shell to pick it up.`);
 }

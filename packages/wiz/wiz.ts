@@ -9,18 +9,13 @@ import {
 	NpmRegistry,
 } from "@webappwiz/ship";
 import { t } from "@webappwiz/t";
-import type { Fixer } from "./fixer";
-import { Path } from "./path";
+import { fix } from "./fix";
+import { path } from "./path";
 import { ship } from "./ship";
 import { test } from "./test";
 
-/**
- * Everything `wiz` is run with: what the mounted `cli` commands need, and the
- * `Fixer` that `fix` and `ship` put the workspace in order with.
- */
-export interface WizDeps extends CommandDeps {
-	fixer: Fixer;
-}
+/** Everything `wiz` is run with. The mounted `cli` commands need the same. */
+export type WizDeps = CommandDeps;
 
 export const wiz = cli<WizDeps>("wiz");
 
@@ -31,7 +26,7 @@ wiz
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action((opts, { fixer }) => fixer.run(opts));
+	.action((opts, { log, fs, ps, glob }) => fix({ ...opts, log, fs, ps, glob }));
 
 wiz
 	.command("path")
@@ -44,13 +39,13 @@ wiz
 		default: false,
 		description: "remove bin/ from your PATH",
 	})
-	.action((opts, { log, fs, ps }) => new Path({ log, fs, ps }).run(opts));
+	.action((opts, { log, fs, ps }) => path({ ...opts, log, fs, ps }));
 
 wiz
 	.command("ship")
 	.description("release every package in the workspace at one version")
 	.arg("bump", t.string(), { description: "patch, minor, or major" })
-	.action(async (opts, { log, fs, ps, fixer }) => {
+	.action(async (opts, { log, fs, ps }) => {
 		const workspace = await ManifestWorkspace.at(ps.cwd(), { fs });
 		const release = new LockstepShip(
 			workspace,
@@ -59,7 +54,7 @@ wiz
 			new CliGithub({ ps }),
 			{ log },
 		);
-		await ship(release, fixer, { ...opts, log, ps });
+		await ship(release, { ...opts, log, ps });
 	});
 
 wiz

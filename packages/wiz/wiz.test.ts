@@ -3,7 +3,6 @@ import { color, MemoryLogger } from "@webappwiz/log";
 import { NodeGlob } from "@webappwiz/sys";
 import { FakeFs, FakePs } from "@webappwiz/sys/testing";
 import { FakeClock } from "@webappwiz/time/testing";
-import { Fixer } from "./fixer";
 import { type WizDeps, wiz } from "./wiz";
 
 describe("wiz", () => {
@@ -18,14 +17,7 @@ describe("wiz", () => {
 		await fs.mkdir("/w");
 		await fs.write("/w/package.json", JSON.stringify({ workspaces: ["p/*"] }));
 		ps.setCwd("/w");
-		deps = {
-			log,
-			fs,
-			ps,
-			clock: new FakeClock(),
-			glob: new NodeGlob(),
-			fixer: new Fixer({ run: async () => true }, { log, ps }),
-		};
+		deps = { log, fs, ps, clock: new FakeClock(), glob: new NodeGlob() };
 	});
 
 	const out = () =>

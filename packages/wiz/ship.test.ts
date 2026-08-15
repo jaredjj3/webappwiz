@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakeShip, fakePlan } from "@webappwiz/ship";
 import { FakePs } from "@webappwiz/sys/testing";
-import { Fixer } from "./fixer";
 import { ship } from "./ship";
 
 describe("ship", () => {
@@ -18,20 +17,25 @@ describe("ship", () => {
 
 	let log: MemoryLogger;
 	let ps: FakePs;
-	let fix: Fixer;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
-		fix = new Fixer({ run: async () => true }, { log, ps });
+	});
+
+	const opts = (bump: string) => ({
+		bump,
+		checks: { run: async () => true },
+		log,
+		ps,
 	});
 
 	it("refuses a bump nobody has heard of", async () => {
 		const release = new FakeShip(fakePlan());
 
-		await expect(
-			ship(release, fix, { ...{ bump: "sideways" }, log, ps }),
-		).rejects.toThrow('unknown version bump "sideways"');
+		await expect(ship(release, opts("sideways"))).rejects.toThrow(
+			'unknown version bump "sideways"',
+		);
 		expect(ps.getCalls()).toEqual([]);
 		expect(release.plans).toBe(0);
 	});
@@ -39,9 +43,9 @@ describe("ship", () => {
 	it("runs the command a problem carries, then plans again", async () => {
 		const release = new FakeShip(fakePlan([NPM_AUTH]), fakePlan([NPM_AUTH]));
 
-		await expect(
-			ship(release, fix, { ...{ bump: "patch" }, log, ps }),
-		).rejects.toThrow("not ready to release");
+		await expect(ship(release, opts("patch"))).rejects.toThrow(
+			"not ready to release",
+		);
 		expect(ps.getCalls()).toEqual([...GATE, "npm login"]);
 		expect(release.plans).toBe(2);
 		expect(release.runs).toEqual([]);
@@ -51,9 +55,9 @@ describe("ship", () => {
 		const dirty = { kind: "dirty" as const, message: "uncommitted changes" };
 		const release = new FakeShip(fakePlan([dirty]));
 
-		await expect(
-			ship(release, fix, { ...{ bump: "patch" }, log, ps }),
-		).rejects.toThrow("not ready to release");
+		await expect(ship(release, opts("patch"))).rejects.toThrow(
+			"not ready to release",
+		);
 		expect(ps.getCalls()).toEqual(GATE);
 		expect(release.plans).toBe(1);
 	});

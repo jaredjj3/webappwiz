@@ -16,6 +16,15 @@ absorb several related functions. A file exporting a single function is
 acceptable, and pure helpers that take no dependencies may share a file
 freely; the rule targets dependency-taking functions.
 
+A cli action goes the other way, and is a function. It runs once, with its
+options handed to it by the parser, and nothing else ever calls it, so a class
+there is built at the call site, has one method called on it, and is dropped.
+Give each action a file named for the command, `fix.ts` with `fix.test.ts`
+beside it, and let its dependencies ride in the same options object the parsed
+options arrive in, each one optional with the real one defaulted inside. That
+is what a test needs to call the action with fakes, which is the only reason
+to inject them.
+
 ## Good
 
 ```ts
@@ -55,6 +64,24 @@ export function stamp(message: string, now: () => Date): string {
 }
 ```
 
+A cli action is a function, and takes its dependencies where its options are:
+
+```ts
+// fix.ts, the action behind `wiz fix`, with fix.test.ts beside it
+export interface FixOptions {
+	/** Report problems without writing fixes, as CI wants it. */
+	check: boolean;
+	log?: Logger;
+	ps?: Ps;
+}
+
+export async function fix(opts: FixOptions): Promise<void> {
+	const log = opts.log ?? new ConsoleLogger();
+	const ps = opts.ps ?? new NodePs();
+	// ...
+}
+```
+
 ## Bad
 
 ```ts
@@ -65,6 +92,23 @@ export function stamp(message: string, clock: Clock): string {
 export function stampAll(messages: string[], clock: Clock): string[] {
 	return messages.map((m) => stamp(m, clock));
 }
+```
+
+A cli action wrapped in a class, which the command declaration constructs only
+to call once:
+
+```ts
+export class Fix {
+	constructor(opts: FixOptions = {}) {
+		/* ... */
+	}
+
+	async run(opts: { check: boolean }): Promise<void> {
+		/* ... */
+	}
+}
+
+wiz.command("fix").action((opts, deps) => new Fix(deps).run(opts));
 ```
 
 Naming one implementation of a dependency that has several shuts the others

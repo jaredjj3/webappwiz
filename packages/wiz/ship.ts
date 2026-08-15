@@ -1,21 +1,20 @@
 import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
+import type { Check } from "@webappwiz/rules";
 import { isBump, type Plan, type Ship } from "@webappwiz/ship";
 import { NodePs, type Ps } from "@webappwiz/sys";
-import type { Fixer } from "./fixer";
+import { fix } from "./fix";
 
 export interface ShipOptions {
 	/** How far to move the version: patch, minor or major. */
 	bump: string;
+	/** The rules the gate runs; the workspace's own by default. */
+	checks?: Pick<Check, "run">;
 	log?: Logger;
 	ps?: Ps;
 }
 
 /** Releases every package in the workspace together, at one version. */
-export async function ship(
-	release: Ship,
-	fixer: Fixer,
-	opts: ShipOptions,
-): Promise<void> {
+export async function ship(release: Ship, opts: ShipOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
 	if (!isBump(opts.bump)) {
@@ -25,7 +24,7 @@ export async function ship(
 	}
 	// These packages publish their source, so a typecheck is the only compile
 	// gate there is. Run it before anything is stamped or pushed.
-	await fixer.run({ check: true });
+	await fix({ check: true, checks: opts.checks, log, ps });
 
 	const plan = await recover(await release.plan(opts.bump), log, ps, release);
 	if (plan.problems.length > 0) {

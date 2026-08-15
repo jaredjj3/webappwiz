@@ -2,23 +2,24 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakePs } from "@webappwiz/sys/testing";
 
-import { Fixer } from "./fixer";
+import { fix } from "./fix";
 
-describe("fixer", () => {
+describe("fix", () => {
 	let log: MemoryLogger;
 	let ps: FakePs;
 	let clean: boolean;
-	let fix: Fixer;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
 		clean = true;
-		fix = new Fixer({ run: async () => clean }, { log: log, ps: ps });
 	});
 
+	const run = (check: boolean) =>
+		fix({ check, checks: { run: async () => clean }, log, ps });
+
 	it("writes fixes by default, then checks and typechecks", async () => {
-		await fix.run({ check: false });
+		await run(false);
 
 		expect(ps.getCalls()).toEqual([
 			"bunx biome check --write --unsafe .",
@@ -27,7 +28,7 @@ describe("fixer", () => {
 	});
 
 	it("leaves the tree alone when given --check", async () => {
-		await fix.run({ check: true });
+		await run(true);
 
 		expect(ps.getCalls()).toEqual(["bunx biome check .", "bunx tsc --noEmit"]);
 	});
@@ -35,15 +36,13 @@ describe("fixer", () => {
 	it("throws when biome fails, without typechecking", async () => {
 		ps.exit(1); // FakePs returns this exit code from every spawn
 
-		await expect(fix.run({ check: false })).rejects.toThrow(
-			"Biome check failed",
-		);
+		await expect(run(false)).rejects.toThrow("Biome check failed");
 	});
 
 	it("throws when a check fails, without typechecking", async () => {
 		clean = false;
 
-		await expect(fix.run({ check: false })).rejects.toThrow("Checks failed");
+		await expect(run(false)).rejects.toThrow("Checks failed");
 		expect(ps.getCalls()).toEqual(["bunx biome check --write --unsafe ."]);
 	});
 });
