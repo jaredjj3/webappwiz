@@ -1,8 +1,8 @@
-export type EventListener<T> = (event: T) => void;
-export type EventUnlistener = () => void;
-export type TypeEventListener<T, E> = (type: T, event: E) => void;
+export type Listener<T> = (event: T) => void;
+export type Unlisten = () => void;
+export type AnyListener<T, E> = (type: T, event: E) => void;
 
-export type EventListenerOptions = {
+export type ListenerOptions = {
 	once?: boolean;
 };
 
@@ -13,12 +13,12 @@ export type EventListenerOptions = {
 export interface Events<T extends Record<string, unknown>> {
 	on<K extends keyof T>(
 		type: K,
-		listener: EventListener<T[K]>,
-		opts?: EventListenerOptions,
-	): EventUnlistener;
+		listener: Listener<T[K]>,
+		opts?: ListenerOptions,
+	): Unlisten;
 
 	all<K extends keyof T>(
-		listener: TypeEventListener<K, T[K]>,
-		opts?: EventListenerOptions,
-	): EventUnlistener;
+		listener: AnyListener<K, T[K]>,
+		opts?: ListenerOptions,
+	): Unlisten;
 }

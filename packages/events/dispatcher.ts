@@ -1,10 +1,10 @@
 import type { Resource } from "@webappwiz/disposable";
 import type {
-	EventListener,
-	EventListenerOptions,
+	AnyListener,
 	Events,
-	EventUnlistener,
-	TypeEventListener,
+	Listener,
+	ListenerOptions,
+	Unlisten,
 } from "./events";
 
 type ListenerEntry<T extends Record<string, unknown>> = {
@@ -12,8 +12,8 @@ type ListenerEntry<T extends Record<string, unknown>> = {
 	id: number;
 	order: number;
 } & (
-	| { kind: "scoped"; listener: EventListener<T[keyof T]> }
-	| { kind: "universal"; typeListener: TypeEventListener<keyof T, T[keyof T]> }
+	| { kind: "scoped"; listener: Listener<T[keyof T]> }
+	| { kind: "universal"; typeListener: AnyListener<keyof T, T[keyof T]> }
 );
 
 /**
@@ -32,14 +32,14 @@ export class Dispatcher<T extends Record<string, unknown>>
 
 	on<K extends keyof T>(
 		type: K,
-		listener: EventListener<T[K]>,
-		opts?: EventListenerOptions,
-	): EventUnlistener {
+		listener: Listener<T[K]>,
+		opts?: ListenerOptions,
+	): Unlisten {
 		const id = this.nextId++;
 		const entries = this.scopedEntries.get(type) ?? [];
 		entries.push({
 			kind: "scoped",
-			listener: listener as EventListener<T[keyof T]>,
+			listener: listener as Listener<T[keyof T]>,
 			once: opts?.once ?? false,
 			id,
 			order: this.nextOrder++,
@@ -49,13 +49,13 @@ export class Dispatcher<T extends Record<string, unknown>>
 	}
 
 	all<K extends keyof T>(
-		typeListener: TypeEventListener<K, T[K]>,
-		opts?: EventListenerOptions,
-	): EventUnlistener {
+		typeListener: AnyListener<K, T[K]>,
+		opts?: ListenerOptions,
+	): Unlisten {
 		const id = this.nextId++;
 		this.universalEntries.push({
 			kind: "universal",
-			typeListener: typeListener as TypeEventListener<keyof T, T[keyof T]>,
+			typeListener: typeListener as AnyListener<keyof T, T[keyof T]>,
 			once: opts?.once ?? false,
 			id,
 			order: this.nextOrder++,

@@ -3,10 +3,10 @@
 export { Dispatcher } from "./dispatcher";
 export type { Eventful, EventMapOf } from "./eventful";
 export type {
-	EventListener,
-	EventListenerOptions,
+	AnyListener,
 	Events,
-	EventUnlistener,
-	TypeEventListener,
+	Listener,
+	ListenerOptions,
+	Unlisten,
 } from "./events";
 export { NoopEvents } from "./noop-events";
