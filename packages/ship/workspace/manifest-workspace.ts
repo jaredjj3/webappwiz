@@ -30,19 +30,30 @@ export class ManifestWorkspace implements Workspace {
 		this.fs = opts.fs ?? new NodeFs();
 	}
 
-	/** Finds the workspace `from` sits in, climbing until a manifest claims one. */
+	/**
+	 * Finds the workspace `from` sits in, climbing until a manifest claims one.
+	 * A repo holding a single package declares no workspaces, so when nothing
+	 * above claims any, the nearest named manifest is a workspace of one.
+	 */
 	static async at(
 		from: string,
 		opts: ManifestWorkspaceOptions = {},
 	): Promise<ManifestWorkspace> {
 		const fs = opts.fs ?? new NodeFs();
+		let single: string | null = null;
 		for (let dir = from; ; dir = dirname(dir)) {
 			const manifest = await read(fs, dir);
 			if (manifest?.workspaces !== undefined) {
 				return new ManifestWorkspace(dir, { fs });
 			}
+			if (single === null && manifest?.name !== undefined) {
+				single = dir;
+			}
 			if (dirname(dir) === dir) {
-				throw new Error(`no workspace above ${from}`);
+				if (single === null) {
+					throw new Error(`no workspace above ${from}`);
+				}
+				return new ManifestWorkspace(single, { fs });
 			}
 		}
 	}
@@ -71,14 +82,18 @@ export class ManifestWorkspace implements Workspace {
 
 	/** Stamps `version` into the root manifest and every package, in lockstep. */
 	async setVersion(version: string): Promise<void> {
-		for (const dir of [this.root, ...(await this.dirs())]) {
+		for (const dir of new Set([this.root, ...(await this.dirs())])) {
 			await this.stamp(dir, version);
 		}
 	}
 
 	private async dirs(): Promise<string[]> {
+		const { workspaces } = await this.manifest();
+		if (workspaces === undefined) {
+			return [this.root]; // no workspaces declared: the root is the one package
+		}
 		const dirs: string[] = [];
-		for (const pattern of (await this.manifest()).workspaces ?? []) {
+		for (const pattern of workspaces) {
 			// ponytail: only `dir/*` and plain paths, which is all any repo here
 			// writes. Reach for a glob library when one of them needs `**`.
 			if (!pattern.endsWith("/*")) {

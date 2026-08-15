@@ -23,6 +23,31 @@ describe("workspace", () => {
 		).rejects.toThrow("no workspace above /elsewhere");
 	});
 
+	it("falls back to the nearest named manifest as a workspace of one", async () => {
+		await harness.write("/solo", { name: "@scope/solo", version: "3.0.0" });
+
+		const workspace = await ManifestWorkspace.at("/solo/src", {
+			fs: harness.fs,
+		});
+
+		expect(workspace.root).toBe("/solo");
+		expect(await workspace.packages()).toEqual([
+			{ name: "@scope/solo", dir: "/solo", private: false, published: false },
+		]);
+	});
+
+	it("stamps a workspace of one at its root, once", async () => {
+		await harness.write("/solo", { name: "@scope/solo", version: "3.0.0" });
+		const workspace = new ManifestWorkspace("/solo", { fs: harness.fs });
+
+		await workspace.setVersion("3.1.0");
+
+		expect(await harness.manifest("/solo")).toEqual({
+			name: "@scope/solo",
+			version: "3.1.0",
+		});
+	});
+
 	it("reads the version off the root manifest", async () => {
 		expect(await harness.workspace.version()).toBe("1.2.3");
 	});
