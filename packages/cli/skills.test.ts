@@ -22,11 +22,10 @@ describe("skills", () => {
 		skills = new Skills({ log: log, fs: fs });
 		await fs.mkdir(source);
 		for (const name of ["arbor", "other"]) {
-			await fs.mkdir(`${source}/${name}`);
-			await fs.write(`${source}/${name}/SKILL.md`, md(name));
+			await fs.write(`${source}/${name}.skill.md`, md(name));
 		}
-		await fs.mkdir(`${source}/arbor/references`);
-		await fs.write(`${source}/arbor/references/deep.md`, "deep");
+		// not a skill: templates that are not `.skill.md` live alongside them
+		await fs.write(`${source}/plain-doc.md`, "not a skill");
 	});
 
 	it("lists every skill there is, and marks the ones not installed", async () => {
@@ -61,14 +60,17 @@ describe("skills", () => {
 		expect(printed()).not.toContain("out of date");
 	});
 
-	it("copies the named skill when adding, including nested files", async () => {
+	it("copies the named skill to <name>/SKILL.md when adding", async () => {
 		await skills.add({ dir: "/p", skill: "arbor" });
 
 		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
 			md("arbor"),
 		);
-		expect(await fs.read("/p/.agents/skills/arbor/references/deep.md")).toEqual(
-			"deep",
+	});
+
+	it("does not offer templates that are not skills", async () => {
+		await expect(skills.add({ dir: "/p", skill: "plain-doc" })).rejects.toThrow(
+			"no such skill: plain-doc (have arbor, other)",
 		);
 	});
 
@@ -159,10 +161,12 @@ describe("skills", () => {
 		);
 		expect(root.version).toEqual(version);
 
-		const names = await real.readdir(source);
-		expect(names.length).toBeGreaterThan(0);
-		for (const name of names) {
-			const skill = await real.read(`${source}/${name}/SKILL.md`);
+		const files = (await real.readdir(source)).filter((file) =>
+			file.endsWith(".skill.md"),
+		);
+		expect(files.length).toBeGreaterThan(0);
+		for (const file of files) {
+			const skill = await real.read(`${source}/${file}`);
 			expect(versionOf(skill)).toEqual(version);
 		}
 	});
