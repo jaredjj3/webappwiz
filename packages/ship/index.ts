@@ -12,11 +12,16 @@ export {
 	type NpmRegistryOptions,
 } from "./registry/npm-registry";
 export type { Registry } from "./registry/registry";
+export { Runner, type RunnerOptions } from "./runner";
 export {
 	LockstepShip,
 	type LockstepShipOptions,
 } from "./ship/lockstep-ship";
-export { Ship, type Target } from "./ship/ship";
+export {
+	Ship,
+	type Target,
+	type WorkspaceShipOptions,
+} from "./ship/ship";
 export { BUMPS, type Bump, bump, isBump } from "./version";
 export {
 	ManifestWorkspace,

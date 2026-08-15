@@ -1,9 +1,13 @@
+import type { Logger } from "@webappwiz/log";
+import { type Fs, NodePs, type Ps } from "@webappwiz/system";
+import { CliGit } from "../git/cli-git";
 import { CliGithub, type CliGithubOptions } from "../github/cli-github";
 import type { Github } from "../github/github";
 import type { Plan } from "../plan";
 import { NpmRegistry, type NpmRegistryOptions } from "../registry/npm-registry";
 import type { Registry } from "../registry/registry";
 import type { Bump } from "../version";
+import { ManifestWorkspace } from "../workspace/manifest-workspace";
 import { LockstepShip } from "./lockstep-ship";
 
 /**
@@ -63,4 +67,31 @@ export const Ship = {
 			{ github: parts.find((part): part is Github => "release" in part) },
 		);
 	},
+
+	/**
+	 * The workspace's own release: every public package around the working
+	 * directory onto npm, with GitHub release notes. This is what `wiz ship`
+	 * runs when nothing declares otherwise.
+	 */
+	async workspace(opts: WorkspaceShipOptions = {}): Promise<Ship> {
+		const ps = opts.ps ?? new NodePs();
+		const workspace = await ManifestWorkspace.at(ps.cwd(), { fs: opts.fs });
+		const registry = new NpmRegistry({ ps });
+		const targets = (await workspace.packages())
+			.filter((pkg) => !pkg.private)
+			.map((pkg) => ({ name: pkg.name, registry }));
+		return new LockstepShip(targets, {
+			workspace,
+			git: new CliGit(workspace.root, { ps }),
+			github: new CliGithub({ ps }),
+			log: opts.log,
+		});
+	},
 };
+
+/** What `Ship.workspace` releases through; the real system by default. */
+export interface WorkspaceShipOptions {
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+}
