@@ -2,7 +2,6 @@ import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import type { Check } from "@webappwiz/rules";
 import {
 	isBump,
-	type Release,
 	type ShipOptions as ReleaseOptions,
 	ship as release,
 	releases,
@@ -13,8 +12,6 @@ import { fix } from "./fix";
 export interface ShipOptions extends ReleaseOptions {
 	/** How far to move the version: patch, minor or major. */
 	bump: string;
-	/** The release to run; the workspace's own lockstep release by default. */
-	release?: Release;
 	/** The rules the gate runs; the workspace's own by default. */
 	checks?: Pick<Check, "run">;
 	log?: Logger;
@@ -33,7 +30,6 @@ export async function ship(opts: ShipOptions): Promise<void> {
 	// gate there is. Run it before anything is stamped or pushed.
 	await fix({ check: true, checks: opts.checks, log, ps });
 
-	const declared =
-		opts.release ?? (await releases.workspace({ fs: opts.fs, ps }));
+	const declared = await releases.workspace({ fs: opts.fs, ps });
 	await release(declared, opts.bump, { ...opts, log, ps });
 }

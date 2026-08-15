@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
-import { FakeGit, FakeRelease, FakeWorkspace } from "@webappwiz/ship/testing";
-import { FakePs } from "@webappwiz/system/testing";
+import { FakeFs, FakePs } from "@webappwiz/system/testing";
 import { ship } from "./ship";
 
 describe("ship", () => {
@@ -11,46 +10,43 @@ describe("ship", () => {
 
 	let log: MemoryLogger;
 	let ps: FakePs;
-	let git: FakeGit;
+	let fs: FakeFs;
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		log = new MemoryLogger();
 		ps = new FakePs();
-		git = new FakeGit();
+		ps.setCwd("/repo");
+		fs = new FakeFs();
+		await fs.mkdir("/repo");
+		await fs.write(
+			"/repo/package.json",
+			JSON.stringify({ name: "@scope/solo", version: "1.2.3" }),
+		);
 	});
 
-	const opts = (release: FakeRelease, bump: string) => ({
+	const opts = (bump: string) => ({
 		bump,
-		release,
 		checks: { run: async () => true },
-		workspace: new FakeWorkspace([
-			{ name: "@scope/one", dir: "/repo/packages/one", private: false },
-		]),
-		git,
 		prompt: () => "y",
 		log,
+		fs,
 		ps,
 	});
 
 	it("refuses a bump nobody has heard of", async () => {
-		const release = new FakeRelease(["@scope/one"]);
-
-		await expect(ship(opts(release, "sideways"))).rejects.toThrow(
+		await expect(ship(opts("sideways"))).rejects.toThrow(
 			'unknown version bump "sideways"',
 		);
 		expect(ps.getCalls()).toEqual([]);
-		expect(release.cuts).toEqual([]);
 	});
 
-	it("gates before the release goes out", async () => {
-		const release = new FakeRelease(["@scope/one"]);
-		// The fake publishes nothing, so stand in for the tag its git part would
-		// have pushed; a release without one is refused.
-		git.tags.add("v1.2.4");
+	it("gates before it releases the workspace it found", async () => {
+		await ship(opts("patch"));
 
-		await ship(opts(release, "patch"));
-
-		expect(ps.getCalls()).toEqual(GATE);
-		expect(release.cuts.map((cut) => cut.version)).toEqual(["1.2.4"]);
+		expect(ps.getCalls().slice(0, GATE.length)).toEqual(GATE);
+		expect(ps.getCalls()).toContain("bun publish --access public");
+		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
+			"1.2.4",
+		);
 	});
 });
