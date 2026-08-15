@@ -1,5 +1,5 @@
-import { SchemaError } from "../schema-error";
 import type { Schema } from "./schema";
+import { SchemaError } from "./schema-error";
 
 export class SchemaString implements Schema<string> {
 	parse(raw: string): string {
