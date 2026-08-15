@@ -1,2 +1,2 @@
-export { MemoryStore } from "./store/memory-store";
-export type { SetOptions, Store } from "./store/store";
+export { MemoryStore } from "./memory-store";
+export type { SetOptions, Store } from "./store";
