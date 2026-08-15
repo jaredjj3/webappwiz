@@ -4,21 +4,23 @@ import { FakePs } from "@webappwiz/system/testing";
 import { FakeGit } from "./git/fake-git";
 import { FakeGithub } from "./github/fake-github";
 import { FakeRegistry } from "./registry/fake-registry";
-import { Runner } from "./runner";
-import { GithubShip } from "./ship/github-ship";
-import type { Ship } from "./ship/ship";
-import { ships } from "./ships";
+import { GithubRelease } from "./release/github-release";
+import type { Release } from "./release/release";
+import { releases } from "./releases";
+import type { ShipOptions } from "./ship";
+import { ship } from "./ship";
 import { FakeWorkspace } from "./workspace/fake-workspace";
 
-describe("runner", () => {
+describe("ship", () => {
 	let workspace: FakeWorkspace;
 	let git: FakeGit;
 	let registry: FakeRegistry;
 	let github: FakeGithub;
 	let log: MemoryLogger;
 	let ps: FakePs;
-	/** Both public packages onto one registry, with the GitHub notes last. */
-	let ship: Ship;
+	let asked: string[];
+	/** Both public packages onto one registry, tagged, with the notes last. */
+	let release: Release;
 
 	beforeEach(() => {
 		workspace = new FakeWorkspace();
@@ -27,34 +29,32 @@ describe("runner", () => {
 		github = new FakeGithub();
 		log = new MemoryLogger();
 		ps = new FakePs();
-		asked.length = 0;
-		ship = ships.lockstep(
-			ships.custom("@scope/one", registry),
-			ships.custom("@scope/two", registry),
-			new GithubShip(github),
+		asked = [];
+		release = releases.lockstep(
+			releases.custom("@scope/one", registry),
+			releases.custom("@scope/two", registry),
+			releases.git({ git }),
+			new GithubRelease(github),
 		);
 	});
 
-	const asked: string[] = [];
+	const answering = (answer: string | null): ShipOptions => ({
+		workspace,
+		git,
+		log,
+		ps,
+		prompt: (message) => {
+			asked.push(message);
+			return answer;
+		},
+	});
 
-	const answering = (answer: string | null) =>
-		new Runner({
-			workspace,
-			git,
-			log,
-			ps,
-			prompt: (message) => {
-				asked.push(message);
-				return answer;
-			},
-		});
-
-	/** Everything the runner said, colour codes and all. */
+	/** Everything the release said, colour codes and all. */
 	const said = () =>
 		log.entries.map((entry) => String(entry.message)).join("\n");
 
 	it("stamps, commits, publishes, tags, pushes and writes the notes", async () => {
-		await answering(" Y ").ship(ship, "patch");
+		await ship(release, "patch", answering(" Y "));
 
 		expect(workspace.stamped).toEqual(["1.2.4"]);
 		expect(git.commits).toEqual(["Release 1.2.4"]);
@@ -68,7 +68,7 @@ describe("runner", () => {
 	});
 
 	it("moves the version as far as the bump says", async () => {
-		await answering("y").ship(ship, "minor");
+		await ship(release, "minor", answering("y"));
 
 		expect(workspace.stamped).toEqual(["1.3.0"]);
 	});
@@ -80,9 +80,10 @@ describe("runner", () => {
 		};
 		git.tag = async (tag: string) => {
 			order.push(`tag ${tag}`);
+			git.tags.add(tag);
 		};
 
-		await answering("y").ship(ship, "patch");
+		await ship(release, "patch", answering("y"));
 
 		expect(order).toEqual([
 			"publish /repo/packages/one",
@@ -91,28 +92,36 @@ describe("runner", () => {
 		]);
 	});
 
-	it("tags a release nothing asked a tag for", async () => {
-		const quiet = ships.lockstep(
-			ships.custom("@scope/one", registry),
-			ships.custom("@scope/two", registry),
+	it("refuses a declaration that would tag before it publishes", () => {
+		expect(() =>
+			releases.lockstep(
+				releases.git({ git }),
+				releases.custom("@scope/one", registry),
+			),
+		).toThrow("releases.git() is declared before a package it would tag");
+	});
+
+	it("refuses a release nothing tagged", async () => {
+		const untagged = releases.lockstep(
+			releases.custom("@scope/one", registry),
+			releases.custom("@scope/two", registry),
 		);
 
-		await answering("y").ship(quiet, "patch");
-
-		expect(git.pushes).toEqual(["main", "v1.2.4"]);
-		expect(github.releases).toEqual([]);
+		await expect(ship(untagged, "patch", answering("y"))).rejects.toThrow(
+			"nothing tagged v1.2.4: declare releases.git()",
+		);
 	});
 
 	it("skips a package the registry already has", async () => {
 		registry.has.add("@scope/one@1.2.4");
 
-		await answering("y").ship(ship, "patch");
+		await ship(release, "patch", answering("y"));
 
 		expect(registry.publishes).toEqual(["/repo/packages/two"]);
 	});
 
 	it("asks before anything moves, and stops on any other answer", async () => {
-		await answering("n").ship(ship, "patch");
+		await ship(release, "patch", answering("n"));
 
 		expect(asked.join()).toContain("publish 2 packages as 1.2.4?");
 		expect(workspace.stamped).toEqual([]);
@@ -124,7 +133,7 @@ describe("runner", () => {
 		git.subject = "Release 1.2.3";
 		registry.has.add("@scope/one@1.2.3");
 
-		await answering("y").ship(ship, "patch");
+		await ship(release, "patch", answering("y"));
 
 		expect(said()).toContain("finishing the release of 1.2.3");
 		expect(registry.publishes).toEqual(["/repo/packages/two"]);
@@ -135,7 +144,7 @@ describe("runner", () => {
 		git.subject = "Release 1.2.3";
 		git.tags.add("v1.2.3");
 
-		await answering("y").ship(ship, "patch");
+		await ship(release, "patch", answering("y"));
 
 		expect(workspace.stamped).toEqual(["1.2.4"]);
 	});
@@ -143,7 +152,7 @@ describe("runner", () => {
 	it("says uncommitted changes go into the release commit, rather than refusing", async () => {
 		git.dirty = true;
 
-		await answering("y").ship(ship, "patch");
+		await ship(release, "patch", answering("y"));
 
 		expect(said()).toContain("uncommitted changes");
 		expect(git.commits).toEqual(["Release 1.2.4"]);
@@ -152,7 +161,7 @@ describe("runner", () => {
 	it("refuses to release from anywhere but the default branch", async () => {
 		git.current = "task/ship";
 
-		await expect(answering("y").ship(ship, "patch")).rejects.toThrow(
+		await expect(ship(release, "patch", answering("y"))).rejects.toThrow(
 			'on "task/ship": releases go out from "main"',
 		);
 		expect(workspace.stamped).toEqual([]);
@@ -160,39 +169,44 @@ describe("runner", () => {
 	});
 
 	it("refuses a package the workspace has nothing public by the name of", async () => {
-		const roaming = ships.lockstep(
-			ships.custom("@scope/one", registry),
-			ships.custom("@scope/two", registry),
-			ships.custom("@scope/gone", registry),
+		const roaming = releases.lockstep(
+			releases.custom("@scope/one", registry),
+			releases.custom("@scope/two", registry),
+			releases.custom("@scope/gone", registry),
+			releases.git({ git }),
 		);
 
-		await expect(answering("y").ship(roaming, "patch")).rejects.toThrow(
+		await expect(ship(roaming, "patch", answering("y"))).rejects.toThrow(
 			'"@scope/gone" is declared but the workspace has no public package by that name',
 		);
 	});
 
 	it("refuses a public package nobody declared", async () => {
-		const partial = ships.lockstep(ships.custom("@scope/one", registry));
+		const partial = releases.lockstep(
+			releases.custom("@scope/one", registry),
+			releases.git({ git }),
+		);
 
-		await expect(answering("y").ship(partial, "patch")).rejects.toThrow(
+		await expect(ship(partial, "patch", answering("y"))).rejects.toThrow(
 			'"@scope/two" is public but not declared: declare it or mark it private',
 		);
 	});
 
 	it("says every way the declaration drifted at once", async () => {
-		const drifted = ships.lockstep(
-			ships.custom("@scope/one", registry),
-			ships.custom("@scope/gone", registry),
+		const drifted = releases.lockstep(
+			releases.custom("@scope/one", registry),
+			releases.custom("@scope/gone", registry),
+			releases.git({ git }),
 		);
 
-		await expect(answering("y").ship(drifted, "patch")).rejects.toThrow(
+		await expect(ship(drifted, "patch", answering("y"))).rejects.toThrow(
 			/"@scope\/gone" is declared[\s\S]*"@scope\/two" is public/,
 		);
 	});
 
 	it("refuses a declaration with nothing to publish", async () => {
 		await expect(
-			answering("y").ship(new GithubShip(github), "patch"),
+			ship(new GithubRelease(github), "patch", answering("y")),
 		).rejects.toThrow("there is nothing to publish");
 	});
 });

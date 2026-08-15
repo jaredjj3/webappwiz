@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
-import type { Bump, Ship } from "@webappwiz/ship";
-import { FakeShip } from "@webappwiz/ship/testing";
+import { FakeGit, FakeRelease, FakeWorkspace } from "@webappwiz/ship/testing";
 import { FakePs } from "@webappwiz/system/testing";
 import { ship } from "./ship";
 
@@ -12,43 +11,46 @@ describe("ship", () => {
 
 	let log: MemoryLogger;
 	let ps: FakePs;
-	let shipped: Array<[Ship, Bump]>;
+	let git: FakeGit;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
-		shipped = [];
+		git = new FakeGit();
 	});
 
-	const opts = (release: FakeShip, bump: string) => ({
+	const opts = (release: FakeRelease, bump: string) => ({
 		bump,
 		release,
-		runner: {
-			ship: async (declared: Ship, type: Bump) => {
-				shipped.push([declared, type]);
-			},
-		},
 		checks: { run: async () => true },
+		workspace: new FakeWorkspace([
+			{ name: "@scope/one", dir: "/repo/packages/one", private: false },
+		]),
+		git,
+		prompt: () => "y",
 		log,
 		ps,
 	});
 
 	it("refuses a bump nobody has heard of", async () => {
-		const release = new FakeShip();
+		const release = new FakeRelease(["@scope/one"]);
 
 		await expect(ship(opts(release, "sideways"))).rejects.toThrow(
 			'unknown version bump "sideways"',
 		);
 		expect(ps.getCalls()).toEqual([]);
-		expect(shipped).toEqual([]);
+		expect(release.cuts).toEqual([]);
 	});
 
-	it("gates before it hands the runner the release", async () => {
-		const release = new FakeShip(["@scope/one"]);
+	it("gates before the release goes out", async () => {
+		const release = new FakeRelease(["@scope/one"]);
+		// The fake publishes nothing, so stand in for the tag its git part would
+		// have pushed; a release without one is refused.
+		git.tags.add("v1.2.4");
 
 		await ship(opts(release, "patch"));
 
 		expect(ps.getCalls()).toEqual(GATE);
-		expect(shipped).toEqual([[release, "patch"]]);
+		expect(release.cuts.map((cut) => cut.version)).toEqual(["1.2.4"]);
 	});
 });

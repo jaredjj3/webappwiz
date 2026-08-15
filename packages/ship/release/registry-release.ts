@@ -1,10 +1,10 @@
 import { color } from "@webappwiz/log";
+import type { Cut } from "../cut";
 import type { Registry } from "../registry/registry";
-import type { Release } from "../release/release";
-import type { Ship } from "./ship";
+import type { Release } from "./release";
 
 /** One package, published through the registry that carries it. */
-export class RegistryShip implements Ship {
+export class RegistryRelease implements Release {
 	readonly packages: readonly string[];
 
 	constructor(
@@ -14,15 +14,15 @@ export class RegistryShip implements Ship {
 		this.packages = [name];
 	}
 
-	async run(release: Release): Promise<void> {
-		const { version, log } = release;
+	async publish(cut: Cut): Promise<void> {
+		const { version, log } = cut;
 		if (await this.registry.published(this.name, version)) {
 			log.info(`${this.name}@${version} ${color.green("already published")}`);
 			return;
 		}
-		const dir = release.dir(this.name);
+		const dir = cut.dir(this.name);
 		if (dir === undefined) {
-			// Unreachable while the roster check the runner makes holds its gate.
+			// Unreachable while the roster check `ship` makes holds its gate.
 			throw new Error(`"${this.name}" has no workspace package`);
 		}
 		await this.registry.publish(dir);
