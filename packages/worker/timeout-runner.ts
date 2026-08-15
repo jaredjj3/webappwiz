@@ -7,12 +7,12 @@ import type { Runner } from "./runner";
  * the caller waits for it.
  *
  * ```ts
- * const worker = new TimeoutWorker(inner, timer, Duration.secs(30));
+ * const runner = new TimeoutRunner(inner, timer, Duration.secs(30));
  * ```
  */
-export class TimeoutWorker<Input, Output> implements Runner<Input, Output> {
+export class TimeoutRunner<Input, Output> implements Runner<Input, Output> {
 	constructor(
-		private readonly worker: Runner<Input, Output>,
+		private readonly runner: Runner<Input, Output>,
 		private readonly timer: Timer,
 		private readonly timeout: Duration,
 	) {}
@@ -20,10 +20,10 @@ export class TimeoutWorker<Input, Output> implements Runner<Input, Output> {
 	send(input: Input): Promise<Output> {
 		return new Promise<Output>((resolve, reject) => {
 			const deadline = this.timer.setTimeout(() => {
-				reject(new Error(`worker timed out after ${this.timeout.ms}ms`));
+				reject(new Error(`runner timed out after ${this.timeout.ms}ms`));
 			}, this.timeout);
 
-			this.worker.send(input).then(
+			this.runner.send(input).then(
 				(output) => {
 					deadline.dispose();
 					resolve(output);
@@ -37,6 +37,6 @@ export class TimeoutWorker<Input, Output> implements Runner<Input, Output> {
 	}
 
 	dispose(): void {
-		this.worker.dispose();
+		this.runner.dispose();
 	}
 }

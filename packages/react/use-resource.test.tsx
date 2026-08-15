@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { renderHook } from "@testing-library/react";
 import { StrictMode } from "react";
 import "@webappwiz/browser/dom";
-import { useDisposable } from "./use-disposable";
+import { useResource } from "./use-resource";
 
 class Resource {
 	static built = 0;
@@ -15,17 +15,17 @@ class Resource {
 	}
 }
 
-describe("useDisposable", () => {
+describe("useResource", () => {
 	it("returns the instance the factory built", () => {
 		const resource = new Resource();
-		const { result } = renderHook(() => useDisposable(() => resource));
+		const { result } = renderHook(() => useResource(() => resource));
 
 		expect(result.current).toBe(resource);
 	});
 
 	it("keeps the same instance while the factory identity holds", () => {
 		const factory = () => new Resource();
-		const { result, rerender } = renderHook(() => useDisposable(factory));
+		const { result, rerender } = renderHook(() => useResource(factory));
 		const first = result.current;
 
 		rerender();
@@ -36,7 +36,7 @@ describe("useDisposable", () => {
 
 	it("disposes the instance on unmount", () => {
 		const resource = new Resource();
-		const { unmount } = renderHook(() => useDisposable(() => resource));
+		const { unmount } = renderHook(() => useResource(() => resource));
 
 		expect(resource.disposed).toBe(false);
 
@@ -46,7 +46,7 @@ describe("useDisposable", () => {
 
 	it("rebuilds and disposes the old instance when the factory changes", () => {
 		const { result, rerender } = renderHook(
-			({ factory }) => useDisposable(factory),
+			({ factory }) => useResource(factory),
 			{
 				initialProps: { factory: () => new Resource() },
 			},
@@ -65,7 +65,7 @@ describe("useDisposable", () => {
 		// disposes the instance, so re-adopting it would leave the component
 		// holding a dead resource.
 		const factory = () => new Resource();
-		const { result } = renderHook(() => useDisposable(factory), {
+		const { result } = renderHook(() => useResource(factory), {
 			wrapper: StrictMode,
 		});
 
@@ -74,7 +74,7 @@ describe("useDisposable", () => {
 
 	it("disposes the surviving instance when a StrictMode mount unmounts", () => {
 		const factory = () => new Resource();
-		const { result, unmount } = renderHook(() => useDisposable(factory), {
+		const { result, unmount } = renderHook(() => useResource(factory), {
 			wrapper: StrictMode,
 		});
 		const instance = result.current;

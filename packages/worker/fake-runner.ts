@@ -4,7 +4,7 @@ import type { Runner } from "./runner";
  * A `Runner` that answers with whatever it was built with, without leaving the
  * thread. It records what it was sent, so a test can say what went out.
  */
-export class FakeWorker<Input, Output> implements Runner<Input, Output> {
+export class FakeRunner<Input, Output> implements Runner<Input, Output> {
 	readonly sent: Input[] = [];
 	disposed = false;
 
@@ -13,7 +13,7 @@ export class FakeWorker<Input, Output> implements Runner<Input, Output> {
 	send(input: Input): Promise<Output> {
 		this.sent.push(input);
 		if (this.disposed) {
-			return Promise.reject(new Error("worker is disposed"));
+			return Promise.reject(new Error("runner is disposed"));
 		}
 		return Promise.resolve(this.output);
 	}

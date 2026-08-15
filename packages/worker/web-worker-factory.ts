@@ -23,7 +23,7 @@ export interface WebWorkerFactoryOptions {
  *   new UuidProvider(),
  *   new SystemTimer(),
  * );
- * const worker = new RetryingWorker(factory);
+ * const worker = new RetryingRunner(factory);
  * ```
  *
  * The worker module must call `workerScript` from `@webappwiz/worker/script`.

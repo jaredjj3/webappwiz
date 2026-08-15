@@ -7,16 +7,16 @@ package stays small on purpose.
 ## Owning a resource for a mount
 
 ```ts
-import { useDisposable, useDisposerEffect } from "@webappwiz/react";
+import { useResource, useDisposerEffect } from "@webappwiz/react";
 
-const parser = useDisposable(() => new Parser(source));
+const parser = useResource(() => new Parser(source));
 
 useDisposerEffect((disposer) => {
 	disposer.use(new WindowBackgroundObserver());
 }, []);
 ```
 
-`useDisposable` builds a `Resource` during render and disposes it on unmount,
+`useResource` builds a `Resource` during render and disposes it on unmount,
 or when the factory changes. Its factory must be render-pure: React can abandon
 a render before commit, and anything acquired there would never be disposed.
 Acquire timers, subscriptions and workers in `useDisposerEffect` instead, which

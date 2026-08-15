@@ -2,7 +2,6 @@
 // package.json exports, not a barrel sitting inside an interface's directory
 export type { ExternalStore } from "./external-store/external-store";
 export { ReactiveExternalStore } from "./external-store/reactive-external-store";
-export { useDisposable } from "./use-disposable";
 export {
 	type AppendOnlyDisposer,
 	type DisposerEffectCallback,
@@ -10,3 +9,4 @@ export {
 } from "./use-disposer-effect";
 export { useExternalStore } from "./use-external-store";
 export { useReactive } from "./use-reactive";
+export { useResource } from "./use-resource";

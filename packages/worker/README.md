@@ -11,7 +11,7 @@ const result = await worker.send(job);
 ```
 
 `Runner<Input, Output>` says what goes in and what comes back. Where it runs is
-the implementation's business, so a test hands over a `FakeWorker` and never
+the implementation's business, so a test hands over a `FakeRunner` and never
 starts a thread.
 
 ## Stacking
@@ -21,8 +21,8 @@ suits.
 
 ```ts
 import {
-	RetryingWorker,
-	TimeoutWorker,
+	RetryingRunner,
+	TimeoutRunner,
 	WebWorkerFactory,
 } from "@webappwiz/worker";
 import { UuidProvider } from "@webappwiz/id";
@@ -33,16 +33,16 @@ const factory = new WebWorkerFactory<Job, Result>(
 	timer,
 );
 
-const worker = new TimeoutWorker(
-	new RetryingWorker(factory, { retries: 2 }),
+const worker = new TimeoutRunner(
+	new RetryingRunner(factory, { retries: 2 }),
 	timer,
 	Duration.secs(30),
 );
 ```
 
-`RetryingWorker` builds its worker on the first `send`, and when one fails it
+`RetryingRunner` builds its worker on the first `send`, and when one fails it
 throws it away and builds another: a dead worker stays dead, so replacing it is
-the only recovery there is. `TimeoutWorker` bounds how long a caller waits.
+the only recovery there is. `TimeoutRunner` bounds how long a caller waits.
 Neither cancels the work itself, because nothing can.
 
 ## The browser implementation
@@ -65,4 +65,4 @@ the worker ends however it ended, which is the only notice you get of a worker
 that dies without an error event.
 
 That lock is why `WebWorker` is browser-only, even though `Runner`,
-`TimeoutWorker`, `RetryingWorker` and `FakeWorker` are not.
+`TimeoutRunner`, `RetryingRunner` and `FakeRunner` are not.

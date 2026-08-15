@@ -1,15 +1,15 @@
 // judge-ignore-file one-dir-per-interface: this is the package entry point named in
 // package.json exports, not a barrel sitting inside an interface's directory
 
-export { FakeWorker } from "./fake-worker";
+export { FakeRunner } from "./fake-runner";
 export type { WorkerMessage, WorkerRequest } from "./protocol";
 export {
-	RetryingWorker,
+	RetryingRunner,
 	type RetryOptions,
-} from "./retrying-worker";
+} from "./retrying-runner";
 export type { Runner } from "./runner";
 export type { RunnerFactory } from "./runner-factory";
-export { TimeoutWorker } from "./timeout-worker";
+export { TimeoutRunner } from "./timeout-runner";
 export { WebWorker } from "./web-worker";
 export {
 	WebWorkerFactory,

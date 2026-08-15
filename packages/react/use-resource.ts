@@ -22,7 +22,7 @@ import { useDisposerEffect } from "./use-disposer-effect";
  * instance whose disposing effect never runs, and anything acquired there
  * leaks. Acquire such resources after commit, via `useDisposerEffect`.
  */
-export function useDisposable<T extends Resource>(factory: () => T): T {
+export function useResource<T extends Resource>(factory: () => T): T {
 	// Building in the effect instead and swapping the instance in afterwards
 	// would return a one-render-stale instance after a dependency change, so a
 	// downstream resource gets wired against the previous (disposed) upstream
