@@ -1,5 +1,7 @@
 // judge-ignore-file one-dir-per-interface: this is the package entry point named in
 // package.json exports, not a barrel sitting inside an interface's directory
+export { BunBundler } from "./bundler/bun-bundler";
+export type { Bundler } from "./bundler/bundler";
 export { CliGit, type CliGitOptions } from "./git/cli-git";
 export { FakeGit } from "./git/fake-git";
 export type { Git } from "./git/git";
