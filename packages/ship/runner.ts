@@ -55,21 +55,21 @@ export class Runner {
 	 * run each step, tag and push.
 	 */
 	async ship(ship: Ship, type: Bump): Promise<void> {
-		const problems = await this.problems(ship);
-		if (problems.length > 0) {
-			for (const problem of problems) {
-				this.log.error(color.red(problem));
-			}
-			throw new Error("not ready to release");
+		const { workspace, git } = await this.collaborators();
+		const [branch, trunk] = [await git.branch(), await git.defaultBranch()];
+		if (branch !== trunk) {
+			// Switching would release code nobody was looking at, so this is the
+			// one thing here a person has to answer with their own checkout.
+			throw new Error(`on "${branch}": releases go out from "${trunk}"`);
 		}
+		this.declares(ship, await workspace.packages());
 
 		const next = await this.next(type);
-		if (!this.confirm(ship, type, next)) {
+		if (!this.confirm(ship, type, next, !(await git.clean()))) {
 			this.log.info(color.red("aborted"));
 			return;
 		}
 
-		const { workspace, git } = await this.collaborators();
 		await workspace.setVersion(next.version);
 		await git.commitAll(`Release ${next.version}`);
 		const release = new WorkspaceRelease(
@@ -86,48 +86,35 @@ export class Runner {
 	}
 
 	/**
-	 * What this repository has to sort out before a release, which is only ever
-	 * the state of the tree and the declaration. Whatever a step needs, it asks
-	 * for itself when it runs.
+	 * Throws unless the declaration and the workspace agree, saying every way
+	 * they differ at once: fixing a declaration one name per run is nobody's
+	 * idea of a good time.
 	 */
-	private async problems(ship: Ship): Promise<string[]> {
-		const { workspace, git } = await this.collaborators();
-		const problems: string[] = [];
-		if (!(await git.clean())) {
-			problems.push("the tree has uncommitted changes: commit them first");
-		}
-		const [branch, trunk] = [await git.branch(), await git.defaultBranch()];
-		if (branch !== trunk) {
-			problems.push(`on "${branch}": releases go out from "${trunk}"`);
-		}
+	private declares(ship: Ship, packages: Package[]): void {
 		if (ship.packages.length === 0) {
-			problems.push("no packages are declared: there is nothing to publish");
+			throw new Error("no packages are declared: there is nothing to publish");
 		}
-		problems.push(...this.roster(ship, await workspace.packages()));
-		return problems;
-	}
-
-	/** Where the declaration and the workspace's packages disagree. */
-	private roster(ship: Ship, packages: Package[]): string[] {
-		const problems: string[] = [];
+		const drift: string[] = [];
 		const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
 		const declared = new Set(ship.packages);
 		for (const name of declared) {
 			const pkg = byName.get(name);
 			if (pkg === undefined || pkg.private) {
-				problems.push(
+				drift.push(
 					`"${name}" is declared but the workspace has no public package by that name`,
 				);
 			}
 		}
 		for (const pkg of packages) {
 			if (!pkg.private && !declared.has(pkg.name)) {
-				problems.push(
+				drift.push(
 					`"${pkg.name}" is public but not declared: declare it or mark it private`,
 				);
 			}
 		}
-		return problems;
+		if (drift.length > 0) {
+			throw new Error(drift.join("\n"));
+		}
 	}
 
 	/**
@@ -152,7 +139,12 @@ export class Runner {
 		};
 	}
 
-	private confirm(ship: Ship, type: Bump, next: Next): boolean {
+	/**
+	 * Whether to go ahead. A dirty tree is named rather than refused: the
+	 * release commit takes every tracked change with it either way, so this is
+	 * the moment to say so to somebody who can answer.
+	 */
+	private confirm(ship: Ship, type: Bump, next: Next, dirty: boolean): boolean {
 		this.log.info(
 			next.resuming
 				? `finishing the release of ${next.version}`
@@ -160,6 +152,11 @@ export class Runner {
 		);
 		for (const name of ship.packages) {
 			this.log.info(`  ${name}`);
+		}
+		if (dirty) {
+			this.log.info(
+				color.yellow("  uncommitted changes, which go into the release commit"),
+			);
 		}
 		const answer = this.ask(
 			color.yellow(

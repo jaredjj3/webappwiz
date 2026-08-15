@@ -71,19 +71,24 @@ committed. Write your own and it drops into a `lockstep` beside the ones here.
 
 ## The runner
 
-`Runner` is the flow around a declaration: say what is in the way, print what
-would go out, ask, and release it. Give it a `log`, `ps` or `prompt` to put it
-somewhere else, and a `workspace` or `git` to point it at a repository that is
-not the one around the working directory.
+`Runner` is the flow around a declaration: print what would go out, ask, and
+release it. Give it a `log`, `ps` or `prompt` to put it somewhere else, and a
+`workspace` or `git` to point it at a repository that is not the one around
+the working directory.
 
 It owns the parts of a release that are nobody's step: choosing the version,
 stamping every package, committing, and pushing.
 
-What it checks before any of that is the state of this repository, and only
-that: a dirty tree, the wrong branch, and a declaration that has drifted from
-the manifest. That last one is why the declaration is safe to write by hand.
-Name a package that no longer exists, or add a public package and forget to
-declare it, and the runner says so before anything is stamped.
+Two things it will not do. It will not release from anywhere but the default
+branch, because switching for you would release code you were not looking at.
+And it will not release a declaration that has drifted from the manifest,
+saying every disagreement at once: name a package that no longer exists, or
+add a public package and forget to declare it, and you hear about it before
+anything is stamped. That is what makes a declaration safe to write by hand.
+
+Uncommitted changes are not refused. The release commit takes every tracked
+change with it whatever anyone thinks about it, so the prompt says so and you
+answer.
 
 ## Logging in is part of publishing
 

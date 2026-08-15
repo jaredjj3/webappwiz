@@ -140,20 +140,26 @@ describe("runner", () => {
 		expect(workspace.stamped).toEqual(["1.2.4"]);
 	});
 
-	it("reports a dirty tree and the wrong branch", async () => {
+	it("says uncommitted changes go into the release commit, rather than refusing", async () => {
 		git.dirty = true;
+
+		await answering("y").ship(ship, "patch");
+
+		expect(said()).toContain("uncommitted changes");
+		expect(git.commits).toEqual(["Release 1.2.4"]);
+	});
+
+	it("refuses to release from anywhere but the default branch", async () => {
 		git.current = "task/ship";
 
 		await expect(answering("y").ship(ship, "patch")).rejects.toThrow(
-			"not ready to release",
+			'on "task/ship": releases go out from "main"',
 		);
-		expect(said()).toContain("the tree has uncommitted changes");
-		expect(said()).toContain('on "task/ship": releases go out from "main"');
-		expect(ps.getCalls()).toEqual([]);
+		expect(workspace.stamped).toEqual([]);
 		expect(registry.publishes).toEqual([]);
 	});
 
-	it("reports a package the workspace has nothing public by the name of", async () => {
+	it("refuses a package the workspace has nothing public by the name of", async () => {
 		const roaming = ships.lockstep(
 			ships.custom("@scope/one", registry),
 			ships.custom("@scope/two", registry),
@@ -161,28 +167,32 @@ describe("runner", () => {
 		);
 
 		await expect(answering("y").ship(roaming, "patch")).rejects.toThrow(
-			"not ready to release",
-		);
-		expect(said()).toContain(
 			'"@scope/gone" is declared but the workspace has no public package by that name',
 		);
 	});
 
-	it("reports a public package nobody declared", async () => {
+	it("refuses a public package nobody declared", async () => {
 		const partial = ships.lockstep(ships.custom("@scope/one", registry));
 
 		await expect(answering("y").ship(partial, "patch")).rejects.toThrow(
-			"not ready to release",
-		);
-		expect(said()).toContain(
 			'"@scope/two" is public but not declared: declare it or mark it private',
 		);
 	});
 
-	it("reports a declaration with nothing to publish", async () => {
+	it("says every way the declaration drifted at once", async () => {
+		const drifted = ships.lockstep(
+			ships.custom("@scope/one", registry),
+			ships.custom("@scope/gone", registry),
+		);
+
+		await expect(answering("y").ship(drifted, "patch")).rejects.toThrow(
+			/"@scope\/gone" is declared[\s\S]*"@scope\/two" is public/,
+		);
+	});
+
+	it("refuses a declaration with nothing to publish", async () => {
 		await expect(
 			answering("y").ship(new GithubShip(github), "patch"),
-		).rejects.toThrow("not ready to release");
-		expect(said()).toContain("there is nothing to publish");
+		).rejects.toThrow("there is nothing to publish");
 	});
 });
