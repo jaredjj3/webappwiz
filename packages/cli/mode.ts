@@ -1,11 +1,13 @@
-import type { AgentOptions } from "@webappwiz/rules";
-
 /** What a command does with the plan it has made. */
 export type Mode = "print" | "estimate" | "run";
 
 /** The flags that choose between the three, on top of the two that name an
  * agent. */
-export interface ModeOptions extends AgentOptions {
+export interface ModeOptions {
+	/** A model to ask. */
+	agent?: string;
+	/** A command to hand the prompt to instead. */
+	exec?: string;
 	/** Print to the logger and spawn nothing. */
 	print?: boolean;
 	/** Print what a run would read, and spawn nothing. */
