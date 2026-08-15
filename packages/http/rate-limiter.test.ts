@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { MemoryStore } from "@webappwiz/store";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
 
-import { type RateLimit, RateLimiter } from "./index";
+import { MemoryStore, type RateLimit, RateLimiter } from "./index";
 
 const LIMIT: RateLimit = { max: 3, window: Duration.mins(1) };
 
@@ -18,7 +17,7 @@ describe("RateLimiter", () => {
 
 	beforeEach(() => {
 		clock = new FakeClock();
-		limiter = new RateLimiter(new MemoryStore(clock), clock);
+		limiter = new RateLimiter(clock);
 	});
 
 	it("lets a client through up to the limit", async () => {
@@ -94,7 +93,7 @@ describe("RateLimiter", () => {
 	});
 
 	it("reads whichever header it was told to", async () => {
-		const cloudflare = new RateLimiter(new MemoryStore(clock), clock, {
+		const cloudflare = new RateLimiter(clock, {
 			clientIpHeaders: ["cf-connecting-ip", "x-forwarded-for"],
 		});
 		const request = new Request("https://example.com/signup", {
@@ -106,6 +105,15 @@ describe("RateLimiter", () => {
 		}
 
 		expect(await cloudflare.hit(request, "signup", LIMIT)).not.toBeNull();
+	});
+
+	it("keeps the hits in the store it was given", async () => {
+		const store = new MemoryStore<string, number[]>(clock);
+		const shared = new RateLimiter(clock, { store });
+
+		await shared.hit(from("1.1.1.1"), "signup", LIMIT);
+
+		expect(await store.get("signup:1.1.1.1")).toEqual([clock.now().ms]);
 	});
 
 	it("answers a turned down caller with a 429 saying when to come back", () => {

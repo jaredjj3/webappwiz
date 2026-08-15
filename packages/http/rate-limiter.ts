@@ -1,5 +1,6 @@
-import type { Store } from "@webappwiz/store";
 import { type Clock, Duration } from "@webappwiz/time";
+import { MemoryStore } from "./store/memory-store";
+import type { Store } from "./store/store";
 
 export interface RateLimit {
 	/** How many requests are allowed within the window. */
@@ -15,6 +16,11 @@ export interface RateLimiterOptions {
 	 * Defaults to `["x-forwarded-for"]`.
 	 */
 	clientIpHeaders?: string[];
+	/**
+	 * Where the hits are kept. Defaults to a `MemoryStore`, which limits each
+	 * process on its own; pass a shared one to make the limit the whole app's.
+	 */
+	store?: Store<string, number[]>;
 }
 
 /**
@@ -22,7 +28,7 @@ export interface RateLimiterOptions {
  * says how long to wait if that hit put the client over.
  *
  * ```ts
- * const limiter = new RateLimiter(store, clock);
+ * const limiter = new RateLimiter(clock);
  *
  * const retryAfter = await limiter.hit(request, "signup", {
  *   max: 10,
@@ -39,16 +45,21 @@ export interface RateLimiterOptions {
  *
  * The `scope` gives each action its own budget, so a strict one does not eat
  * into the allowance of everything else.
+ *
+ * The hits live in a `MemoryStore` unless `opts.store` says otherwise, so an
+ * app spread over several processes hands in a `Store` of its own that they
+ * all share.
  */
 export class RateLimiter {
 	private readonly clientIpHeaders: string[];
+	private readonly store: Store<string, number[]>;
 
 	constructor(
-		private readonly store: Store<string, number[]>,
 		private readonly clock: Clock,
 		opts: RateLimiterOptions = {},
 	) {
 		this.clientIpHeaders = opts.clientIpHeaders ?? ["x-forwarded-for"];
+		this.store = opts.store ?? new MemoryStore(clock);
 	}
 
 	/**

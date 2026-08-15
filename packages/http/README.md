@@ -23,11 +23,9 @@ written against this runs unchanged on whatever ends up listening for it.
 
 ```ts
 import { RateLimiter } from "@webappwiz/http";
-import { MemoryStore } from "@webappwiz/store";
 import { Duration, SystemClock } from "@webappwiz/time";
 
-const clock = new SystemClock();
-const limiter = new RateLimiter(new MemoryStore(clock), clock);
+const limiter = new RateLimiter(new SystemClock());
 
 const retryAfter = await limiter.hit(request, "signup", {
 	max: 10,
@@ -46,8 +44,13 @@ The scope (`"signup"` above) gives each action its own budget, so a strict limit
 on one does not eat into the allowance of everything else.
 
 Where the hits are kept is the caller's choice, because it decides what the
-limiter can do. `MemoryStore` is per process, so two instances of the app each
-allow the full quota; a shared `Store` makes the limit the whole app's.
+limiter can do. The default `MemoryStore` is per process, so two instances of
+the app each allow the full quota; a shared `Store` makes the limit the whole
+app's.
+
+```ts
+const limiter = new RateLimiter(clock, { store: new RedisStore(redis) });
+```
 
 Nothing has to be cleaned up. Each client's entry is written with the window as
 its `ttl`, so it goes when its newest hit ages out, and the entry itself holds
@@ -63,3 +66,30 @@ the norm locally and in tests, and there is nothing to key on.
 Keying on the address alone is deliberate. Adding the session would let an
 attacker rotate cookies for a fresh budget, and an address cannot be dodged that
 way.
+
+## Stores
+
+`Store` is somewhere to put a value under a key and find it again: the
+limiter's hits, and a session or a cached response if you have one. `MemoryStore`
+is only the implementation that ships. Write your own to put the same data in
+Redis, a database or a cookie jar, and whatever holds it changes without the
+code above it noticing.
+
+```ts
+import type { SetOptions, Store } from "@webappwiz/http";
+
+export class RedisStore<V> implements Store<string, V> {
+	async get(key: string): Promise<V | null> { ... }
+	async set(key: string, value: V, opts?: SetOptions): Promise<void> { ... }
+	async delete(key: string): Promise<void> { ... }
+}
+```
+
+Every method is async, because most implementations are over a network. The
+in-memory one still returns promises rather than pretending otherwise, so
+swapping it out later changes nothing at the call site.
+
+`MemoryStore` holds everything in one process, so it is lost on restart and a
+second instance of the app has its own copy. It expires entries on read and
+sweeps every 500 writes, rather than running a timer that would keep the
+process alive.

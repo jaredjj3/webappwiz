@@ -122,7 +122,6 @@
       "name": "@webappwiz/http",
       "version": "0.0.0",
       "dependencies": {
-        "@webappwiz/store": "workspace:*",
         "@webappwiz/time": "workspace:*",
       },
     },
@@ -188,13 +187,6 @@
       "dependencies": {
         "@webappwiz/log": "workspace:*",
         "@webappwiz/sys": "workspace:*",
-      },
-    },
-    "packages/store": {
-      "name": "@webappwiz/store",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/time": "workspace:*",
       },
     },
     "packages/sys": {
@@ -409,8 +401,6 @@
     "@webappwiz/rules": ["@webappwiz/rules@workspace:packages/rules"],
 
     "@webappwiz/ship": ["@webappwiz/ship@workspace:packages/ship"],
-
-    "@webappwiz/store": ["@webappwiz/store@workspace:packages/store"],
 
     "@webappwiz/sys": ["@webappwiz/sys@workspace:packages/sys"],
 

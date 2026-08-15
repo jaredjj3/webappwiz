@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { Duration } from "@webappwiz/time";
 import { FakeClock } from "@webappwiz/time/testing";
 
-import { MemoryStore } from "./index";
+import { MemoryStore } from "./memory-store";
 
 describe("MemoryStore", () => {
 	let clock: FakeClock;

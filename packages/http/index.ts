@@ -12,3 +12,5 @@ export {
 	RateLimiter,
 	type RateLimiterOptions,
 } from "./rate-limiter";
+export { MemoryStore } from "./store/memory-store";
+export type { SetOptions, Store } from "./store/store";

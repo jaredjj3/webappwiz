@@ -7,7 +7,6 @@
 		".": "./index.ts"
 	},
 	"dependencies": {
-		"@webappwiz/store": "workspace:*",
 		"@webappwiz/time": "workspace:*"
 	}
 }
