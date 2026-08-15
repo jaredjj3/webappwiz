@@ -1,4 +1,4 @@
-import { type Disposable, Disposer, disposables } from "@webappwiz/disposable";
+import { Disposer, disposables, type Resource } from "@webappwiz/disposable";
 import { Dispatcher } from "@webappwiz/events";
 import { Duration, type Timer } from "@webappwiz/time";
 import type {
@@ -19,7 +19,7 @@ const LAPSE_POLL_INTERVAL = Duration.secs(1);
  * A `UserActivationObserver` over `navigator.userActivation`.
  */
 export class WindowUserActivationObserver
-	implements UserActivationObserver, Disposable
+	implements UserActivationObserver, Resource
 {
 	private readonly disposer = new Disposer();
 	private readonly dispatcher = this.disposer.use(

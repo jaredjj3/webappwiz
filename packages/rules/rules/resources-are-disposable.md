@@ -5,12 +5,12 @@ resource: a timer, a subscription, a listener on an object you did not create,
 a worker, a socket, a file handle, an observer. Every one of those needs a way
 to be released, and it is the holder's job to offer it.
 
-Implement `Disposable` from `@webappwiz/disposable` and release the resource in
-`dispose()`, or `AsyncDisposable` and `disposeAsync()` when the release has to
+Implement `Resource` from `@webappwiz/disposable` and release the resource in
+`dispose()`, or `AsyncResource` and `disposeAsync()` when the release has to
 be awaited. Never invent a second name for it: a `close()`, `destroy()`,
 `stop()`, `cleanup()` or `unsubscribe()` doing the same job is the same
 interface under a name no caller can compose. A method that hands out a
-resource returns a `Disposable` rather than an id or a handle, so cancelling is
+resource returns a `Resource` rather than an id or a handle, so cancelling is
 the same move as releasing anything else.
 
 Holders of several resources own a `Disposer` (or `AsyncDisposer`) and register
@@ -26,12 +26,12 @@ today.
 
 ## Good
 
-The holder implements `Disposable` and a `Disposer` releases what it took:
+The holder implements `Resource` and a `Disposer` releases what it took:
 
 ```ts
-import { type Disposable, Disposer } from "@webappwiz/disposable";
+import { type Resource, Disposer } from "@webappwiz/disposable";
 
-export class Poller implements Disposable {
+export class Poller implements Resource {
 	private disposer = new Disposer();
 
 	constructor(timer: Timer, source: Source) {
@@ -45,11 +45,11 @@ export class Poller implements Disposable {
 }
 ```
 
-Handing out a resource means handing back a `Disposable`:
+Handing out a resource means handing back a `Resource`:
 
 ```ts
 export interface Timer {
-	setTimeout(callback: () => void, delay: Duration): Disposable;
+	setTimeout(callback: () => void, delay: Duration): Resource;
 }
 ```
 
@@ -61,11 +61,11 @@ export class FakeUploads implements Uploads {
 }
 ```
 
-An awaited release is `AsyncDisposable`, and an owner of several uses
+An awaited release is `AsyncResource`, and an owner of several uses
 `AsyncDisposer`:
 
 ```ts
-export class Server implements AsyncDisposable {
+export class Server implements AsyncResource {
 	private disposer = new AsyncDisposer();
 
 	constructor(private server: Bun.Server, db: Database) {
@@ -115,7 +115,7 @@ Hand-rolled bookkeeping in place of a `Disposer`, which leaks the moment one
 release throws or an early return skips the rest:
 
 ```ts
-export class Poller implements Disposable {
+export class Poller implements Resource {
 	private timeouts = [] as number[];
 	private unlisteners = [] as (() => void)[];
 

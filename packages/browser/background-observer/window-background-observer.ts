@@ -1,4 +1,4 @@
-import { type Disposable, Disposer } from "@webappwiz/disposable";
+import { Disposer, type Resource } from "@webappwiz/disposable";
 import { Dispatcher } from "@webappwiz/events";
 import type {
 	BackgroundObserver,
@@ -11,9 +11,7 @@ const EVENTS = ["visibilitychange", "focus", "blur", "pageshow"] as const;
  * A `BackgroundObserver` over the window: the page counts as backgrounded when
  * it is not visible or does not have focus.
  */
-export class WindowBackgroundObserver
-	implements BackgroundObserver, Disposable
-{
+export class WindowBackgroundObserver implements BackgroundObserver, Resource {
 	private readonly disposer = new Disposer();
 	private readonly dispatcher = this.disposer.use(
 		new Dispatcher<BackgroundObserverEventMap>(),

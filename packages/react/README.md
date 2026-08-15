@@ -16,7 +16,7 @@ useDisposerEffect((disposer) => {
 }, []);
 ```
 
-`useDisposable` builds a `Disposable` during render and disposes it on unmount,
+`useDisposable` builds a `Resource` during render and disposes it on unmount,
 or when the factory changes. Its factory must be render-pure: React can abandon
 a render before commit, and anything acquired there would never be disposed.
 Acquire timers, subscriptions and workers in `useDisposerEffect` instead, which

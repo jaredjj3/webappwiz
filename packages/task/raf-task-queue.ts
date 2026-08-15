@@ -1,5 +1,5 @@
 import { type Frame, raf } from "@webappwiz/browser";
-import { type Disposable, Disposer } from "@webappwiz/disposable";
+import { Disposer, type Resource } from "@webappwiz/disposable";
 import type { Clock } from "@webappwiz/time";
 import { ConflatedTaskQueue } from "./conflated-task-queue";
 import type { Task, TaskQueue, TaskQueueState } from "./task-queue";
@@ -22,7 +22,7 @@ export interface RafTaskQueueOptions {
  * element.addEventListener("pointermove", () => queue.trigger());
  * ```
  */
-export class RafTaskQueue implements TaskQueue, Disposable {
+export class RafTaskQueue implements TaskQueue, Resource {
 	private readonly disposer = new Disposer();
 	private readonly queue: TaskQueue;
 	private readonly frames: Raf;

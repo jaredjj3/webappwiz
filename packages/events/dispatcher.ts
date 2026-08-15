@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import type {
 	EventListener,
 	EventListenerOptions,
@@ -21,7 +21,7 @@ type ListenerEntry<T extends Record<string, unknown>> = {
  * everyone else gets `events` and can only listen.
  */
 export class Dispatcher<T extends Record<string, unknown>>
-	implements Events<T>, Disposable
+	implements Events<T>, Resource
 {
 	readonly events: Events<T> = this;
 

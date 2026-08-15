@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import type { Duration } from "../duration";
 import type { Timer } from "./timer";
 
@@ -16,11 +16,11 @@ export class FakeTimer implements Timer {
 	readonly timeouts: Entry[] = [];
 	readonly intervals: Entry[] = [];
 
-	setTimeout(callback: () => void, delay: Duration): Disposable {
+	setTimeout(callback: () => void, delay: Duration): Resource {
 		return this.add(this.timeouts, callback, delay);
 	}
 
-	setInterval(callback: () => void, interval: Duration): Disposable {
+	setInterval(callback: () => void, interval: Duration): Resource {
 		return this.add(this.intervals, callback, interval);
 	}
 
@@ -56,7 +56,7 @@ export class FakeTimer implements Timer {
 		entries: Entry[],
 		callback: () => void,
 		delay: Duration,
-	): Disposable {
+	): Resource {
 		const entry: Entry = { callback, delay, disposed: false };
 		entries.push(entry);
 		return {

@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import { useRef, useState } from "react";
 import { useDisposerEffect } from "./use-disposer-effect";
 
@@ -22,7 +22,7 @@ import { useDisposerEffect } from "./use-disposer-effect";
  * instance whose disposing effect never runs, and anything acquired there
  * leaks. Acquire such resources after commit, via `useDisposerEffect`.
  */
-export function useDisposable<T extends Disposable>(factory: () => T): T {
+export function useDisposable<T extends Resource>(factory: () => T): T {
 	// Building in the effect instead and swapping the instance in afterwards
 	// would return a one-render-stale instance after a dependency change, so a
 	// downstream resource gets wired against the previous (disposed) upstream
@@ -33,7 +33,7 @@ export function useDisposable<T extends Disposable>(factory: () => T): T {
 	// instance is never handed back, even for a single committed render: React
 	// can reuse this fiber's hook state across an unmount/remount (route
 	// prefetch, offscreen) and the preserved memo would return the dead one.
-	const retiredRef = useRef<WeakSet<Disposable>>(new WeakSet());
+	const retiredRef = useRef<WeakSet<Resource>>(new WeakSet());
 
 	// A manual ref memo rather than useMemo, so the instance is never
 	// spuriously recomputed: it is rebuilt only when the factory changes, the

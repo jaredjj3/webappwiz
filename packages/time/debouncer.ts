@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import type { Duration } from "./duration";
 import type { Timer } from "./timer/timer";
 
@@ -11,8 +11,8 @@ import type { Timer } from "./timer/timer";
  * input.addEventListener("input", () => debouncer.call(() => search(input.value)));
  * ```
  */
-export class Debouncer implements Disposable {
-	private pending: Disposable | null = null;
+export class Debouncer implements Resource {
+	private pending: Resource | null = null;
 	private fn: (() => void) | null = null;
 
 	constructor(

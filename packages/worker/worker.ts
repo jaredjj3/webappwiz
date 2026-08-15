@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 
 /**
  * Work sent somewhere else and answered, one request at a time from the
@@ -13,6 +13,6 @@ import type { Disposable } from "@webappwiz/disposable";
  *
  * Disposing tears the worker down and rejects everything still in flight.
  */
-export interface Worker<Input, Output> extends Disposable {
+export interface Worker<Input, Output> extends Resource {
 	send(input: Input): Promise<Output>;
 }

@@ -1,18 +1,18 @@
-import type { Disposable } from "./disposable";
+import type { Resource } from "./resource";
 
-/** Ways of getting a `Disposable` when you do not have an object to hand. */
+/** Ways of getting a `Resource` when you do not have an object to hand. */
 export class disposables {
 	private constructor() {}
 
-	static noop(): Disposable {
+	static noop(): Resource {
 		return disposables.callback(() => {});
 	}
 
-	static callback(dispose: () => void): Disposable {
+	static callback(dispose: () => void): Resource {
 		return { dispose };
 	}
 
-	static nullable(disposable: Disposable | null): Disposable {
-		return disposable ?? disposables.noop();
+	static nullable(resource: Resource | null): Resource {
+		return resource ?? disposables.noop();
 	}
 }

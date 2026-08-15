@@ -1,4 +1,4 @@
-import { type Disposable, Disposer } from "@webappwiz/disposable";
+import { Disposer, type Resource } from "@webappwiz/disposable";
 import { Dispatcher } from "@webappwiz/events";
 import type { Clock, Duration } from "@webappwiz/time";
 import { type Frame, raf } from "./raf";
@@ -21,7 +21,7 @@ export type AnimationLoopEventMap = {
  * Each frame asks for the next, so a loop nobody stops runs until it is
  * disposed. Disposing stops it.
  */
-export class AnimationLoop implements Disposable {
+export class AnimationLoop implements Resource {
 	private readonly disposer = new Disposer();
 	private readonly dispatcher = this.disposer.use(
 		new Dispatcher<AnimationLoopEventMap>(),

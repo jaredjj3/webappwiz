@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import type { Clock } from "./clock/clock";
 import { Duration } from "./duration";
 
@@ -18,7 +18,7 @@ import { Duration } from "./duration";
  * It reads a `Clock` rather than a `WallClock`, so it is unmoved by the machine
  * syncing its date.
  */
-export class Stopwatch implements Disposable {
+export class Stopwatch implements Resource {
 	private accumulated = Duration.zero();
 	private runningSince: Duration | null = null;
 

@@ -1,19 +1,19 @@
-import type { Disposable } from "./disposable";
 import { disposables } from "./disposables";
+import type { Resource } from "./resource";
 
-/** A stack of disposables, released in reverse order of registration. */
-export class Disposer implements Disposable {
-	private resources = [] as Disposable[];
+/** A stack of resources, released in reverse order of registration. */
+export class Disposer implements Resource {
+	private resources = [] as Resource[];
 	private _disposed = false;
 
 	get disposed(): boolean {
 		return this._disposed;
 	}
 
-	use<T extends Disposable>(disposable: T): T {
+	use<T extends Resource>(resource: T): T {
 		this.assertOpen();
-		this.resources.push(disposable);
-		return disposable;
+		this.resources.push(resource);
+		return resource;
 	}
 
 	adopt<T>(value: T, dispose: (value: T) => void): T {

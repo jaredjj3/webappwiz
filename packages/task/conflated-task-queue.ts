@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import { Dispatcher } from "@webappwiz/events";
 import type {
 	Task,
@@ -13,7 +13,7 @@ import type {
  * work asked for a hundred times happens twice: now, and once with the latest
  * state.
  */
-export class ConflatedTaskQueue implements TaskQueue, Disposable {
+export class ConflatedTaskQueue implements TaskQueue, Resource {
 	private readonly dispatcher = new Dispatcher<TaskQueueEventMap>();
 	readonly events = this.dispatcher.events;
 

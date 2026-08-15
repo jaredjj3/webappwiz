@@ -1,4 +1,4 @@
 /** Something holding a resource that must be released. */
-export interface Disposable {
+export interface Resource {
 	dispose(): void;
 }

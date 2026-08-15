@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import { Dispatcher } from "@webappwiz/events";
 import type { Debouncer } from "@webappwiz/time";
 import type {
@@ -13,7 +13,7 @@ import type {
  * The queue reads as busy from the first trigger, not from when the task
  * actually starts, so a spinner comes up while the debouncer is still waiting.
  */
-export class DebouncedTaskQueue implements TaskQueue, Disposable {
+export class DebouncedTaskQueue implements TaskQueue, Resource {
 	private readonly dispatcher = new Dispatcher<TaskQueueEventMap>();
 	readonly events = this.dispatcher.events;
 

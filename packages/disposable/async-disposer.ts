@@ -1,18 +1,18 @@
-import type { AsyncDisposable } from "./async-disposable";
+import type { AsyncResource } from "./async-resource";
 
-/** A stack of async disposables, released in reverse order of registration. */
-export class AsyncDisposer implements AsyncDisposable {
-	private resources = [] as AsyncDisposable[];
+/** A stack of async resources, released in reverse order of registration. */
+export class AsyncDisposer implements AsyncResource {
+	private resources = [] as AsyncResource[];
 	private _disposed = false;
 
 	get disposed(): boolean {
 		return this._disposed;
 	}
 
-	use<T extends AsyncDisposable>(disposable: T): T {
+	use<T extends AsyncResource>(resource: T): T {
 		this.assertOpen();
-		this.resources.push(disposable);
-		return disposable;
+		this.resources.push(resource);
+		return resource;
 	}
 
 	adopt<T>(value: T, disposeAsync: (value: T) => Promise<void>): T {

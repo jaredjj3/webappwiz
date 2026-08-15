@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import { Dispatcher } from "@webappwiz/events";
 import type { Throttler } from "@webappwiz/time";
 import type {
@@ -13,7 +13,7 @@ import type {
  * interval, so a long burst keeps producing results rather than going quiet
  * until it ends.
  */
-export class ThrottledTaskQueue implements TaskQueue, Disposable {
+export class ThrottledTaskQueue implements TaskQueue, Resource {
 	private readonly dispatcher = new Dispatcher<TaskQueueEventMap>();
 	readonly events = this.dispatcher.events;
 

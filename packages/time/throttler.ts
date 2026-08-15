@@ -1,4 +1,4 @@
-import type { Disposable } from "@webappwiz/disposable";
+import type { Resource } from "@webappwiz/disposable";
 import type { Duration } from "./duration";
 import type { Timer } from "./timer/timer";
 
@@ -12,8 +12,8 @@ import type { Timer } from "./timer/timer";
  * window.addEventListener("scroll", () => throttler.call(() => reposition()));
  * ```
  */
-export class Throttler implements Disposable {
-	private pending: Disposable | null = null;
+export class Throttler implements Resource {
+	private pending: Resource | null = null;
 	private fn: (() => void) | null = null;
 
 	constructor(
