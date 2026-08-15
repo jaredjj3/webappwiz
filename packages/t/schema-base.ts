@@ -11,6 +11,11 @@ export abstract class SchemaBase<T> implements Schema<T> {
 
 	abstract coerce(raw: string): T;
 
+	/** Overridden only by `SchemaOptional`; everything else demands a value. */
+	isOptional(): boolean {
+		return false;
+	}
+
 	safeParse(value: unknown): SafeParseResult<T> {
 		try {
 			return { success: true, data: this.parse(value) };

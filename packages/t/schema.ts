@@ -18,6 +18,11 @@ export interface Schema<T> {
 	coerce(raw: string): T;
 	/** `parse`, returning the error instead of throwing it. */
 	safeParse(value: unknown): SafeParseResult<T>;
+	/**
+	 * Whether `undefined` is a value this schema accepts, so a caller binding
+	 * arguments knows an absent one is allowed rather than missing.
+	 */
+	isOptional(): boolean;
 }
 
 export type Infer<S> = S extends Schema<infer T> ? T : never;

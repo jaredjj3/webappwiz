@@ -6,6 +6,10 @@ export class SchemaOptional<T> extends SchemaBase<T | undefined> {
 		super();
 	}
 
+	override isOptional(): boolean {
+		return true;
+	}
+
 	parse(value: unknown): T | undefined {
 		return value === undefined ? undefined : this.inner.parse(value);
 	}

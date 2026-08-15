@@ -63,11 +63,9 @@ webappwiz
 		description: "directory to judge (default: .)",
 	})
 	.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
-		default: undefined,
 		description: "model to check with (default: the config's agent)",
 	})
 	.option("exec", t.optional(t.string()), {
-		default: undefined,
 		description: "command the prompt is passed to, instead of --agent",
 	})
 	.option("print", t.boolean(), {
@@ -83,7 +81,6 @@ webappwiz
 		description: "files per review",
 	})
 	.option("since", t.optional(t.string()), {
-		default: undefined,
 		description: "only check files added or changed since this git ref",
 	})
 	.option("budget", t.number(), {
@@ -100,11 +97,9 @@ webappwiz
 		description: "directory whose change is weighed (default: .)",
 	})
 	.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
-		default: undefined,
 		description: "model to weigh it with (default: the config's agent)",
 	})
 	.option("exec", t.optional(t.string()), {
-		default: undefined,
 		description: "command the prompt is passed to, instead of --agent",
 	})
 	.option("print", t.boolean(), {

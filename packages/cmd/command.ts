@@ -166,11 +166,17 @@ export class Command<O, C extends object = object> {
 		this.args.forEach((arg, i) => {
 			const value = positional[i];
 			if (value === undefined) {
-				if (!arg.hasDefault) {
-					throw new Error(`missing required argument <${arg.name}>`);
+				if (arg.hasDefault) {
+					out[arg.name] = arg.default;
+					return;
 				}
-				out[arg.name] = arg.default;
-				return;
+				// an optional schema already says absence is allowed, so asking for
+				// `default: undefined` as well would be saying it twice
+				if (arg.schema.isOptional()) {
+					out[arg.name] = undefined;
+					return;
+				}
+				throw new Error(`missing required argument <${arg.name}>`);
 			}
 			out[arg.name] = arg.schema.coerce(value);
 		});
@@ -179,6 +185,10 @@ export class Command<O, C extends object = object> {
 			if (value === undefined) {
 				if (opt.hasDefault) {
 					out[opt.name] = opt.default;
+					continue;
+				}
+				if (opt.schema.isOptional()) {
+					out[opt.name] = undefined;
 					continue;
 				}
 				throw new Error(`missing required option --${opt.name}`);

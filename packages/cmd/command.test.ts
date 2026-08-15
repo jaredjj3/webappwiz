@@ -97,6 +97,28 @@ describe("Command", () => {
 		);
 	});
 
+	it("leaves an optional option undefined when it is absent, with no default", () => {
+		let got: unknown;
+		new Command("judge")
+			.option("agent", t.optional(t.string()))
+			.action((opts) => {
+				got = opts;
+			})
+			.exec([], { log });
+		expect(got).toEqual({ agent: undefined });
+	});
+
+	it("leaves an optional positional undefined when it is absent", () => {
+		let got: unknown;
+		new Command("show")
+			.arg("task", t.optional(t.string()))
+			.action((opts) => {
+				got = opts;
+			})
+			.exec([], { log });
+		expect(got).toEqual({ task: undefined });
+	});
+
 	it("propagates schema parse errors to the caller", () => {
 		const cmd = new Command("n").option("x", t.number()).action(() => {});
 		expect(() => cmd.exec(["--x", "abc"], { log })).toThrow(/number/);
