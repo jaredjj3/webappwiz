@@ -1,6 +1,14 @@
 {
 	"name": "@webappwiz/cli",
 	"version": "0.0.0",
+	"description": "The webappwiz CLI: judge code against rules, sign off a diff, and manage agent skills",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/cli"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"bin": {
@@ -10,6 +18,17 @@
 		".": "./index.ts",
 		"./webappwiz": "./webappwiz.ts",
 		"./rules": "./rules.ts"
+	},
+	"engines": {
+		"bun": ">=1.3"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts",
+		"templates/*.md"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"@webappwiz/cmd": "workspace:*",

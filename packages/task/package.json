@@ -1,11 +1,26 @@
 {
 	"name": "@webappwiz/task",
 	"version": "0.0.0",
+	"description": "Somewhere to say \"this needs doing again\" without saying when",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/task"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts",
 		"./browser": "./browser.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"@webappwiz/browser": "workspace:*",

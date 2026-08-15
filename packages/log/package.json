@@ -1,9 +1,24 @@
 {
 	"name": "@webappwiz/log",
 	"version": "0.0.0",
+	"description": "Logging behind a Logger interface, with decorators and an in-memory double",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/log"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	}
 }

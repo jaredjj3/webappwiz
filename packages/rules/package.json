@@ -1,12 +1,28 @@
 {
 	"name": "@webappwiz/rules",
 	"version": "0.0.0",
+	"description": "Checking code against rules an agent has to read to apply",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/rules"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts",
 		"./rules": "./rules/index.ts",
 		"./testing": "./testing.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts",
+		"rules/*.md"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"@webappwiz/events": "workspace:*",

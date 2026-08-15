@@ -1,10 +1,25 @@
 {
 	"name": "@webappwiz/aws",
 	"version": "0.0.0",
+	"description": "CDK constructs for running a web app on AWS: network, database, image, service and domain",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/aws"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"aws-cdk-lib": "^2.250.0",

@@ -1,9 +1,24 @@
 {
 	"name": "@webappwiz/disposable",
 	"version": "0.0.0",
+	"description": "Resources that must be released, and stacks that release them in reverse order",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/disposable"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	}
 }

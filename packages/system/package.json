@@ -1,11 +1,26 @@
 {
 	"name": "@webappwiz/system",
 	"version": "0.0.0",
+	"description": "Interfaces for the things that touch the machine, so code under test doesn't",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/system"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts",
 		"./testing": "./testing.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"@webappwiz/log": "workspace:*",

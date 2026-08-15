@@ -1,10 +1,25 @@
 {
 	"name": "@webappwiz/http",
 	"version": "0.0.0",
+	"description": "Serving HTTP, and the parts of doing so that every app writes again",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/http"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"@webappwiz/time": "workspace:*"

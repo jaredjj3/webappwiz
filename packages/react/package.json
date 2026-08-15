@@ -1,10 +1,25 @@
 {
 	"name": "@webappwiz/react",
 	"version": "0.0.0",
+	"description": "Wiring React to the rest of webappwiz: resources, reactive objects and external stores",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/react"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"@webappwiz/disposable": "workspace:*",

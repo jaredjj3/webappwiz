@@ -1,9 +1,24 @@
 {
 	"name": "@webappwiz/geometry",
 	"version": "0.0.0",
+	"description": "The 2D value types a web app keeps rewriting: Rect, Position and a QuadTree",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/geometry"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	}
 }

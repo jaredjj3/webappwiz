@@ -1,10 +1,25 @@
 {
 	"name": "@webappwiz/cmd",
 	"version": "0.0.0",
+	"description": "Builds a CLI: subcommands, typed positional arguments and flag options",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/cmd"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"@webappwiz/log": "workspace:*",

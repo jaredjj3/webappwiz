@@ -1,12 +1,27 @@
 {
 	"name": "@webappwiz/worker",
 	"version": "0.0.0",
+	"description": "Work sent somewhere else and answered, behind an interface",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/worker"
+	},
 	"type": "module",
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts",
 		"./script": "./script.ts",
 		"./testing": "./testing.ts"
+	},
+	"files": [
+		"**/*.ts",
+		"!**/*.test.ts"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"@webappwiz/assert": "workspace:*",
