@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import { type Fs, NodeFs, walk } from "@webappwiz/system";
-import { Skills } from "./skills";
+import { update as updateSkills } from "./skills/update";
 
 /**
  * A `"@webappwiz/x": "1.2.3"` dependency entry, captured either side of the
@@ -47,5 +47,5 @@ export async function update(opts: UpdateOptions): Promise<void> {
 		count++;
 	}
 	log.info(`${count} package.json pinned to ${opts.version}`);
-	await new Skills({ log, fs }).update({ dir: opts.dir });
+	await updateSkills({ dir: opts.dir, log: log, fs: fs });
 }

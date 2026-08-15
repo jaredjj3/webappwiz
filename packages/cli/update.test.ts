@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakeFs } from "@webappwiz/system/testing";
 
-import { source } from "./skills";
+import { source } from "./skills/skill";
 import { update } from "./update";
 
 describe("update", () => {

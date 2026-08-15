@@ -10,7 +10,9 @@ import { JudgeCommands } from "./judge";
 import { version } from "./package.json";
 import { JUDGE_RULES, SIGNOFF_RULES } from "./rules";
 import { Signoff } from "./signoff";
-import { Skills } from "./skills";
+import { add } from "./skills/add";
+import { ls } from "./skills/ls";
+import { update as updateSkills } from "./skills/update";
 import { update } from "./update";
 
 /** What webappwiz's commands are run with, on top of what any cli needs. */
@@ -151,7 +153,7 @@ skillsGroup
 		default: ".",
 		description: "project to inspect (default: .)",
 	})
-	.action((opts, { log, fs }) => new Skills({ log, fs }).ls(opts));
+	.action((opts, { log, fs }) => ls({ ...opts, log: log, fs: fs }));
 
 skillsGroup
 	.command("add")
@@ -161,7 +163,7 @@ skillsGroup
 		default: ".",
 		description: "project to add it to (default: .)",
 	})
-	.action((opts, { log, fs }) => new Skills({ log, fs }).add(opts));
+	.action((opts, { log, fs }) => add({ ...opts, log: log, fs: fs }));
 
 skillsGroup
 	.command("update")
@@ -170,4 +172,4 @@ skillsGroup
 		default: ".",
 		description: "project to refresh (default: .)",
 	})
-	.action((opts, { log, fs }) => new Skills({ log, fs }).update(opts));
+	.action((opts, { log, fs }) => updateSkills({ ...opts, log: log, fs: fs }));
