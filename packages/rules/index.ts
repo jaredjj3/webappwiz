@@ -6,40 +6,12 @@ export {
 	type AgentOptions,
 	agentCommand,
 } from "./agent";
-export { Check, type CheckOptions } from "./check";
-export {
-	type Checked,
-	Checker,
-	type CheckerOptions,
-	type Escalation,
-} from "./checker";
-export {
-	DEFAULT_AGENT,
-	DEFAULT_CONCURRENCY,
-	defineRules,
-	type RuleSet,
-	type RuleSetInput,
-	type RunnerOptions,
-} from "./config";
-export type { Diagnostic } from "./diagnostic";
-export {
-	DEFAULT_CHUNK,
-	Files,
-	type FilesOptions,
-	type FileTask,
-	type PlanOptions,
-	type Violation,
-} from "./files";
+export { Check } from "./check";
+export { defineRules, type RuleSet } from "./config";
+export { Files, type FileTask, type Violation } from "./files";
 export type { Finding } from "./finding";
-export {
-	type Finished,
-	Harness,
-	type HarnessEvents,
-	type HarnessOptions,
-	type RunOptions,
-} from "./harness";
+export { type Finished, Harness } from "./harness";
 export { Hit } from "./hit";
-export { exemptions } from "./ignore";
 export { prompt } from "./prompt";
 export type { FileRule, FileText, Level, Rule, Verdict } from "./rule";
 export { SyntaxKind, type Token, tokens } from "./scan";
