@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { MemoryLogger } from "../index";
+import { MemoryLogger } from "./index";
 
 describe("MemoryLogger", () => {
 	it("stores info and error entries and can clear them", () => {
@@ -16,14 +16,12 @@ describe("MemoryLogger", () => {
 				message: "ready",
 				optionalParams: [1, true],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 			{
 				level: "error",
 				message: "failed",
 				optionalParams: [error],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 		]);
 

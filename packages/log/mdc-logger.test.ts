@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 
-import { MdcLogger, MemoryLogger } from "../index";
+import { MdcLogger, MemoryLogger } from "./index";
 
 describe("MdcLogger", () => {
 	let memoryLogger: MemoryLogger;
@@ -23,14 +23,12 @@ describe("MdcLogger", () => {
 				message: "[foo=bar] ready",
 				optionalParams: [1],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 			{
 				level: "error",
 				message: "[foo=bar] [baz=bam] failed",
 				optionalParams: [error],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 		]);
 	});
@@ -51,7 +49,6 @@ describe("MdcLogger", () => {
 				message: "[foo=updated] [baz=bam] ready",
 				optionalParams: [],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 		]);
 	});

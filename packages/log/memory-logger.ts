@@ -20,29 +20,6 @@ export class MemoryLogger implements Logger {
 		message: unknown,
 		optionalParams: unknown[],
 	): LogEntry {
-		return {
-			level,
-			message,
-			optionalParams,
-			timestamp: new Date(),
-			callsite: this.callsiteFromStack(),
-		};
-	}
-
-	private callsiteFromStack(): string {
-		const stack = new Error().stack;
-		if (!stack) {
-			return "unknown";
-		}
-
-		const stackFrames = stack
-			.split("\n")
-			.map((line) => line.trim())
-			.filter((line) => line.startsWith("at "));
-
-		return (
-			stackFrames.find((line) => !line.includes("memory-logger.ts")) ??
-			"unknown"
-		);
+		return { level, message, optionalParams, timestamp: new Date() };
 	}
 }

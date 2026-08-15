@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { CompositeLogger, type LogEntry, MemoryLogger } from "../index";
+import { CompositeLogger, type LogEntry, MemoryLogger } from "./index";
 
 describe("CompositeLogger", () => {
 	it("logs to all loggers", () => {
@@ -18,14 +18,12 @@ describe("CompositeLogger", () => {
 				message: "ready",
 				optionalParams: [1, true],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 			{
 				level: "error",
 				message: "failed",
 				optionalParams: [error],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 		];
 		expect(firstLogger.entries).toEqual(expected);

@@ -11,5 +11,4 @@ export interface LogEntry {
 	message: unknown;
 	optionalParams: unknown[];
 	timestamp: Date;
-	callsite: string;
 }

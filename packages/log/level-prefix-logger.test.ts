@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { LevelPrefixLogger, MemoryLogger } from "../index";
+import { LevelPrefixLogger, MemoryLogger } from "./index";
 
 describe("LevelPrefixLogger", () => {
 	it("prefixes info and error messages by level", () => {
@@ -17,14 +17,12 @@ describe("LevelPrefixLogger", () => {
 				message: "[INFO] ready",
 				optionalParams: [1],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 			{
 				level: "error",
 				message: "[ERROR] failed",
 				optionalParams: [error],
 				timestamp: expect.any(Date),
-				callsite: expect.any(String),
 			},
 		]);
 	});

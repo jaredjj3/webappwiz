@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import {
-	ConsoleLogger,
-	color,
-	FakeConsole,
-	MemoryLogger,
-} from "@webappwiz/log";
+import { ConsoleLogger, color, MemoryLogger } from "@webappwiz/log";
 import { NodePs } from "@webappwiz/system";
 import { FakePs } from "@webappwiz/system/testing";
 import { t } from "@webappwiz/t";
@@ -294,13 +289,13 @@ describe("cli", () => {
 	});
 
 	it("prints usage through the logger it is run with", () => {
-		const out = new FakeConsole();
+		const out = new MemoryLogger();
 
-		cli("wiz").run({ log: new ConsoleLogger({ out: out }), ps }, []);
+		cli("wiz").run({ log: out, ps }, []);
 
-		expect(color.strip(out.logged.flat().join("\n"))).toContain(
-			"Usage: wiz <command> [options]",
-		);
+		expect(
+			color.strip(out.entries.map((entry) => entry.message).join("\n")),
+		).toContain("Usage: wiz <command> [options]");
 	});
 
 	it("defaults the logger and process a command is given", () => {
