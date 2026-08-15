@@ -27,8 +27,10 @@ export class GitRelease implements Release {
 	}
 
 	async publish(cut: Cut): Promise<void> {
-		await this.git.tag(cut.tag);
+		// The branch goes first: a tag left behind by a push origin rejected reads
+		// as a finished release, and sends the next run past this version.
 		await this.git.push(await this.git.branch());
+		await this.git.tag(cut.tag);
 		await this.git.push(cut.tag);
 		cut.log.info(`${cut.tag} ${color.green("pushed")}`);
 	}

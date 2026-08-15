@@ -1,15 +1,17 @@
+import type { Fs } from "@webappwiz/system";
 import { FakeFs } from "@webappwiz/system/testing";
 import { ManifestWorkspace } from "./manifest-workspace";
 
 /**
  * A workspace on disk at 1.2.3: a root declaring `packages/*`, a public
- * `@scope/one` under it, and a private `@scope/two`.
+ * `@scope/one` under it, and a private `@scope/two`. Seed it on a filesystem
+ * of your own to say what happens when one of the writes will not go.
  */
 export class WorkspaceHarness {
-	readonly fs = new FakeFs();
+	constructor(readonly fs: Fs = new FakeFs()) {}
 
-	static async seeded(): Promise<WorkspaceHarness> {
-		const harness = new WorkspaceHarness();
+	static async seeded(fs?: Fs): Promise<WorkspaceHarness> {
+		const harness = new WorkspaceHarness(fs);
 		await harness.write("/repo", {
 			version: "1.2.3",
 			workspaces: ["packages/*"],

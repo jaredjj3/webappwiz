@@ -1,6 +1,19 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import { FakeFs } from "@webappwiz/system/testing";
 import { ManifestWorkspace } from "./manifest-workspace";
 import { WorkspaceHarness } from "./workspace-harness";
+
+/** A filesystem that takes every write but the one path it is given. */
+class PartialFs extends FakeFs {
+	refuses?: string;
+
+	override async write(path: string, data: string): Promise<void> {
+		if (path === this.refuses) {
+			throw new Error(`no space left on device: ${path}`);
+		}
+		await super.write(path, data);
+	}
+}
 
 describe("workspace", () => {
 	let harness: WorkspaceHarness;
@@ -89,6 +102,20 @@ describe("workspace", () => {
 
 		expect(await harness.versionAt("/repo/packages/one")).toBe("2.0.0");
 		expect(await harness.versionAt("/repo/packages/two")).toBe("2.0.0");
+	});
+
+	it("leaves the root at the old version when a package will not stamp", async () => {
+		const fs = new PartialFs();
+		const partial = await WorkspaceHarness.seeded(fs);
+		fs.refuses = "/repo/packages/two/package.json";
+
+		await expect(partial.workspace.setVersion("2.0.0")).rejects.toThrow(
+			"no space left on device",
+		);
+
+		// The root is the version a release reads. Left at 1.2.3, the next run
+		// bumps to the same 2.0.0 and stamps everything; moved, it skips a version.
+		expect(await partial.versionAt("/repo")).toBe("1.2.3");
 	});
 
 	it("stamps private packages too, so nothing drifts out of lockstep", async () => {

@@ -14,4 +14,15 @@ describe("github release", () => {
 
 		expect(github.releases).toEqual(["v1.2.4"]);
 	});
+
+	it("throws the notes it could not write, for a resume to retry", async () => {
+		const github = new FakeGithub();
+		github.error = new Error("not logged in to GitHub");
+
+		await expect(
+			new GithubRelease(github).publish(
+				new Cut("1.2.4", [], { log: new MemoryLogger() }),
+			),
+		).rejects.toThrow("not logged in to GitHub");
+	});
 });

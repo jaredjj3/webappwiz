@@ -78,9 +78,14 @@ export class ManifestWorkspace implements Workspace {
 		return packages.sort((left, right) => left.name.localeCompare(right.name));
 	}
 
-	/** Stamps `version` into the root manifest and every package, in lockstep. */
+	/**
+	 * Stamps `version` into every package and the root manifest, in lockstep.
+	 * The root goes last, because it is the version a release reads: stamping it
+	 * first would leave a run that died partway reading as the version it never
+	 * finished, and send the next one past it.
+	 */
 	async setVersion(version: string): Promise<void> {
-		for (const dir of new Set([this.root, ...(await this.dirs())])) {
+		for (const dir of new Set([...(await this.dirs()), this.root])) {
 			await this.stamp(dir, version);
 		}
 	}

@@ -12,6 +12,8 @@ export class FakeGit implements Git {
 	readonly tags = new Set<string>();
 	readonly commits: string[] = [];
 	readonly pushes: string[] = [];
+	/** Refs push refuses, as origin does when somebody else got there first. */
+	readonly rejects = new Set<string>();
 
 	async clean(): Promise<boolean> {
 		return !this.dirty;
@@ -42,6 +44,9 @@ export class FakeGit implements Git {
 	}
 
 	async push(ref: string): Promise<void> {
+		if (this.rejects.has(ref)) {
+			throw new Error(`git push origin ${ref}: rejected`);
+		}
 		this.pushes.push(ref);
 	}
 }
