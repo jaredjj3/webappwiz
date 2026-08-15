@@ -43,6 +43,35 @@ and starts again from zero on the next page load.
 Measure elapsed time with `Clock` even so, because a wall clock steps when the
 machine syncs with NTP or the user changes it.
 
+## Pacing work
+
+`Debouncer` waits for a burst to end and runs once. `Throttler` runs
+immediately, then at most once per interval, so something keeps happening
+throughout.
+
+```ts
+import { Debouncer, Duration, SystemTimer, Throttler } from "@webappwiz/time";
+
+const debouncer = new Debouncer(new SystemTimer(), Duration.ms(300));
+input.addEventListener("input", () => debouncer.call(() => search(input.value)));
+```
+
+[@webappwiz/task](../task) is the same idea one level up: somewhere to say
+"this needs doing again" without saying when. Its queues take a `Debouncer` or a
+`Throttler` to decide how a burst of triggers becomes runs.
+
+## Deadlines
+
+```ts
+import { Duration, timeouts } from "@webappwiz/time";
+
+const inTime = await timeouts.race(timer, work, Duration.secs(5));
+```
+
+The work is not cancelled, because a promise cannot be: this decides how long
+the caller waits. For the same thing driven by an `AbortSignal` rather than a
+deadline, see [@webappwiz/abort](../abort).
+
 ## Stopwatch
 
 Elapsed time that can be paused, so the parts that should not count are left

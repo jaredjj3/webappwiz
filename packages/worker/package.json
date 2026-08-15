@@ -8,8 +8,9 @@
 		"./script": "./script.ts"
 	},
 	"dependencies": {
+		"@webappwiz/assert": "workspace:*",
 		"@webappwiz/disposable": "workspace:*",
-		"@webappwiz/time": "workspace:*",
-		"@webappwiz/util": "workspace:*"
+		"@webappwiz/id": "workspace:*",
+		"@webappwiz/time": "workspace:*"
 	}
 }

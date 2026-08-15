@@ -8,8 +8,7 @@
 	},
 	"dependencies": {
 		"@webappwiz/disposable": "workspace:*",
-		"@webappwiz/events": "workspace:*",
-		"@webappwiz/util": "workspace:*"
+		"@webappwiz/events": "workspace:*"
 	},
 	"peerDependencies": {
 		"react": "^19"

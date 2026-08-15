@@ -1,4 +1,4 @@
-import { assert } from "@webappwiz/util";
+import { assert } from "@webappwiz/assert";
 import type { Worker } from "./worker";
 import type { WorkerFactory } from "./worker-factory";
 

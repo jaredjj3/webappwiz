@@ -1,4 +1,5 @@
-import type { Duration, Timer } from "@webappwiz/time";
+import type { Duration } from "./duration";
+import type { Timer } from "./timer/timer";
 
 /** Putting a deadline on work that does not take one. */
 export class timeouts {

@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { Duration } from "@webappwiz/time";
+import { Debouncer, Duration } from "@webappwiz/time";
 import { FakeTimer } from "@webappwiz/time/testing";
-import { Debouncer } from "@webappwiz/util";
 
 import { DebouncedTaskQueue } from "./index";
 

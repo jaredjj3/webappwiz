@@ -25,7 +25,7 @@ import {
 	TimeoutWorker,
 	WebWorkerFactory,
 } from "@webappwiz/worker";
-import { UuidProvider } from "@webappwiz/util";
+import { UuidProvider } from "@webappwiz/id";
 
 const factory = new WebWorkerFactory<Job, Result>(
 	TranscodeWorker,

@@ -1,6 +1,6 @@
 import type { Disposable } from "@webappwiz/disposable";
 import { Dispatcher } from "@webappwiz/events";
-import type { Throttler } from "@webappwiz/util";
+import type { Throttler } from "@webappwiz/time";
 import type {
 	Task,
 	TaskQueue,

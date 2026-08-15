@@ -22,13 +22,12 @@ becomes runs of the task, so the code doing the triggering never has to know:
   interval, so a long burst keeps producing results rather than going quiet
   until it ends.
 
-The last two take the `Debouncer` and `Throttler` of `@webappwiz/util`, which
+The last two take the `Debouncer` and `Throttler` of `@webappwiz/time`, which
 are the same choice one level down, over a plain function.
 
 ```ts
 import { DebouncedTaskQueue } from "@webappwiz/task";
-import { Debouncer } from "@webappwiz/util";
-import { Duration, SystemTimer } from "@webappwiz/time";
+import { Debouncer, Duration, SystemTimer } from "@webappwiz/time";
 
 const queue = new DebouncedTaskQueue(
 	new Debouncer(new SystemTimer(), Duration.ms(300)),

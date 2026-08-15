@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { Duration } from "@webappwiz/time";
+import { Duration, Throttler } from "@webappwiz/time";
 import { FakeTimer } from "@webappwiz/time/testing";
-import { Throttler } from "@webappwiz/util";
 
 import { ThrottledTaskQueue } from "./index";
 

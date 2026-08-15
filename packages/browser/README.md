@@ -94,6 +94,18 @@ download(url, "export.csv");
 URL.revokeObjectURL(url);
 ```
 
+## Class names
+
+```ts
+import { cx } from "@webappwiz/browser";
+
+cx("btn", isPrimary && "btn-primary", { "btn-lg": size === "lg" });
+```
+
+Strings, numbers, nested arrays and objects with truthy keys. Everything falsy
+is dropped, so a `count && "badge"` guard contributes nothing rather than the
+class name `0`.
+
 ## Testing
 
 `@webappwiz/browser/dom` puts happy-dom on `globalThis`, for tests of anything

@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { Duration } from "@webappwiz/time";
-import { FakeTimer } from "@webappwiz/time/testing";
 
-import { Debouncer } from "./index";
+import { Debouncer, Duration } from "./index";
+import { FakeTimer } from "./testing";
 
 describe("Debouncer", () => {
 	let timer: FakeTimer;

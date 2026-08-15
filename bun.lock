@@ -14,6 +14,10 @@
         "typescript": "^7",
       },
     },
+    "packages/abort": {
+      "name": "@webappwiz/abort",
+      "version": "0.0.0",
+    },
     "packages/arbor": {
       "name": "@webappwiz/arbor",
       "version": "0.0.0",
@@ -43,6 +47,10 @@
         "@types/react-dom": "^19.2.4",
         "@webappwiz/browser": "workspace:*",
       },
+    },
+    "packages/assert": {
+      "name": "@webappwiz/assert",
+      "version": "0.0.0",
     },
     "packages/aws": {
       "name": "@webappwiz/aws",
@@ -118,6 +126,10 @@
         "@webappwiz/time": "workspace:*",
       },
     },
+    "packages/id": {
+      "name": "@webappwiz/id",
+      "version": "0.0.0",
+    },
     "packages/log": {
       "name": "@webappwiz/log",
       "version": "0.0.0",
@@ -132,7 +144,6 @@
       "dependencies": {
         "@webappwiz/disposable": "workspace:*",
         "@webappwiz/events": "workspace:*",
-        "@webappwiz/util": "workspace:*",
       },
       "devDependencies": {
         "@testing-library/react": "^16.3.1",
@@ -206,7 +217,6 @@
         "@webappwiz/disposable": "workspace:*",
         "@webappwiz/events": "workspace:*",
         "@webappwiz/time": "workspace:*",
-        "@webappwiz/util": "workspace:*",
       },
     },
     "packages/time": {
@@ -214,15 +224,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/disposable": "workspace:*",
-      },
-    },
-    "packages/util": {
-      "name": "@webappwiz/util",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/disposable": "workspace:*",
-        "@webappwiz/events": "workspace:*",
-        "@webappwiz/time": "workspace:*",
       },
     },
     "packages/wiz": {
@@ -243,9 +244,10 @@
       "name": "@webappwiz/worker",
       "version": "0.0.0",
       "dependencies": {
+        "@webappwiz/assert": "workspace:*",
         "@webappwiz/disposable": "workspace:*",
+        "@webappwiz/id": "workspace:*",
         "@webappwiz/time": "workspace:*",
-        "@webappwiz/util": "workspace:*",
       },
     },
   },
@@ -372,7 +374,11 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
 
+    "@webappwiz/abort": ["@webappwiz/abort@workspace:packages/abort"],
+
     "@webappwiz/arbor": ["@webappwiz/arbor@workspace:packages/arbor"],
+
+    "@webappwiz/assert": ["@webappwiz/assert@workspace:packages/assert"],
 
     "@webappwiz/aws": ["@webappwiz/aws@workspace:packages/aws"],
 
@@ -389,6 +395,8 @@
     "@webappwiz/geometry": ["@webappwiz/geometry@workspace:packages/geometry"],
 
     "@webappwiz/http": ["@webappwiz/http@workspace:packages/http"],
+
+    "@webappwiz/id": ["@webappwiz/id@workspace:packages/id"],
 
     "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
 
@@ -411,8 +419,6 @@
     "@webappwiz/task": ["@webappwiz/task@workspace:packages/task"],
 
     "@webappwiz/time": ["@webappwiz/time@workspace:packages/time"],
-
-    "@webappwiz/util": ["@webappwiz/util@workspace:packages/util"],
 
     "@webappwiz/worker": ["@webappwiz/worker@workspace:packages/worker"],
 

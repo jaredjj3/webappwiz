@@ -1,5 +1,6 @@
 import type { Disposable } from "@webappwiz/disposable";
-import type { Duration, Timer } from "@webappwiz/time";
+import type { Duration } from "./duration";
+import type { Timer } from "./timer/timer";
 
 /**
  * Runs the last function it was given once the calls stop, waiting `delay`

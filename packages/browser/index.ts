@@ -9,6 +9,7 @@ export type {
 	BackgroundObserverEventMap,
 } from "./background-observer/background-observer";
 export { WindowBackgroundObserver } from "./background-observer/window-background-observer";
+export { type ClassValue, cx } from "./cx";
 export {
 	type BrowserName,
 	Device,
