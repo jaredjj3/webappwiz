@@ -1,5 +1,5 @@
+import "../../test-setup";
 import { beforeEach, describe, expect, it } from "bun:test";
-import "./dom";
 
 import { Scroll } from "./index";
 

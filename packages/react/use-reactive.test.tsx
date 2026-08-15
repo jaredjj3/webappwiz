@@ -1,8 +1,8 @@
+import "../../test-setup";
 import { beforeEach, describe, expect, it } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
 import { Dispatcher } from "@webappwiz/events";
 import { StrictMode } from "react";
-import "@webappwiz/browser/dom";
 import { useReactive } from "./use-reactive";
 
 type CounterEvents = { change: undefined };

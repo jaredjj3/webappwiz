@@ -1,5 +1,5 @@
+import "../../../test-setup";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import "../dom";
 
 import { WindowBackgroundObserver } from "../index";
 

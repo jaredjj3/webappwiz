@@ -1,7 +1,7 @@
+import "../../test-setup";
 import { describe, expect, it } from "bun:test";
 import { renderHook } from "@testing-library/react";
 import { StrictMode } from "react";
-import "@webappwiz/browser/dom";
 import { useResource } from "./use-resource";
 
 class Resource {

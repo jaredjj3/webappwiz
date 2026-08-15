@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import "./dom";
+import "./test-setup";
 
 describe("dom", () => {
 	it("gives the DOM to whoever imports it", () => {

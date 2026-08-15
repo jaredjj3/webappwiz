@@ -1,6 +1,6 @@
+import "../../../test-setup";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { FakeTimer } from "@webappwiz/time/testing";
-import "../dom";
 
 import { WindowUserActivationObserver } from "../index";
 

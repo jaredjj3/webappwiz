@@ -6,6 +6,7 @@
       "name": "webappwiz",
       "devDependencies": {
         "@biomejs/biome": "^2.5.7",
+        "@happy-dom/global-registrator": "^20.3.1",
         "@types/bun": "latest",
         "@webappwiz/arbor": "workspace:*",
         "@webappwiz/rules": "workspace:*",
@@ -70,9 +71,6 @@
         "@webappwiz/disposable": "workspace:*",
         "@webappwiz/events": "workspace:*",
         "@webappwiz/time": "workspace:*",
-      },
-      "devDependencies": {
-        "@happy-dom/global-registrator": "^20.3.1",
       },
     },
     "packages/cli": {
