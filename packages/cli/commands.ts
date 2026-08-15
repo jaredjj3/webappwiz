@@ -1,5 +1,5 @@
 import { cli, type Deps } from "@webappwiz/cmd";
-import { AGENTS, SIGNOFF_RULES, WEBAPPWIZ_RULES } from "@webappwiz/rules";
+import { AGENTS } from "@webappwiz/rules";
 import type { Fs, Glob } from "@webappwiz/sys";
 import { t } from "@webappwiz/t";
 import type { Clock } from "@webappwiz/time";
@@ -8,6 +8,7 @@ import { JudgeCommands } from "./judge";
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
 import { version } from "./package.json";
+import { JUDGE_RULES, SIGNOFF_RULES } from "./rules";
 import { Signoff } from "./signoff";
 import { Skills } from "./skills";
 import { update } from "./update";
@@ -43,7 +44,7 @@ webappwiz
 // rule set is shared, with `wiz fix` enforcing the rules that carry a check
 // and `judge` the ones only an agent can decide, so neither owns it.
 const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
-	new JudgeCommands(WEBAPPWIZ_RULES, {
+	new JudgeCommands(JUDGE_RULES, {
 		signoffRules: SIGNOFF_RULES,
 		log,
 		fs,
@@ -117,7 +118,7 @@ webappwiz
 		description: "confirm before reading more than this many tokens",
 	})
 	.action((opts, { log, ps, clock }) =>
-		new Signoff(SIGNOFF_RULES, WEBAPPWIZ_RULES.agent, {
+		new Signoff(SIGNOFF_RULES, JUDGE_RULES.agent, {
 			log,
 			ps,
 			clock,

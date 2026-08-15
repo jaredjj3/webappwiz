@@ -6,11 +6,11 @@ spawning the agent, keeping a bounded number of calls in flight, parsing
 findings back out of whatever the agent wrapped them in, and choosing which
 files to send in the first place.
 
-It also owns webappwiz's own rules: a class and a markdown document each, named
-one by one in [`judge.ts`](./judge.ts) as `WEBAPPWIZ_RULES` and in
-[`signoff.ts`](./signoff.ts) as `SIGNOFF_RULES`, each beside the directory its
-rules live in. Nothing here reaches for them implicitly. A caller hands in a
-rule set, that list or its own, and reads violations back.
+It also owns webappwiz's own rules: a class and a markdown document each, all of
+them in [`rules/`](./rules) and exported from `@webappwiz/rules/rules`. Nothing
+here assembles them into a set. A caller names the rules it wants, as
+[`@webappwiz/cli`](../cli/rules.ts) does in `JUDGE_RULES` and `SIGNOFF_RULES`,
+hands the list in, and reads violations back.
 
 ## A rule
 

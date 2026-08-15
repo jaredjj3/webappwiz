@@ -14,9 +14,10 @@ bunx @webappwiz/cli signoff            # does this change need a person?
 
 ## rules
 
-Every rule webappwiz judges itself by lives in
-[`@webappwiz/rules`](../rules/judge.ts) as a constant, one class each. There is
-no config file and no preset: a rule is in that list or it does not exist.
+Every rule webappwiz judges itself by is named in [`rules.ts`](./rules.ts), as
+`JUDGE_RULES` and `SIGNOFF_RULES`, off the classes
+[`@webappwiz/rules`](../rules/rules) ships. There is no config file and no
+preset: a rule is in one of those lists or it does not exist.
 
 ```
 ID                  RULE                       SET      LEVEL    FILES

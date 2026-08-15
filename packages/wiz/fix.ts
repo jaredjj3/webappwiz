@@ -1,5 +1,6 @@
+import { JUDGE_RULES } from "@webappwiz/cli/rules";
 import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
-import { Check, WEBAPPWIZ_RULES } from "@webappwiz/rules";
+import { Check } from "@webappwiz/rules";
 import { type Fs, type Glob, NodePs, type Ps } from "@webappwiz/sys";
 
 export interface FixOptions {
@@ -19,7 +20,7 @@ export async function fix(opts: FixOptions): Promise<void> {
 	const ps = opts.ps ?? new NodePs();
 	const checks =
 		opts.checks ??
-		new Check(WEBAPPWIZ_RULES.rules, {
+		new Check(JUDGE_RULES.rules, {
 			log,
 			ps,
 			fs: opts.fs,

@@ -8,7 +8,8 @@
 	},
 	"exports": {
 		".": "./index.ts",
-		"./commands": "./commands.ts"
+		"./commands": "./commands.ts",
+		"./rules": "./rules.ts"
 	},
 	"dependencies": {
 		"@webappwiz/cmd": "workspace:*",
