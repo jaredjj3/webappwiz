@@ -3,7 +3,7 @@ import { MemoryLogger } from "@webappwiz/log";
 import { NodeGlob } from "@webappwiz/system";
 import { FakeFs, FakePs } from "@webappwiz/system/testing";
 import { FakeClock } from "@webappwiz/time/testing";
-import { webappwiz } from "./commands";
+import { webappwiz } from "./webappwiz";
 
 describe("webappwiz", () => {
 	it("runs a command against the dependencies it is given", async () => {

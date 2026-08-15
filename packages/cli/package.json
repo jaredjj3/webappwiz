@@ -8,7 +8,7 @@
 	},
 	"exports": {
 		".": "./index.ts",
-		"./commands": "./commands.ts",
+		"./webappwiz": "./webappwiz.ts",
 		"./rules": "./rules.ts"
 	},
 	"dependencies": {

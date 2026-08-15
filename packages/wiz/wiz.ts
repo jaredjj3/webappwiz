@@ -1,5 +1,5 @@
-import type { CommandDeps } from "@webappwiz/cli/commands";
-import { webappwiz } from "@webappwiz/cli/commands";
+import type { CommandDeps } from "@webappwiz/cli/webappwiz";
+import { webappwiz } from "@webappwiz/cli/webappwiz";
 import { cli } from "@webappwiz/cmd";
 import { t } from "@webappwiz/t";
 import { fix } from "./fix";
