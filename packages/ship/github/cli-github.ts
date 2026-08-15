@@ -1,5 +1,5 @@
 import { NodePs, type Ps } from "@webappwiz/system";
-import type { Problem } from "../plan";
+import type { Problem } from "../problem";
 import type { Github } from "./github";
 
 /** GitHub releases, via the `gh` CLI. */

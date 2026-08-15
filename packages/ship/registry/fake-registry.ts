@@ -1,4 +1,4 @@
-import type { Problem } from "../plan";
+import type { Problem } from "../problem";
 import type { Registry } from "./registry";
 
 /** The problem a `FakeRegistry` reports when `loggedIn` is off. */

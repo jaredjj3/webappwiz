@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
-import { FakeShip, fakePlan } from "@webappwiz/ship/testing";
+import type { Bump, Ship } from "@webappwiz/ship";
+import { FakeShip } from "@webappwiz/ship/testing";
 import { FakePs } from "@webappwiz/system/testing";
 import { ship } from "./ship";
 
@@ -11,39 +12,43 @@ describe("ship", () => {
 
 	let log: MemoryLogger;
 	let ps: FakePs;
+	let shipped: Array<[Ship, Bump]>;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
+		shipped = [];
 	});
 
 	const opts = (release: FakeShip, bump: string) => ({
 		bump,
 		release,
+		runner: {
+			ship: async (declared: Ship, type: Bump) => {
+				shipped.push([declared, type]);
+			},
+		},
 		checks: { run: async () => true },
 		log,
 		ps,
 	});
 
 	it("refuses a bump nobody has heard of", async () => {
-		const release = new FakeShip(fakePlan());
+		const release = new FakeShip();
 
 		await expect(ship(opts(release, "sideways"))).rejects.toThrow(
 			'unknown version bump "sideways"',
 		);
 		expect(ps.getCalls()).toEqual([]);
-		expect(release.plans).toBe(0);
+		expect(shipped).toEqual([]);
 	});
 
-	it("gates before it plans, and hands the runner the release", async () => {
-		const dirty = { kind: "dirty", message: "uncommitted changes" };
-		const release = new FakeShip(fakePlan([dirty]));
+	it("gates before it hands the runner the release", async () => {
+		const release = new FakeShip(["@scope/one"]);
 
-		await expect(ship(opts(release, "patch"))).rejects.toThrow(
-			"not ready to release",
-		);
+		await ship(opts(release, "patch"));
+
 		expect(ps.getCalls()).toEqual(GATE);
-		expect(release.plans).toBe(1);
-		expect(release.runs).toEqual([]);
+		expect(shipped).toEqual([[release, "patch"]]);
 	});
 });

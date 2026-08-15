@@ -1,6 +1,6 @@
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import type { Check } from "@webappwiz/rules";
-import { isBump, Runner, Ship } from "@webappwiz/ship";
+import { isBump, Runner, type Ship, ships } from "@webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "@webappwiz/system";
 import { fix } from "./fix";
 
@@ -9,6 +9,8 @@ export interface ShipOptions {
 	bump: string;
 	/** The release to run; the workspace's own lockstep release by default. */
 	release?: Ship;
+	/** What runs the release; the terminal runner by default. */
+	runner?: Pick<Runner, "ship">;
 	/** The rules the gate runs; the workspace's own by default. */
 	checks?: Pick<Check, "run">;
 	log?: Logger;
@@ -29,7 +31,7 @@ export async function ship(opts: ShipOptions): Promise<void> {
 	// gate there is. Run it before anything is stamped or pushed.
 	await fix({ check: true, checks: opts.checks, log, ps });
 
-	const release =
-		opts.release ?? (await Ship.workspace({ log, fs: opts.fs, ps }));
-	await new Runner({ log, ps }).ship(release, opts.bump);
+	const release = opts.release ?? (await ships.workspace({ fs: opts.fs, ps }));
+	const runner = opts.runner ?? new Runner({ log, fs: opts.fs, ps });
+	await runner.ship(release, opts.bump);
 }

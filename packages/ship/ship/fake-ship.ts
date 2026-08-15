@@ -1,42 +1,24 @@
-import type { Plan } from "../plan";
+import type { Problem } from "../problem";
+import type { Release } from "../release/release";
 import type { Ship } from "./ship";
 
-/** The plan a `FakeShip` answers with when it was given none. */
-export function fakePlan(problems: Plan["problems"] = []): Plan {
-	return {
-		bump: "patch",
-		current: "1.2.3",
-		next: "1.2.4",
-		resuming: false,
-		packages: [],
-		problems,
-	};
-}
-
 /**
- * Answers with each plan it was built with in turn, so a re-plan can differ
- * from the first, and repeats the last one after that. `plans` counts how
- * many were asked for and `runs` holds the ones that were carried out.
+ * A step publishing the packages it was named for and reporting the problems
+ * it was handed. `runs` holds every release it was run in.
  */
 export class FakeShip implements Ship {
-	plans = 0;
-	readonly runs: Plan[] = [];
+	readonly runs: Release[] = [];
 
-	private readonly answers: Plan[];
+	constructor(
+		readonly packages: readonly string[] = [],
+		private readonly reported: Problem[] = [],
+	) {}
 
-	constructor(...answers: Plan[]) {
-		this.answers = answers;
+	async problems(): Promise<Problem[]> {
+		return this.reported;
 	}
 
-	async plan(): Promise<Plan> {
-		return (
-			this.answers[this.plans++] ??
-			this.answers[this.answers.length - 1] ??
-			fakePlan()
-		);
-	}
-
-	async run(approved: Plan): Promise<void> {
-		this.runs.push(approved);
+	async run(release: Release): Promise<void> {
+		this.runs.push(release);
 	}
 }

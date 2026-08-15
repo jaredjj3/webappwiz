@@ -1,7 +1,6 @@
 import { dirname } from "node:path";
 import { type Fs, NodeFs } from "@webappwiz/system";
-import type { Package } from "../plan";
-import type { Workspace } from "./workspace";
+import type { Package, Workspace } from "./workspace";
 
 interface Manifest {
 	name?: string;
@@ -74,7 +73,6 @@ export class ManifestWorkspace implements Workspace {
 				name: manifest.name,
 				dir,
 				private: manifest.private === true,
-				published: false,
 			});
 		}
 		return packages.sort((left, right) => left.name.localeCompare(right.name));

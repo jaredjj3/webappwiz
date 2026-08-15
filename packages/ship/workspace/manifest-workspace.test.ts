@@ -32,7 +32,7 @@ describe("workspace", () => {
 
 		expect(workspace.root).toBe("/solo");
 		expect(await workspace.packages()).toEqual([
-			{ name: "@scope/solo", dir: "/solo", private: false, published: false },
+			{ name: "@scope/solo", dir: "/solo", private: false },
 		]);
 	});
 
@@ -58,13 +58,11 @@ describe("workspace", () => {
 				name: "@scope/one",
 				dir: "/repo/packages/one",
 				private: false,
-				published: false,
 			},
 			{
 				name: "@scope/two",
 				dir: "/repo/packages/two",
 				private: true,
-				published: false,
 			},
 		]);
 	});

@@ -1,4 +1,11 @@
-import type { Package } from "../plan";
+/** One workspace package, as a release sees it. */
+export interface Package {
+	name: string;
+	/** The directory holding its package.json. */
+	dir: string;
+	/** Private packages still get the version stamp; they just never go out. */
+	private: boolean;
+}
 
 /**
  * The packages a release stamps and publishes. One version covers the whole

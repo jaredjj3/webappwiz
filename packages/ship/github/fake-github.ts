@@ -1,4 +1,4 @@
-import type { Problem } from "../plan";
+import type { Problem } from "../problem";
 import type { Github } from "./github";
 
 /** The problem a `FakeGithub` reports when `loggedIn` is off. */

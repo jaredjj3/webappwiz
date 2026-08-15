@@ -1,24 +1,20 @@
-import type { Package } from "../plan";
-import type { Workspace } from "./workspace";
+import type { Package, Workspace } from "./workspace";
 
 const PACKAGES: Package[] = [
 	{
 		name: "@scope/one",
 		dir: "/repo/packages/one",
 		private: false,
-		published: false,
 	},
 	{
 		name: "@scope/two",
 		dir: "/repo/packages/two",
 		private: false,
-		published: false,
 	},
 	{
 		name: "@scope/hid",
 		dir: "/repo/packages/hid",
 		private: true,
-		published: false,
 	},
 ];
 

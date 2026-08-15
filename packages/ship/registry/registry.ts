@@ -1,4 +1,4 @@
-import type { Problem } from "../plan";
+import type { Problem } from "../problem";
 
 /** The package registry, as a release touches it. */
 export interface Registry {

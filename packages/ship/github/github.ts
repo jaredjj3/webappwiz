@@ -1,4 +1,4 @@
-import type { Problem } from "../plan";
+import type { Problem } from "../problem";
 
 /** The GitHub releases a release publishes. */
 export interface Github {
