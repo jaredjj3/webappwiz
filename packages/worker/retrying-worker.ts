@@ -1,6 +1,6 @@
 import { assert } from "@webappwiz/assert";
-import type { Worker } from "./worker";
-import type { WorkerFactory } from "./worker-factory";
+import type { Runner } from "./runner";
+import type { RunnerFactory } from "./runner-factory";
 
 export interface RetryOptions {
 	/** How many times to build a fresh worker and try again. Defaults to 1. */
@@ -8,7 +8,7 @@ export interface RetryOptions {
 }
 
 /**
- * A `Worker` that builds its own from a factory, and on failure throws it away
+ * A `Runner` that builds its own from a factory, and on failure throws it away
  * and tries again with a new one. A worker that has died stays dead, so
  * replacing it is the only recovery there is.
  *
@@ -19,14 +19,14 @@ export interface RetryOptions {
  * The worker is built on the first `send`, not up front, so nothing starts
  * until there is work for it.
  */
-export class RetryingWorker<Input, Output> implements Worker<Input, Output> {
+export class RetryingWorker<Input, Output> implements Runner<Input, Output> {
 	private readonly retries: number;
-	private worker: Worker<Input, Output> | null = null;
-	private creating: Promise<Worker<Input, Output>> | null = null;
+	private worker: Runner<Input, Output> | null = null;
+	private creating: Promise<Runner<Input, Output>> | null = null;
 	private isDisposed = false;
 
 	constructor(
-		private readonly factory: WorkerFactory<Input, Output>,
+		private readonly factory: RunnerFactory<Input, Output>,
 		opts: RetryOptions = {},
 	) {
 		this.retries = opts.retries ?? 1;
@@ -61,7 +61,7 @@ export class RetryingWorker<Input, Output> implements Worker<Input, Output> {
 		this.worker = null;
 	}
 
-	private create(): Promise<Worker<Input, Output>> {
+	private create(): Promise<Runner<Input, Output>> {
 		// Held so concurrent sends share one build rather than starting a worker
 		// each and leaking all but the last.
 		this.creating ??= this.factory.create();

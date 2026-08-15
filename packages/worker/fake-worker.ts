@@ -1,10 +1,10 @@
-import type { Worker } from "./worker";
+import type { Runner } from "./runner";
 
 /**
- * A `Worker` that answers with whatever it was built with, without leaving the
+ * A `Runner` that answers with whatever it was built with, without leaving the
  * thread. It records what it was sent, so a test can say what went out.
  */
-export class FakeWorker<Input, Output> implements Worker<Input, Output> {
+export class FakeWorker<Input, Output> implements Runner<Input, Output> {
 	readonly sent: Input[] = [];
 	disposed = false;
 

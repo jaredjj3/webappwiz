@@ -5,18 +5,18 @@ parts (a worker that dies, one that never replies) handled by wrappers rather
 than by the code that wanted the work done.
 
 ```ts
-import { Worker } from "@webappwiz/worker";
+import { Runner } from "@webappwiz/worker";
 
 const result = await worker.send(job);
 ```
 
-`Worker<Input, Output>` says what goes in and what comes back. Where it runs is
+`Runner<Input, Output>` says what goes in and what comes back. Where it runs is
 the implementation's business, so a test hands over a `FakeWorker` and never
 starts a thread.
 
 ## Stacking
 
-Each wrapper is a `Worker` around a `Worker`, so they compose in whatever order
+Each wrapper is a `Runner` around a `Runner`, so they compose in whatever order
 suits.
 
 ```ts
@@ -64,5 +64,5 @@ a Web Lock for as long as it lives, so the page is granted that lock the moment
 the worker ends however it ended, which is the only notice you get of a worker
 that dies without an error event.
 
-That lock is why `WebWorker` is browser-only, even though `Worker`,
+That lock is why `WebWorker` is browser-only, even though `Runner`,
 `TimeoutWorker`, `RetryingWorker` and `FakeWorker` are not.

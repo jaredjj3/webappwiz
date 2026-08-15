@@ -1,8 +1,8 @@
 import type { Duration, Timer } from "@webappwiz/time";
-import type { Worker } from "./worker";
+import type { Runner } from "./runner";
 
 /**
- * A `Worker` wrapping another, rejecting anything that takes longer than
+ * A `Runner` wrapping another, rejecting anything that takes longer than
  * `timeout`. The work carries on wherever it is running: this decides how long
  * the caller waits for it.
  *
@@ -10,9 +10,9 @@ import type { Worker } from "./worker";
  * const worker = new TimeoutWorker(inner, timer, Duration.secs(30));
  * ```
  */
-export class TimeoutWorker<Input, Output> implements Worker<Input, Output> {
+export class TimeoutWorker<Input, Output> implements Runner<Input, Output> {
 	constructor(
-		private readonly worker: Worker<Input, Output>,
+		private readonly worker: Runner<Input, Output>,
 		private readonly timer: Timer,
 		private readonly timeout: Duration,
 	) {}

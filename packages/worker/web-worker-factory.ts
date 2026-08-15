@@ -1,8 +1,8 @@
 import type { IdProvider } from "@webappwiz/id";
 import { Duration, type Timer } from "@webappwiz/time";
 import type { WorkerMessage } from "./protocol";
+import type { RunnerFactory } from "./runner-factory";
 import { WebWorker } from "./web-worker";
-import type { WorkerFactory } from "./worker-factory";
 
 export interface WebWorkerFactoryOptions {
 	/** How long to wait for a new worker to say it is ready. Defaults to 10 seconds. */
@@ -29,14 +29,14 @@ export interface WebWorkerFactoryOptions {
  * The worker module must call `workerScript` from `@webappwiz/worker/script`.
  */
 export class WebWorkerFactory<Input, Output>
-	implements WorkerFactory<Input, Output>
+	implements RunnerFactory<Input, Output>
 {
 	private readonly readyTimeout: Duration;
 	private readonly ackTimeout: Duration;
 
-	// judge-ignore objects-over-callbacks: `construct` is a Worker constructor, which is exactly what a bundler's `?worker` import hands you; an interface around it would be a file that says `new`
+	// judge-ignore objects-over-callbacks: `construct` is a Runner constructor, which is exactly what a bundler's `?worker` import hands you; an interface around it would be a file that says `new`
 	constructor(
-		private readonly construct: new () => globalThis.Worker,
+		private readonly construct: new () => Worker,
 		private readonly ids: IdProvider,
 		private readonly timer: Timer,
 		opts: WebWorkerFactoryOptions = {},
@@ -65,7 +65,7 @@ export class WebWorkerFactory<Input, Output>
 	}
 
 	private whenReady(
-		worker: globalThis.Worker,
+		worker: Worker,
 		lockName: string,
 	): Promise<WebWorker<Input, Output>> {
 		return new Promise((resolve, reject) => {

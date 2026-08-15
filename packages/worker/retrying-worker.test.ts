@@ -3,17 +3,17 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import {
 	FakeWorker,
 	RetryingWorker,
-	type Worker,
-	type WorkerFactory,
+	type Runner,
+	type RunnerFactory,
 } from "./index";
 
 /** A factory whose first `failures` workers reject whatever they are sent. */
-class FlakyFactory implements WorkerFactory<string, string> {
+class FlakyFactory implements RunnerFactory<string, string> {
 	created = 0;
 
 	constructor(private readonly failures: number) {}
 
-	create(): Promise<Worker<string, string>> {
+	create(): Promise<Runner<string, string>> {
 		this.created++;
 		const fails = this.created <= this.failures;
 		return Promise.resolve({

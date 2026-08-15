@@ -7,11 +7,11 @@ export {
 	RetryingWorker,
 	type RetryOptions,
 } from "./retrying-worker";
+export type { Runner } from "./runner";
+export type { RunnerFactory } from "./runner-factory";
 export { TimeoutWorker } from "./timeout-worker";
 export { WebWorker } from "./web-worker";
 export {
 	WebWorkerFactory,
 	type WebWorkerFactoryOptions,
 } from "./web-worker-factory";
-export type { Worker } from "./worker";
-export type { WorkerFactory } from "./worker-factory";

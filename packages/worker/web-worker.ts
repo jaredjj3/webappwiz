@@ -3,18 +3,18 @@ import { Disposer } from "@webappwiz/disposable";
 import type { IdProvider } from "@webappwiz/id";
 import type { Duration, Timer } from "@webappwiz/time";
 import type { WorkerMessage } from "./protocol";
-import type { Worker } from "./worker";
+import type { Runner } from "./runner";
 
 /**
- * A `Worker` over a real Web Worker running `workerScript`. Build one with
+ * A `Runner` over a real Web Worker running `workerScript`. Build one with
  * `WebWorkerFactory` rather than directly: the worker has to be handshaken
  * before it can be used.
  *
  * It needs the Web Locks API, which browsers have and other runtimes largely
- * do not, so this is the browser implementation of `Worker` while the interface
+ * do not, so this is the browser implementation of `Runner` while the interface
  * and the decorators around it are not.
  */
-export class WebWorker<Input, Output> implements Worker<Input, Output> {
+export class WebWorker<Input, Output> implements Runner<Input, Output> {
 	private readonly pending = new Map<
 		string,
 		{ reject: (reason: Error) => void; disposer: Disposer }
@@ -22,7 +22,7 @@ export class WebWorker<Input, Output> implements Worker<Input, Output> {
 	private alive = true;
 
 	constructor(
-		private readonly worker: globalThis.Worker,
+		private readonly worker: Worker,
 		private readonly ids: IdProvider,
 		private readonly timer: Timer,
 		private readonly ackTimeout: Duration,
