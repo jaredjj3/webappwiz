@@ -1,37 +1,56 @@
 import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
+import { type Fs, NodePs, type Ps } from "@webappwiz/system";
+import { CliGit } from "../git/cli-git";
 import type { Git } from "../git/git";
 import type { Github } from "../github/github";
 import type { Package, Plan, Problem } from "../plan";
 import type { Registry } from "../registry/registry";
 import { type Bump, bump } from "../version";
+import { ManifestWorkspace } from "../workspace/manifest-workspace";
 import type { Workspace } from "../workspace/workspace";
-import type { Ship } from "./ship";
+import type { Ship, Target } from "./ship";
 
-/** Where a `LockstepShip` reports progress; the console by default. */
+/** What a `LockstepShip` releases through; found from the working directory by default. */
 export interface LockstepShipOptions {
+	/** Publishes release notes after the tag. Omitted, the release has no GitHub step. */
+	github?: Github;
+	/** The packages the release stamps; the manifest workspace here by default. */
+	workspace?: Workspace;
+	/** The repository the release commits, tags and pushes; the workspace root's by default. */
+	git?: Git;
 	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
 }
 
-/** Releases the whole workspace at one version, in lockstep. */
+/**
+ * Releases every declared target together, at one version: stamp, commit,
+ * publish each target through its registry, tag, push, and write the GitHub
+ * release notes when a step for them was declared. Planning cross-checks the
+ * declared targets against the workspace, so a declaration that drifted from
+ * the manifest fails before anything moves.
+ */
 export class LockstepShip implements Ship {
 	private readonly log: Logger;
+	private workspace?: Workspace;
+	private git?: Git;
 
 	constructor(
-		private readonly workspace: Workspace,
-		private readonly git: Git,
-		private readonly registry: Registry,
-		private readonly github: Github,
-		opts: LockstepShipOptions = {},
+		private readonly targets: Target[],
+		private readonly opts: LockstepShipOptions = {},
 	) {
 		this.log = opts.log ?? new ConsoleLogger();
+		this.workspace = opts.workspace;
+		this.git = opts.git;
 	}
 
 	async plan(type: Bump): Promise<Plan> {
-		const current = await this.workspace.version();
-		const resuming = await this.unfinished(current);
+		const { workspace, git } = await this.collaborators();
+		const current = await workspace.version();
+		const resuming = await this.unfinished(git, current);
 		const next = resuming ? current : bump(current, type);
 		const packages = await this.withPublished(
-			await this.workspace.packages(),
+			await workspace.packages(),
 			resuming ? current : null,
 		);
 		return {
@@ -40,7 +59,7 @@ export class LockstepShip implements Ship {
 			next,
 			resuming,
 			packages,
-			problems: await this.problems(packages),
+			problems: await this.problems(git, packages),
 		};
 	}
 
@@ -65,29 +84,48 @@ export class LockstepShip implements Ship {
 			);
 		}
 
+		const { workspace, git } = await this.collaborators();
 		const { next } = fresh;
 		const tag = `v${next}`;
-		await this.workspace.setVersion(next);
-		await this.git.commitAll(`Release ${next}`);
+		await workspace.setVersion(next);
+		await git.commitAll(`Release ${next}`);
 
 		// Publish before tagging: a tag for a version the registry never got
 		// outlives the failure that caused it, and lies about what exists.
-		for (const pkg of fresh.packages.filter((pkg) => !pkg.private)) {
-			if (await this.registry.published(pkg.name, next)) {
+		const dirs = new Map(fresh.packages.map((pkg) => [pkg.name, pkg.dir]));
+		for (const target of this.targets) {
+			if (await target.registry.published(target.name, next)) {
 				this.log.info(
-					`${pkg.name}@${next} ${color.green("already published")}`,
+					`${target.name}@${next} ${color.green("already published")}`,
 				);
 				continue;
 			}
-			await this.registry.publish(pkg.dir);
-			this.log.info(`${pkg.name}@${next} ${color.green("published")}`);
+			const dir = dirs.get(target.name);
+			if (dir === undefined) {
+				// Unreachable while the roster problems above hold their gate.
+				throw new Error(`"${target.name}" has no workspace package`);
+			}
+			await target.registry.publish(dir);
+			this.log.info(`${target.name}@${next} ${color.green("published")}`);
 		}
 
-		await this.git.tag(tag);
-		await this.git.push(await this.git.branch());
-		await this.git.push(tag);
-		await this.github.release(tag);
+		await git.tag(tag);
+		await git.push(await git.branch());
+		await git.push(tag);
+		await this.opts.github?.release(tag);
 		this.log.info(color.green(`shipped ${next}`));
+	}
+
+	/** The workspace and repository released from, found once and kept. */
+	private async collaborators(): Promise<{ workspace: Workspace; git: Git }> {
+		if (this.workspace === undefined) {
+			const ps = this.opts.ps ?? new NodePs();
+			this.workspace = await ManifestWorkspace.at(ps.cwd(), {
+				fs: this.opts.fs,
+			});
+		}
+		this.git ??= new CliGit(this.workspace.root, { ps: this.opts.ps });
+		return { workspace: this.workspace, git: this.git };
 	}
 
 	/**
@@ -95,14 +133,14 @@ export class LockstepShip implements Ship {
 	 * HEAD without a tag is the signature: tagging is the first thing that
 	 * happens once every package is out.
 	 */
-	private async unfinished(version: string): Promise<boolean> {
-		if (await this.git.hasTag(`v${version}`)) {
+	private async unfinished(git: Git, version: string): Promise<boolean> {
+		if (await git.hasTag(`v${version}`)) {
 			return false;
 		}
 		// ponytail: a release that tagged but failed to push reads as finished,
 		// and the next one moves past it. Compare against origin's tags if that
 		// ever costs anyone a version.
-		return (await this.git.headSubject()) === `Release ${version}`;
+		return (await git.headSubject()) === `Release ${version}`;
 	}
 
 	private async withPublished(
@@ -111,57 +149,94 @@ export class LockstepShip implements Ship {
 	): Promise<Package[]> {
 		if (version === null) {
 			// Nobody has released this version yet, and `run` asks the registry
-			// again per package anyway, so there is nothing to learn by asking now.
+			// again per target anyway, so there is nothing to learn by asking now.
 			return packages;
 		}
+		const registries = new Map(
+			this.targets.map((target) => [target.name, target.registry]),
+		);
 		const answered: Package[] = [];
 		for (const pkg of packages) {
+			const registry = registries.get(pkg.name);
 			answered.push({
 				...pkg,
 				published:
-					!pkg.private && (await this.registry.published(pkg.name, version)),
+					registry !== undefined &&
+					(await registry.published(pkg.name, version)),
 			});
 		}
 		return answered;
 	}
 
-	private async problems(packages: Package[]): Promise<Problem[]> {
+	private async problems(git: Git, packages: Package[]): Promise<Problem[]> {
 		const problems: Problem[] = [];
-		if (!(await this.git.clean())) {
+		if (!(await git.clean())) {
 			problems.push({
 				kind: "dirty",
 				message: "the tree has uncommitted changes: commit them first",
 			});
 		}
-		const [branch, trunk] = [
-			await this.git.branch(),
-			await this.git.defaultBranch(),
-		];
+		const [branch, trunk] = [await git.branch(), await git.defaultBranch()];
 		if (branch !== trunk) {
 			problems.push({
 				kind: "branch",
 				message: `on "${branch}": releases go out from "${trunk}"`,
 			});
 		}
-		if (packages.every((pkg) => pkg.private)) {
+		if (this.targets.length === 0) {
 			problems.push({
 				kind: "empty",
-				message: "every package is private: there is nothing to publish",
+				message: "no targets are declared: there is nothing to publish",
 			});
 		}
-		if (!(await this.registry.authed())) {
-			problems.push({
-				kind: "npm-auth",
-				message: "not logged in to npm",
-				remedy: ["npm", "login"],
-			});
+		problems.push(...this.roster(packages));
+		problems.push(...(await this.blocked()));
+		return problems;
+	}
+
+	/** Where the declared targets and the workspace's packages disagree. */
+	private roster(packages: Package[]): Problem[] {
+		const problems: Problem[] = [];
+		const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
+		const declared = new Set(this.targets.map((target) => target.name));
+		for (const target of this.targets) {
+			const pkg = byName.get(target.name);
+			if (pkg === undefined || pkg.private) {
+				problems.push({
+					kind: "unknown",
+					message: `"${target.name}" is declared but the workspace has no public package by that name`,
+				});
+			}
 		}
-		if (!(await this.github.authed())) {
-			problems.push({
-				kind: "gh-auth",
-				message: "not logged in to GitHub",
-				remedy: ["gh", "auth", "login"],
-			});
+		for (const pkg of packages) {
+			if (!pkg.private && !declared.has(pkg.name)) {
+				problems.push({
+					kind: "undeclared",
+					message: `"${pkg.name}" is public but not declared: declare it or mark it private`,
+				});
+			}
+		}
+		return problems;
+	}
+
+	/** Everything the registries and GitHub report, each problem said once. */
+	private async blocked(): Promise<Problem[]> {
+		const sources: Pick<Registry, "problems">[] = [
+			...new Set(this.targets.map((target) => target.registry)),
+		];
+		if (this.opts.github !== undefined) {
+			sources.push(this.opts.github);
+		}
+		const problems: Problem[] = [];
+		const seen = new Set<string>();
+		for (const source of sources) {
+			for (const problem of await source.problems()) {
+				const key = `${problem.kind}: ${problem.message}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					problems.push(problem);
+				}
+			}
 		}
 		return problems;
 	}

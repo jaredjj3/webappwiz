@@ -1,7 +1,12 @@
+import type { Problem } from "../plan";
+
 /** The GitHub releases a release publishes. */
 export interface Github {
-	/** Whether there are credentials. A token counts, so a server needs no login. */
-	authed(): Promise<boolean>;
+	/**
+	 * What blocks releasing here, each problem carrying its remedy when one
+	 * exists. Empty means ready.
+	 */
+	problems(): Promise<Problem[]>;
 	/** Publishes release notes for `tag`, or leaves the existing ones alone. */
 	release(tag: string): Promise<void>;
 }

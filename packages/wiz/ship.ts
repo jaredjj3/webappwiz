@@ -54,20 +54,23 @@ export async function ship(opts: ShipOptions): Promise<void> {
 	await release.run(plan);
 }
 
-/** The real thing: every package in this workspace, released in lockstep. */
+/** The real thing: every public package in this workspace, declared onto npm. */
 async function lockstepRelease(
 	log: Logger,
 	ps: Ps,
 	{ fs }: { fs?: Fs },
 ): Promise<Ship> {
 	const workspace = await ManifestWorkspace.at(ps.cwd(), { fs });
-	return new LockstepShip(
+	const registry = new NpmRegistry({ ps });
+	const targets = (await workspace.packages())
+		.filter((pkg) => !pkg.private)
+		.map((pkg) => ({ name: pkg.name, registry }));
+	return new LockstepShip(targets, {
 		workspace,
-		new CliGit(workspace.root, { ps }),
-		new NpmRegistry({ ps }),
-		new CliGithub({ ps }),
-		{ log },
-	);
+		git: new CliGit(workspace.root, { ps }),
+		github: new CliGithub({ ps }),
+		log,
+	});
 }
 
 /**

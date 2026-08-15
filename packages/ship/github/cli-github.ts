@@ -1,4 +1,5 @@
 import { NodePs, type Ps } from "@webappwiz/system";
+import type { Problem } from "../plan";
 import type { Github } from "./github";
 
 /** GitHub releases, via the `gh` CLI. */
@@ -14,10 +15,19 @@ export class CliGithub implements Github {
 		this.ps = opts.ps ?? new NodePs();
 	}
 
-	/** Whether gh has credentials. GH_TOKEN counts, so a server needs no login. */
-	async authed(): Promise<boolean> {
+	/** Missing gh credentials, if any. GH_TOKEN counts, so a server needs no login. */
+	async problems(): Promise<Problem[]> {
 		const { exitCode } = await this.ps.spawnCapture(["gh", "auth", "status"]);
-		return exitCode === 0;
+		if (exitCode === 0) {
+			return [];
+		}
+		return [
+			{
+				kind: "gh-auth",
+				message: "not logged in to GitHub",
+				remedy: ["gh", "auth", "login"],
+			},
+		];
 	}
 
 	/** Publishes release notes for `tag`, or leaves the existing ones alone. */

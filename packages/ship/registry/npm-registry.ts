@@ -1,4 +1,5 @@
 import { NodePs, type Ps } from "@webappwiz/system";
+import type { Problem } from "../plan";
 import type { Registry } from "./registry";
 
 /** The npm registry, reached through the npm and bun CLIs. */
@@ -14,10 +15,19 @@ export class NpmRegistry implements Registry {
 		this.ps = opts.ps ?? new NodePs();
 	}
 
-	/** Whether npm has credentials. NPM_TOKEN counts, so a server needs no login. */
-	async authed(): Promise<boolean> {
+	/** Missing npm credentials, if any. NPM_TOKEN counts, so a server needs no login. */
+	async problems(): Promise<Problem[]> {
 		const { exitCode } = await this.ps.spawnCapture(["npm", "whoami"]);
-		return exitCode === 0;
+		if (exitCode === 0) {
+			return [];
+		}
+		return [
+			{
+				kind: "npm-auth",
+				message: "not logged in to npm",
+				remedy: ["npm", "login"],
+			},
+		];
 	}
 
 	async published(name: string, version: string): Promise<boolean> {

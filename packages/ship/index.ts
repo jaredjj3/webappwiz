@@ -6,7 +6,7 @@ export { CliGit, type CliGitOptions } from "./git/cli-git";
 export type { Git } from "./git/git";
 export { CliGithub, type CliGithubOptions } from "./github/cli-github";
 export type { Github } from "./github/github";
-export type { Package, Plan, Problem, ProblemKind } from "./plan";
+export type { Package, Plan, Problem } from "./plan";
 export {
 	NpmRegistry,
 	type NpmRegistryOptions,
@@ -16,7 +16,7 @@ export {
 	LockstepShip,
 	type LockstepShipOptions,
 } from "./ship/lockstep-ship";
-export type { Ship } from "./ship/ship";
+export { Ship, type Target } from "./ship/ship";
 export { BUMPS, type Bump, bump, isBump } from "./version";
 export {
 	ManifestWorkspace,

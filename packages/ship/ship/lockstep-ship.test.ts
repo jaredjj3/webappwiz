@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import type { Ship } from "./ship";
+import { MemoryLogger } from "@webappwiz/log";
+import { GITHUB_AUTH } from "../github/fake-github";
+import { FakeRegistry, REGISTRY_AUTH } from "../registry/fake-registry";
+import { LockstepShip } from "./lockstep-ship";
+import type { Ship, Target } from "./ship";
 import { ShipHarness } from "./ship-harness";
 
 describe("ship", () => {
@@ -12,6 +16,15 @@ describe("ship", () => {
 	beforeEach(() => {
 		({ workspace, git, registry, github, ship } = new ShipHarness());
 	});
+
+	/** The harness's ship with its targets redeclared. */
+	const declaring = (...targets: Target[]) =>
+		new LockstepShip(targets, {
+			workspace,
+			git,
+			github,
+			log: new MemoryLogger(),
+		});
 
 	it("plans the whole workspace onto the next version", async () => {
 		const plan = await ship.plan("minor");
@@ -50,17 +63,50 @@ describe("ship", () => {
 		registry.loggedIn = false;
 		github.loggedIn = false;
 		const plan = await ship.plan("patch");
+		expect(plan.problems).toEqual([REGISTRY_AUTH, GITHUB_AUTH]);
+	});
+
+	it("says a shared registry's problem once, not once per target", async () => {
+		registry.loggedIn = false;
+		const plan = await ship.plan("patch");
+		expect(plan.problems).toEqual([REGISTRY_AUTH]);
+	});
+
+	it("reports a target the workspace has no public package for", async () => {
+		const roaming = declaring(
+			{ name: "@scope/one", registry },
+			{ name: "@scope/two", registry },
+			{ name: "@scope/gone", registry },
+		);
+		const plan = await roaming.plan("patch");
 		expect(plan.problems).toEqual([
 			{
-				kind: "npm-auth",
-				message: "not logged in to npm",
-				remedy: ["npm", "login"],
+				kind: "unknown",
+				message:
+					'"@scope/gone" is declared but the workspace has no public package by that name',
 			},
+		]);
+	});
+
+	it("reports a public package nobody declared", async () => {
+		const partial = declaring({ name: "@scope/one", registry });
+		const plan = await partial.plan("patch");
+		expect(plan.problems).toEqual([
 			{
-				kind: "gh-auth",
-				message: "not logged in to GitHub",
-				remedy: ["gh", "auth", "login"],
+				kind: "undeclared",
+				message:
+					'"@scope/two" is public but not declared: declare it or mark it private',
 			},
+		]);
+	});
+
+	it("reports an empty declaration", async () => {
+		const empty = declaring();
+		const plan = await empty.plan("patch");
+		expect(plan.problems.map((problem) => problem.kind)).toEqual([
+			"empty",
+			"undeclared",
+			"undeclared",
 		]);
 	});
 
@@ -96,6 +142,33 @@ describe("ship", () => {
 		expect([...git.tags]).toEqual(["v1.2.4"]);
 		expect(git.pushes).toEqual(["main", "v1.2.4"]);
 		expect(github.releases).toEqual(["v1.2.4"]);
+	});
+
+	it("publishes each target through its own registry", async () => {
+		const other = new FakeRegistry();
+		const split = declaring(
+			{ name: "@scope/one", registry },
+			{ name: "@scope/two", registry: other },
+		);
+		await split.run(await split.plan("patch"));
+		expect(registry.publishes).toEqual(["/repo/packages/one"]);
+		expect(other.publishes).toEqual(["/repo/packages/two"]);
+	});
+
+	it("has no GitHub step, or GitHub problems, unless one is declared", async () => {
+		github.loggedIn = false;
+		const quiet = new LockstepShip(
+			[
+				{ name: "@scope/one", registry },
+				{ name: "@scope/two", registry },
+			],
+			{ workspace, git, log: new MemoryLogger() },
+		);
+		const plan = await quiet.plan("patch");
+		expect(plan.problems).toEqual([]);
+		await quiet.run(plan);
+		expect(git.pushes).toEqual(["main", "v1.2.4"]);
+		expect(github.releases).toEqual([]);
 	});
 
 	it("publishes before it tags, so no tag names a version the registry lacks", async () => {

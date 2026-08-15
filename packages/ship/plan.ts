@@ -11,11 +11,10 @@ export interface Package {
 	published: boolean;
 }
 
-export type ProblemKind = "dirty" | "branch" | "empty" | "npm-auth" | "gh-auth";
-
 /** Something standing between you and a release. */
 export interface Problem {
-	kind: ProblemKind;
+	/** A short slug naming the class of problem, such as "dirty" or "npm-auth". */
+	kind: string;
 	message: string;
 	/**
 	 * A command that clears this problem, when one exists. Run it only where a
