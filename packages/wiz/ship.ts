@@ -1,22 +1,36 @@
 import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import type { Check } from "@webappwiz/rules";
-import { isBump, type Plan, type Ship } from "@webappwiz/ship";
-import { NodePs, type Ps } from "@webappwiz/sys";
+import {
+	CliGit,
+	CliGithub,
+	isBump,
+	LockstepShip,
+	ManifestWorkspace,
+	NpmRegistry,
+	type Plan,
+	type Ship,
+} from "@webappwiz/ship";
+import { type Fs, NodePs, type Ps } from "@webappwiz/sys";
 import { fix } from "./fix";
 
 export interface ShipOptions {
 	/** How far to move the version: patch, minor or major. */
 	bump: string;
+	/** The release to run; the workspace's own lockstep release by default. */
+	release?: Ship;
 	/** The rules the gate runs; the workspace's own by default. */
 	checks?: Pick<Check, "run">;
 	log?: Logger;
+	fs?: Fs;
 	ps?: Ps;
 }
 
 /** Releases every package in the workspace together, at one version. */
-export async function ship(release: Ship, opts: ShipOptions): Promise<void> {
+export async function ship(opts: ShipOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
+	const release =
+		opts.release ?? (await lockstepRelease(log, ps, { fs: opts.fs }));
 	if (!isBump(opts.bump)) {
 		throw new Error(
 			`unknown version bump "${opts.bump}" (expected patch, minor or major)`,
@@ -38,6 +52,22 @@ export async function ship(release: Ship, opts: ShipOptions): Promise<void> {
 		return;
 	}
 	await release.run(plan);
+}
+
+/** The real thing: every package in this workspace, released in lockstep. */
+async function lockstepRelease(
+	log: Logger,
+	ps: Ps,
+	{ fs }: { fs?: Fs },
+): Promise<Ship> {
+	const workspace = await ManifestWorkspace.at(ps.cwd(), { fs });
+	return new LockstepShip(
+		workspace,
+		new CliGit(workspace.root, { ps }),
+		new NpmRegistry({ ps }),
+		new CliGithub({ ps }),
+		{ log },
+	);
 }
 
 /**

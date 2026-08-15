@@ -23,8 +23,9 @@ describe("ship", () => {
 		ps = new FakePs();
 	});
 
-	const opts = (bump: string) => ({
+	const opts = (release: FakeShip, bump: string) => ({
 		bump,
+		release,
 		checks: { run: async () => true },
 		log,
 		ps,
@@ -33,7 +34,7 @@ describe("ship", () => {
 	it("refuses a bump nobody has heard of", async () => {
 		const release = new FakeShip(fakePlan());
 
-		await expect(ship(release, opts("sideways"))).rejects.toThrow(
+		await expect(ship(opts(release, "sideways"))).rejects.toThrow(
 			'unknown version bump "sideways"',
 		);
 		expect(ps.getCalls()).toEqual([]);
@@ -43,7 +44,7 @@ describe("ship", () => {
 	it("runs the command a problem carries, then plans again", async () => {
 		const release = new FakeShip(fakePlan([NPM_AUTH]), fakePlan([NPM_AUTH]));
 
-		await expect(ship(release, opts("patch"))).rejects.toThrow(
+		await expect(ship(opts(release, "patch"))).rejects.toThrow(
 			"not ready to release",
 		);
 		expect(ps.getCalls()).toEqual([...GATE, "npm login"]);
@@ -55,7 +56,7 @@ describe("ship", () => {
 		const dirty = { kind: "dirty" as const, message: "uncommitted changes" };
 		const release = new FakeShip(fakePlan([dirty]));
 
-		await expect(ship(release, opts("patch"))).rejects.toThrow(
+		await expect(ship(opts(release, "patch"))).rejects.toThrow(
 			"not ready to release",
 		);
 		expect(ps.getCalls()).toEqual(GATE);
