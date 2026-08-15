@@ -172,7 +172,7 @@ export class Command<O, C extends object = object> {
 				out[arg.name] = arg.default;
 				return;
 			}
-			out[arg.name] = arg.schema.parse(value);
+			out[arg.name] = arg.schema.coerce(value);
 		});
 		for (const opt of this.options) {
 			const value = raw.get(opt.name);
@@ -183,7 +183,7 @@ export class Command<O, C extends object = object> {
 				}
 				throw new Error(`missing required option --${opt.name}`);
 			}
-			out[opt.name] = opt.schema.parse(value);
+			out[opt.name] = opt.schema.coerce(value);
 		}
 		return out as O;
 	}

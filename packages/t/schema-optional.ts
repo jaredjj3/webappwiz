@@ -1,13 +1,22 @@
 import type { Schema } from "./schema";
+import { SchemaBase } from "./schema-base";
 
-export class SchemaOptional<T> implements Schema<T | undefined> {
-	constructor(private inner: Schema<T>) {}
-
-	parse(raw: string): T | undefined {
-		return this.inner.parse(raw);
+export class SchemaOptional<T> extends SchemaBase<T | undefined> {
+	constructor(private inner: Schema<T>) {
+		super();
 	}
 
-	check(value: unknown): T | undefined {
-		return value === undefined ? undefined : this.inner.check(value);
+	parse(value: unknown): T | undefined {
+		return value === undefined ? undefined : this.inner.parse(value);
+	}
+
+	/**
+	 * Absence is `parse`'s business, not this one's: a caller that has nothing
+	 * to coerce has no string to hand over, and `cmd` resolves a missing option
+	 * to its default before ever getting here. An empty string is a value, so
+	 * the inner schema decides what it means, the way `z.coerce` does.
+	 */
+	coerce(raw: string): T | undefined {
+		return this.inner.coerce(raw);
 	}
 }

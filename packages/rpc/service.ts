@@ -75,7 +75,7 @@ export class Service<C extends Contract> {
 				method.type === "query"
 					? JSON.parse(url.searchParams.get("input") ?? "")
 					: await req.json();
-			input = method.input.check(raw);
+			input = method.input.parse(raw);
 		} catch (e) {
 			if (e instanceof SchemaError || e instanceof SyntaxError) {
 				return new Response(e.message, { status: 400 });
