@@ -54,12 +54,14 @@
     "packages/aws": {
       "name": "@webappwiz/aws",
       "version": "0.0.0",
-      "dependencies": {
+      "devDependencies": {
+        "@types/bun": "^1.3.0",
         "aws-cdk-lib": "^2.250.0",
         "constructs": "^10.0.0",
       },
-      "devDependencies": {
-        "@types/bun": "^1.3.0",
+      "peerDependencies": {
+        "aws-cdk-lib": "^2.250.0",
+        "constructs": "^10.0.0",
       },
     },
     "packages/browser": {
