@@ -53,8 +53,16 @@ file says landed is skipped outright, and the rest carry their own checks
 alone), so running `release()` again after any failure is always the right
 move: nothing goes out twice, and whatever failed is retried.
 
-The file is in-flight state for one checkout, not history: gitignore it.
-Getting into a weird state is cheap in both directions, because the per-artifact
+The file is in-flight state for one checkout, not history, so put it in your
+`.gitignore`:
+
+```gitignore
+# a release under way; the last artifact to land deletes it
+RELEASE
+```
+
+Committing it would hand every other checkout a release that is not theirs to
+finish. Getting into a weird state is cheap in both directions, because the per-artifact
 checks hold either way. A stale file resumes a release that actually
 finished, and every artifact skips; a lost file bumps past a death, and you spend
 a version number.
