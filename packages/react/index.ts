@@ -1,4 +1,4 @@
-// judge-ignore-file one-dir-per-interface: this is the package entry point named in
+// rule-ignore-file one-dir-per-interface: this is the package entry point named in
 // package.json exports, not a barrel sitting inside an interface's directory
 export type { ExternalStore } from "./external-store/external-store";
 export { ReactiveExternalStore } from "./external-store/reactive-external-store";

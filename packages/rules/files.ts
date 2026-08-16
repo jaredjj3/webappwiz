@@ -52,7 +52,7 @@ export const DEFAULT_CHUNK = 25;
  * findings that come back into violations a report can print.
  *
  * Everything file-shaped lives here: choosing the files, chunking them,
- * honoring `judge-ignore` markers and quoting the offending line off disk. The
+ * honoring `rule-ignore` markers and quoting the offending line off disk. The
  * harness underneath knows none of it, and this does not wrap it: a caller
  * plans here, runs there, and turns the findings back here.
  */
@@ -217,14 +217,14 @@ export class Files {
 	}
 }
 
-/** What the prompt says about `judge-ignore`, which is this caller's
+/** What the prompt says about `rule-ignore`, which is this caller's
  * convention and no business of the harness's. */
 const MARKERS = [
 	"Code excuses itself from a rule with a comment naming that rule's id:",
 	"",
-	"- `judge-ignore <id>: <reason>` excuses the line it sits above, " +
+	"- `rule-ignore <id>: <reason>` excuses the line it sits above, " +
 		"and everything indented under that line.",
-	"- `judge-ignore-file <id>: <reason>` excuses the whole file.",
+	"- `rule-ignore-file <id>: <reason>` excuses the whole file.",
 	"",
 	"Report nothing an excused line does against the rule the marker names. " +
 		"A marker excuses only that one rule, and a marker naming an id not " +

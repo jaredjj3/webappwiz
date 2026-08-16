@@ -16,7 +16,7 @@ the function:
 
 An options bag of callbacks such as `{ onStart, onError }` is an events
 interface begging to exist. When a bare function genuinely is the cleanest
-design, keep it and `judge-ignore` the declaration with the reason: one
+design, keep it and `rule-ignore` the declaration with the reason: one
 marker at the declaration covers every call site.
 
 ## Good

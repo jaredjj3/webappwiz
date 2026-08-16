@@ -1,4 +1,4 @@
-// judge-ignore-file one-dir-per-interface: a barrel for the one directory this
+// rule-ignore-file one-dir-per-interface: a barrel for the one directory this
 // package exists to ship, so a caller naming its own rule set writes one import
 export { ClassesOverFunctionExports } from "./classes-over-function-exports";
 export { CommentsSayWhyNotWhat } from "./comments-say-why-not-what";

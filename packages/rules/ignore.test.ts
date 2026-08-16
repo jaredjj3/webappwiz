@@ -19,7 +19,7 @@ describe("ignore", () => {
 			lines(
 				[
 					"const a = 1;",
-					"// judge-ignore no-em-dashes: quoting a spec",
+					"// rule-ignore no-em-dashes: quoting a spec",
 					'const b = "\u2014";',
 					'const c = "\u2014";',
 				].join("\n"),
@@ -37,7 +37,7 @@ describe("ignore", () => {
 		const excused = exemptions(
 			lines(
 				[
-					"// judge-ignore one-class-per-file: local fake for this suite",
+					"// rule-ignore one-class-per-file: local fake for this suite",
 					"class FakeClock {",
 					"\tnow(): Date { return new Date(0); }",
 					"}",
@@ -54,7 +54,7 @@ describe("ignore", () => {
 
 	it("excuses every line when the marker says file", () => {
 		const excused = exemptions(
-			lines("const a = 1;\n// judge-ignore-file no-em-dashes: generated"),
+			lines("const a = 1;\n// rule-ignore-file no-em-dashes: generated"),
 			"no-em-dashes",
 		);
 
@@ -63,7 +63,7 @@ describe("ignore", () => {
 
 	it("does not let one rule's marker excuse another rule", () => {
 		const excused = exemptions(
-			lines("// judge-ignore-file no-em-dashes: generated\nclass A {}"),
+			lines("// rule-ignore-file no-em-dashes: generated\nclass A {}"),
 			"one-class-per-file",
 		);
 
@@ -72,7 +72,7 @@ describe("ignore", () => {
 
 	it("excuses nothing for a marker without a reason", () => {
 		const excused = exemptions(
-			lines("// judge-ignore-file no-em-dashes:\nconst a = 1;"),
+			lines("// rule-ignore-file no-em-dashes:\nconst a = 1;"),
 			"no-em-dashes",
 		);
 

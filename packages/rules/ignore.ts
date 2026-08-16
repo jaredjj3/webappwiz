@@ -1,19 +1,19 @@
 // Matched anywhere in a line, so any language's comment syntax carries it.
 // The reason after the colon is required: a marker without one excuses
 // nothing, and the finding it failed to silence is how its author finds out.
-const MARKER = /judge-ignore(-file)?\s+([\w-]+)\s*:\s*\S/;
+const MARKER = /rule-ignore(-file)?\s+([\w-]+)\s*:\s*\S/;
 
 /**
- * Tells you which lines of a file a `judge-ignore` comment excuses from the
+ * Tells you which lines of a file a `rule-ignore` comment excuses from the
  * rule `id`, given the file's lines:
  *
  * ```ts
- * // judge-ignore no-em-dashes: quoting a spec that spells them out
+ * // rule-ignore no-em-dashes: quoting a spec that spells them out
  * ```
  *
  * A marker covers itself, the next line, and everything indented under that
  * line: one statement when it sits above a statement, a whole declaration
- * when it sits above one. `judge-ignore-file` covers the file instead.
+ * when it sits above one. `rule-ignore-file` covers the file instead.
  */
 export function exemptions(
 	lines: string[],

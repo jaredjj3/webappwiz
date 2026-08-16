@@ -18,7 +18,7 @@ export function useReactive<
 	State,
 >(
 	source: Source,
-	// judge-ignore objects-over-callbacks: a projection run to compute what the hook returns, which the guide calls fine; the ref only keeps a fresh inline arrow from re-subscribing
+	// rule-ignore objects-over-callbacks: a projection run to compute what the hook returns, which the guide calls fine; the ref only keeps a fresh inline arrow from re-subscribing
 	select: (source: Source) => State,
 	events: Array<string & keyof EventMapOf<Source>>,
 ): State {

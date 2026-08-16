@@ -37,7 +37,7 @@ describe("Harness", () => {
 	it("builds a prompt from the rule documents, the context and the contract", () => {
 		const built = prompt({
 			...review("src/a.ts", "Classes"),
-			instructions: "Honor judge-ignore markers.",
+			instructions: "Honor rule-ignore markers.",
 		});
 
 		expect(built).toContain("exactly 1 rule");
@@ -45,7 +45,7 @@ describe("Harness", () => {
 		expect(built).toContain("# Classes"); // the rule md, verbatim
 		expect(built).toContain("## Good");
 		expect(built).toContain("Judge this:");
-		expect(built).toContain("Honor judge-ignore markers.");
+		expect(built).toContain("Honor rule-ignore markers.");
 		expect(built).toContain('"rule"');
 	});
 

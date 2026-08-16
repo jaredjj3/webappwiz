@@ -29,7 +29,7 @@ packages/system/fs/
 A file an implementation reads is part of it, and sits with it:
 
 ```text
-packages/judge/rule/
+packages/rules/rule/
 	rule.ts           # export interface Rule
 	no-em-dashes.ts   # export class NoEmDashes implements Rule
 	no-em-dashes.md   # the document that class imports

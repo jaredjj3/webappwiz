@@ -91,11 +91,11 @@ describe("checker", () => {
 		]);
 	});
 
-	it("drops findings a judge-ignore excuses", () => {
+	it("drops findings a rule-ignore excuses", () => {
 		const { diagnostics } = new Checker([noX], { glob: glob }).check([
 			{
 				path: "a.md",
-				text: "<!-- judge-ignore no-x: the topic is x itself -->\nx\nclean",
+				text: "<!-- rule-ignore no-x: the topic is x itself -->\nx\nclean",
 			},
 		]);
 
@@ -106,7 +106,7 @@ describe("checker", () => {
 		const { diagnostics } = new Checker([noX], { glob: glob }).check([
 			{
 				path: "a.md",
-				text: "x\nx\n<!-- judge-ignore-file no-x: an x demo -->",
+				text: "x\nx\n<!-- rule-ignore-file no-x: an x demo -->",
 			},
 		]);
 

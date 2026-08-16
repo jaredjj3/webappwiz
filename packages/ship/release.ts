@@ -23,7 +23,7 @@ export interface ReleaseOptions {
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
-	// judge-ignore objects-over-callbacks: the platform's own prompt() is the
+	// rule-ignore objects-over-callbacks: the platform's own prompt() is the
 	// dependency here, and it is a bare function
 	prompt?: (message: string) => string | null;
 }

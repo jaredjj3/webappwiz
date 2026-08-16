@@ -113,7 +113,7 @@ describe("Files", () => {
 		expect(built).toContain("## Good");
 		expect(built).toContain("- src/a.ts");
 		expect(built).not.toContain("b.ts");
-		expect(built).toContain("judge-ignore <id>: <reason>");
+		expect(built).toContain("rule-ignore <id>: <reason>");
 	});
 
 	it("prices a review by its prompt and the files it names", async () => {
@@ -144,10 +144,10 @@ describe("Files", () => {
 		]);
 	});
 
-	it("drops a finding the code excuses with a judge-ignore comment", async () => {
+	it("drops a finding the code excuses with a rule-ignore comment", async () => {
 		await fs.write(
 			"/p/src/a.ts",
-			"// judge-ignore Classes: the second class is a fixture\nclass A {}\nclass B {}\n",
+			"// rule-ignore Classes: the second class is a fixture\nclass A {}\nclass B {}\n",
 		);
 		ps.setCaptureOutput(
 			'[{"rule": "Classes", "file": "src/a.ts", "line": 2, "message": "the file declares a second class"},' +

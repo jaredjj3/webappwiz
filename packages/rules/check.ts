@@ -13,7 +13,7 @@ import type { FileRule } from "./rule";
 /**
  * Checks every git-tracked file a rule's glob wants and reports one line per
  * finding, `path:line:column rule message`. Only the free half runs here:
- * what the checks escalate is `wiz judge`'s job, on demand.
+ * what the checks escalate is an agent's job, on demand.
  */
 /** What a `Check` runs through; the real ones by default. */
 export interface CheckOptions {

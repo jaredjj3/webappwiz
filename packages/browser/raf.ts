@@ -16,7 +16,7 @@ export interface Frame {
  * await frame.promise;
  * ```
  */
-// judge-ignore objects-over-callbacks: the work to run on the frame, which is what requestAnimationFrame itself takes
+// rule-ignore objects-over-callbacks: the work to run on the frame, which is what requestAnimationFrame itself takes
 export function raf(
 	clock: Clock,
 	callback: (dt: Duration) => void | Promise<void>,
