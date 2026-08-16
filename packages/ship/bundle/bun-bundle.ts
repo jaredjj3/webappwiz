@@ -57,7 +57,10 @@ export class BunBundle implements Bundle {
 		} else {
 			await this.compile(dir, sources(manifest));
 		}
+		// Before pointing, since a package that exports nothing built nothing, and
+		// walking a directory that is not there is an error rather than a no-op.
 		await this.fs.mkdir(out);
+		await this.point(dir);
 		await this.fs.write(
 			`${out}/package.json`,
 			`${JSON.stringify(published(manifest), null, "\t")}\n`,
@@ -128,7 +131,6 @@ export class BunBundle implements Bundle {
 			],
 			dir,
 		);
-		await this.point(dir);
 	}
 
 	/**
@@ -153,6 +155,10 @@ export class BunBundle implements Bundle {
 	 * lost without anybody being told. A `.js` specifier resolves to the
 	 * declaration beside it under both node16 and bundler resolution, so the one
 	 * output serves either.
+	 *
+	 * This runs over whatever is in `dist`, however it got there, so a package
+	 * building itself does not have to remember. A specifier that already names
+	 * a file is left alone, which is what makes running it twice harmless.
 	 */
 	private async point(dir: string): Promise<void> {
 		for await (const path of walk(`${dir}/dist`, { fs: this.fs })) {
