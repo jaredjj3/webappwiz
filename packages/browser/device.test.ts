@@ -31,8 +31,8 @@ describe("Device", () => {
 
 		expect(device.os).toBe("ios");
 		expect(device.type).toBe("phone");
-		expect(device.isMobile).toBe(true);
-		expect(device.touch).toBe(true);
+		expect(device.isMobile()).toBe(true);
+		expect(device.isTouch()).toBe(true);
 	});
 
 	it("takes a touch screen as what tells an iPad from a Mac, since both say Macintosh", () => {
@@ -46,8 +46,8 @@ describe("Device", () => {
 		const device = Device.parse(IPAD_CHROME, { touchPoints: 5 });
 
 		expect(device.type).toBe("tablet");
-		expect(device.isTablet).toBe(true);
-		expect(device.isPhone).toBe(false);
+		expect(device.isTablet()).toBe(true);
+		expect(device.isPhone()).toBe(false);
 		expect(device.browser).toBe("chrome");
 	});
 
@@ -61,7 +61,7 @@ describe("Device", () => {
 		const device = Device.parse(ANDROID, { touchPoints: 5 });
 
 		expect(device.os).toBe("android");
-		expect(device.isAndroid).toBe(true);
+		expect(device.isAndroid()).toBe(true);
 		expect(device.type).toBe("phone");
 	});
 
@@ -75,7 +75,7 @@ describe("Device", () => {
 	it("picks Edge over the Chrome and Safari it also claims to be", () => {
 		expect(Device.parse(WINDOWS_EDGE).browser).toBe("edge");
 		expect(Device.parse(WINDOWS_EDGE).os).toBe("windows");
-		expect(Device.parse(WINDOWS_EDGE).isDesktop).toBe(true);
+		expect(Device.parse(WINDOWS_EDGE).isDesktop()).toBe(true);
 	});
 
 	it("picks Chrome over the Safari it also claims to be", () => {
@@ -99,7 +99,7 @@ describe("Device", () => {
 		expect(device.browser).toBe("firefox");
 		expect(device.os).toBe("linux");
 		expect(device.type).toBe("desktop");
-		expect(device.isMobile).toBe(false);
+		expect(device.isMobile()).toBe(false);
 	});
 
 	it("is unknown for a string that says nothing", () => {
@@ -108,6 +108,6 @@ describe("Device", () => {
 		expect(device.os).toBe("unknown");
 		expect(device.browser).toBe("unknown");
 		expect(device.type).toBe("desktop");
-		expect(device.touch).toBe(false);
+		expect(device.isTouch()).toBe(false);
 	});
 });

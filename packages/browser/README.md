@@ -12,7 +12,7 @@ import { Device } from "@webappwiz/browser";
 const device = Device.parse(navigator.userAgent, {
 	touchPoints: navigator.maxTouchPoints,
 });
-device.isIos; // true on an iPhone, and on an iPad claiming to be a Mac
+device.isIos(); // true on an iPhone, and on an iPad claiming to be a Mac
 device.type; // "phone" | "tablet" | "desktop"
 device.browser; // "safari" | "chrome" | "firefox" | "edge" | "unknown"
 ```

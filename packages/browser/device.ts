@@ -22,7 +22,7 @@ export interface DeviceOptions {
  * const device = Device.parse(navigator.userAgent, {
  *   touchPoints: navigator.maxTouchPoints,
  * });
- * if (device.isPhone) { ... }
+ * if (device.isPhone()) { ... }
  * ```
  *
  * It answers those four questions and no others. Browser versions, device
@@ -48,29 +48,33 @@ export class Device {
 		);
 	}
 
-	get isIos(): boolean {
+	isIos(): boolean {
 		return this.os === "ios";
 	}
 
-	get isAndroid(): boolean {
+	isAndroid(): boolean {
 		return this.os === "android";
 	}
 
-	get isPhone(): boolean {
+	isPhone(): boolean {
 		return this.type === "phone";
 	}
 
-	get isTablet(): boolean {
+	isTablet(): boolean {
 		return this.type === "tablet";
 	}
 
 	/** A phone or a tablet, which is to say anything that is not a desktop. */
-	get isMobile(): boolean {
+	isMobile(): boolean {
 		return this.type !== "desktop";
 	}
 
-	get isDesktop(): boolean {
+	isDesktop(): boolean {
 		return this.type === "desktop";
+	}
+
+	isTouch(): boolean {
+		return this.touch;
 	}
 }
 
