@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { Cut } from "../cut";
-import { FakeGit } from "../git/fake-git";
+import { FakeGit } from "./fake-git";
 import { GitPart } from "./git-part";
 
 describe("git part", () => {

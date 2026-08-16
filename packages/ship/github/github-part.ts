@@ -1,6 +1,6 @@
 import type { Cut } from "../cut";
-import type { Github } from "../github/github";
-import type { Part, Stage } from "./part";
+import type { Part, Stage } from "../part/part";
+import type { Github } from "./github";
 
 /**
  * The GitHub release notes for the tag. Its stage puts it after the tag,

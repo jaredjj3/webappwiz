@@ -3,7 +3,7 @@ import { MemoryLogger } from "@webappwiz/log";
 import { FakeFs } from "@webappwiz/system/testing";
 import { FakeGit } from "./git/fake-git";
 import { FakeGithub } from "./github/fake-github";
-import { GithubPart } from "./part/github-part";
+import { GithubPart } from "./github/github-part";
 import { FakeRegistry } from "./registry/fake-registry";
 import type { Release, ReleaseOptions } from "./release";
 import { releases } from "./releases";

@@ -1,9 +1,9 @@
 import { color } from "@webappwiz/log";
 import { NodePs, type Ps } from "@webappwiz/system";
 import type { Cut } from "../cut";
-import { CliGit } from "../git/cli-git";
-import type { Git } from "../git/git";
-import type { Part, Stage } from "./part";
+import type { Part, Stage } from "../part/part";
+import { CliGit } from "./cli-git";
+import type { Git } from "./git";
 
 /** What a `GitPart` speaks git through; the repository here by default. */
 export interface GitPartOptions {

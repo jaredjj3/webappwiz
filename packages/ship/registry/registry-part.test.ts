@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { Cut } from "../cut";
-import { FakeRegistry } from "../registry/fake-registry";
+import { FakeRegistry } from "./fake-registry";
 import { RegistryPart } from "./registry-part";
 
 describe("registry part", () => {

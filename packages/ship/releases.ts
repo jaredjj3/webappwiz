@@ -1,12 +1,12 @@
 import { type Fs, NodePs, type Ps } from "@webappwiz/system";
 import { CliGit } from "./git/cli-git";
+import { GitPart, type GitPartOptions } from "./git/git-part";
 import { CliGithub, type CliGithubOptions } from "./github/cli-github";
-import { GitPart, type GitPartOptions } from "./part/git-part";
-import { GithubPart } from "./part/github-part";
+import { GithubPart } from "./github/github-part";
 import type { Part } from "./part/part";
-import { RegistryPart } from "./part/registry-part";
 import { NpmRegistry, type NpmRegistryOptions } from "./registry/npm-registry";
 import type { Registry } from "./registry/registry";
+import { RegistryPart } from "./registry/registry-part";
 import { Release } from "./release";
 import { ManifestWorkspace } from "./workspace/manifest-workspace";
 

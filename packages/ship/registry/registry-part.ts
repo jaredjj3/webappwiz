@@ -1,7 +1,7 @@
 import { color } from "@webappwiz/log";
 import type { Cut } from "../cut";
-import type { Registry } from "../registry/registry";
-import type { Part, Stage } from "./part";
+import type { Part, Stage } from "../part/part";
+import type { Registry } from "./registry";
 
 /** One package, published through the registry that carries it. */
 export class RegistryPart implements Part {
