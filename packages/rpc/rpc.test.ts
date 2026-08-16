@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { BunHttpServer, type Listening } from "@webappwiz/http";
+import type { Listening } from "@webappwiz/http";
+import { BunHttpServer } from "@webappwiz/http/bun";
 import { t } from "@webappwiz/t";
 import { Duration } from "@webappwiz/time";
 
