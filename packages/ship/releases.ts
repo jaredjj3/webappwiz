@@ -1,9 +1,9 @@
 import { type Fs, NodePs, type Ps } from "@webappwiz/system";
+import type { Artifact } from "./artifact/artifact";
 import { CliGit } from "./git/cli-git";
 import { GitArtifact, type GitArtifactOptions } from "./git/git-artifact";
 import { CliGithub, type CliGithubOptions } from "./github/cli-github";
 import { GithubArtifact } from "./github/github-artifact";
-import type { Artifact } from "./artifact/artifact";
 import { NpmRegistry, type NpmRegistryOptions } from "./registry/npm-registry";
 import type { Registry } from "./registry/registry";
 import { RegistryArtifact } from "./registry/registry-artifact";

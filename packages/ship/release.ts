@@ -1,9 +1,9 @@
 import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "@webappwiz/system";
+import { type Artifact, STAGES } from "./artifact/artifact";
 import { Cut } from "./cut";
 import { CliGit } from "./git/cli-git";
 import type { Git } from "./git/git";
-import { type Artifact, STAGES } from "./artifact/artifact";
 import { ReleaseFile } from "./release-file";
 import { type Bump, bump } from "./version";
 import { ManifestWorkspace } from "./workspace/manifest-workspace";

@@ -1,7 +1,7 @@
 import { color } from "@webappwiz/log";
 import { NodePs, type Ps } from "@webappwiz/system";
-import type { Cut } from "../cut";
 import type { Artifact, Stage } from "../artifact/artifact";
+import type { Cut } from "../cut";
 import { CliGit } from "./cli-git";
 import type { Git } from "./git";
 

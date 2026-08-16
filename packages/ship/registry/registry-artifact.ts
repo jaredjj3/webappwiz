@@ -1,6 +1,6 @@
 import { color } from "@webappwiz/log";
-import type { Cut } from "../cut";
 import type { Artifact, Stage } from "../artifact/artifact";
+import type { Cut } from "../cut";
 import type { Registry } from "./registry";
 
 /** One package, published through the registry that carries it. */

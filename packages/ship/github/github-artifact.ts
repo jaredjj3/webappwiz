@@ -1,5 +1,5 @@
-import type { Cut } from "../cut";
 import type { Artifact, Stage } from "../artifact/artifact";
+import type { Cut } from "../cut";
 import type { Github } from "./github";
 
 /**
