@@ -18,11 +18,13 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@standard-schema/spec": "^1.1.0",
 		"@webappwiz/events": "workspace:*",
 		"@webappwiz/t": "workspace:*"
 	},
 	"devDependencies": {
 		"@webappwiz/http": "workspace:*",
-		"@webappwiz/time": "workspace:*"
+		"@webappwiz/time": "workspace:*",
+		"zod": "^4.4.3"
 	}
 }

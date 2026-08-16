@@ -1,5 +1,6 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { color, type Logger } from "@webappwiz/log";
-import type { Schema } from "@webappwiz/t";
+import { ours, type Schema, validate } from "@webappwiz/t";
 import type { Deps } from "./deps";
 import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 
@@ -7,6 +8,14 @@ import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 // flags `option()` does, in one object. Not a settings bag the caller can drop,
 // so it leads, and the context the middleware built follows it.
 type Action<O, C> = (parsed: O, ctx: C) => unknown;
+
+/**
+ * What an option or a positional is declared with. A `t` schema knows how to
+ * read a command line, since a command line is made of strings; any other
+ * Standard Schema is handed the string as it arrived, so a zod caller writes
+ * `z.coerce.number()` where they would otherwise write `z.number()`.
+ */
+export type Arg<T> = Schema<T> | StandardSchemaV1<unknown, T>;
 
 /** What a caller can say about an option or a positional beyond its schema. */
 export type Meta<T> = {
@@ -18,7 +27,7 @@ export type Meta<T> = {
 
 type OptionMeta = {
 	name: string;
-	schema: Schema<unknown>;
+	schema: Arg<unknown>;
 	description?: string;
 	hasDefault: boolean;
 	default?: unknown;
@@ -47,12 +56,12 @@ export class Command<O, C extends object = object> {
 
 	option<K extends string, T>(
 		name: K,
-		schema: Schema<T>,
+		schema: Arg<T>,
 		meta?: Meta<T>,
 	): Command<O & { [P in K]: T }, C> {
 		this.options.push({
 			name,
-			schema: schema as Schema<unknown>,
+			schema: schema as Arg<unknown>,
 			description: meta?.description,
 			// only a present `default` key makes the option optional (vs. a lone description)
 			hasDefault: meta !== undefined && "default" in meta,
@@ -63,12 +72,12 @@ export class Command<O, C extends object = object> {
 
 	arg<K extends string, T>(
 		name: K,
-		schema: Schema<T>,
+		schema: Arg<T>,
 		meta?: Meta<T>,
 	): Command<O & { [P in K]: T }, C> {
 		this.args.push({
 			name,
-			schema: schema as Schema<unknown>,
+			schema: schema as Arg<unknown>,
 			description: meta?.description,
 			hasDefault: meta !== undefined && "default" in meta,
 			default: meta?.default,
@@ -170,15 +179,16 @@ export class Command<O, C extends object = object> {
 					out[arg.name] = arg.default;
 					return;
 				}
-				// an optional schema already says absence is allowed, so asking for
-				// `default: undefined` as well would be saying it twice
-				if (arg.schema.isOptional()) {
-					out[arg.name] = undefined;
+				// a schema that accepts absence already says it is allowed, so asking
+				// for `default: undefined` as well would be saying it twice
+				const missing = absent(arg.schema);
+				if (missing !== null) {
+					out[arg.name] = missing.value;
 					return;
 				}
 				throw new Error(`missing required argument <${arg.name}>`);
 			}
-			out[arg.name] = arg.schema.coerce(value);
+			out[arg.name] = read(arg.schema, value);
 		});
 		for (const opt of this.options) {
 			const value = raw.get(opt.name);
@@ -187,13 +197,14 @@ export class Command<O, C extends object = object> {
 					out[opt.name] = opt.default;
 					continue;
 				}
-				if (opt.schema.isOptional()) {
-					out[opt.name] = undefined;
+				const missing = absent(opt.schema);
+				if (missing !== null) {
+					out[opt.name] = missing.value;
 					continue;
 				}
 				throw new Error(`missing required option --${opt.name}`);
 			}
-			out[opt.name] = opt.schema.coerce(value);
+			out[opt.name] = read(opt.schema, value);
 		}
 		return out as O;
 	}
@@ -242,4 +253,31 @@ export class Command<O, C extends object = object> {
 		}
 		log.info(lines.join("\n"));
 	}
+}
+
+/**
+ * One command-line token as the value its schema says it is. A `t` schema
+ * coerces, because it was built knowing the input is a string. Anything else
+ * gets the string handed to it, which is why a foreign schema has to be one
+ * that accepts strings.
+ */
+function read<T>(schema: Arg<T>, raw: string): T {
+	return ours(schema) ? schema.coerce(raw) : validate(schema, raw);
+}
+
+/**
+ * What an absent option or argument binds to, or nothing when leaving it out is
+ * not allowed.
+ *
+ * The question is put by validating absence, which is the only way to put it
+ * that every schema can answer: `isOptional` is ours and the interface has no
+ * equivalent. Asking this way costs nothing and gains something, since a schema
+ * carrying its own default answers with that default rather than with nothing.
+ */
+function absent(schema: Arg<unknown>): { value: unknown } | null {
+	const result = schema["~standard"].validate(undefined);
+	if (result instanceof Promise || result.issues !== undefined) {
+		return null;
+	}
+	return { value: result.value };
 }

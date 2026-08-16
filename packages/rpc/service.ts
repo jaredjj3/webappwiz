@@ -1,4 +1,4 @@
-import { SchemaError } from "@webappwiz/t";
+import { SchemaError, validate } from "@webappwiz/t";
 import type { Contract, Handlers } from "./contract";
 import { RpcError } from "./error";
 
@@ -75,7 +75,7 @@ export class Service<C extends Contract> {
 				method.type === "query"
 					? JSON.parse(url.searchParams.get("input") ?? "")
 					: await req.json();
-			input = method.input.parse(raw);
+			input = validate(method.input, raw);
 		} catch (e) {
 			if (e instanceof SchemaError || e instanceof SyntaxError) {
 				return new Response(e.message, { status: 400 });
