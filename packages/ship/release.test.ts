@@ -168,13 +168,15 @@ describe("release", () => {
 		expect(workspace.stamped).toEqual([]);
 	});
 
-	it("says uncommitted changes go into the release commit, rather than refusing", async () => {
+	it("refuses a dirty tree, whose changes the release commit would take", async () => {
 		git.dirty = true;
 
-		await release.release(answering("y"));
-
-		expect(said()).toContain("uncommitted changes");
-		expect(git.commits).toEqual(["Release 1.2.4"]);
+		await expect(release.release(answering("y"))).rejects.toThrow(
+			"uncommitted changes: releases go out from a clean tree",
+		);
+		expect(asked).toEqual([]);
+		expect(workspace.stamped).toEqual([]);
+		expect(git.commits).toEqual([]);
 	});
 
 	it("refuses to release from anywhere but the default branch", async () => {

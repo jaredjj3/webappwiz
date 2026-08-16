@@ -51,7 +51,10 @@ So a `RELEASE` file on disk means the previous run died, and the next
 file says landed is skipped outright, and the rest carry their own checks
 (`releases.npm` asks the registry, `releases.git()` leaves an existing tag
 alone), so running `release()` again after any failure is always the right
-move: nothing goes out twice, and whatever failed is retried.
+move: nothing goes out twice, and whatever failed is retried. A run that died
+between stamping the versions and committing them is the one case that wants a
+hand first, since the tree it left behind is dirty: `git checkout` the stamps
+and release again, and the version comes back off `RELEASE` as it would have.
 
 The file is in-flight state for one checkout, not history, so put it in your
 `.gitignore`:
@@ -143,9 +146,10 @@ once: name a package that no longer exists, or add a public package and
 forget to declare it, and you hear about it before anything is stamped. That
 is what makes a declaration safe to write by hand.
 
-Uncommitted changes are not refused. The release commit takes every tracked
-change with it whatever anyone thinks about it, so the prompt says so and you
-answer.
+It will not release a dirty tree either. The release commit takes every
+tracked change with it, so a dirty tree is a release nobody read: commit what
+belongs in it or discard the rest, and what goes out is exactly the version
+stamps on top of the commit you were looking at.
 
 Each `release()` asks before any of it. Pass a `prompt` to ask somewhere
 other than a terminal, a `log` to say it somewhere else, and a `workspace` or

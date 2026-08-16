@@ -76,6 +76,15 @@ export class Release {
 			// thing here a person has to answer with their own checkout.
 			throw new Error(`on "${branch}": releases go out from "${trunk}"`);
 		}
+		if (!(await git.clean())) {
+			// The release commit takes every tracked change with it, so a dirty tree
+			// is a release nobody reviewed. A run that died between the stamp and
+			// its commit lands here too: `git checkout` the stamps and release
+			// again, since the version comes back off RELEASE either way.
+			throw new Error(
+				"uncommitted changes: releases go out from a clean tree, so commit or discard them first",
+			);
+		}
 		declares(this.packages, await workspace.packages());
 
 		const file = new ReleaseFile(workspace.root, { fs });
@@ -84,7 +93,6 @@ export class Release {
 			bump: opts.bump ?? "patch",
 			resuming: found !== null,
 			current: await workspace.version(),
-			dirty: !(await git.clean()),
 		};
 		const version = found?.version ?? bump(next.current, next.bump);
 		if (!confirm(opts.prompt ?? prompt, log, this.packages, version, next)) {
@@ -130,7 +138,6 @@ interface Next {
 	bump: Bump;
 	resuming: boolean;
 	current: string;
-	dirty: boolean;
 }
 
 /**
@@ -165,11 +172,7 @@ function declares(declared: readonly string[], packages: Package[]): void {
 	}
 }
 
-/**
- * Whether to go ahead. A dirty tree is named rather than refused: the release
- * commit takes every tracked change with it either way, so this is the moment
- * to say so to somebody who can answer.
- */
+/** Whether to go ahead, having said what would go out. */
 function confirm(
 	ask: (message: string) => string | null,
 	log: Logger,
@@ -184,11 +187,6 @@ function confirm(
 	);
 	for (const name of packages) {
 		log.info(`  ${name}`);
-	}
-	if (next.dirty) {
-		log.info(
-			color.yellow("  uncommitted changes, which go into the release commit"),
-		);
 	}
 	const answer = ask(
 		color.yellow(`publish ${packages.length} packages as ${version}? (y/n)`),
