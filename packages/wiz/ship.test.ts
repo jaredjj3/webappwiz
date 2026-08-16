@@ -39,9 +39,17 @@ describe("ship", () => {
 
 	it("refuses a bump nobody has heard of", async () => {
 		await expect(ship(opts("resume"))).rejects.toThrow(
-			'unknown version bump "resume" (expected patch, minor, major)',
+			'unknown version bump "resume" (expected patch, minor)',
 		);
 		expect(ps.getCalls()).toEqual([]);
+	});
+
+	it("refuses major, which would carry every package out of 0.x", async () => {
+		await expect(ship(opts("major"))).rejects.toThrow("major would leave 0.x");
+		expect(ps.getCalls()).toEqual([]);
+		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
+			"1.2.3",
+		);
 	});
 
 	it("finishes a release that failed, at the version RELEASE holds", async () => {
@@ -50,8 +58,9 @@ describe("ship", () => {
 			JSON.stringify({ version: "1.2.4", done: [] }),
 		);
 
-		await ship(opts("major"));
+		await ship(opts("minor"));
 
+		// 1.3.0 is what the bump asked for; RELEASE holding 1.2.4 overrules it.
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
 			"1.2.4",
 		);
