@@ -2,9 +2,9 @@ import { describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { Cut } from "../cut";
 import { FakeRegistry } from "../registry/fake-registry";
-import { RegistryRelease } from "./registry-release";
+import { RegistryPart } from "./registry-part";
 
-describe("registry release", () => {
+describe("registry part", () => {
 	const cutting = () =>
 		new Cut(
 			"1.2.4",
@@ -14,10 +14,11 @@ describe("registry release", () => {
 
 	it("publishes the one package it was declared for", async () => {
 		const registry = new FakeRegistry();
-		const release = new RegistryRelease("@scope/one", registry);
+		const part = new RegistryPart("@scope/one", registry);
 
-		expect(release.packages).toEqual(["@scope/one"]);
-		await release.publish(cutting());
+		expect(part.packages).toEqual(["@scope/one"]);
+		expect(part.stage).toBe("publish");
+		await part.publish(cutting());
 		expect(registry.publishes).toEqual(["/repo/packages/one"]);
 	});
 
@@ -25,15 +26,15 @@ describe("registry release", () => {
 		const registry = new FakeRegistry();
 		registry.has.add("@scope/one@1.2.4");
 
-		await new RegistryRelease("@scope/one", registry).publish(cutting());
+		await new RegistryPart("@scope/one", registry).publish(cutting());
 
 		expect(registry.publishes).toEqual([]);
 	});
 
 	it("refuses a package the cut holds no directory for", async () => {
-		const release = new RegistryRelease("@scope/gone", new FakeRegistry());
+		const part = new RegistryPart("@scope/gone", new FakeRegistry());
 
-		await expect(release.publish(cutting())).rejects.toThrow(
+		await expect(part.publish(cutting())).rejects.toThrow(
 			'"@scope/gone" has no workspace package',
 		);
 	});

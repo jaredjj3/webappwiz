@@ -1,20 +1,18 @@
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import type { Check } from "@webappwiz/rules";
-import { ship as release, releases } from "@webappwiz/ship";
+import { type Bump, releases } from "@webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "@webappwiz/system";
 import { fix } from "./fix";
 
-/** What `wiz ship` will answer to, which is every verb the library has. */
-const VERBS = ["patch", "minor", "major", "resume"] as const;
+/** What `wiz ship` will answer to. A release that died is finished first. */
+const BUMPS = ["patch", "minor", "major"] as const satisfies readonly Bump[];
 
-type Verb = (typeof VERBS)[number];
-
-function isVerb(value: string): value is Verb {
-	return (VERBS as readonly string[]).includes(value);
+function isBump(value: string): value is Bump {
+	return (BUMPS as readonly string[]).includes(value);
 }
 
 export interface ShipOptions {
-	/** How far to move the version: patch, minor, major, or resume. */
+	/** How far to move the version: patch, minor, or major. */
 	bump: string;
 	/** The rules the gate runs; the workspace's own by default. */
 	checks?: Pick<Check, "run">;
@@ -30,9 +28,9 @@ export interface ShipOptions {
 export async function ship(opts: ShipOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
-	if (!isVerb(opts.bump)) {
+	if (!isBump(opts.bump)) {
 		throw new Error(
-			`unknown version bump "${opts.bump}" (expected ${VERBS.join(", ")})`,
+			`unknown version bump "${opts.bump}" (expected ${BUMPS.join(", ")})`,
 		);
 	}
 	// These packages publish their source, so a typecheck is the only compile
@@ -40,7 +38,8 @@ export async function ship(opts: ShipOptions): Promise<void> {
 	await fix({ check: true, checks: opts.checks, log, ps });
 
 	const declared = await releases.workspace({ fs: opts.fs, ps });
-	await release[opts.bump](declared, {
+	await declared.release({
+		bump: opts.bump,
 		prompt: opts.prompt,
 		log,
 		fs: opts.fs,

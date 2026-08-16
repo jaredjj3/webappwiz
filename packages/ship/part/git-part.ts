@@ -3,25 +3,26 @@ import { NodePs, type Ps } from "@webappwiz/system";
 import type { Cut } from "../cut";
 import { CliGit } from "../git/cli-git";
 import type { Git } from "../git/git";
-import type { Release } from "./release";
+import type { Part, Stage } from "./part";
 
-/** What a `GitRelease` speaks git through; the repository here by default. */
-export interface GitReleaseOptions {
+/** What a `GitPart` speaks git through; the repository here by default. */
+export interface GitPartOptions {
 	git?: Git;
 	ps?: Ps;
 }
 
 /**
  * The tag naming the release, and the push that publishes it along with the
- * commit it names. Declare it after the packages it tags: a tag for a version
+ * commit it names. Its stage puts it after every package: a tag for a version
  * a registry never got outlives the failure that caused it.
  */
-export class GitRelease implements Release {
+export class GitPart implements Part {
 	readonly packages: readonly string[] = [];
+	readonly stage: Stage = "tag";
 
 	private readonly git: Git;
 
-	constructor(opts: GitReleaseOptions = {}) {
+	constructor(opts: GitPartOptions = {}) {
 		const ps = opts.ps ?? new NodePs();
 		this.git = opts.git ?? new CliGit(ps.cwd(), { ps });
 	}

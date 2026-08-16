@@ -34,18 +34,24 @@ describe("ship", () => {
 	});
 
 	it("refuses a bump nobody has heard of", async () => {
-		await expect(ship(opts("sideways"))).rejects.toThrow(
-			'unknown version bump "sideways"',
+		await expect(ship(opts("resume"))).rejects.toThrow(
+			'unknown version bump "resume" (expected patch, minor, major)',
 		);
 		expect(ps.getCalls()).toEqual([]);
 	});
 
-	it("finishes a release that failed, at the version already stamped", async () => {
-		await ship(opts("resume"));
+	it("finishes a release that failed, at the version RELEASE holds", async () => {
+		await fs.write(
+			"/repo/RELEASE",
+			JSON.stringify({ version: "1.2.4", done: [] }),
+		);
+
+		await ship(opts("major"));
 
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
-			"1.2.3",
+			"1.2.4",
 		);
+		expect(await fs.exists("/repo/RELEASE")).toBe(false);
 	});
 
 	it("gates before it releases the workspace it found", async () => {
@@ -56,5 +62,6 @@ describe("ship", () => {
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
 			"1.2.4",
 		);
+		expect(await fs.exists("/repo/RELEASE")).toBe(false);
 	});
 });

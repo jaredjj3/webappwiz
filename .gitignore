@@ -30,6 +30,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # what the last judge run cost, which calibrates the next estimate
 .wiz
 
+# a release under way; the last part to land deletes it (wiz ship)
+RELEASE
+
 # IntelliJ based IDEs
 .idea
 

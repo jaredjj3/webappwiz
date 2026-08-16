@@ -1,13 +1,14 @@
 import type { Cut } from "../cut";
 import type { Github } from "../github/github";
-import type { Release } from "./release";
+import type { Part, Stage } from "./part";
 
 /**
- * The GitHub release notes for the tag. Declare it after `releases.git()`,
- * which is what puts the tag there for it to write about.
+ * The GitHub release notes for the tag. Its stage puts it after the tag,
+ * which is what it writes about.
  */
-export class GithubRelease implements Release {
+export class GithubPart implements Part {
 	readonly packages: readonly string[] = [];
+	readonly stage: Stage = "notes";
 
 	constructor(private readonly github: Github) {}
 

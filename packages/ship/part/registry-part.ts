@@ -1,11 +1,12 @@
 import { color } from "@webappwiz/log";
 import type { Cut } from "../cut";
 import type { Registry } from "../registry/registry";
-import type { Release } from "./release";
+import type { Part, Stage } from "./part";
 
 /** One package, published through the registry that carries it. */
-export class RegistryRelease implements Release {
+export class RegistryPart implements Part {
 	readonly packages: readonly string[];
+	readonly stage: Stage = "publish";
 
 	constructor(
 		private readonly name: string,
@@ -22,7 +23,7 @@ export class RegistryRelease implements Release {
 		}
 		const dir = cut.dir(this.name);
 		if (dir === undefined) {
-			// Unreachable while the roster check `ship` makes holds its gate.
+			// Unreachable while the roster check a release makes holds its gate.
 			throw new Error(`"${this.name}" has no workspace package`);
 		}
 		await this.registry.publish(dir);

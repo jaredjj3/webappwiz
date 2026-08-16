@@ -38,7 +38,8 @@ wiz
 	.command("ship")
 	.description("release every package in the workspace at one version")
 	.arg("bump", t.string(), {
-		description: "patch, minor, major, or resume to finish one that failed",
+		description:
+			"patch, minor, or major (a release that failed is finished first)",
 	})
 	.action((opts, { log, fs, ps }) => ship({ ...opts, log, fs, ps }));
 

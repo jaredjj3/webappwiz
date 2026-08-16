@@ -3,10 +3,11 @@
 export { Cut, type CutOptions } from "./cut";
 export type { CliGithubOptions } from "./github/cli-github";
 export type { Github } from "./github/github";
+export type { GitPartOptions } from "./part/git-part";
+export type { Part, Stage } from "./part/part";
 export type { NpmRegistryOptions } from "./registry/npm-registry";
 export type { Registry } from "./registry/registry";
-export type { GitReleaseOptions } from "./release/git-release";
-export type { Release } from "./release/release";
+export { Release, type ReleaseOptions } from "./release";
 export { releases, type WorkspaceReleaseOptions } from "./releases";
-export { type ShipOptions, ship } from "./ship";
+export type { Bump } from "./version";
 export type { Package, Workspace } from "./workspace/workspace";

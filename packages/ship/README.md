@@ -6,22 +6,58 @@ command, an MCP tool and an HTTP endpoint, because deciding what to release is
 separate from doing it.
 
 ```ts
-import { releases, ship } from "@webappwiz/ship";
+import { releases } from "@webappwiz/ship";
 
-const release = releases.lockstep(
+await releases.lockstep(
 	releases.npm("@scope/foo"),
 	releases.npm("@scope/bar"),
 	releases.git(),
 	releases.github(),
-);
-
-await ship.patch(release);
+).release({ bump: "minor" });
 ```
 
-That is a whole release script. `releases` composes, `ship` runs, and nothing
-else is public. Every part goes out in the order you declared it: the packages
-publish, `releases.git()` tags and pushes, and `releases.github()` writes the
-notes for the tag it finds there.
+That is a whole release script. `releases` composes `Release` objects, and
+`release()` runs one: print what would go out, ask, stamp every package,
+commit, and carry each part out. `bump` says how far the version moves, and
+`patch` is the default.
+
+## Declaration order does not matter
+
+Every part carries a stage: packages `publish`, then the `tag` goes on, then
+the `notes` are written about it. A release runs its parts by stage, so this
+declaration goes out in exactly the same order as the one above:
+
+```ts
+await releases.lockstep(
+	releases.github(),
+	releases.git(),
+	releases.npm("@scope/foo"),
+	releases.npm("@scope/bar"),
+).release();
+```
+
+The point is what the ordering protects: a tag for a version no registry ever
+received is a permanent lie, so the tag always follows the packages it names,
+as a property of the parts rather than a rule about how to write them down.
+
+## The RELEASE file
+
+The moment a release starts, a `RELEASE` file goes down at the workspace
+root: the version going out, and which parts have landed so far. The last
+part to land deletes it.
+
+So a `RELEASE` file on disk means the previous run died, and the next
+`release()` finishes that version instead of bumping past it. Every part the
+file says landed is skipped outright, and the rest carry their own checks
+(`releases.npm` asks the registry, `releases.git()` leaves an existing tag
+alone), so running `release()` again after any failure is always the right
+move: nothing goes out twice, and whatever failed is retried.
+
+The file is in-flight state for one checkout, not history: gitignore it.
+Getting into a weird state is cheap in both directions, because the per-part
+checks hold either way. A stale file resumes a release that actually
+finished, and every part skips; a lost file bumps past a death, and you spend
+a version number.
 
 ## Anywhere npm is not the answer
 
@@ -40,11 +76,11 @@ class CrateRegistry implements Registry {
 	}
 }
 
-const release = releases.lockstep(
+await releases.lockstep(
 	releases.npm("@scope/foo"),
 	releases.custom("scope-foo-sys", new CrateRegistry()),
 	releases.git(),
-);
+).release();
 ```
 
 A registry answers two questions: do you already have this version, and please
@@ -54,29 +90,31 @@ For a workspace whose packages all go to npm, `releases.workspace()` reads the
 roster off your manifest instead:
 
 ```ts
-await ship.minor(await releases.workspace());
+await (await releases.workspace()).release({ bump: "minor" });
 ```
 
 ## What a part is
 
-Two members, whether it publishes one package or a hundred:
+Two members and an optional stage, whether it publishes one package or a
+hundred:
 
 ```ts
-interface Release {
+interface Part {
 	readonly packages: readonly string[];
+	readonly stage?: Stage; // "publish" when omitted
 	publish(cut: Cut): Promise<void>;
 }
 ```
 
-`packages` is the declaration `ship` cross-checks against your manifest, and
-`publish` carries the part out. A `Cut` is the release under way: `version`,
-`tag`, `dir(name)` for a package's directory, and a `log`. By the time a part
-sees one, every package is stamped and committed.
+`packages` is the declaration a release cross-checks against your manifest,
+and `publish` carries the part out. A `Cut` is the release under way:
+`version`, `tag`, `dir(name)` for a package's directory, and a `log`. By the
+time a part sees one, every package is stamped and committed.
 
 Write your own and it drops into a `lockstep` beside the ones here:
 
 ```ts
-class DockerRelease implements Release {
+class DockerPart implements Part {
 	readonly packages = []; // nothing the manifest carries
 
 	async publish(cut: Cut) {
@@ -85,26 +123,26 @@ class DockerRelease implements Release {
 }
 ```
 
-## Shipping
+Make `publish` repeatable: a retried release runs it again, so skip whatever
+already went out.
 
-`ship.patch`, `ship.minor` and `ship.major` each run the whole flow at the
-version their name picks: print what would go out, ask, stamp every package,
-commit, and publish each part in turn. `ship.resume` is the fourth, below.
+## What `release()` will not do
 
-They all take `(release, opts)`. Give it a `log`, `ps` or `prompt` to put it
-somewhere other than a terminal, and a `workspace` or `git` to point it at a
-repository that is not the one around the working directory.
-
-Two things it will not do. It will not release from anywhere but the default
-branch, because switching for you would release code you were not looking at.
-And it will not release a declaration that has drifted from the manifest,
-saying every disagreement at once: name a package that no longer exists, or
-add a public package and forget to declare it, and you hear about it before
-anything is stamped. That is what makes a declaration safe to write by hand.
+It will not release from anywhere but the default branch, because switching
+for you would release code you were not looking at. And it will not release a
+declaration that has drifted from the manifest, saying every disagreement at
+once: name a package that no longer exists, or add a public package and
+forget to declare it, and you hear about it before anything is stamped. That
+is what makes a declaration safe to write by hand.
 
 Uncommitted changes are not refused. The release commit takes every tracked
 change with it whatever anyone thinks about it, so the prompt says so and you
 answer.
+
+Each `release()` asks before any of it. Pass a `prompt` to ask somewhere
+other than a terminal, a `log` to say it somewhere else, and a `workspace` or
+`git` to point it at a repository that is not the one around the working
+directory.
 
 ## Logging in is part of publishing
 
@@ -116,47 +154,15 @@ preflight to keep in step with what publishing actually does.
 
 Set `NPM_TOKEN` and `GH_TOKEN` and neither login ever runs. In CI, set them:
 `npm login` reads from a human, and where there is none it would sit waiting
-rather than failing, so a release under `CI` says which token to set instead of
-asking.
+rather than failing, so a release under `CI` says which token to set instead
+of asking.
 
-Anything else that goes wrong throws, because there is nothing to decide about
-a publish that failed halfway. That is what `ship.resume` is for.
-
-## Finishing a release that died
-
-```ts
-await ship.resume(release);
-```
-
-`resume` releases at the version already stamped instead of picking a new one.
-Every part skips what it has already done, so whatever failed is retried and
-nothing goes out twice: `releases.npm` asks the registry, `releases.git()`
-leaves a tag that is already there, and `releases.github()` leaves notes that
-are already written.
-
-You say it, rather than `ship` guessing. Guessing means reading some marker to
-tell a release that finished from one that died, and every marker worth
-reading is written by a step that can itself fail. A person who just watched a
-release die knows it died, and the prompt names the version before anything
-moves.
-
-Getting it wrong is cheap in both directions. Resume a release that actually
-finished and every part skips, so nothing is published twice. Bump past one
-that died and you spend a version number.
-
-## The tag comes last
-
-Packages publish first, then the version is tagged and pushed. Tagging a
-version the registry never received leaves a permanent lie behind, so
-`releases.git()` goes after the packages it tags, and `releases.lockstep`
-refuses a declaration that puts it anywhere else.
-
-Beyond that ordering the tag is an artifact like any other. It decides nothing
-about what the next release does, so a part declared after it is as resumable
-as one declared before.
+Anything else that goes wrong throws, because there is nothing to decide
+about a publish that failed halfway. The `RELEASE` file it leaves behind is
+what makes the next `release()` finish the job.
 
 ## What it leaves to you
 
 Quality gates. Nothing here runs your formatter, tests or build, because which
 ones matter is your repo's business, not this package's. Run them before you
-call `ship`.
+call `release()`.
