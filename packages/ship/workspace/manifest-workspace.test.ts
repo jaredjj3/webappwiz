@@ -75,7 +75,7 @@ describe("workspace", () => {
 
 		expect(found.root).toBe("/solo");
 		expect(await found.packages()).toEqual([
-			{ name: "@scope/solo", dir: "/solo", private: false },
+			{ name: "@scope/solo", dir: "/solo", private: false, dependencies: [] },
 		]);
 	});
 
@@ -101,13 +101,41 @@ describe("workspace", () => {
 				name: "@scope/one",
 				dir: "/repo/packages/one",
 				private: false,
+				dependencies: [],
 			},
 			{
 				name: "@scope/two",
 				dir: "/repo/packages/two",
 				private: true,
+				dependencies: [],
 			},
 		]);
+	});
+
+	it("reports the siblings a package depends on, peers included", async () => {
+		await write(fs, "/repo/packages/one", {
+			name: "@scope/one",
+			dependencies: { "@scope/two": "workspace:^", chalk: "^5.0.0" },
+			peerDependencies: { typescript: "^7" },
+			devDependencies: { "@scope/two": "workspace:^" },
+		});
+
+		const [one] = await workspace.packages();
+
+		// chalk and typescript are already on the registry, so neither can hold a
+		// release back; the sibling is the only name that orders anything.
+		expect(one?.dependencies).toEqual(["@scope/two"]);
+	});
+
+	it("counts a sibling named only as a peer", async () => {
+		await write(fs, "/repo/packages/one", {
+			name: "@scope/one",
+			peerDependencies: { "@scope/two": "workspace:^" },
+		});
+
+		const [one] = await workspace.packages();
+
+		expect(one?.dependencies).toEqual(["@scope/two"]);
 	});
 
 	it("skips a directory with no manifest of its own", async () => {

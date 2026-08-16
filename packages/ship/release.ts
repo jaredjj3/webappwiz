@@ -4,6 +4,7 @@ import { type Artifact, STAGES } from "./artifact/artifact";
 import { Cut } from "./cut";
 import { CliGit } from "./git/cli-git";
 import type { Git } from "./git/git";
+import { order } from "./order";
 import { ReleaseFile } from "./release-file";
 import { type Bump, bump } from "./version";
 import { ManifestWorkspace } from "./workspace/manifest-workspace";
@@ -85,7 +86,10 @@ export class Release {
 				"uncommitted changes: releases go out from a clean tree, so commit or discard them first",
 			);
 		}
-		declares(this.packages, await workspace.packages());
+		// Ordered once, and used twice: it decides what builds before what, and
+		// then which package reaches the registry before which.
+		const packages = order(await workspace.packages());
+		declares(this.packages, packages);
 
 		const file = new ReleaseFile(workspace.root, { fs });
 		const found = await file.read();
@@ -107,19 +111,56 @@ export class Release {
 		await workspace.setVersion(version);
 		await git.commitAll(`Release ${version}`);
 
-		const cut = new Cut(version, await workspace.packages(), { log });
-		for (const [index, artifact] of this.artifacts.entries()) {
-			const key = keyFor(artifact, index);
-			if (state.done.includes(key)) {
-				continue;
+		const cut = new Cut(version, packages, { log });
+		try {
+			for (const [index, artifact] of sequence(
+				this.artifacts,
+				packages,
+			).entries()) {
+				const key = keyFor(artifact, index);
+				if (state.done.includes(key)) {
+					continue;
+				}
+				await artifact.publish(cut);
+				state.done.push(key);
+				await file.write(state);
 			}
-			await artifact.publish(cut);
-			state.done.push(key);
-			await file.write(state);
+		} finally {
+			for (const artifact of this.artifacts) {
+				await artifact.clean?.(cut);
+			}
 		}
 		await file.clear();
 		log.info(color.green(`shipped ${version}`));
 	}
+}
+
+/**
+ * `artifacts` in the order they run: by stage, and within a stage by where the
+ * packages they name fall in the dependency order. The stage key is applied
+ * again here rather than trusted from the constructor, so the sequence is
+ * right however the artifacts arrived.
+ *
+ * An artifact naming no packages, or naming one the workspace does not have,
+ * sorts to the end of its stage, where it cannot come between two that do.
+ */
+function sequence(
+	artifacts: readonly Artifact[],
+	packages: readonly Package[],
+): Artifact[] {
+	const rank = new Map(packages.map((pkg, index) => [pkg.name, index]));
+	const at = (artifact: Artifact): number => {
+		const ranks = artifact.packages.map(
+			(name) => rank.get(name) ?? packages.length,
+		);
+		return ranks.length === 0 ? packages.length : Math.min(...ranks);
+	};
+	return artifacts.toSorted((left, right) => {
+		const stages =
+			STAGES.indexOf(left.stage ?? "publish") -
+			STAGES.indexOf(right.stage ?? "publish");
+		return stages !== 0 ? stages : at(left) - at(right);
+	});
 }
 
 /**

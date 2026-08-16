@@ -10,34 +10,50 @@
 		"directory": "packages/cli"
 	},
 	"type": "module",
-	"module": "index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"bin": {
-		"webappwiz": "./index.ts"
+		"webappwiz": "./dist/index.js"
 	},
 	"exports": {
-		".": "./index.ts",
-		"./webappwiz": "./webappwiz.ts",
-		"./rules": "./rules.ts"
+		".": {
+			"bun": "./index.ts",
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./webappwiz": {
+			"bun": "./webappwiz.ts",
+			"types": "./dist/webappwiz.d.ts",
+			"default": "./dist/webappwiz.js"
+		},
+		"./rules": {
+			"bun": "./rules.ts",
+			"types": "./dist/rules.d.ts",
+			"default": "./dist/rules.js"
+		}
 	},
 	"engines": {
 		"bun": ">=1.3"
 	},
 	"files": [
+		"dist",
 		"**/*.ts",
+		"**/*.tsx",
 		"!**/*.test.ts",
+		"!**/*.test.tsx",
 		"templates/*.md"
 	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/cmd": "workspace:*",
-		"@webappwiz/log": "workspace:*",
-		"@webappwiz/md": "workspace:*",
-		"@webappwiz/rules": "workspace:*",
-		"@webappwiz/system": "workspace:*",
-		"@webappwiz/t": "workspace:*",
-		"@webappwiz/time": "workspace:*"
+		"@webappwiz/cmd": "workspace:^",
+		"@webappwiz/log": "workspace:^",
+		"@webappwiz/md": "workspace:^",
+		"@webappwiz/rules": "workspace:^",
+		"@webappwiz/system": "workspace:^",
+		"@webappwiz/t": "workspace:^",
+		"@webappwiz/time": "workspace:^"
 	},
 	"peerDependencies": {
 		"typescript": "^7"

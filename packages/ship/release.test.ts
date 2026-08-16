@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakeFs } from "@webappwiz/system/testing";
+import { FakeBundle } from "./bundle/fake-bundle";
 import { FakeGit } from "./git/fake-git";
 import { FakeGithub } from "./github/fake-github";
 import { GithubArtifact } from "./github/github-artifact";
@@ -229,5 +230,78 @@ describe("release", () => {
 		await expect(releases.git({ git }).release(answering("y"))).rejects.toThrow(
 			"there is nothing to publish",
 		);
+	});
+
+	it("publishes a package only once the siblings it needs are out", async () => {
+		// Alphabetically `one` leads, but it needs `two`, so `two` goes first. A
+		// release that died in between would leave `two` installable rather than
+		// leaving `one` naming a version no registry has.
+		workspace = new FakeWorkspace([
+			{
+				name: "@scope/one",
+				dir: "/repo/packages/one",
+				private: false,
+				dependencies: ["@scope/two"],
+			},
+			{
+				name: "@scope/two",
+				dir: "/repo/packages/two",
+				private: false,
+				dependencies: [],
+			},
+		]);
+
+		await releases
+			.lockstep(
+				releases.custom("@scope/one", registry),
+				releases.custom("@scope/two", registry),
+			)
+			.release(answering("y"));
+
+		expect(registry.publishes).toEqual([
+			"/repo/packages/two",
+			"/repo/packages/one",
+		]);
+	});
+
+	it("clears what the build left, and publishes nothing it could not build", async () => {
+		const bundle = new FakeBundle();
+		bundle.fails = "/repo/packages/one";
+		const building = releases.lockstep(
+			releases.build(bundle),
+			releases.custom("@scope/one", registry),
+			releases.custom("@scope/two", registry),
+			releases.git({ git }),
+		);
+
+		await expect(building.release(answering("y"))).rejects.toThrow(
+			"build failed in /repo/packages/one",
+		);
+
+		expect(registry.publishes).toEqual([]);
+		expect(git.tags.size).toBe(0);
+		// The private package is cleared alongside the rest: it was stamped too.
+		expect(bundle.cleaned).toEqual([
+			"/repo/packages/hid",
+			"/repo/packages/one",
+			"/repo/packages/two",
+		]);
+	});
+
+	it("clears the build after a release that worked", async () => {
+		const bundle = new FakeBundle();
+
+		await releases
+			.lockstep(
+				releases.build(bundle),
+				releases.custom("@scope/one", registry),
+				releases.custom("@scope/two", registry),
+				releases.git({ git }),
+			)
+			.release(answering("y"));
+
+		expect(bundle.built).toEqual(["/repo/packages/one", "/repo/packages/two"]);
+		expect(bundle.cleaned).toHaveLength(3);
+		expect(registry.publishes).toHaveLength(2);
 	});
 });

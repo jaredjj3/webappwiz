@@ -1,5 +1,8 @@
 import { type Fs, NodePs, type Ps } from "@webappwiz/system";
 import type { Artifact } from "./artifact/artifact";
+import { BunBundle } from "./bundle/bun-bundle";
+import type { Bundle } from "./bundle/bundle";
+import { BundleArtifact } from "./bundle/bundle-artifact";
 import { CliGit } from "./git/cli-git";
 import { GitArtifact, type GitArtifactOptions } from "./git/git-artifact";
 import { CliGithub, type CliGithubOptions } from "./github/cli-github";
@@ -47,6 +50,15 @@ export class releases {
 		return new Release([new GitArtifact(opts)]);
 	}
 
+	/**
+	 * Building every package before any of them goes out, and clearing what that
+	 * left once the release is over. Add it to any release whose packages
+	 * publish something other than the source they were written in.
+	 */
+	static build(bundle?: Bundle): Release {
+		return new Release([new BundleArtifact(bundle)]);
+	}
+
 	/** The release notes GitHub publishes for the tag. */
 	static github(opts: CliGithubOptions = {}): Release {
 		return new Release([new GithubArtifact(new CliGithub(opts))]);
@@ -78,6 +90,7 @@ export class releases {
 			.filter((pkg) => !pkg.private)
 			.map((pkg) => new RegistryArtifact(pkg.name, registry));
 		return new Release([
+			new BundleArtifact(new BunBundle({ fs: opts.fs, ps })),
 			...artifacts,
 			new GitArtifact({ git: new CliGit(workspace.root, { ps }) }),
 			new GithubArtifact(new CliGithub({ ps })),

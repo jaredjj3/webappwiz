@@ -7,6 +7,8 @@ interface Manifest {
 	version?: string;
 	private?: boolean;
 	workspaces?: string[];
+	dependencies?: Record<string, string>;
+	peerDependencies?: Record<string, string>;
 }
 
 /**
@@ -63,19 +65,30 @@ export class ManifestWorkspace implements Workspace {
 	}
 
 	async packages(): Promise<Package[]> {
-		const packages: Package[] = [];
+		const found: Array<{ dir: string; manifest: Manifest & { name: string } }> =
+			[];
 		for (const dir of await this.dirs()) {
 			const manifest = await read(this.fs, dir);
-			if (manifest?.name === undefined) {
-				continue;
+			if (manifest?.name !== undefined) {
+				found.push({ dir, manifest: { ...manifest, name: manifest.name } });
 			}
-			packages.push({
+		}
+		// Which names are siblings is only knowable once every manifest is read,
+		// so the dependency lists are narrowed to the workspace in a second pass.
+		const names = new Set(found.map((one) => one.manifest.name));
+		return found
+			.map(({ dir, manifest }) => ({
 				name: manifest.name,
 				dir,
 				private: manifest.private === true,
-			});
-		}
-		return packages.sort((left, right) => left.name.localeCompare(right.name));
+				// Peers count and devDependencies do not: a consumer installing this
+				// package gets its peers resolved and never sees what tested it.
+				dependencies: Object.keys({
+					...manifest.dependencies,
+					...manifest.peerDependencies,
+				}).filter((dep) => names.has(dep)),
+			}))
+			.sort((left, right) => left.name.localeCompare(right.name));
 	}
 
 	/**

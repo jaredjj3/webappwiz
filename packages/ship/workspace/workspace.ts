@@ -5,6 +5,12 @@ export interface Package {
 	dir: string;
 	/** Private packages still get the version stamp; they just never go out. */
 	private: boolean;
+	/**
+	 * The workspace packages this one needs, which is what puts it later in the
+	 * order a release builds and publishes in. Only siblings appear here:
+	 * everything from outside the workspace is already on the registry.
+	 */
+	dependencies: readonly string[];
 }
 
 /**

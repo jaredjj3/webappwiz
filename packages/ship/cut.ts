@@ -20,7 +20,12 @@ export class Cut {
 	constructor(
 		/** The version every package in this release goes out at. */
 		readonly version: string,
-		private readonly packages: Package[],
+		/**
+		 * Every package in the workspace, each one after the siblings it depends
+		 * on. An artifact that works through them in this order never reaches a
+		 * package before whatever it needs is ready.
+		 */
+		readonly packages: readonly Package[],
 		opts: CutOptions = {},
 	) {
 		this.tag = `v${version}`;

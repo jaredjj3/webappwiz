@@ -10,20 +10,32 @@
 		"directory": "packages/system"
 	},
 	"type": "module",
-	"module": "index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./index.ts",
-		"./testing": "./testing.ts"
+		".": {
+			"bun": "./index.ts",
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./testing": {
+			"bun": "./testing.ts",
+			"types": "./dist/testing.d.ts",
+			"default": "./dist/testing.js"
+		}
 	},
 	"files": [
+		"dist",
 		"**/*.ts",
-		"!**/*.test.ts"
+		"**/*.tsx",
+		"!**/*.test.ts",
+		"!**/*.test.tsx"
 	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/log": "workspace:*",
-		"@webappwiz/time": "workspace:*"
+		"@webappwiz/log": "workspace:^",
+		"@webappwiz/time": "workspace:^"
 	}
 }

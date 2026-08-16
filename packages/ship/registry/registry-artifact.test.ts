@@ -8,7 +8,14 @@ describe("registry artifact", () => {
 	const cutting = () =>
 		new Cut(
 			"1.2.4",
-			[{ name: "@scope/one", dir: "/repo/packages/one", private: false }],
+			[
+				{
+					name: "@scope/one",
+					dir: "/repo/packages/one",
+					private: false,
+					dependencies: [],
+				},
+			],
 			{ log: new MemoryLogger() },
 		);
 

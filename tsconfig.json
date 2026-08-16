@@ -14,6 +14,9 @@
 
 		// Bundler mode
 		"moduleResolution": "bundler",
+		// Resolves @webappwiz/* to source here, while consumers take the built
+		// dist entries that follow it in each package's exports.
+		"customConditions": ["bun"],
 		"allowImportingTsExtensions": true,
 		"resolveJsonModule": true,
 		"verbatimModuleSyntax": true,

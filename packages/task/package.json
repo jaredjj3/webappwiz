@@ -10,22 +10,34 @@
 		"directory": "packages/task"
 	},
 	"type": "module",
-	"module": "index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./index.ts",
-		"./browser": "./browser.ts"
+		".": {
+			"bun": "./index.ts",
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./browser": {
+			"bun": "./browser.ts",
+			"types": "./dist/browser.d.ts",
+			"default": "./dist/browser.js"
+		}
 	},
 	"files": [
+		"dist",
 		"**/*.ts",
-		"!**/*.test.ts"
+		"**/*.tsx",
+		"!**/*.test.ts",
+		"!**/*.test.tsx"
 	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/browser": "workspace:*",
-		"@webappwiz/disposable": "workspace:*",
-		"@webappwiz/events": "workspace:*",
-		"@webappwiz/time": "workspace:*"
+		"@webappwiz/browser": "workspace:^",
+		"@webappwiz/disposable": "workspace:^",
+		"@webappwiz/events": "workspace:^",
+		"@webappwiz/time": "workspace:^"
 	}
 }

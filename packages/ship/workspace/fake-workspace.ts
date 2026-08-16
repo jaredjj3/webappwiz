@@ -5,16 +5,19 @@ const PACKAGES: Package[] = [
 		name: "@scope/one",
 		dir: "/repo/packages/one",
 		private: false,
+		dependencies: [],
 	},
 	{
 		name: "@scope/two",
 		dir: "/repo/packages/two",
 		private: false,
+		dependencies: ["@scope/one"],
 	},
 	{
 		name: "@scope/hid",
 		dir: "/repo/packages/hid",
 		private: true,
+		dependencies: [],
 	},
 ];
 
