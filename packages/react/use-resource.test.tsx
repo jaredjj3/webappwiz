@@ -1,4 +1,4 @@
-import "../../test-setup";
+import "../../setup";
 import { describe, expect, it } from "bun:test";
 import { renderHook } from "@testing-library/react";
 import { StrictMode } from "react";

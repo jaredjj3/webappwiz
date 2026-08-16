@@ -1,4 +1,4 @@
-import "../../test-setup";
+import "../../setup";
 import { beforeEach, describe, expect, it } from "bun:test";
 
 import { Scroll } from "./index";

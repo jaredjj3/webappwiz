@@ -1,4 +1,4 @@
-import "../../../test-setup";
+import "../../../setup";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { FakeTimer } from "@webappwiz/time/testing";
 
