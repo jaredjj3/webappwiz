@@ -108,7 +108,7 @@ describe("bun bundle", () => {
 		);
 	});
 
-	it("runs a package's own build script instead of the compiler", async () => {
+	it("runs a package's own build script before compiling it", async () => {
 		await written({
 			exports: { ".": "./index.ts" },
 			scripts: { build: "make everything" },
@@ -116,8 +116,10 @@ describe("bun bundle", () => {
 
 		await bundle.build("/repo/packages/time");
 
-		expect(ps.getCalls()).toEqual(["bun run build"]);
-		// The manifest is still the release's business, however it was built.
+		// First, because what it makes is something the source then imports:
+		// `arbor` builds the page it serves this way.
+		expect(ps.getCalls()[0]).toBe("bun run build");
+		expect(compiled()).toContain("./index.ts");
 		expect(await fs.exists("/repo/packages/time/dist/package.json")).toBe(true);
 	});
 

@@ -45,3 +45,6 @@ ARBOR.md
 # snapshots and screenshots an agent's browser leaves behind
 .playwright-mcp
 .arbor-shots
+
+# the arbor dev page, compiled by packages/arbor/build.ts
+packages/arbor/dev/build

@@ -33,10 +33,11 @@ export interface BunBundleOptions {
  * needs neither Bun nor a bundler nor a compiler pass over somebody else's
  * source, and the source never leaves the repository.
  *
- * A package whose output is more than its own source says so with a `build`
- * script in its manifest, and that runs instead of the compiler. The manifest
- * and the documents are still written afterwards: what a package is built by is
- * its own business, but what it publishes as is the release's.
+ * A package needing something made before it compiles says so with a `build`
+ * script in its manifest, and that runs first: `arbor` builds the page it
+ * serves, which its own source then imports. The compiler still runs after,
+ * because what a package makes for itself is its business and what it publishes
+ * as is the release's.
  */
 export class BunBundle implements Bundle {
 	private readonly fs: Fs;
@@ -54,9 +55,8 @@ export class BunBundle implements Bundle {
 		const out = `${dir}/dist`;
 		if (manifest.scripts?.build !== undefined) {
 			await this.run(["bun", "run", "build"], dir);
-		} else {
-			await this.compile(dir, sources(manifest));
 		}
+		await this.compile(dir, sources(manifest));
 		// Before pointing, since a package that exports nothing built nothing, and
 		// walking a directory that is not there is an error rather than a no-op.
 		await this.fs.mkdir(out);
