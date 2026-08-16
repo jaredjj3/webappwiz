@@ -6,7 +6,11 @@ import { ship } from "./ship";
 describe("ship", () => {
 	// The gate runs through the same FakePs the release does, so its commands
 	// show up in `getCalls()` ahead of anything the release itself spawns.
-	const GATE = ["bunx biome check .", "bunx tsc --noEmit"];
+	const GATE = [
+		"bunx biome check .",
+		"bunx tsc --noEmit",
+		"bun test --pass-with-no-tests --parallel",
+	];
 
 	let log: MemoryLogger;
 	let ps: FakePs;
@@ -63,5 +67,18 @@ describe("ship", () => {
 			"1.2.4",
 		);
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
+	});
+
+	it("stops on a red suite, before anything is stamped", async () => {
+		ps.simulate(async () =>
+			ps.getCalls().at(-1)?.startsWith("bun test") ? 1 : 0,
+		);
+
+		await expect(ship(opts("patch"))).rejects.toThrow("Tests failed");
+
+		expect(ps.getCalls()).toEqual(GATE);
+		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
+			"1.2.3",
+		);
 	});
 });

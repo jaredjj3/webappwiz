@@ -3,6 +3,7 @@ import type { Check } from "@webappwiz/rules";
 import { type Bump, releases } from "@webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "@webappwiz/system";
 import { fix } from "./fix";
+import { test } from "./test";
 
 /** What `wiz ship` will answer to. A release that died is finished first. */
 const BUMPS = ["patch", "minor", "major"] as const satisfies readonly Bump[];
@@ -34,8 +35,10 @@ export async function ship(opts: ShipOptions): Promise<void> {
 		);
 	}
 	// These packages publish their source, so a typecheck is the only compile
-	// gate there is. Run it before anything is stamped or pushed.
+	// gate there is. Run it before anything is stamped or pushed, and the tests
+	// after it: the cheap gate should be the one that fails first.
 	await fix({ check: true, checks: opts.checks, log, ps });
+	await test({ package: "", fs: opts.fs, ps });
 
 	const declared = await releases.workspace({ fs: opts.fs, ps });
 	await declared.release({
