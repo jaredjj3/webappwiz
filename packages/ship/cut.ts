@@ -7,14 +7,14 @@ export interface CutOptions {
 }
 
 /**
- * The release under way, as one part of it sees it: the version everything
+ * The release under way, as one artifact of it sees it: the version everything
  * goes out at, the tag that names it, and where the packages sit. By the time
- * a part is handed one, every package is stamped and committed.
+ * an artifact is handed one, every package is stamped and committed.
  */
 export class Cut {
 	/** The tag naming this release, such as `v1.2.4`. */
 	readonly tag: string;
-	/** Where a part says what it did. */
+	/** Where an artifact says what it did. */
 	readonly log: Logger;
 
 	constructor(

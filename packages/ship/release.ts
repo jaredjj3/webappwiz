@@ -3,7 +3,7 @@ import { type Fs, NodeFs, NodePs, type Ps } from "@webappwiz/system";
 import { Cut } from "./cut";
 import { CliGit } from "./git/cli-git";
 import type { Git } from "./git/git";
-import { type Part, STAGES } from "./part/part";
+import { type Artifact, STAGES } from "./artifact/artifact";
 import { ReleaseFile } from "./release-file";
 import { type Bump, bump } from "./version";
 import { ManifestWorkspace } from "./workspace/manifest-workspace";
@@ -31,34 +31,34 @@ export interface ReleaseOptions {
 /**
  * Everything a release ships, ready to go out at one version. `releases`
  * composes these; `release()` runs the whole flow: say what would go out, ask,
- * stamp every package, commit, and carry each part out in stage order.
+ * stamp every package, commit, and carry each artifact out in stage order.
  *
  * ```ts
  * await releases.lockstep(releases.npm("@scope/foo"), releases.git()).release();
  * ```
  *
  * A release that dies partway leaves a RELEASE file behind, and the next
- * `release()` finishes that version instead of bumping past it: every part
+ * `release()` finishes that version instead of bumping past it: every artifact
  * that landed is skipped, so nothing goes out twice.
  */
 export class Release {
-	/** Every part, in the order they will run: publish, then tag, then notes. */
-	readonly parts: readonly Part[];
+	/** Every artifact, in the order they will run: publish, then tag, then notes. */
+	readonly artifacts: readonly Artifact[];
 
-	constructor(parts: readonly Part[]) {
+	constructor(artifacts: readonly Artifact[]) {
 		// Sorting here, stably, is what frees declarations from caring about
 		// order: a tag cannot come before the packages it names however the
-		// parts were written down.
-		this.parts = parts.toSorted(
+		// artifacts were written down.
+		this.artifacts = artifacts.toSorted(
 			(left, right) =>
 				STAGES.indexOf(left.stage ?? "publish") -
 				STAGES.indexOf(right.stage ?? "publish"),
 		);
 	}
 
-	/** The workspace packages this publishes, gathered from every part. */
+	/** The workspace packages this publishes, gathered from every artifact. */
 	get packages(): readonly string[] {
-		return this.parts.flatMap((part) => [...part.packages]);
+		return this.artifacts.flatMap((artifact) => [...artifact.packages]);
 	}
 
 	/** Releases everything, asking first. Run it again after a failure. */
@@ -100,12 +100,12 @@ export class Release {
 		await git.commitAll(`Release ${version}`);
 
 		const cut = new Cut(version, await workspace.packages(), { log });
-		for (const [index, part] of this.parts.entries()) {
-			const key = keyFor(part, index);
+		for (const [index, artifact] of this.artifacts.entries()) {
+			const key = keyFor(artifact, index);
 			if (state.done.includes(key)) {
 				continue;
 			}
-			await part.publish(cut);
+			await artifact.publish(cut);
 			state.done.push(key);
 			await file.write(state);
 		}
@@ -115,14 +115,14 @@ export class Release {
 }
 
 /**
- * One name per part, so RELEASE can say which of them landed. The index makes
+ * One name per artifact, so RELEASE can say which of them landed. The index makes
  * it unique; the rest makes the file legible. A declaration edited between a
- * death and its retry shifts the keys, and every part reruns: each one skips
+ * death and its retry shifts the keys, and every artifact reruns: each one skips
  * what already went out, so the cost is a registry lookup, not a double
  * publish.
  */
-function keyFor(part: Part, index: number): string {
-	return `${index}:${part.packages.join(" ") || (part.stage ?? "publish")}`;
+function keyFor(artifact: Artifact, index: number): string {
+	return `${index}:${artifact.packages.join(" ") || (artifact.stage ?? "publish")}`;
 }
 
 /** The version about to go out, and everything the prompt should say about it. */

@@ -1,11 +1,11 @@
 import type { Cut } from "../cut";
-import type { Part, Stage } from "./part";
+import type { Artifact, Stage } from "./artifact";
 
 /**
- * A part publishing the packages it was named for, at the `publish` stage
+ * A artifact publishing the packages it was named for, at the `publish` stage
  * unless a test moves `stage`. `cuts` holds every release it went into.
  */
-export class FakePart implements Part {
+export class FakeArtifact implements Artifact {
 	readonly cuts: Cut[] = [];
 	stage?: Stage;
 

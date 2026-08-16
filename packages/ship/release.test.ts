@@ -3,7 +3,7 @@ import { MemoryLogger } from "@webappwiz/log";
 import { FakeFs } from "@webappwiz/system/testing";
 import { FakeGit } from "./git/fake-git";
 import { FakeGithub } from "./github/fake-github";
-import { GithubPart } from "./github/github-part";
+import { GithubArtifact } from "./github/github-artifact";
 import { FakeRegistry } from "./registry/fake-registry";
 import type { Release, ReleaseOptions } from "./release";
 import { releases } from "./releases";
@@ -33,7 +33,7 @@ describe("release", () => {
 			releases.custom("@scope/one", registry),
 			releases.custom("@scope/two", registry),
 			releases.git({ git }),
-			new GithubPart(github),
+			new GithubArtifact(github),
 		);
 	});
 
@@ -92,7 +92,7 @@ describe("release", () => {
 			order.push(`notes ${tag}`);
 		};
 		const scrambled = releases.lockstep(
-			new GithubPart(github),
+			new GithubArtifact(github),
 			releases.git({ git }),
 			releases.custom("@scope/one", registry),
 			releases.custom("@scope/two", registry),
@@ -126,7 +126,7 @@ describe("release", () => {
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
 	});
 
-	it("leaves RELEASE behind when a part fails, and finishes from it", async () => {
+	it("leaves RELEASE behind when an artifact fails, and finishes from it", async () => {
 		github.error = new Error("not logged in to GitHub");
 
 		await expect(release.release(answering("y"))).rejects.toThrow(
@@ -138,7 +138,7 @@ describe("release", () => {
 		expect(state.done).toHaveLength(3); // both packages and the tag landed
 
 		// The retry finishes 1.2.4 whatever bump it asked for, skipping every
-		// part RELEASE says landed without so much as a registry lookup.
+		// artifact RELEASE says landed without so much as a registry lookup.
 		github.error = undefined;
 		const looked: string[] = [];
 		registry.published = async (name: string) => {

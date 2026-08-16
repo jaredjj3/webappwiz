@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { FakePart } from "./part/fake-part";
+import { FakeArtifact } from "./artifact/fake-artifact";
 import { FakeRegistry } from "./registry/fake-registry";
 import { releases } from "./releases";
 
@@ -22,25 +22,25 @@ describe("releases", () => {
 		expect(release.packages).toEqual(["@scope/one", "@scope/two"]);
 	});
 
-	it("runs the parts by stage, not by the order they were declared", () => {
+	it("runs the artifacts by stage, not by the order they were declared", () => {
 		const release = releases.lockstep(
 			releases.github(),
 			releases.git(),
 			releases.npm("@scope/one"),
 		);
 
-		expect(release.parts.map((part) => part.stage)).toEqual([
+		expect(release.artifacts.map((artifact) => artifact.stage)).toEqual([
 			"publish",
 			"tag",
 			"notes",
 		]);
 	});
 
-	it("takes a bare part beside the composed ones, at the publish stage", () => {
-		const docker = new FakePart();
+	it("takes a bare artifact beside the composed ones, at the publish stage", () => {
+		const docker = new FakeArtifact();
 		const release = releases.lockstep(releases.git(), docker);
 
-		expect(release.parts[0]).toBe(docker);
-		expect(release.parts[1]?.stage).toBe("tag");
+		expect(release.artifacts[0]).toBe(docker);
+		expect(release.artifacts[1]?.stage).toBe("tag");
 	});
 });

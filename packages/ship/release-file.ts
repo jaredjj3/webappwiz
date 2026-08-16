@@ -4,7 +4,7 @@ import { type Fs, NodeFs } from "@webappwiz/system";
 export interface ReleaseState {
 	/** The version everything goes out at. */
 	version: string;
-	/** The parts that already landed, by the keys the release gave them. */
+	/** The artifacts that already landed, by the keys the release gave them. */
 	done: string[];
 }
 
@@ -15,7 +15,7 @@ export interface ReleaseFileOptions {
 
 /**
  * The RELEASE file at the workspace root: written when a release starts,
- * updated as each part lands, deleted when the last one does. A release that
+ * updated as each artifact lands, deleted when the last one does. A release that
  * finds one knows the previous run died, and finishes it instead of bumping
  * past it. It is in-flight state for one checkout, so gitignore it.
  */

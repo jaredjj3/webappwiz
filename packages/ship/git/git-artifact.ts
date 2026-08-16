@@ -1,12 +1,12 @@
 import { color } from "@webappwiz/log";
 import { NodePs, type Ps } from "@webappwiz/system";
 import type { Cut } from "../cut";
-import type { Part, Stage } from "../part/part";
+import type { Artifact, Stage } from "../artifact/artifact";
 import { CliGit } from "./cli-git";
 import type { Git } from "./git";
 
-/** What a `GitPart` speaks git through; the repository here by default. */
-export interface GitPartOptions {
+/** What a `GitArtifact` speaks git through; the repository here by default. */
+export interface GitArtifactOptions {
 	git?: Git;
 	ps?: Ps;
 }
@@ -16,13 +16,13 @@ export interface GitPartOptions {
  * commit it names. Its stage puts it after every package: a tag for a version
  * a registry never got outlives the failure that caused it.
  */
-export class GitPart implements Part {
+export class GitArtifact implements Artifact {
 	readonly packages: readonly string[] = [];
 	readonly stage: Stage = "tag";
 
 	private readonly git: Git;
 
-	constructor(opts: GitPartOptions = {}) {
+	constructor(opts: GitArtifactOptions = {}) {
 		const ps = opts.ps ?? new NodePs();
 		this.git = opts.git ?? new CliGit(ps.cwd(), { ps });
 	}

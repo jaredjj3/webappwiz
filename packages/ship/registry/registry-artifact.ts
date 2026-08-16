@@ -1,10 +1,10 @@
 import { color } from "@webappwiz/log";
 import type { Cut } from "../cut";
-import type { Part, Stage } from "../part/part";
+import type { Artifact, Stage } from "../artifact/artifact";
 import type { Registry } from "./registry";
 
 /** One package, published through the registry that carries it. */
-export class RegistryPart implements Part {
+export class RegistryArtifact implements Artifact {
 	readonly packages: readonly string[];
 	readonly stage: Stage = "publish";
 

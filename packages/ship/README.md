@@ -18,13 +18,13 @@ await releases.lockstep(
 
 That is a whole release script. `releases` composes `Release` objects, and
 `release()` runs one: print what would go out, ask, stamp every package,
-commit, and carry each part out. `bump` says how far the version moves, and
+commit, and carry each artifact out. `bump` says how far the version moves, and
 `patch` is the default.
 
 ## Declaration order does not matter
 
-Every part carries a stage: packages `publish`, then the `tag` goes on, then
-the `notes` are written about it. A release runs its parts by stage, so this
+Every artifact carries a stage: packages `publish`, then the `tag` goes on, then
+the `notes` are written about it. A release runs its artifacts by stage, so this
 declaration goes out in exactly the same order as the one above:
 
 ```ts
@@ -38,25 +38,25 @@ await releases.lockstep(
 
 The point is what the ordering protects: a tag for a version no registry ever
 received is a permanent lie, so the tag always follows the packages it names,
-as a property of the parts rather than a rule about how to write them down.
+as a property of the artifacts rather than a rule about how to write them down.
 
 ## The RELEASE file
 
 The moment a release starts, a `RELEASE` file goes down at the workspace
-root: the version going out, and which parts have landed so far. The last
-part to land deletes it.
+root: the version going out, and which artifacts have landed so far. The last
+artifact to land deletes it.
 
 So a `RELEASE` file on disk means the previous run died, and the next
-`release()` finishes that version instead of bumping past it. Every part the
+`release()` finishes that version instead of bumping past it. Every artifact the
 file says landed is skipped outright, and the rest carry their own checks
 (`releases.npm` asks the registry, `releases.git()` leaves an existing tag
 alone), so running `release()` again after any failure is always the right
 move: nothing goes out twice, and whatever failed is retried.
 
 The file is in-flight state for one checkout, not history: gitignore it.
-Getting into a weird state is cheap in both directions, because the per-part
+Getting into a weird state is cheap in both directions, because the per-artifact
 checks hold either way. A stale file resumes a release that actually
-finished, and every part skips; a lost file bumps past a death, and you spend
+finished, and every artifact skips; a lost file bumps past a death, and you spend
 a version number.
 
 ## Anywhere npm is not the answer
@@ -93,13 +93,13 @@ roster off your manifest instead:
 await (await releases.workspace()).release({ bump: "minor" });
 ```
 
-## What a part is
+## What an artifact is
 
 Two members and an optional stage, whether it publishes one package or a
 hundred:
 
 ```ts
-interface Part {
+interface Artifact {
 	readonly packages: readonly string[];
 	readonly stage?: Stage; // "publish" when omitted
 	publish(cut: Cut): Promise<void>;
@@ -107,14 +107,14 @@ interface Part {
 ```
 
 `packages` is the declaration a release cross-checks against your manifest,
-and `publish` carries the part out. A `Cut` is the release under way:
+and `publish` carries the artifact out. A `Cut` is the release under way:
 `version`, `tag`, `dir(name)` for a package's directory, and a `log`. By the
-time a part sees one, every package is stamped and committed.
+time an artifact sees one, every package is stamped and committed.
 
 Write your own and it drops into a `lockstep` beside the ones here:
 
 ```ts
-class DockerPart implements Part {
+class DockerArtifact implements Artifact {
 	readonly packages = []; // nothing the manifest carries
 
 	async publish(cut: Cut) {
@@ -146,7 +146,7 @@ directory.
 
 ## Logging in is part of publishing
 
-Nothing asks you to be logged in beforehand. A part that needs credentials
+Nothing asks you to be logged in beforehand. An artifact that needs credentials
 gets them where it needs them: `releases.npm` runs `npm login` when
 `npm whoami` comes back with nobody, and `releases.github()` runs
 `gh auth login` the same way. Publishing then carries on. There is no

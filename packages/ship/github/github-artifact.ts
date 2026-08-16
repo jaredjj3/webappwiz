@@ -1,12 +1,12 @@
 import type { Cut } from "../cut";
-import type { Part, Stage } from "../part/part";
+import type { Artifact, Stage } from "../artifact/artifact";
 import type { Github } from "./github";
 
 /**
  * The GitHub release notes for the tag. Its stage puts it after the tag,
  * which is what it writes about.
  */
-export class GithubPart implements Part {
+export class GithubArtifact implements Artifact {
 	readonly packages: readonly string[] = [];
 	readonly stage: Stage = "notes";
 
