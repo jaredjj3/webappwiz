@@ -10,39 +10,19 @@
 		"directory": "packages/worker"
 	},
 	"type": "module",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"module": "index.ts",
 	"exports": {
-		".": {
-			"bun": "./index.ts",
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
-		},
-		"./script": {
-			"bun": "./script.ts",
-			"types": "./dist/script.d.ts",
-			"default": "./dist/script.js"
-		},
-		"./testing": {
-			"bun": "./testing.ts",
-			"types": "./dist/testing.d.ts",
-			"default": "./dist/testing.js"
-		}
+		".": "./index.ts",
+		"./script": "./script.ts",
+		"./testing": "./testing.ts"
 	},
-	"files": [
-		"dist",
-		"**/*.ts",
-		"**/*.tsx",
-		"!**/*.test.ts",
-		"!**/*.test.tsx"
-	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/assert": "workspace:^",
-		"@webappwiz/disposable": "workspace:^",
-		"@webappwiz/id": "workspace:^",
-		"@webappwiz/time": "workspace:^"
+		"@webappwiz/assert": "workspace:*",
+		"@webappwiz/disposable": "workspace:*",
+		"@webappwiz/id": "workspace:*",
+		"@webappwiz/time": "workspace:*"
 	}
 }

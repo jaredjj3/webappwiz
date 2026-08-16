@@ -17,6 +17,9 @@ export class Cut {
 	/** Where an artifact says what it did. */
 	readonly log: Logger;
 
+	/** Package name to where a build put what that package publishes. */
+	private readonly staged = new Map<string, string>();
+
 	constructor(
 		/** The version every package in this release goes out at. */
 		readonly version: string,
@@ -32,8 +35,20 @@ export class Cut {
 		this.log = opts.log ?? new ConsoleLogger();
 	}
 
-	/** Where the named package's package.json sits, when the workspace has it. */
+	/**
+	 * Where the named package publishes from, when the workspace has it: what a
+	 * build staged for it, or its own directory when nothing built anything.
+	 */
 	dir(name: string): string | undefined {
-		return this.packages.find((pkg) => pkg.name === name)?.dir;
+		const pkg = this.packages.find((one) => one.name === name);
+		return pkg === undefined ? undefined : (this.staged.get(name) ?? pkg.dir);
+	}
+
+	/**
+	 * Says the named package publishes from `dir`. A build calls this so that
+	 * the stage after it sends the built package rather than the source one.
+	 */
+	stage(name: string, dir: string): void {
+		this.staged.set(name, dir);
 	}
 }

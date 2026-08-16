@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { NodeFs } from "@webappwiz/system";
 
-import { source, versionOf } from "./skill";
+import { available, bundled, versionOf } from "./skill";
 
 const md = (name: string, version = "1.0.0") =>
 	`---\nname: ${name}\nversion: ${version}\n---\n\n# ${name}\n`;
@@ -32,13 +32,10 @@ describe("skill", () => {
 		);
 		expect(root.version).toEqual(version);
 
-		const files = (await real.readdir(source)).filter((file) =>
-			file.endsWith(".skill.md"),
-		);
-		expect(files.length).toBeGreaterThan(0);
-		for (const file of files) {
-			const skill = await real.read(`${source}/${file}`);
-			expect(versionOf(skill)).toEqual(version);
+		const skills = available(bundled);
+		expect(skills.length).toBeGreaterThan(0);
+		for (const [name, doc] of skills) {
+			expect([name, versionOf(doc)]).toEqual([name, version]);
 		}
 	});
 });

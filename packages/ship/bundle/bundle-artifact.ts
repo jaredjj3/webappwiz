@@ -17,16 +17,12 @@ export class BundleArtifact implements Artifact {
 	readonly packages: readonly string[] = [];
 	readonly stage: Stage = "build";
 
-	private readonly bundle: Bundle;
-
-	constructor(bundle: Bundle = new BunBundle()) {
-		this.bundle = bundle;
-	}
+	constructor(private readonly bundle: Bundle = new BunBundle()) {}
 
 	async publish(cut: Cut): Promise<void> {
 		const going = cut.packages.filter((pkg) => !pkg.private);
 		for (const pkg of going) {
-			await this.bundle.build(pkg.dir);
+			cut.stage(pkg.name, await this.bundle.build(pkg.dir));
 		}
 		cut.log.info(`${going.length} packages ${color.green("built")}`);
 	}

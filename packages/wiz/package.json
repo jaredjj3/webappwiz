@@ -1,17 +1,17 @@
 {
 	"name": "wiz",
 	"version": "0.0.0",
-	"type": "module",
-	"dependencies": {
-		"@webappwiz/cli": "workspace:^",
-		"@webappwiz/cmd": "workspace:^",
-		"@webappwiz/log": "workspace:^",
-		"@webappwiz/rules": "workspace:^",
-		"@webappwiz/ship": "workspace:^",
-		"@webappwiz/system": "workspace:^",
-		"@webappwiz/t": "workspace:^",
-		"@webappwiz/time": "workspace:^"
-	},
 	"private": true,
-	"module": "index.ts"
+	"type": "module",
+	"module": "index.ts",
+	"dependencies": {
+		"@webappwiz/cli": "workspace:*",
+		"@webappwiz/cmd": "workspace:*",
+		"@webappwiz/log": "workspace:*",
+		"@webappwiz/rules": "workspace:*",
+		"@webappwiz/ship": "workspace:*",
+		"@webappwiz/system": "workspace:*",
+		"@webappwiz/t": "workspace:*",
+		"@webappwiz/time": "workspace:*"
+	}
 }

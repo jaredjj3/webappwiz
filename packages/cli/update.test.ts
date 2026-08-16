@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "@webappwiz/log";
 import { FakeFs } from "@webappwiz/system/testing";
 
-import { source } from "./skills/skill";
 import { update } from "./update";
 
 describe("update", () => {
@@ -15,12 +14,18 @@ describe("update", () => {
 	const skill = (version: string) =>
 		`---\nname: arbor\nversion: ${version}\n---\n\n# arbor\n`;
 
+	const updating = () => ({
+		dir: "/p",
+		version: "1.0.0",
+		log,
+		fs,
+		skills: { arbor: skill("1.0.0") },
+	});
+
 	beforeEach(async () => {
 		fs = new FakeFs();
 		log = new MemoryLogger();
 		await fs.mkdir("/p");
-		await fs.mkdir(source);
-		await fs.write(`${source}/arbor.skill.md`, skill("1.0.0"));
 	});
 
 	it("pins every @webappwiz dependency it finds, at any depth", async () => {
@@ -32,7 +37,7 @@ describe("update", () => {
 			manifest({ "@webappwiz/log": "^0.2.0", "left-pad": "1.0.0" }),
 		);
 
-		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
+		await update(updating());
 
 		expect(await fs.read("/p/package.json")).toContain(
 			'"@webappwiz/t": "1.0.0"',
@@ -48,7 +53,7 @@ describe("update", () => {
 			manifest({ "@webappwiz/t": "workspace:*" }),
 		);
 
-		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
+		await update(updating());
 
 		expect(await fs.read("/p/package.json")).toContain('"workspace:*"');
 	});
@@ -57,7 +62,7 @@ describe("update", () => {
 		const own = JSON.stringify({ name: "@webappwiz/t", version: "0.1.0" });
 		await fs.write("/p/package.json", own);
 
-		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
+		await update(updating());
 
 		expect(await fs.read("/p/package.json")).toEqual(own);
 	});
@@ -67,7 +72,7 @@ describe("update", () => {
 		await fs.mkdir("/p/.agents/skills/arbor");
 		await fs.write("/p/.agents/skills/arbor/SKILL.md", skill("0.9.0"));
 
-		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
+		await update(updating());
 
 		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
 			skill("1.0.0"),
@@ -80,7 +85,7 @@ describe("update", () => {
 		await fs.mkdir("/p/node_modules/x");
 		await fs.write("/p/node_modules/x/package.json", vendored);
 
-		await update({ ...{ dir: "/p", version: "1.0.0" }, log: log, fs: fs });
+		await update(updating());
 
 		expect(await fs.read("/p/node_modules/x/package.json")).toEqual(vendored);
 	});

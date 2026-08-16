@@ -1,12 +1,21 @@
 import { dirname } from "node:path";
 import type { Logger } from "@webappwiz/log";
 import type { Fs } from "@webappwiz/system";
+import arbor from "../templates/arbor.skill.md" with { type: "text" };
 
-/** The directory holding the documents this package ships. Skills live there
- * flat as `<name>.skill.md`, alongside any other templates. */
-export const source = `${import.meta.dirname}/../templates`;
+/** Skill name to the document a project installs under that name. */
+export type Skills = Record<string, string>;
 
-const SKILL = /^(.+)\.skill\.md$/;
+/**
+ * The skills this package ships.
+ *
+ * They are imported rather than read out of a directory so they travel inside
+ * the build: what publishes is the compiled JavaScript, and a document sitting
+ * beside the source would not be part of it. Naming each one also means adding
+ * a skill is a line here rather than a file that a directory listing may or may
+ * not happen to pick up.
+ */
+export const bundled: Skills = { arbor };
 
 export function versionOf(md: string): string | null {
 	// frontmatter only, so a `version:` inside a fenced example in the body is
@@ -21,18 +30,18 @@ export interface ProjectOptions {
 	dir: string;
 	log?: Logger;
 	fs?: Fs;
+	/** The skills on offer; the ones this package ships by default. */
+	skills?: Skills;
 }
 
-/** The skills bundled here: every `<name>.skill.md` in the source dir. */
-export async function available(fs: Fs): Promise<string[]> {
-	const names = [];
-	for (const file of await fs.readdir(source)) {
-		const name = file.match(SKILL)?.[1];
-		if (name) {
-			names.push(name);
-		}
-	}
-	return names.sort();
+/**
+ * Every skill on offer, name and document together, in the order they are
+ * listed and installed in.
+ */
+export function available(skills: Skills): Array<[string, string]> {
+	return Object.entries(skills).toSorted(([left], [right]) =>
+		left.localeCompare(right),
+	);
 }
 
 /** What `copy` works through, once an action has resolved them. */
@@ -41,9 +50,10 @@ export interface CopyOptions {
 	fs: Fs;
 }
 
-/** Installs one bundled skill into a project. */
+/** Installs one skill into a project. */
 export async function copy(
 	name: string,
+	doc: string,
 	dir: string,
 	opts: CopyOptions,
 ): Promise<void> {
@@ -51,6 +61,6 @@ export async function copy(
 	// version in a skill's frontmatter mean anything
 	const target = `${dir}/.agents/skills/${name}/SKILL.md`;
 	await opts.fs.mkdir(dirname(target));
-	await opts.fs.write(target, await opts.fs.read(`${source}/${name}.skill.md`));
+	await opts.fs.write(target, doc);
 	opts.log.info(`wrote ${target}`);
 }

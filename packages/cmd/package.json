@@ -10,28 +10,16 @@
 		"directory": "packages/cmd"
 	},
 	"type": "module",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"module": "index.ts",
 	"exports": {
-		".": {
-			"bun": "./index.ts",
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
-		}
+		".": "./index.ts"
 	},
-	"files": [
-		"dist",
-		"**/*.ts",
-		"**/*.tsx",
-		"!**/*.test.ts",
-		"!**/*.test.tsx"
-	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/log": "workspace:^",
-		"@webappwiz/system": "workspace:^",
-		"@webappwiz/t": "workspace:^"
+		"@webappwiz/log": "workspace:*",
+		"@webappwiz/system": "workspace:*",
+		"@webappwiz/t": "workspace:*"
 	}
 }

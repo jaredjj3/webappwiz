@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import { type Fs, NodeFs, walk } from "@webappwiz/system";
+import type { Skills } from "./skills/skill";
 import { update as updateSkills } from "./skills/update";
 
 /**
@@ -18,6 +19,8 @@ export interface UpdateOptions {
 	version: string;
 	log?: Logger;
 	fs?: Fs;
+	/** The skills to refresh with; the ones this package ships by default. */
+	skills?: Skills;
 }
 
 /**
@@ -47,5 +50,5 @@ export async function update(opts: UpdateOptions): Promise<void> {
 		count++;
 	}
 	log.info(`${count} package.json pinned to ${opts.version}`);
-	await updateSkills({ dir: opts.dir, log: log, fs: fs });
+	await updateSkills({ dir: opts.dir, log: log, fs: fs, skills: opts.skills });
 }

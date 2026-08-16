@@ -10,31 +10,15 @@
 		"directory": "packages/time"
 	},
 	"type": "module",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"module": "index.ts",
 	"exports": {
-		".": {
-			"bun": "./index.ts",
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
-		},
-		"./testing": {
-			"bun": "./testing.ts",
-			"types": "./dist/testing.d.ts",
-			"default": "./dist/testing.js"
-		}
+		".": "./index.ts",
+		"./testing": "./testing.ts"
 	},
-	"files": [
-		"dist",
-		"**/*.ts",
-		"**/*.tsx",
-		"!**/*.test.ts",
-		"!**/*.test.tsx"
-	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/disposable": "workspace:^"
+		"@webappwiz/disposable": "workspace:*"
 	}
 }

@@ -3,7 +3,6 @@ import { color, MemoryLogger } from "@webappwiz/log";
 import { FakeFs } from "@webappwiz/system/testing";
 
 import { ls } from "./ls";
-import { source } from "./skill";
 
 const md = (name: string, version = "1.0.0") =>
 	`---\nname: ${name}\nversion: ${version}\n---\n\n# ${name}\n`;
@@ -11,23 +10,20 @@ const md = (name: string, version = "1.0.0") =>
 describe("skills ls", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
+	const skills = { other: md("other"), arbor: md("arbor") };
 
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
 
-	beforeEach(async () => {
+	const listing = () => ({ dir: "/p", log, fs, skills });
+
+	beforeEach(() => {
 		fs = new FakeFs();
 		log = new MemoryLogger();
-		await fs.mkdir(source);
-		for (const name of ["arbor", "other"]) {
-			await fs.write(`${source}/${name}.skill.md`, md(name));
-		}
-		// not a skill: templates that are not `.skill.md` live alongside them
-		await fs.write(`${source}/plain-doc.md`, "not a skill");
 	});
 
-	it("lists every skill there is, and marks the ones not installed", async () => {
-		await ls({ dir: "/p", log: log, fs: fs });
+	it("lists every skill there is by name, and marks the ones not installed", async () => {
+		await ls(listing());
 
 		expect(printed()).toEqual(
 			[
@@ -42,7 +38,7 @@ describe("skills ls", () => {
 		await fs.mkdir("/p/.agents/skills/arbor");
 		await fs.write("/p/.agents/skills/arbor/SKILL.md", md("arbor", "0.9.0"));
 
-		await ls({ dir: "/p", log: log, fs: fs });
+		await ls(listing());
 
 		expect(printed()).toContain("arbor   1.0.0   0.9.0");
 		expect(printed()).toContain("1 out of date: run `skills update`");
@@ -52,9 +48,15 @@ describe("skills ls", () => {
 		await fs.mkdir("/p/.agents/skills/arbor");
 		await fs.write("/p/.agents/skills/arbor/SKILL.md", md("arbor"));
 
-		await ls({ dir: "/p", log: log, fs: fs });
+		await ls(listing());
 
 		expect(printed()).toContain("arbor   1.0.0   1.0.0");
 		expect(printed()).not.toContain("out of date");
+	});
+
+	it("says so when a skill ships without a version in its frontmatter", async () => {
+		await ls({ dir: "/p", log, fs, skills: { arbor: "# no frontmatter" } });
+
+		expect(printed()).toContain("arbor   ?       -");
 	});
 });

@@ -1,7 +1,7 @@
 import { ConsoleLogger, color } from "@webappwiz/log";
 import { NodeFs } from "@webappwiz/system";
 import { table } from "../table";
-import { available, type ProjectOptions, source, versionOf } from "./skill";
+import { available, bundled, type ProjectOptions, versionOf } from "./skill";
 
 /**
  * What there is to install, and what the project has of it. The version a
@@ -11,10 +11,11 @@ import { available, type ProjectOptions, source, versionOf } from "./skill";
 export async function ls(opts: ProjectOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const fs = opts.fs ?? new NodeFs();
+	const skills = opts.skills ?? bundled;
 	const rows = [["skill", "ships", "installed"].map(color.dim)];
 	let stale = 0;
-	for (const name of await available(fs)) {
-		const ships = versionOf(await fs.read(`${source}/${name}.skill.md`)) ?? "?";
+	for (const [name, doc] of available(skills)) {
+		const ships = versionOf(doc) ?? "?";
 		const installed = await fs
 			.read(`${opts.dir}/.agents/skills/${name}/SKILL.md`)
 			.then(versionOf)

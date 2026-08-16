@@ -10,34 +10,22 @@
 		"directory": "packages/react"
 	},
 	"type": "module",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"module": "index.ts",
 	"exports": {
-		".": {
-			"bun": "./index.ts",
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
-		}
+		".": "./index.ts"
 	},
-	"files": [
-		"dist",
-		"**/*.ts",
-		"**/*.tsx",
-		"!**/*.test.ts",
-		"!**/*.test.tsx"
-	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/disposable": "workspace:^",
-		"@webappwiz/events": "workspace:^"
+		"@webappwiz/disposable": "workspace:*",
+		"@webappwiz/events": "workspace:*"
 	},
 	"peerDependencies": {
 		"react": "^19"
 	},
 	"devDependencies": {
-		"@webappwiz/browser": "workspace:^",
+		"@webappwiz/browser": "workspace:*",
 		"@testing-library/react": "^16.3.1",
 		"@types/react": "^19.1.13",
 		"react": "^19.2.4",

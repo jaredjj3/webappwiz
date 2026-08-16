@@ -1,10 +1,6 @@
 import { type Fs, NodeFs, NodePs, type Ps, walk } from "@webappwiz/system";
 import type { Bundle } from "./bundle";
-
-interface Manifest {
-	scripts?: Record<string, string>;
-	exports?: Record<string, string | { default?: string }>;
-}
+import { type Exports, type Manifest, published } from "./published";
 
 /**
  * Relative specifiers in an emitted declaration, whether imported or exported,
@@ -15,6 +11,15 @@ const SPECIFIER = /(from\s*"|import\(")(\.[^"]*)(")/g;
 /** A specifier that already names a file, which is left alone. */
 const EXTENSION = /\.[a-z]+$/;
 
+/** A source file an entry point can name. */
+const SOURCE = /\.tsx?$/;
+
+/**
+ * The documents npm would have taken from a package root on its own. They are
+ * copied because the root that publishes is `dist`, which nobody writes into.
+ */
+const DOCS = ["README.md", "LICENSE", "LICENSE.md", "CHANGELOG.md"];
+
 /** What a `BunBundle` builds through; the real system by default. */
 export interface BunBundleOptions {
 	fs?: Fs;
@@ -22,12 +27,16 @@ export interface BunBundleOptions {
 }
 
 /**
- * Builds a package into `dist/`: one bundle per entry point, with the
- * declarations beside them. What goes out is JavaScript, so a consumer needs
- * neither Bun nor a bundler nor a compiler pass over somebody else's source.
+ * Builds a package into `dist/`: one bundle per entry point, the declarations
+ * beside them, and a manifest of its own, so that directory is a whole package
+ * and the one thing a release sends. What goes out is JavaScript, so a consumer
+ * needs neither Bun nor a bundler nor a compiler pass over somebody else's
+ * source, and the source never leaves the repository.
  *
  * A package whose output is more than its own source says so with a `build`
- * script in its manifest, and that runs instead.
+ * script in its manifest, and that runs instead of the compiler. The manifest
+ * and the documents are still written afterwards: what a package is built by is
+ * its own business, but what it publishes as is the release's.
  */
 export class BunBundle implements Bundle {
 	private readonly fs: Fs;
@@ -38,17 +47,40 @@ export class BunBundle implements Bundle {
 		this.ps = opts.ps ?? new NodePs();
 	}
 
-	async build(dir: string): Promise<void> {
+	async build(dir: string): Promise<string> {
 		const manifest: Manifest = JSON.parse(
 			await this.fs.read(`${dir}/package.json`),
 		);
+		const out = `${dir}/dist`;
 		if (manifest.scripts?.build !== undefined) {
 			await this.run(["bun", "run", "build"], dir);
-			return;
+		} else {
+			await this.compile(dir, sources(manifest));
 		}
-		const entries = sources(manifest);
+		await this.fs.mkdir(out);
+		await this.fs.write(
+			`${out}/package.json`,
+			`${JSON.stringify(published(manifest), null, "\t")}\n`,
+		);
+		for (const doc of DOCS) {
+			if (await this.fs.exists(`${dir}/${doc}`)) {
+				await this.fs.write(
+					`${out}/${doc}`,
+					await this.fs.read(`${dir}/${doc}`),
+				);
+			}
+		}
+		return out;
+	}
+
+	async clean(dir: string): Promise<void> {
+		await this.fs.rm(`${dir}/dist`, { recursive: true, force: true });
+	}
+
+	/** The JavaScript and the declarations for every entry point a package has. */
+	private async compile(dir: string, entries: string[]): Promise<void> {
 		if (entries.length === 0) {
-			return; // nothing is exported, so there is nothing to build
+			return; // nothing is exported, so there is nothing to compile
 		}
 		// Splitting is what keeps a package with more than one entry point from
 		// carrying two copies of everything they share. Two copies means two
@@ -97,10 +129,6 @@ export class BunBundle implements Bundle {
 			dir,
 		);
 		await this.point(dir);
-	}
-
-	async clean(dir: string): Promise<void> {
-		await this.fs.rm(`${dir}/dist`, { recursive: true, force: true });
 	}
 
 	/**
@@ -152,17 +180,24 @@ export class BunBundle implements Bundle {
 }
 
 /**
- * The source behind every entry point the manifest exports. `dist` mirrors the
- * source tree, so the manifest already says where each one came from and
- * nothing needs a second list to fall out of step with.
+ * The source behind every entry point a manifest has, whether it is exported or
+ * installed as a command, which is what the build compiles. The manifest
+ * already names them, so nothing needs a second list to fall out of step with.
  */
 function sources(manifest: Manifest): string[] {
 	const found = new Set<string>();
-	for (const entry of Object.values(manifest.exports ?? {})) {
-		const output = typeof entry === "string" ? entry : entry.default;
-		if (output?.startsWith("./dist/") === true && output.endsWith(".js")) {
-			found.add(`./${output.slice("./dist/".length, -".js".length)}.ts`);
+	const gather = (entry: Exports): void => {
+		if (typeof entry === "string") {
+			if (SOURCE.test(entry)) {
+				found.add(entry);
+			}
+			return;
 		}
-	}
+		for (const value of Object.values(entry)) {
+			gather(value);
+		}
+	};
+	gather(manifest.exports ?? {});
+	gather(manifest.bin ?? {});
 	return [...found];
 }

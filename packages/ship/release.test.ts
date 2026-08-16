@@ -302,6 +302,11 @@ describe("release", () => {
 
 		expect(bundle.built).toEqual(["/repo/packages/one", "/repo/packages/two"]);
 		expect(bundle.cleaned).toHaveLength(3);
-		expect(registry.publishes).toHaveLength(2);
+		// What the registry took is the build, not the directory it was built from:
+		// the source stays in the repository it was written in.
+		expect(registry.publishes).toEqual([
+			"/repo/packages/one/dist",
+			"/repo/packages/two/dist",
+		]);
 	});
 });

@@ -1,6 +1,6 @@
 import { ConsoleLogger } from "@webappwiz/log";
 import { NodeFs } from "@webappwiz/system";
-import { available, copy, type ProjectOptions } from "./skill";
+import { available, bundled, copy, type ProjectOptions } from "./skill";
 
 export interface AddOptions extends ProjectOptions {
 	/** The skill to install, as `skills ls` names it. */
@@ -11,9 +11,11 @@ export interface AddOptions extends ProjectOptions {
 export async function add(opts: AddOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const fs = opts.fs ?? new NodeFs();
-	const have = await available(fs);
-	if (!have.includes(opts.skill)) {
+	const skills = opts.skills ?? bundled;
+	const doc = skills[opts.skill];
+	if (doc === undefined) {
+		const have = available(skills).map(([name]) => name);
 		throw new Error(`no such skill: ${opts.skill} (have ${have.join(", ")})`);
 	}
-	await copy(opts.skill, opts.dir, { log, fs });
+	await copy(opts.skill, doc, opts.dir, { log, fs });
 }

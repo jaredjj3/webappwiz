@@ -38,6 +38,16 @@ describe("bundle artifact", () => {
 		]);
 	});
 
+	it("sends every package to where its build put it, not to its source", async () => {
+		const cut = cutting(pkg("one"), pkg("hid", true));
+
+		await new BundleArtifact(new FakeBundle()).publish(cut);
+
+		expect(cut.dir("one")).toBe("/repo/packages/one/dist");
+		// Nothing built the private one, so it still answers for itself.
+		expect(cut.dir("hid")).toBe("/repo/packages/hid");
+	});
+
 	it("leaves a private package alone, since it never goes out", async () => {
 		const bundle = new FakeBundle();
 
