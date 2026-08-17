@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { resolve } from "node:path";
-import { MemoryLogger } from "@webappwiz/log";
-import { FakeFs, FakePs } from "@webappwiz/system/testing";
+import { MemoryLogger } from "webappwiz/log";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
 
 import { path } from "./path";
 

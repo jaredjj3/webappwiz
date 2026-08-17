@@ -16,7 +16,7 @@ import {
 	SimpleTestSetup,
 	TestsNotWeakened,
 	VisualWorkTested,
-} from "@webappwiz/rules/rules";
+} from "@webappwiz/rules/catalog";
 
 /**
  * Every rule webappwiz judges itself by, named one by one. There is no preset

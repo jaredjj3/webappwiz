@@ -1,7 +1,7 @@
-import { ConsoleLogger, type Logger } from "@webappwiz/log";
 import type { Check } from "@webappwiz/rules";
-import { type Bump, releases } from "@webappwiz/ship";
-import { type Fs, NodePs, type Ps } from "@webappwiz/system";
+import { ConsoleLogger, type Logger } from "webappwiz/log";
+import { type Bump, releases } from "webappwiz/ship";
+import { type Fs, NodePs, type Ps } from "webappwiz/system";
 import { fix } from "./fix";
 import { test } from "./test";
 
@@ -29,7 +29,7 @@ export interface ShipOptions {
 export async function ship(opts: ShipOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
-	// A policy of this workspace, not of `@webappwiz/ship`: other repos release
+	// A policy of this workspace, not of `webappwiz/ship`: other repos release
 	// one package and mean it when they say major. Here one version covers them
 	// all, so the refusal belongs to the command rather than the library.
 	if (opts.bump === "major") {

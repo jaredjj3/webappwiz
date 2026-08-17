@@ -6,12 +6,7 @@
 	"module": "index.ts",
 	"dependencies": {
 		"@webappwiz/cli": "workspace:*",
-		"@webappwiz/cmd": "workspace:*",
-		"@webappwiz/log": "workspace:*",
 		"@webappwiz/rules": "workspace:*",
-		"@webappwiz/ship": "workspace:*",
-		"@webappwiz/system": "workspace:*",
-		"@webappwiz/t": "workspace:*",
-		"@webappwiz/time": "workspace:*"
+		"webappwiz": "workspace:*"
 	}
 }

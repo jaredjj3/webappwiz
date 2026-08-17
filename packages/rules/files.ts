@@ -1,7 +1,7 @@
 import { join } from "node:path";
-import { ConsoleLogger, type Logger } from "@webappwiz/log";
-import type { Fs, Glob } from "@webappwiz/system";
-import { NodeFs, NodeGlob, walk } from "@webappwiz/system";
+import { ConsoleLogger, type Logger } from "webappwiz/log";
+import type { Fs, Glob } from "webappwiz/system";
+import { NodeFs, NodeGlob, walk } from "webappwiz/system";
 import { Checker } from "./checker";
 import type { Finding } from "./finding";
 import { exemptions } from "./ignore";

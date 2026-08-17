@@ -1,4 +1,4 @@
-import { MarkdownWriter } from "@webappwiz/md";
+import { MarkdownWriter } from "webappwiz/md";
 import type { FileRule, FileText, Level, Verdict } from "./rule";
 
 /** A sound rule document for tests to point a rule at, or to break. */

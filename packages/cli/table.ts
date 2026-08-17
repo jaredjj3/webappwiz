@@ -1,4 +1,4 @@
-import { color } from "@webappwiz/log";
+import { color } from "webappwiz/log";
 
 /**
  * Row one is the header. Columns line up by what a cell shows rather than by

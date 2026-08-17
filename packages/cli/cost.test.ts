@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { FakeFs } from "@webappwiz/system/testing";
+import { FakeFs } from "webappwiz/system/testing";
 import { calibrate, floor, overheads, predict, priced } from "./cost";
 
 describe("cost", () => {

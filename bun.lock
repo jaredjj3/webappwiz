@@ -15,10 +15,6 @@
         "typescript": "^7",
       },
     },
-    "packages/abort": {
-      "name": "@webappwiz/abort",
-      "version": "0.0.0",
-    },
     "packages/arbor": {
       "name": "@webappwiz/arbor",
       "version": "0.0.0",
@@ -26,30 +22,18 @@
         "arbor": "./index.ts",
       },
       "dependencies": {
-        "@webappwiz/cmd": "workspace:*",
-        "@webappwiz/http": "workspace:*",
-        "@webappwiz/log": "workspace:*",
-        "@webappwiz/md": "workspace:*",
-        "@webappwiz/system": "workspace:*",
-        "@webappwiz/t": "workspace:*",
-        "@webappwiz/time": "workspace:*",
+        "webappwiz": "workspace:*",
       },
       "devDependencies": {
         "@tailwindcss/oxide": "^4.3.3",
         "@testing-library/react": "^16.3.1",
         "@types/react": "^19.2.18",
         "@types/react-dom": "^19.2.4",
-        "@webappwiz/browser": "workspace:*",
-        "@webappwiz/events": "workspace:*",
         "@webappwiz/react": "workspace:*",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
         "tailwindcss": "^4.3.3",
       },
-    },
-    "packages/assert": {
-      "name": "@webappwiz/assert",
-      "version": "0.0.0",
     },
     "packages/aws": {
       "name": "@webappwiz/aws",
@@ -64,15 +48,6 @@
         "constructs": "^10.0.0",
       },
     },
-    "packages/browser": {
-      "name": "@webappwiz/browser",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/disposable": "workspace:*",
-        "@webappwiz/events": "workspace:*",
-        "@webappwiz/time": "workspace:*",
-      },
-    },
     "packages/cli": {
       "name": "@webappwiz/cli",
       "version": "0.0.0",
@@ -80,76 +55,22 @@
         "webappwiz": "./index.ts",
       },
       "dependencies": {
-        "@webappwiz/cmd": "workspace:*",
-        "@webappwiz/log": "workspace:*",
-        "@webappwiz/md": "workspace:*",
         "@webappwiz/rules": "workspace:*",
-        "@webappwiz/system": "workspace:*",
-        "@webappwiz/t": "workspace:*",
-        "@webappwiz/time": "workspace:*",
+        "webappwiz": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^7",
       },
     },
-    "packages/cmd": {
-      "name": "@webappwiz/cmd",
-      "version": "0.0.0",
-      "dependencies": {
-        "@standard-schema/spec": "^1.1.0",
-        "@webappwiz/log": "workspace:*",
-        "@webappwiz/system": "workspace:*",
-        "@webappwiz/t": "workspace:*",
-      },
-      "devDependencies": {
-        "zod": "^4.4.3",
-      },
-    },
-    "packages/disposable": {
-      "name": "@webappwiz/disposable",
-      "version": "0.0.0",
-    },
-    "packages/events": {
-      "name": "@webappwiz/events",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/disposable": "workspace:*",
-      },
-    },
-    "packages/geometry": {
-      "name": "@webappwiz/geometry",
-      "version": "0.0.0",
-    },
-    "packages/http": {
-      "name": "@webappwiz/http",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/time": "workspace:*",
-      },
-    },
-    "packages/id": {
-      "name": "@webappwiz/id",
-      "version": "0.0.0",
-    },
-    "packages/log": {
-      "name": "@webappwiz/log",
-      "version": "0.0.0",
-    },
-    "packages/md": {
-      "name": "@webappwiz/md",
-      "version": "0.0.0",
-    },
     "packages/react": {
       "name": "@webappwiz/react",
       "version": "0.0.0",
       "dependencies": {
-        "@webappwiz/disposable": "workspace:*",
-        "@webappwiz/events": "workspace:*",
+        "webappwiz": "workspace:*",
       },
       "devDependencies": {
         "@testing-library/react": "^16.3.1",
         "@types/react": "^19.1.13",
-        "@webappwiz/browser": "workspace:*",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
       },
@@ -157,72 +78,24 @@
         "react": "^19",
       },
     },
-    "packages/rpc": {
-      "name": "@webappwiz/rpc",
-      "version": "0.0.0",
-      "dependencies": {
-        "@standard-schema/spec": "^1.1.0",
-        "@webappwiz/events": "workspace:*",
-        "@webappwiz/t": "workspace:*",
-      },
-      "devDependencies": {
-        "@webappwiz/http": "workspace:*",
-        "@webappwiz/time": "workspace:*",
-        "zod": "^4.4.3",
-      },
-    },
     "packages/rules": {
       "name": "@webappwiz/rules",
       "version": "0.0.0",
       "dependencies": {
-        "@webappwiz/events": "workspace:*",
-        "@webappwiz/log": "workspace:*",
-        "@webappwiz/md": "workspace:*",
-        "@webappwiz/system": "workspace:*",
-        "@webappwiz/time": "workspace:*",
+        "webappwiz": "workspace:*",
       },
       "peerDependencies": {
         "typescript": "^7",
       },
     },
-    "packages/ship": {
-      "name": "@webappwiz/ship",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/log": "workspace:*",
-        "@webappwiz/system": "workspace:*",
-      },
-    },
-    "packages/system": {
-      "name": "@webappwiz/system",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/log": "workspace:*",
-        "@webappwiz/time": "workspace:*",
-      },
-    },
-    "packages/t": {
-      "name": "@webappwiz/t",
+    "packages/webappwiz": {
+      "name": "webappwiz",
       "version": "0.0.0",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
       },
-    },
-    "packages/task": {
-      "name": "@webappwiz/task",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/browser": "workspace:*",
-        "@webappwiz/disposable": "workspace:*",
-        "@webappwiz/events": "workspace:*",
-        "@webappwiz/time": "workspace:*",
-      },
-    },
-    "packages/time": {
-      "name": "@webappwiz/time",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/disposable": "workspace:*",
+      "devDependencies": {
+        "zod": "^4.4.3",
       },
     },
     "packages/wiz": {
@@ -230,23 +103,8 @@
       "version": "0.0.0",
       "dependencies": {
         "@webappwiz/cli": "workspace:*",
-        "@webappwiz/cmd": "workspace:*",
-        "@webappwiz/log": "workspace:*",
         "@webappwiz/rules": "workspace:*",
-        "@webappwiz/ship": "workspace:*",
-        "@webappwiz/system": "workspace:*",
-        "@webappwiz/t": "workspace:*",
-        "@webappwiz/time": "workspace:*",
-      },
-    },
-    "packages/worker": {
-      "name": "@webappwiz/worker",
-      "version": "0.0.0",
-      "dependencies": {
-        "@webappwiz/assert": "workspace:*",
-        "@webappwiz/disposable": "workspace:*",
-        "@webappwiz/id": "workspace:*",
-        "@webappwiz/time": "workspace:*",
+        "webappwiz": "workspace:*",
       },
     },
   },
@@ -375,51 +233,15 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.0.2", "", { "os": "win32", "cpu": "x64" }, "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="],
 
-    "@webappwiz/abort": ["@webappwiz/abort@workspace:packages/abort"],
-
     "@webappwiz/arbor": ["@webappwiz/arbor@workspace:packages/arbor"],
-
-    "@webappwiz/assert": ["@webappwiz/assert@workspace:packages/assert"],
 
     "@webappwiz/aws": ["@webappwiz/aws@workspace:packages/aws"],
 
-    "@webappwiz/browser": ["@webappwiz/browser@workspace:packages/browser"],
-
     "@webappwiz/cli": ["@webappwiz/cli@workspace:packages/cli"],
-
-    "@webappwiz/cmd": ["@webappwiz/cmd@workspace:packages/cmd"],
-
-    "@webappwiz/disposable": ["@webappwiz/disposable@workspace:packages/disposable"],
-
-    "@webappwiz/events": ["@webappwiz/events@workspace:packages/events"],
-
-    "@webappwiz/geometry": ["@webappwiz/geometry@workspace:packages/geometry"],
-
-    "@webappwiz/http": ["@webappwiz/http@workspace:packages/http"],
-
-    "@webappwiz/id": ["@webappwiz/id@workspace:packages/id"],
-
-    "@webappwiz/log": ["@webappwiz/log@workspace:packages/log"],
-
-    "@webappwiz/md": ["@webappwiz/md@workspace:packages/md"],
 
     "@webappwiz/react": ["@webappwiz/react@workspace:packages/react"],
 
-    "@webappwiz/rpc": ["@webappwiz/rpc@workspace:packages/rpc"],
-
     "@webappwiz/rules": ["@webappwiz/rules@workspace:packages/rules"],
-
-    "@webappwiz/ship": ["@webappwiz/ship@workspace:packages/ship"],
-
-    "@webappwiz/system": ["@webappwiz/system@workspace:packages/system"],
-
-    "@webappwiz/t": ["@webappwiz/t@workspace:packages/t"],
-
-    "@webappwiz/task": ["@webappwiz/task@workspace:packages/task"],
-
-    "@webappwiz/time": ["@webappwiz/time@workspace:packages/time"],
-
-    "@webappwiz/worker": ["@webappwiz/worker@workspace:packages/worker"],
 
     "ansi-regex": ["ansi-regex@5.0.1", "", {}, "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ=="],
 
@@ -496,6 +318,8 @@
     "undici-types": ["undici-types@8.3.0", "", {}, "sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ=="],
 
     "universalify": ["universalify@2.0.1", "", {}, "sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw=="],
+
+    "webappwiz": ["webappwiz@workspace:packages/webappwiz"],
 
     "whatwg-mimetype": ["whatwg-mimetype@3.0.0", "", {}, "sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q=="],
 

@@ -1,4 +1,3 @@
-import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import {
 	type Agent,
 	agentCommand,
@@ -8,8 +7,9 @@ import {
 	type Rule,
 	prompt as reviewPrompt,
 } from "@webappwiz/rules";
-import { NodePs, type Ps } from "@webappwiz/system";
-import { type Clock, SystemClock } from "@webappwiz/time";
+import { ConsoleLogger, color, type Logger } from "webappwiz/log";
+import { NodePs, type Ps } from "webappwiz/system";
+import { type Clock, SystemClock } from "webappwiz/time";
 import { diff } from "./changed";
 import { ask, type Confirm } from "./judge";
 import { mode } from "./mode";

@@ -1,4 +1,4 @@
-import { type Glob, NodeGlob } from "@webappwiz/system";
+import { type Glob, NodeGlob } from "webappwiz/system";
 import type { Diagnostic } from "./diagnostic";
 import { exemptions } from "./ignore";
 import type { FileRule, FileText } from "./rule";

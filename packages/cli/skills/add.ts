@@ -1,5 +1,5 @@
-import { ConsoleLogger } from "@webappwiz/log";
-import { NodeFs } from "@webappwiz/system";
+import { ConsoleLogger } from "webappwiz/log";
+import { NodeFs } from "webappwiz/system";
 import { available, bundled, copy, type ProjectOptions } from "./skill";
 
 export interface AddOptions extends ProjectOptions {

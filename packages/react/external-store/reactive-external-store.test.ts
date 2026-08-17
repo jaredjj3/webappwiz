@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { Dispatcher } from "@webappwiz/events";
+import { Dispatcher } from "webappwiz/events";
 import { ReactiveExternalStore } from "./reactive-external-store";
 
 type CounterEvents = { change: undefined; other: undefined };

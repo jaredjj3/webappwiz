@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { MemoryLogger } from "@webappwiz/log";
-import { FakePs } from "@webappwiz/system/testing";
-import { Duration } from "@webappwiz/time";
-import { FakeClock } from "@webappwiz/time/testing";
+import { MemoryLogger } from "webappwiz/log";
+import { FakePs } from "webappwiz/system/testing";
+import { Duration } from "webappwiz/time";
+import { FakeClock } from "webappwiz/time/testing";
 import { Harness } from "./harness";
 import { prompt } from "./prompt";
 import type { Review } from "./review";

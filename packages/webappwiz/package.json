@@ -1,0 +1,50 @@
+{
+	"name": "webappwiz",
+	"version": "0.0.0",
+	"description": "The parts of a web app that get written again every time, behind interfaces a test can replace",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/webappwiz"
+	},
+	"type": "module",
+	"exports": {
+		"./abort": "./abort/index.ts",
+		"./assert": "./assert/index.ts",
+		"./browser": "./browser/index.ts",
+		"./cmd": "./cmd/index.ts",
+		"./disposable": "./disposable/index.ts",
+		"./events": "./events/index.ts",
+		"./geometry": "./geometry/index.ts",
+		"./http": "./http/index.ts",
+		"./http/bun": "./http/bun.ts",
+		"./id": "./id/index.ts",
+		"./log": "./log/index.ts",
+		"./md": "./md/index.ts",
+		"./rpc": "./rpc/index.ts",
+		"./ship": "./ship/index.ts",
+		"./ship/testing": "./ship/testing.ts",
+		"./system": "./system/index.ts",
+		"./system/testing": "./system/testing.ts",
+		"./t": "./t/index.ts",
+		"./task": "./task/index.ts",
+		"./task/browser": "./task/browser.ts",
+		"./time": "./time/index.ts",
+		"./time/testing": "./time/testing.ts",
+		"./worker": "./worker/index.ts",
+		"./worker/script": "./worker/script.ts",
+		"./worker/testing": "./worker/testing.ts",
+		"./worker/web": "./worker/web.ts"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@standard-schema/spec": "^1.1.0"
+	},
+	"devDependencies": {
+		"zod": "^4.4.3"
+	}
+}

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { color, MemoryLogger } from "@webappwiz/log";
 import type { Rule } from "@webappwiz/rules";
 import { ruleDoc } from "@webappwiz/rules/testing";
-import { FakePs } from "@webappwiz/system/testing";
-import { FakeClock } from "@webappwiz/time/testing";
+import { color, MemoryLogger } from "webappwiz/log";
+import { FakePs } from "webappwiz/system/testing";
+import { FakeClock } from "webappwiz/time/testing";
 import type { Confirm } from "./judge";
 import { Signoff } from "./signoff";
 

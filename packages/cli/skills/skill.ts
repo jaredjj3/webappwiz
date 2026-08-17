@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
-import type { Logger } from "@webappwiz/log";
-import type { Fs } from "@webappwiz/system";
+import type { Logger } from "webappwiz/log";
+import type { Fs } from "webappwiz/system";
 import arbor from "../templates/arbor.skill.md" with { type: "text" };
 
 /** Skill name to the document a project installs under that name. */

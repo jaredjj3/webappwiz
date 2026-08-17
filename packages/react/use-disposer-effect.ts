@@ -1,5 +1,5 @@
-import { Disposer } from "@webappwiz/disposable";
 import { type DependencyList, useEffect } from "react";
+import { Disposer } from "webappwiz/disposable";
 
 /** A `Disposer` that can take on resources but cannot be disposed by the effect. */
 export type AppendOnlyDisposer = Pick<

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { FakeFs, FakePs } from "@webappwiz/system/testing";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
 
 import { test } from "./test";
 

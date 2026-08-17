@@ -1,4 +1,4 @@
-import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
+import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import {
 	type Fs,
 	type Glob,
@@ -6,7 +6,7 @@ import {
 	NodeGlob,
 	NodePs,
 	type Ps,
-} from "@webappwiz/system";
+} from "webappwiz/system";
 import { Checker } from "./checker";
 import type { FileRule } from "./rule";
 

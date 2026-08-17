@@ -1,4 +1,3 @@
-import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import {
 	type Agent,
 	type AgentOptions,
@@ -12,6 +11,7 @@ import {
 	prompt as reviewPrompt,
 	type Violation,
 } from "@webappwiz/rules";
+import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import {
 	type Fs,
 	type Glob,
@@ -19,8 +19,8 @@ import {
 	NodeGlob,
 	NodePs,
 	type Ps,
-} from "@webappwiz/system";
-import { type Clock, SystemClock } from "@webappwiz/time";
+} from "webappwiz/system";
+import { type Clock, SystemClock } from "webappwiz/time";
 import { changed } from "./changed";
 import { calibrate, floor, overheads, predict } from "./cost";
 import { mode } from "./mode";

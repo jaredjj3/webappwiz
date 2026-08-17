@@ -1,4 +1,4 @@
-import { MarkdownWriter } from "@webappwiz/md";
+import { MarkdownWriter } from "webappwiz/md";
 import type { Review } from "./review";
 
 /**

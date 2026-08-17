@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { MemoryLogger } from "@webappwiz/log";
-import { NodeGlob } from "@webappwiz/system";
-import { FakeFs, FakePs } from "@webappwiz/system/testing";
-import { FakeClock } from "@webappwiz/time/testing";
+import { MemoryLogger } from "webappwiz/log";
+import { NodeGlob } from "webappwiz/system";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
+import { FakeClock } from "webappwiz/time/testing";
 import { webappwiz } from "./webappwiz";
 
 describe("webappwiz", () => {
@@ -11,7 +11,7 @@ describe("webappwiz", () => {
 		await fs.mkdir("/p");
 		await fs.write(
 			"/p/package.json",
-			JSON.stringify({ dependencies: { "@webappwiz/t": "0.1.0" } }, null, "\t"),
+			JSON.stringify({ dependencies: { webappwiz: "0.1.0" } }, null, "\t"),
 		);
 
 		await webappwiz.run(
@@ -25,8 +25,6 @@ describe("webappwiz", () => {
 			["update", "/p", "--version", "1.2.3"],
 		);
 
-		expect(await fs.read("/p/package.json")).toContain(
-			'"@webappwiz/t": "1.2.3"',
-		);
+		expect(await fs.read("/p/package.json")).toContain('"webappwiz": "1.2.3"');
 	});
 });

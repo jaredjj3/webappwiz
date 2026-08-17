@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { color, MemoryLogger } from "@webappwiz/log";
 import { defineRules, type RuleSet } from "@webappwiz/rules";
 import { ruleDoc, testRule } from "@webappwiz/rules/testing";
-import { NodeGlob } from "@webappwiz/system";
-import { FakeFs, FakePs } from "@webappwiz/system/testing";
-import { Duration } from "@webappwiz/time";
-import { FakeClock } from "@webappwiz/time/testing";
+import { color, MemoryLogger } from "webappwiz/log";
+import { NodeGlob } from "webappwiz/system";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
+import { Duration } from "webappwiz/time";
+import { FakeClock } from "webappwiz/time/testing";
 import { type Confirm, JudgeCommands } from "./judge";
 
 describe("JudgeCommands", () => {

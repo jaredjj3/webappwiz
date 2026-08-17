@@ -1,7 +1,7 @@
 import type { CommandDeps } from "@webappwiz/cli/webappwiz";
 import { webappwiz } from "@webappwiz/cli/webappwiz";
-import { cli } from "@webappwiz/cmd";
-import { t } from "@webappwiz/t";
+import { cli } from "webappwiz/cmd";
+import { t } from "webappwiz/t";
 import { fix } from "./fix";
 import { path } from "./path";
 import { ship } from "./ship";

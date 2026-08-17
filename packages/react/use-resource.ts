@@ -1,5 +1,5 @@
-import type { Resource } from "@webappwiz/disposable";
 import { useRef, useState } from "react";
+import type { Resource } from "webappwiz/disposable";
 import { useDisposerEffect } from "./use-disposer-effect";
 
 /**

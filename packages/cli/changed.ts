@@ -1,4 +1,4 @@
-import { NodePs, type Ps } from "@webappwiz/system";
+import { NodePs, type Ps } from "webappwiz/system";
 
 /**
  * The files git says are new or changed in `dir` since `ref`, named the way a

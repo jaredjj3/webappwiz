@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { NodeGlob } from "@webappwiz/system";
+import { NodeGlob } from "webappwiz/system";
 import { Checker } from "./checker";
 import { Hit } from "./hit";
 import type { FileRule, FileText, Verdict } from "./rule";

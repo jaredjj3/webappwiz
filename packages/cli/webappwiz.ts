@@ -1,8 +1,8 @@
-import { cli, type Deps } from "@webappwiz/cmd";
 import { AGENTS } from "@webappwiz/rules";
-import type { Fs, Glob } from "@webappwiz/system";
-import { t } from "@webappwiz/t";
-import type { Clock } from "@webappwiz/time";
+import { cli, type Deps } from "webappwiz/cmd";
+import type { Fs, Glob } from "webappwiz/system";
+import { t } from "webappwiz/t";
+import type { Clock } from "webappwiz/time";
 import { JudgeCommands } from "./judge";
 // Every @webappwiz package is released in lockstep, so this one's version is
 // the version of the packages to pin and of the skills bundled here. Imported
@@ -31,7 +31,7 @@ export const webappwiz = cli<CommandDeps>("webappwiz");
 
 webappwiz
 	.command("update")
-	.description("pin every @webappwiz/* dependency in a tree to one version")
+	.description("pin every webappwiz dependency in a tree to one version")
 	.arg("dir", t.string(), {
 		default: ".",
 		description: "directory to scan recursively (default: .)",

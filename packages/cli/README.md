@@ -3,7 +3,7 @@
 Keeps a project in step with a webappwiz release.
 
 ```bash
-bunx @webappwiz/cli update             # pin @webappwiz/* deps, like bun update
+bunx @webappwiz/cli update             # pin webappwiz deps, like bun update
 bunx @webappwiz/cli skills ls          # what there is, and what you have
 bunx @webappwiz/cli skills add arbor   # install an agent skill
 bunx @webappwiz/cli skills update      # refresh the ones already installed
@@ -74,7 +74,7 @@ comment above the line, or `rule-ignore-file <id>: <reason>` for the file.
 ## update
 
 Walks a directory for every `package.json` (workspaces, nested apps, anything)
-and rewrites each `@webappwiz/*` dependency to one version. They are released
+and rewrites each webappwiz dependency to one version. They are released
 together, so a project running two of them at different versions is running a
 combination nobody tested.
 

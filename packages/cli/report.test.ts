@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { color } from "@webappwiz/log";
 import type { Violation } from "@webappwiz/rules";
-import { Duration } from "@webappwiz/time";
+import { color } from "webappwiz/log";
+import { Duration } from "webappwiz/time";
 import {
 	divider,
 	estimate,

@@ -1,7 +1,7 @@
 import { JUDGE_RULES } from "@webappwiz/cli/rules";
-import { ConsoleLogger, color, type Logger } from "@webappwiz/log";
 import { Check } from "@webappwiz/rules";
-import { type Fs, type Glob, NodePs, type Ps } from "@webappwiz/system";
+import { ConsoleLogger, color, type Logger } from "webappwiz/log";
+import { type Fs, type Glob, NodePs, type Ps } from "webappwiz/system";
 
 export interface FixOptions {
 	/** Report problems without writing fixes, as CI wants it. */

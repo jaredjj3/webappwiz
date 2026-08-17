@@ -1,5 +1,5 @@
-import { ConsoleLogger, color } from "@webappwiz/log";
-import { NodeFs } from "@webappwiz/system";
+import { ConsoleLogger, color } from "webappwiz/log";
+import { NodeFs } from "webappwiz/system";
 import { table } from "../table";
 import { available, bundled, type ProjectOptions, versionOf } from "./skill";
 

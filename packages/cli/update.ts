@@ -1,21 +1,25 @@
 import { basename } from "node:path";
-import { ConsoleLogger, type Logger } from "@webappwiz/log";
-import { type Fs, NodeFs, walk } from "@webappwiz/system";
+import { ConsoleLogger, type Logger } from "webappwiz/log";
+import { type Fs, NodeFs, walk } from "webappwiz/system";
 import type { Skills } from "./skills/skill";
 import { update as updateSkills } from "./skills/update";
 
 /**
- * A `"@webappwiz/x": "1.2.3"` dependency entry, captured either side of the
- * version so a replace can swap it. `workspace:` ranges are left alone: inside
- * a monorepo they already resolve in lockstep, and pinning them would break it.
+ * A `"webappwiz": "1.2.3"` or `"@webappwiz/x": "1.2.3"` dependency entry,
+ * captured either side of the version so a replace can swap it. Core is
+ * published unscoped, so matching the scope alone would skip the one package
+ * everything else is built against, and say nothing about having done so.
+ * `workspace:` ranges are left alone: inside a monorepo they already resolve in
+ * lockstep, and pinning them would break it.
  */
-const DEPENDENCY = /("@webappwiz\/[^"]+"\s*:\s*")(?!workspace:)[^"]*(")/g;
+const DEPENDENCY =
+	/("(?:webappwiz|@webappwiz\/[^"]+)"\s*:\s*")(?!workspace:)[^"]*(")/g;
 
 /** Which tree to pin, and to what. */
 export interface UpdateOptions {
 	/** The directory to scan recursively for manifests. */
 	dir: string;
-	/** The version every `@webappwiz/*` entry is set to. */
+	/** The version every webappwiz entry is set to. */
 	version: string;
 	log?: Logger;
 	fs?: Fs;
@@ -24,7 +28,7 @@ export interface UpdateOptions {
 }
 
 /**
- * Pins every `@webappwiz/*` dependency under `dir` to one version, so a project
+ * Pins every webappwiz dependency under `dir` to one version, so a project
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
  * Installed skills are copies of files those packages ship, so they are

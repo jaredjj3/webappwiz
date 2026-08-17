@@ -1,5 +1,5 @@
-import type { Eventful, EventMapOf } from "@webappwiz/events";
 import { useRef, useState } from "react";
+import type { Eventful, EventMapOf } from "webappwiz/events";
 import { ReactiveExternalStore } from "./external-store/reactive-external-store";
 import { useExternalStore } from "./use-external-store";
 

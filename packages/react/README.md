@@ -1,7 +1,7 @@
 # @webappwiz/react
 
 Wiring React to the rest of webappwiz, and nothing else. Anything that would
-work without React lives in `@webappwiz/browser`, and this
+work without React lives in `webappwiz/browser`, and this
 package stays small on purpose.
 
 ## Owning a resource for a mount

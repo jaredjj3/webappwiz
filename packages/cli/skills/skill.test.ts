@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { NodeFs } from "@webappwiz/system";
+import { NodeFs } from "webappwiz/system";
 
 import { available, bundled, versionOf } from "./skill";
 

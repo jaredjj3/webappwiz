@@ -13,18 +13,14 @@
 	"module": "index.ts",
 	"exports": {
 		".": "./index.ts",
-		"./rules": "./rules/index.ts",
+		"./catalog": "./catalog/index.ts",
 		"./testing": "./testing.ts"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/events": "workspace:*",
-		"@webappwiz/log": "workspace:*",
-		"@webappwiz/md": "workspace:*",
-		"@webappwiz/system": "workspace:*",
-		"@webappwiz/time": "workspace:*"
+		"webappwiz": "workspace:*"
 	},
 	"peerDependencies": {
 		"typescript": "^7"

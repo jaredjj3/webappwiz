@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { MemoryLogger } from "@webappwiz/log";
-import { FakeFs } from "@webappwiz/system/testing";
+import { MemoryLogger } from "webappwiz/log";
+import { FakeFs } from "webappwiz/system/testing";
 
 import { update } from "./update";
 
