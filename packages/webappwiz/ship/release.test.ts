@@ -160,6 +160,37 @@ describe("release", () => {
 		expect(said()).toContain("shipped 1.2.4");
 	});
 
+	it("stamps a skill into the release commit, and again when resuming", async () => {
+		await fs.write("/repo/arbor.skill.md", "---\nversion: 0.0.0\n---\n");
+		const withSkill = releases.lockstep(
+			release,
+			releases.skill("arbor.skill.md", { fs }),
+		);
+		// What the commit would take with it, read at the moment it is made.
+		let committed = "";
+		git.commitAll = async (message: string) => {
+			git.commits.push(message);
+			committed = await fs.read("/repo/arbor.skill.md");
+		};
+		github.error = new Error("not logged in to GitHub");
+
+		await expect(withSkill.release(answering("y"))).rejects.toThrow(
+			"not logged in to GitHub",
+		);
+
+		expect(committed).toContain("version: 1.2.4");
+		// The stamp is never marked done, so the resumed run writes it again
+		// rather than trusting a file it cannot see.
+		expect(JSON.parse(await fs.read("/repo/RELEASE")).done).not.toContain(
+			"stamp",
+		);
+		await fs.write("/repo/arbor.skill.md", "---\nversion: 0.0.0\n---\n");
+		github.error = undefined;
+		await withSkill.release(answering("y"));
+
+		expect(await fs.read("/repo/arbor.skill.md")).toContain("version: 1.2.4");
+	});
+
 	it("refuses a RELEASE file it cannot read", async () => {
 		await fs.write("/repo/RELEASE", "half a releas");
 

@@ -12,6 +12,9 @@ describe("ship", () => {
 		"bun test --pass-with-no-tests --parallel",
 	];
 
+	/** Every skill the release stamps, as `SKILLS` in ship.ts lists them. */
+	const SKILLS = ["/repo/packages/cli/templates/arbor.skill.md"];
+
 	let log: MemoryLogger;
 	let ps: FakePs;
 	let fs: FakeFs;
@@ -26,6 +29,9 @@ describe("ship", () => {
 			"/repo/package.json",
 			JSON.stringify({ name: "@scope/solo", version: "1.2.3" }),
 		);
+		for (const path of SKILLS) {
+			await fs.write(path, "---\nname: arbor\nversion: 1.2.3\n---\n");
+		}
 	});
 
 	const opts = (bump: string) => ({
@@ -76,6 +82,14 @@ describe("ship", () => {
 			"1.2.4",
 		);
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
+	});
+
+	it("carries every skill copy to the version the packages went out at", async () => {
+		await ship(opts("patch"));
+
+		for (const path of SKILLS) {
+			expect(await fs.read(path)).toContain("version: 1.2.4\n");
+		}
 	});
 
 	it("stops on a red suite, before anything is stamped", async () => {

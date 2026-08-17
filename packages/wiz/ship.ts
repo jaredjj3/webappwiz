@@ -8,6 +8,15 @@ import { test } from "./test";
 /** What `wiz ship` will answer to. A release that died is finished first. */
 const BUMPS = ["patch", "minor"] as const satisfies readonly Bump[];
 
+/**
+ * Every agent skill this workspace ships, listed rather than discovered so
+ * that adding one is a line here. Each is the document `@webappwiz/cli`
+ * bundles; this repo's own `.agents/skills` copies are symlinks to them, so
+ * stamping the template is what keeps `skills ls` from calling them stale the
+ * moment a release lands.
+ */
+const SKILLS = ["packages/cli/templates/arbor.skill.md"];
+
 function isBump(value: string): value is Bump {
 	return (BUMPS as readonly string[]).includes(value);
 }
@@ -48,7 +57,10 @@ export async function ship(opts: ShipOptions): Promise<void> {
 	await fix({ check: true, checks: opts.checks, log, ps });
 	await test({ package: "", fs: opts.fs, ps });
 
-	const declared = await releases.workspace({ fs: opts.fs, ps });
+	const declared = releases.lockstep(
+		await releases.workspace({ fs: opts.fs, ps }),
+		...SKILLS.map((path) => releases.skill(path, { fs: opts.fs })),
+	);
 	await declared.release({
 		bump: opts.bump,
 		prompt: opts.prompt,

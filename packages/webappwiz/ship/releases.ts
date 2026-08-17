@@ -11,6 +11,7 @@ import { NpmRegistry, type NpmRegistryOptions } from "./registry/npm-registry";
 import type { Registry } from "./registry/registry";
 import { RegistryArtifact } from "./registry/registry-artifact";
 import { Release } from "./release";
+import { SkillArtifact, type SkillArtifactOptions } from "./skill-artifact";
 import { ManifestWorkspace } from "./workspace/manifest-workspace";
 
 /** What `releases.workspace` reads the roster through; the real system by default. */
@@ -57,6 +58,16 @@ export class releases {
 	 */
 	static build(bundle?: Bundle): Release {
 		return new Release([new BundleArtifact(bundle)]);
+	}
+
+	/**
+	 * An agent skill document whose frontmatter version this release stamps,
+	 * given relative to the workspace root. The stamp lands in the release
+	 * commit, so a skill bundled into a package says the version that bundled
+	 * it rather than the one before.
+	 */
+	static skill(path: string, opts: SkillArtifactOptions = {}): Release {
+		return new Release([new SkillArtifact(path, opts)]);
 	}
 
 	/** The release notes GitHub publishes for the tag. */

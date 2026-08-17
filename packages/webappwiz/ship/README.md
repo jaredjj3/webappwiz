@@ -23,9 +23,10 @@ commit, and carry each artifact out. `bump` says how far the version moves, and
 
 ## Declaration order does not matter
 
-Every artifact carries a stage: packages `publish`, then the `tag` goes on, then
-the `notes` are written about it. A release runs its artifacts by stage, so this
-declaration goes out in exactly the same order as the one above:
+Every artifact carries a stage: a `stamp` goes into the release commit, packages
+`publish`, then the `tag` goes on, then the `notes` are written about it. A
+release runs its artifacts by stage, so this declaration goes out in exactly the
+same order as the one above:
 
 ```ts
 await releases.lockstep(
@@ -39,6 +40,30 @@ await releases.lockstep(
 The point is what the ordering protects: a tag for a version no registry ever
 received is a permanent lie, so the tag always follows the packages it names,
 as a property of the artifacts rather than a rule about how to write them down.
+
+## Files that say which version they came from
+
+An agent skill carries its version in its own frontmatter, because a copy
+somebody installed months ago has nothing else to give its age away.
+`releases.skill` keeps that number honest:
+
+```ts
+await releases.lockstep(
+	releases.npm("@scope/cli"),
+	releases.skill("templates/arbor.skill.md"),
+	releases.git(),
+).release();
+```
+
+The path is relative to the workspace root, and the `version:` line in the
+document's frontmatter comes out holding the version going out. A skill with no
+such line stops the release, since a version nobody wrote down is one nobody can
+compare.
+
+It is the `stamp` stage that makes the number true rather than one release
+behind: the rewrite happens between stamping the packages and committing them,
+so the document goes into the release commit alongside every `package.json`, and
+a package that bundles it bundles the version that bundled it.
 
 ## The RELEASE file
 
@@ -119,8 +144,9 @@ interface Artifact {
 
 `packages` is the declaration a release cross-checks against your manifest,
 and `publish` carries the artifact out. A `Cut` is the release under way:
-`version`, `tag`, `dir(name)` for a package's directory, and a `log`. By the
-time an artifact sees one, every package is stamped and committed.
+`version`, `tag`, `root` for the workspace, `dir(name)` for a package's
+directory, and a `log`. By the time an artifact sees one, every package is
+stamped; everything past the `stamp` stage sees that stamp committed too.
 
 Write your own and it drops into a `lockstep` beside the ones here:
 

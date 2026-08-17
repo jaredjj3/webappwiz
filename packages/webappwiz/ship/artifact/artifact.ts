@@ -1,16 +1,24 @@
 import type { Cut } from "../cut";
 
 /**
- * When an artifact goes out. Everything is `build` first, because a compiler
- * failure is only free while nothing has shipped. Packages `publish` next, the
- * `tag` naming them follows, and the `notes` about the tag come last: a tag for
- * a version no registry took would outlive the failure that caused it, so the
+ * When an artifact goes out. A `stamp` writes into the tree while the release
+ * commit is still being made, so whatever it changes is committed along with
+ * the version stamps. Everything is `build` next, because a compiler failure is
+ * only free while nothing has shipped. Packages `publish` after that, the `tag`
+ * naming them follows, and the `notes` about the tag come last: a tag for a
+ * version no registry took would outlive the failure that caused it, so the
  * order lives here rather than in anyone's declaration.
  */
-export type Stage = "build" | "publish" | "tag" | "notes";
+export type Stage = "stamp" | "build" | "publish" | "tag" | "notes";
 
 /** Every stage, in the order a release runs them. */
-export const STAGES: readonly Stage[] = ["build", "publish", "tag", "notes"];
+export const STAGES: readonly Stage[] = [
+	"stamp",
+	"build",
+	"publish",
+	"tag",
+	"notes",
+];
 
 /**
  * One thing a release does: publish a package, tag the repository, write the
@@ -28,7 +36,9 @@ export interface Artifact {
 	readonly stage?: Stage;
 	/**
 	 * Carries this artifact out, throwing if it does not land. Make it repeatable:
-	 * a retried release runs it again, so skip whatever already went out.
+	 * a retried release runs it again, so skip whatever already went out. A
+	 * `stamp` artifact runs here too, before the release commit rather than
+	 * after it.
 	 */
 	publish(cut: Cut): Promise<void>;
 	/**

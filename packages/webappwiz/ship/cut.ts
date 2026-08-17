@@ -1,21 +1,26 @@
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import type { Package } from "./workspace/workspace";
 
-/** Where a `Cut` speaks; the console by default. */
+/** Where a `Cut` speaks and sits; the console and the working directory by default. */
 export interface CutOptions {
 	log?: Logger;
+	/** The workspace root, which any path an artifact holds is relative to. */
+	root?: string;
 }
 
 /**
  * The release under way, as one artifact of it sees it: the version everything
  * goes out at, the tag that names it, and where the packages sit. By the time
- * an artifact is handed one, every package is stamped and committed.
+ * an artifact is handed one, every package is stamped; everything past the
+ * `stamp` stage sees that stamp committed too.
  */
 export class Cut {
 	/** The tag naming this release, such as `v1.2.4`. */
 	readonly tag: string;
 	/** Where an artifact says what it did. */
 	readonly log: Logger;
+	/** The workspace root, which any path an artifact holds is relative to. */
+	readonly root: string;
 
 	/** Package name to where a build put what that package publishes. */
 	private readonly staged = new Map<string, string>();
@@ -33,6 +38,7 @@ export class Cut {
 	) {
 		this.tag = `v${version}`;
 		this.log = opts.log ?? new ConsoleLogger();
+		this.root = opts.root ?? ".";
 	}
 
 	/**

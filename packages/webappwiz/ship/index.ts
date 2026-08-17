@@ -14,5 +14,6 @@ export type { NpmRegistryOptions } from "./registry/npm-registry";
 export type { Registry } from "./registry/registry";
 export { Release, type ReleaseOptions } from "./release";
 export { releases, type WorkspaceReleaseOptions } from "./releases";
+export type { SkillArtifactOptions } from "./skill-artifact";
 export type { Bump } from "./version";
 export type { Package, Workspace } from "./workspace/workspace";

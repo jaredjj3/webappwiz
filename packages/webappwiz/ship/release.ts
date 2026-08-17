@@ -108,15 +108,23 @@ export class Release {
 		// The file goes down before anything moves: a run that dies from here on
 		// is one the next run can see and finish.
 		await file.write(state);
+		const cut = new Cut(version, packages, { log, root: workspace.root });
 		await workspace.setVersion(version);
+		// Stamps go in before the commit takes them, and are never marked done:
+		// a resumed release writes the same version over the same files, which
+		// leaves the tree exactly as clean as it found it.
+		const ordered = sequence(this.artifacts, packages);
+		const [stamps, going] = [
+			ordered.filter((artifact) => artifact.stage === "stamp"),
+			ordered.filter((artifact) => artifact.stage !== "stamp"),
+		];
+		for (const artifact of stamps) {
+			await artifact.publish(cut);
+		}
 		await git.commitAll(`Release ${version}`);
 
-		const cut = new Cut(version, packages, { log });
 		try {
-			for (const [index, artifact] of sequence(
-				this.artifacts,
-				packages,
-			).entries()) {
+			for (const [index, artifact] of going.entries()) {
 				const key = keyFor(artifact, index);
 				if (state.done.includes(key)) {
 					continue;
