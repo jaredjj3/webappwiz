@@ -1,6 +1,6 @@
 {
 	"name": "webappwiz",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "The parts of a web app that get written again every time, behind interfaces a test can replace",
 	"license": "MIT",
 	"author": "Jared Johnson",
