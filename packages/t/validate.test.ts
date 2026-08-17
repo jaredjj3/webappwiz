@@ -36,7 +36,7 @@ const sync = <T>(
 	return result;
 };
 
-describe("t as a Standard Schema", () => {
+describe("standard schema", () => {
 	it("says who it is, in the shape the interface asks for", () => {
 		const props = t.string()["~standard"];
 
@@ -71,9 +71,7 @@ describe("t as a Standard Schema", () => {
 		expect(sync(t.number(), "42").issues).toBeDefined();
 		expect(t.number().coerce("42")).toBe(42);
 	});
-});
 
-describe("validate", () => {
 	it("takes a schema from anywhere and hands back the value", () => {
 		expect(validate(foreign(String), 1)).toBe("1");
 		expect(validate(t.string(), "ours")).toBe("ours");

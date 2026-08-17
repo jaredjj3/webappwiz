@@ -1,7 +1,8 @@
 # @webappwiz/cmd
 
 Builds a CLI: subcommands, positional `.arg()`s and `--flag` options typed by
-[@webappwiz/t](../t), and generated `--help`.
+[@webappwiz/t](../t) or any other [Standard Schema](https://standardschema.dev),
+and generated `--help`.
 
 ```ts
 import { cli } from "@webappwiz/cmd";
@@ -31,6 +32,30 @@ A flag the command never declared is an error, and so is a positional past
 the ones it does, since the alternative is a typo running the command anyway
 with a default the caller thought they had overridden. A reason or message
 that reads as prose has to be quoted to arrive as one argument.
+
+## Schemas
+
+`arg` and `option` take a `t` schema or anyone else's, so bring zod, valibot or
+arktype if you already have one:
+
+```ts
+import { z } from "zod";
+
+app
+	.command("serve")
+	.arg("dir", z.string())
+	.option("port", z.coerce.number(), { default: 3000 })
+	.action(/* … */);
+```
+
+**Reach for the coercing form.** A command line arrives as strings. A `t`
+schema knows that and reads them; anything else is handed the string as it
+came, so `z.coerce.number()` works where `z.number()` refuses "3000".
+
+Whether an argument may be left out is put to the schema by validating
+absence, so `z.string().optional()` says it may, and `z.string()
+.default("x")` both says it may and supplies the value. A `default` in the
+`meta` argument says the same thing from the outside, and wins.
 
 ## Dependencies
 

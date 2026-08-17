@@ -105,6 +105,34 @@ describe("Command with zod", () => {
 		expect(run).toThrow("missing required argument <name>");
 	});
 
+	it("refuses a plain zod number, which is why the README says to coerce", () => {
+		// The distinction the README turns on: a command line hands over strings,
+		// and a schema that was not written expecting one says no.
+		const run = (schema: z.ZodType<number>) =>
+			new Command("serve")
+				.arg("port", schema)
+				.action(() => {})
+				.exec(["3000"], { log });
+
+		expect(() => run(z.number())).toThrow();
+		expect(() => run(z.coerce.number())).not.toThrow();
+	});
+
+	it("lets a declared default overrule what the schema would have supplied", () => {
+		let got: string | undefined;
+
+		new Command("greet")
+			.arg("name", z.string().default("from the schema"), {
+				default: "from the caller",
+			})
+			.action((opts) => {
+				got = opts.name;
+			})
+			.exec([], { log });
+
+		expect(got).toBe("from the caller");
+	});
+
 	it("takes the default a schema carries itself, which ours cannot express", () => {
 		// Absence is put to the schema by validating `undefined`, so a schema that
 		// answers with a value of its own supplies it. Nothing had to be taught
