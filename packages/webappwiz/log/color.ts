@@ -26,6 +26,10 @@ export class color {
 		return color.wrap("34", FG_RESET, value);
 	}
 
+	static magenta(value: unknown): string {
+		return color.wrap("35", FG_RESET, value);
+	}
+
 	static dim(value: unknown): string {
 		return color.wrap("2", INTENSITY_RESET, value);
 	}

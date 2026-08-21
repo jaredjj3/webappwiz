@@ -15,6 +15,10 @@ describe("color", () => {
 		expect(color.strip(painted)).toBe("ok (1s)");
 	});
 
+	it("wraps magenta in its own foreground code", () => {
+		expect(color.magenta("marker")).toBe("\u001B[35mmarker\u001B[39m");
+	});
+
 	it("emits plain text when NO_COLOR is set", () => {
 		process.env.NO_COLOR = "1";
 
