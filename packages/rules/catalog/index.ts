@@ -5,6 +5,7 @@ export { CommentsSayWhyNotWhat } from "./comments-say-why-not-what";
 export { DevServersFindAPort } from "./dev-servers-find-a-port";
 export { DocCommentsAddressUsers } from "./doc-comments-address-users";
 export { FakesOverMocks } from "./fakes-over-mocks";
+export { MatchersOverTestLogic } from "./matchers-over-test-logic";
 export { NamedOptionsLast } from "./named-options-last";
 export { NoEmDashes } from "./no-em-dashes";
 export { ObjectsOverCallbacks } from "./objects-over-callbacks";
