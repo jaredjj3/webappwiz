@@ -247,6 +247,138 @@ describe("Command", () => {
 		expect(got).toEqual({ task: "all" });
 	});
 
+	it("collects the arguments past the declared ones into rest()", () => {
+		const cmd = new Command("test")
+			.arg("pkg", t.string(), { default: "" })
+			.rest("args", t.string())
+			.action((opts) => {
+				got = opts;
+			});
+		let got: { pkg: string; args: string[] } | undefined;
+
+		cmd.exec(["web"], { log });
+		expect(got).toEqual({ pkg: "web", args: [] });
+
+		cmd.exec(["web", "viewframe"], { log });
+		expect(got).toEqual({ pkg: "web", args: ["viewframe"] });
+
+		cmd.exec(["web", "viewframe", "midi"], { log });
+		expect(got).toEqual({ pkg: "web", args: ["viewframe", "midi"] });
+	});
+
+	it("reads each of the rest through the schema it was given", () => {
+		let got: { ports: number[] } | undefined;
+		new Command("open")
+			.rest("ports", t.number())
+			.action((opts) => {
+				got = opts;
+			})
+			.exec(["80", "443"], { log });
+		expect(got).toEqual({ ports: [80, 443] });
+	});
+
+	it("throws when anything is declared after rest(), at declaration time", () => {
+		expect(() =>
+			new Command("test").rest("args", t.string()).arg("pkg", t.string()),
+		).toThrow("args takes every remaining argument");
+
+		expect(() =>
+			new Command("test").rest("args", t.string()).rest("more", t.string()),
+		).toThrow("args already takes every remaining argument");
+	});
+
+	it("passes an undeclared flag through as an argument with allowUnknownOption", () => {
+		let got: { check: boolean; args: string[] } | undefined;
+		new Command("test")
+			.allowUnknownOption()
+			.option("check", t.boolean(), { default: false })
+			.rest("args", t.string())
+			.action((opts) => {
+				got = opts;
+			})
+			// `--check` before `web` would read it as its value, the way any bare
+			// flag ahead of a positional does; that rule has not changed here
+			.exec(["web", "--check", "--watch", "--grep", "midi"], { log });
+		expect(got).toEqual({
+			check: true,
+			args: ["web", "--watch", "--grep", "midi"],
+		});
+	});
+
+	it("tolerates arguments it never declared with allowExcessArguments", () => {
+		let got: { task: string } | undefined;
+		new Command("show")
+			.allowExcessArguments()
+			.arg("task", t.string())
+			.action((opts) => {
+				got = opts;
+			})
+			.exec(["alpha", "extra"], { log });
+		expect(got).toEqual({ task: "alpha" });
+	});
+
+	it("stops reading options at the first argument with passThroughOptions", () => {
+		const cmd = new Command("serve")
+			.passThroughOptions()
+			.option("port", t.number(), { default: 0 })
+			.rest("args", t.string())
+			.action((opts) => {
+				got = opts;
+			});
+		let got: { port: number; args: string[] } | undefined;
+
+		cmd.exec(["--port=80", "run"], { log });
+		expect(got).toEqual({ port: 80, args: ["run"] });
+
+		cmd.exec(["run", "--port=80"], { log });
+		expect(got).toEqual({ port: 0, args: ["run", "--port=80"] });
+	});
+
+	it("passes everything after a bare -- through as arguments", () => {
+		let got: { args: string[] } | undefined;
+		const cmd = new Command("test").rest("args", t.string()).action((opts) => {
+			got = opts;
+		});
+
+		cmd.exec(["--", "--watch"], { log });
+		expect(got).toEqual({ args: ["--watch"] });
+
+		cmd.exec(["--", "--help"], { log });
+		expect(got).toEqual({ args: ["--help"] });
+		expect(log.entries).toHaveLength(0);
+	});
+
+	it("keeps refusing unknown flags and extra arguments by default", () => {
+		const cmd = new Command("test")
+			.arg("pkg", t.string(), { default: "" })
+			.action(() => {});
+
+		expect(() => cmd.exec(["web", "viewframe"], { log })).toThrow(
+			'unexpected argument "viewframe"',
+		);
+		expect(() => cmd.exec(["web", "--watch"], { log })).toThrow(
+			"unknown option --watch",
+		);
+		expect(() => cmd.exec(["web", "--", "--watch"], { log })).toThrow(
+			'unexpected argument "--watch"',
+		);
+	});
+
+	it("shows a variadic as [args...] in the usage line and the argument list", () => {
+		new Command("test")
+			.arg("pkg", t.string(), { default: "" })
+			.rest("args", t.string(), { description: "passed to the runner" })
+			.action(() => {})
+			.exec(["--help"], { log }, [], "s2s test");
+
+		const text = log.entries
+			.map((entry) => color.strip(entry.message))
+			.join("\n");
+		expect(text).toContain("Usage: s2s test [pkg] [args...] [options]");
+		expect(text).toContain("args...");
+		expect(text).toContain("passed to the runner");
+	});
+
 	it("shows arguments in the usage line and their own section in help", () => {
 		new Command("escalate")
 			.arg("reason", t.string(), { description: "why this needs a human" })

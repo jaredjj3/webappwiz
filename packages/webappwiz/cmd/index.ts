@@ -4,6 +4,6 @@ export type { Cli } from "./cli";
 export { cli } from "./cli";
 // The schema an option or a positional takes, so a caller bringing their own
 // validation library can say what this accepts.
-export type { Arg, Meta } from "./command";
+export type { Arg, Meta, RestMeta } from "./command";
 export type { Deps } from "./deps";
 export type { Middleware, Next } from "./middleware";

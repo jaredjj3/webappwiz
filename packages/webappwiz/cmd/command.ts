@@ -25,6 +25,12 @@ export type Meta<T> = {
 	description?: string;
 };
 
+/**
+ * What a caller can say about a variadic argument. It has no `default`: a
+ * variadic with nothing left to collect is an empty array, never missing.
+ */
+export type RestMeta = Pick<Meta<unknown>, "description">;
+
 type OptionMeta = {
 	name: string;
 	schema: Arg<unknown>;
@@ -37,9 +43,13 @@ export class Command<O, C extends object = object> {
 	private _description = "";
 	private options: OptionMeta[] = [];
 	private args: OptionMeta[] = []; // positionals, in declaration order
+	private variadic: OptionMeta | undefined;
 	private middleware: AnyMiddleware[] = [];
 	private _action: Action<O, C> = () => {};
 	private hasAction = false;
+	private unknownOptions = false;
+	private excessArguments = false;
+	private passThrough = false;
 
 	constructor(readonly name: string) {}
 
@@ -75,6 +85,11 @@ export class Command<O, C extends object = object> {
 		schema: Arg<T>,
 		meta?: Meta<T>,
 	): Command<O & { [P in K]: T }, C> {
+		if (this.variadic) {
+			throw new Error(
+				`${this.name}: ${this.variadic.name} takes every remaining argument, so ${name} would never be filled`,
+			);
+		}
 		this.args.push({
 			name,
 			schema: schema as Arg<unknown>,
@@ -83,6 +98,57 @@ export class Command<O, C extends object = object> {
 			default: meta?.default,
 		});
 		return this as unknown as Command<O & { [P in K]: T }, C>;
+	}
+
+	/**
+	 * The last positional, collecting every argument left over as an array. The
+	 * schema describes one of them, so `rest("args", t.string())` arrives as
+	 * `string[]`, empty when there was nothing left. Only one is allowed, and
+	 * nothing may be declared after it.
+	 */
+	rest<K extends string, T>(
+		name: K,
+		schema: Arg<T>,
+		meta?: RestMeta,
+	): Command<O & { [P in K]: T[] }, C> {
+		if (this.variadic) {
+			throw new Error(
+				`${this.name}: ${this.variadic.name} already takes every remaining argument`,
+			);
+		}
+		this.variadic = {
+			name,
+			schema: schema as Arg<unknown>,
+			description: meta?.description,
+			hasDefault: false,
+		};
+		return this as unknown as Command<O & { [P in K]: T[] }, C>;
+	}
+
+	/**
+	 * Lets a flag this command never declared through as an ordinary argument,
+	 * for a command that forwards what it is given to another program. Declared
+	 * options are still read from the same command line.
+	 */
+	allowUnknownOption(allow = true): this {
+		this.unknownOptions = allow;
+		return this;
+	}
+
+	/** Lets more arguments arrive than were declared, instead of failing. */
+	allowExcessArguments(allow = true): this {
+		this.excessArguments = allow;
+		return this;
+	}
+
+	/**
+	 * Stops reading options once the first argument has arrived, so everything
+	 * past it is an argument however it is spelled. `cmd --port 80 run` reads
+	 * `--port`; `cmd run --port 80` passes it on, with no `--` needed.
+	 */
+	passThroughOptions(passThrough = true): this {
+		this.passThrough = passThrough;
+		return this;
 	}
 
 	/**
@@ -114,7 +180,7 @@ export class Command<O, C extends object = object> {
 		outer: AnyMiddleware[] = [],
 		path = this.name,
 	): unknown {
-		if (argv.includes("--help") || argv.includes("-h")) {
+		if (this.wantsHelp(argv)) {
 			this.help(deps.log, path);
 			return;
 		}
@@ -132,6 +198,42 @@ export class Command<O, C extends object = object> {
 		return run(deps).then(() => result);
 	}
 
+	/**
+	 * Whether this run is asking for help rather than doing anything. Only what
+	 * is still being read as an option counts: past a `--`, or past the first
+	 * argument of a pass-through command, `--help` belongs to whatever this
+	 * command forwards to.
+	 */
+	private wantsHelp(argv: string[]): boolean {
+		for (let i = 0; i < argv.length; i++) {
+			const token = argv[i];
+			if (token === "--") {
+				return false;
+			}
+			if (token === "--help" || token === "-h") {
+				return true;
+			}
+			if (this.passThrough && token !== undefined && !this.isValue(argv, i)) {
+				return false;
+			}
+		}
+		return false;
+	}
+
+	// The token after a bare `--flag` is that flag's value, which is what makes
+	// it not the first argument a pass-through command stops reading options at.
+	private isValue(argv: string[], i: number): boolean {
+		const token = argv[i];
+		if (token?.startsWith("-")) {
+			return true;
+		}
+		const previous = argv[i - 1];
+		if (previous === undefined || !previous.startsWith("--")) {
+			return false;
+		}
+		return !previous.includes("=");
+	}
+
 	private parse(argv: string[]): O {
 		const raw = new Map<string, string>();
 		const positional: string[] = [];
@@ -140,33 +242,46 @@ export class Command<O, C extends object = object> {
 			if (token === undefined) {
 				continue;
 			}
-			if (!token.startsWith("--")) {
+			// a bare `--` ends option processing: what follows is arguments, however
+			// it is spelled, and the separator itself is not one of them
+			if (token === "--") {
+				positional.push(...argv.slice(i + 1));
+				break;
+			}
+			const stopped = this.passThrough && positional.length > 0;
+			if (!token.startsWith("--") || stopped) {
 				positional.push(token);
 				continue;
 			}
 			const eq = token.indexOf("=");
+			const name = eq === -1 ? token.slice(2) : token.slice(2, eq);
+			// Before anything binds: a typo is likelier than a missing value, so
+			// `cmd --grep x` reports the flag it does not know rather than the
+			// argument it thinks you left out. A command that forwards its arguments
+			// says so, and then an unknown flag is one of them.
+			if (!this.options.some((option) => option.name === name)) {
+				if (!this.unknownOptions) {
+					throw new Error(`unknown option --${name}`);
+				}
+				// no value is taken with it: the parser cannot know the arity of a
+				// flag it has never heard of, so the next token stands on its own
+				positional.push(token);
+				continue;
+			}
 			if (eq !== -1) {
-				raw.set(token.slice(2, eq), token.slice(eq + 1));
+				raw.set(name, token.slice(eq + 1));
 			} else {
 				const next = argv[i + 1];
 				if (next !== undefined && !next.startsWith("--")) {
-					raw.set(token.slice(2), next);
+					raw.set(name, next);
 					i++;
 				} else {
-					raw.set(token.slice(2), "true"); // bare flag
+					raw.set(name, "true"); // bare flag
 				}
 			}
 		}
-		// Before anything binds: a typo is likelier than a missing value, so
-		// `cmd --grep x` reports the flag it does not know rather than the
-		// argument it thinks you left out.
-		for (const name of raw.keys()) {
-			if (!this.options.some((option) => option.name === name)) {
-				throw new Error(`unknown option --${name}`);
-			}
-		}
 		const extra = positional[this.args.length];
-		if (extra !== undefined) {
+		if (extra !== undefined && !this.variadic && !this.excessArguments) {
 			throw new Error(`unexpected argument "${extra}"`);
 		}
 		const out: Record<string, unknown> = {};
@@ -190,6 +305,12 @@ export class Command<O, C extends object = object> {
 			}
 			out[arg.name] = read(arg.schema, value);
 		});
+		if (this.variadic) {
+			const rest = this.variadic;
+			out[rest.name] = positional
+				.slice(this.args.length)
+				.map((value) => read(rest.schema, value));
+		}
 		for (const opt of this.options) {
 			const value = raw.get(opt.name);
 			if (value === undefined) {
@@ -225,6 +346,9 @@ export class Command<O, C extends object = object> {
 		const args = this.args.map((arg) =>
 			arg.hasDefault ? `[${arg.name}]` : `<${arg.name}>`,
 		);
+		if (this.variadic) {
+			args.push(`[${this.variadic.name}...]`);
+		}
 		const usage = [
 			color.bold(path),
 			color.dim([...args, "[options]"].join(" ")),
@@ -233,10 +357,13 @@ export class Command<O, C extends object = object> {
 		if (this._description) {
 			lines.push("", this._description);
 		}
-		if (this.args.length > 0) {
+		const named = this.variadic
+			? [...this.args, { ...this.variadic, name: `${this.variadic.name}...` }]
+			: this.args;
+		if (named.length > 0) {
 			lines.push("", color.bold("Arguments:"));
-			const pad = Math.max(...this.args.map((arg) => arg.name.length));
-			for (const arg of this.args) {
+			const pad = Math.max(...named.map((arg) => arg.name.length));
+			for (const arg of named) {
 				lines.push(
 					`  ${color.blue(arg.name.padEnd(pad))}  ${arg.description ?? ""}`.trimEnd(),
 				);

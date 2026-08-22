@@ -30,8 +30,64 @@ flags after them: `app greet --loud ada` reads `ada` as the value of `--loud`.
 
 A flag the command never declared is an error, and so is a positional past
 the ones it does, since the alternative is a typo running the command anyway
-with a default the caller thought they had overridden. A reason or message
-that reads as prose has to be quoted to arrive as one argument.
+with a default the caller thought they had overridden. A command that exists
+to forward what it is given opts out of both, with the flags below. A reason
+or message that reads as prose has to be quoted to arrive as one argument.
+
+`rest` is the last positional, taking everything left over. Its schema
+describes one of them and `opts` gets an array, empty when there was nothing
+left, so it is never missing and never has a `default`. Only one is allowed,
+and declaring anything after it throws where it is declared.
+
+```ts
+app
+	.command("run")
+	.arg("script", t.string())
+	.rest("args", t.string(), { description: "passed to the script" })
+	.action((opts, { ps }) => ps.spawn([opts.script, ...opts.args])); // string[]
+```
+
+```bash
+app run build --watch    # help shows: app run <script> [args...] [options]
+```
+
+## Forwarding
+
+Three per-command flags relax the parsing, for a command that wraps another
+program. They are named after [commander](https://github.com/tj/commander.js)'s,
+and mean what they do there.
+
+```ts
+app
+	.command("test")
+	.allowUnknownOption()
+	.arg("pkg", t.string(), { default: "" })
+	.rest("args", t.string())
+	.action((opts, { ps }) => ps.spawn(["bun", "test", opts.pkg, ...opts.args]));
+```
+
+```bash
+app test web viewframe --watch   # { pkg: "web", args: ["viewframe", "--watch"] }
+```
+
+- `allowUnknownOption()` takes a flag this command never declared as an
+  ordinary argument, so it flows into the positionals and on into `rest`.
+  Declared options are still read from the same command line, and no value is
+  taken along with an unknown flag: the parser cannot know the arity of a flag
+  it has never heard of.
+- `allowExcessArguments()` lets more arguments arrive than were declared,
+  which a command with no `rest` needs to tolerate them at all.
+- `passThroughOptions()` stops reading options at the first argument, so
+  `app serve --port 80 run` reads `--port` and `app serve run --port 80`
+  passes it on.
+
+`--` ends option processing whatever those flags say: everything after it is
+an argument however it is spelled, and the `--` itself is not one of them.
+That covers `--help` too, so `app test -- --help` forwards the flag instead of
+printing this program's help.
+
+Only long flags are parsed. There is no `-f` for `--force`, and no bundling:
+the only short flag is `-h`.
 
 ## Schemas
 

@@ -298,6 +298,33 @@ describe("cli", () => {
 		).toContain("Usage: wiz <command> [options]");
 	});
 
+	it("routes every argument past the command name to a forwarding command", () => {
+		let got: { pkg: string; args: string[] } | undefined;
+		const s2s = cli("s2s");
+		s2s
+			.command("test")
+			.allowUnknownOption()
+			.arg("pkg", t.string(), { default: "" })
+			.rest("args", t.string())
+			.action((opts) => {
+				got = opts;
+			});
+		const e2e = s2s.group("e2e");
+		e2e
+			.command("run")
+			.allowUnknownOption()
+			.rest("args", t.string())
+			.action((opts) => {
+				got = { pkg: "", args: opts.args };
+			});
+
+		s2s.run({ log, ps }, ["test", "web", "viewframe", "--watch"]);
+		expect(got).toEqual({ pkg: "web", args: ["viewframe", "--watch"] });
+
+		s2s.run({ log, ps }, ["e2e", "run", "midi-fidelity", "--", "--headed"]);
+		expect(got).toEqual({ pkg: "", args: ["midi-fidelity", "--headed"] });
+	});
+
 	it("defaults the logger and process a command is given", () => {
 		let got: Deps | undefined;
 		const wiz = cli("wiz");
