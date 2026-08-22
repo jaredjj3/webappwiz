@@ -1,6 +1,6 @@
 {
 	"name": "@webappwiz/react",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"description": "Wiring React to the rest of webappwiz: resources, reactive objects and external stores",
 	"license": "MIT",
 	"author": "Jared Johnson",
