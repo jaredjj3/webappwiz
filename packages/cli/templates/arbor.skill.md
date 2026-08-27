@@ -27,9 +27,12 @@ its changed files:
 `git -C "$(arbor path <task>)" diff --name-only main...task/<task>`
 (`arbor show <task>` for its plan; neither takes its lease).
 
-If nothing overlaps, carry on. If something does, wait for it to land rather
-than buying a rebase conflict: say one line about what you are waiting on,
-then re-check periodically. A status is only true for the moment you read it,
+If nothing overlaps, carry on. If something does, do not pick a side
+yourself: `arbor add` your task if you have not already, record the overlap
+in `ARBOR.md` (which task, which files), then `arbor escalate` and ask the
+user whether to wait for the other task, work alongside it and accept the
+rebase, or drop yours. If they choose to wait, re-check periodically. A
+status is only true for the moment you read it,
 so re-run `arbor ls` every time you are about to repeat one. Act on what it
 becomes:
 
@@ -83,7 +86,7 @@ or merge: ask the user and wait for the answer.
 
 ## Reporting
 
-However a task ends, say so in one block:
+However a task ends, say so in one block; only a merge names a base:
 
 ````markdown
 ### ✅ Merged `<task>` onto `<base>`
@@ -91,20 +94,34 @@ However a task ends, say so in one block:
 One sentence blending what the task set out to do with where it ended up.
 ````
 
-✅ for a merge, ⚠️ `Escalated <task>` for one now waiting on a person, ❌
-`Removed <task>` for one you `arbor rm`ed instead; only a merge names a base.
+````markdown
+### ⚠️ Escalated `<task>`
+
+One sentence blending what the task set out to do with what it now waits on.
+````
+
+````markdown
+### ❌ Removed `<task>`
+
+One sentence blending what the task set out to do with why you `arbor rm`ed
+it instead.
+````
+
 Anything else worth saying goes after this block, not instead of it.
 
 ## ARBOR.md
 
 Your session can die at any moment; `ARBOR.md` is what lets a stranger
 `arbor claim` the task and continue. Fill in `## Goal` (one or two lines on
-what done means) and list every step you can foresee under `## Next` as
-`- [ ]` items, roughly one commit each. Move items to `## Done` as you finish
-them: those checkboxes are the only progress the task reports. Decisions,
-dead ends and how to verify go under `## Notes`. Update it as each step
-lands, during implementation rather than at the end; a stale plan is worse
-than none, and a session that dies mid-task reports nothing.
+what done means), list the file paths you plan to touch under `## Files`,
+and list every step you can foresee under `## Next` as `- [ ]` items,
+roughly one commit each. Move items to `## Done` as you finish them: those
+checkboxes are the only progress the task reports. Decisions, dead ends and
+how to verify go under `## Notes`. Keep the whole file current throughout
+implementation, not at the end: after each step lands, check it off, and
+when the set of files you are touching changes, change `## Files` to match.
+A stale plan is worse than none, and a session that dies mid-task reports
+nothing.
 
 `arbor show <task>` prints the file and every way it departs from the
 expected shape; run it on your own task after writing the file. `add` excludes
