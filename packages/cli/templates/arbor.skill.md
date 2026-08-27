@@ -62,16 +62,38 @@ command runs): when waiting, watch a task's status, never its lease.
 
 A successful merge deletes the worktree, and your working directory with it:
 `cd` to the main tree (merge prints its path) before running anything else.
-Then report it:
+
+## Escalation
+
+Merge only work you verified yourself. Escalate instead when verification
+needs a person: external services, destructive migrations, anything tests
+cannot confirm. And if the user asked to see the work before it lands,
+escalate regardless.
+
+1. `arbor escalate <reason>`.
+2. Under `## Blocked` in `ARBOR.md`, state what needs verifying, ending in a
+   question a yes/no or a sentence can answer.
+3. Leave something the human can look at and print its **absolute path**
+   (start from `arbor path <task>`). For anything visual or UX, that means a
+   screenshot; if producing one is expensive or has side effects, ask before
+   starting and say what it will cost.
+
+If you claim a tree whose `## Blocked` question is unanswered, do not resume
+or merge: ask the user and wait for the answer.
+
+## Reporting
+
+However a task ends, say so in one block:
 
 ````markdown
 ### ✅ Merged `<task>` onto `<base>`
 
-One sentence blending what the task set out to do with what actually changed.
+One sentence blending what the task set out to do with where it ended up.
 ````
 
-✅ for a merge, ❌ for a task you `arbor rm`ed instead. Anything else worth
-saying goes after this block, not instead of it.
+✅ for a merge, ⚠️ `Escalated <task>` for one now waiting on a person, ❌
+`Removed <task>` for one you `arbor rm`ed instead; only a merge names a base.
+Anything else worth saying goes after this block, not instead of it.
 
 ## ARBOR.md
 
@@ -97,20 +119,3 @@ Plain, human-style commit messages with **no attribution**: no
 fewer than 5 commits, and wanting many more means the task wants splitting,
 not squashing.
 
-## Escalation
-
-Merge only work you verified yourself. Escalate instead when verification
-needs a person: external services, destructive migrations, anything tests
-cannot confirm. And if the user asked to see the work before it lands,
-escalate regardless.
-
-1. `arbor escalate <reason>`.
-2. Under `## Blocked` in `ARBOR.md`, state what needs verifying, ending in a
-   question a yes/no or a sentence can answer.
-3. Leave something the human can look at and print its **absolute path**
-   (start from `arbor path <task>`). For anything visual or UX, that means a
-   screenshot; if producing one is expensive or has side effects, ask before
-   starting and say what it will cost.
-
-If you claim a tree whose `## Blocked` question is unanswered, do not resume
-or merge: ask the user and wait for the answer.
