@@ -88,24 +88,24 @@ or merge: ask the user and wait for the answer.
 
 However a task ends, say so in one block; only a merge names a base:
 
-````markdown
+```markdown
 ### ✅ Merged `<task>` onto `<base>`
 
 One sentence blending what the task set out to do with where it ended up.
-````
+```
 
-````markdown
+```markdown
 ### ⚠️ Escalated `<task>`
 
 One sentence blending what the task set out to do with what it now waits on.
-````
+```
 
-````markdown
-### ❌ Removed `<task>`
+```markdown
+### 🛑 Removed `<task>`
 
 One sentence blending what the task set out to do with why you `arbor rm`ed
 it instead.
-````
+```
 
 Anything else worth saying goes after this block, not instead of it.
 
@@ -135,4 +135,3 @@ Plain, human-style commit messages with **no attribution**: no
 `--author` overrides. Commit as often as it helps you; a task usually takes
 fewer than 5 commits, and wanting many more means the task wants splitting,
 not squashing.
-
