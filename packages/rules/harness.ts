@@ -21,12 +21,6 @@ export interface Finished {
 	findings: Finding[];
 	/** How long this review's agent took. */
 	took: Duration;
-	/**
-	 * Dollars this review's call was billed, straight from the agent rather than
-	 * priced here. Undefined for an agent that does not report one, which is any
-	 * `--exec` command: reports leave the money off rather than guess it.
-	 */
-	cost?: number;
 	done: number;
 	total: number;
 }
@@ -99,7 +93,7 @@ export class Harness {
 					return;
 				}
 				const started = this.clock.now();
-				const { findings, cost } = await this.spawn(review, agent, cwd);
+				const findings = await this.spawn(review, agent, cwd);
 				done += 1;
 				this.dispatcher.dispatch("finished", {
 					at,
@@ -107,7 +101,6 @@ export class Harness {
 					rules: review.rules.map((rule) => rule.id),
 					findings,
 					took: this.clock.now().subtract(started),
-					cost,
 					done,
 					total: reviews.length,
 				});
@@ -123,7 +116,7 @@ export class Harness {
 		review: Review,
 		agent: Agent,
 		cwd?: string,
-	): Promise<{ findings: Finding[]; cost?: number }> {
+	): Promise<Finding[]> {
 		const argv = [...agent.argv, prompt(review)];
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(argv, {
 			cwd,
@@ -132,17 +125,17 @@ export class Harness {
 			this.log.error(
 				`agent exited ${exitCode} on ${review.label}: ${stderr.trim() || "no stderr"}`,
 			);
-			return { findings: [] };
+			return [];
 		}
 		const reported = parse(stdout);
 		if (reported === null) {
 			this.log.error(
 				`agent returned no JSON array on ${review.label}: ${stdout.trim().slice(0, 200)}`,
 			);
-			return { findings: [] };
+			return [];
 		}
 		const findings: Finding[] = [];
-		for (const report of reported.findings) {
+		for (const report of reported) {
 			if (!review.rules.some((rule) => rule.id === report.rule)) {
 				// Aloud, not dropped in silence: a finding filed under a misspelled
 				// id is still a finding somebody paid for.
@@ -153,23 +146,20 @@ export class Harness {
 			}
 			findings.push(report);
 		}
-		return { findings, cost: reported.cost };
+		return findings;
 	}
 }
 
 /**
- * The answer and what it was billed, out of whatever envelope the agent wrote
- * it in. `--output-format json` wraps the text in an object with the cost
- * beside it; an `--exec` command prints the array on its own and reports no
- * money at all.
+ * The answer, out of whatever envelope the agent wrote it in.
+ * `--output-format json` wraps the text in an object; an `--exec` command
+ * prints the array on its own.
  */
-function parse(stdout: string): { findings: Finding[]; cost?: number } | null {
-	const envelope = unwrap(stdout);
-	const findings = array(envelope.result);
-	return findings === null ? null : { findings, cost: envelope.total_cost_usd };
+function parse(stdout: string): Finding[] | null {
+	return array(unwrap(stdout).result);
 }
 
-function unwrap(stdout: string): { result: string; total_cost_usd?: number } {
+function unwrap(stdout: string): { result: string } {
 	let value: unknown;
 	try {
 		value = JSON.parse(stdout);
@@ -184,11 +174,7 @@ function unwrap(stdout: string): { result: string; total_cost_usd?: number } {
 	) {
 		return { result: stdout };
 	}
-	const cost = "total_cost_usd" in value ? value.total_cost_usd : undefined;
-	return {
-		result: value.result,
-		total_cost_usd: typeof cost === "number" ? cost : undefined,
-	};
+	return { result: value.result };
 }
 
 /**

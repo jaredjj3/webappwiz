@@ -4,7 +4,6 @@ import { ruleDoc } from "@webappwiz/rules/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { FakePs } from "webappwiz/system/testing";
 import { FakeClock } from "webappwiz/time/testing";
-import type { Confirm } from "./judge";
 import { Signoff } from "./signoff";
 
 describe("Signoff", () => {
@@ -18,10 +17,8 @@ describe("Signoff", () => {
 		{ id: "two", document: ruleDoc("Two") },
 		{ id: "three", document: ruleDoc("Three") },
 	];
-	const signoff = (confirm?: Confirm) =>
-		new Signoff(rules, "haiku", { log, ps, clock, confirmer: confirm });
-	// budget high enough that only the test about budgets ever meets it
-	const weighing = { dir: "/p", since: "main", budget: 1_000_000 };
+	const signoff = () => new Signoff(rules, "haiku", { log, ps, clock });
+	const weighing = { dir: "/p", since: "main" };
 	const patch = "diff --git a/a.ts b/a.ts\n+class A {}";
 	// One answer per spawn, in order: the diff, the files git has never seen,
 	// then the agent. The fake has one output at a time, so each call sets the
@@ -125,14 +122,5 @@ describe("Signoff", () => {
 
 		expect(printed()).toContain("nothing has changed since main");
 		expect(ps.getCalls()).toHaveLength(2); // the two git calls, and no agent
-	});
-
-	it("spawns nothing when the change is over budget and nobody says go", async () => {
-		answers(patch, "", "[]");
-
-		expect(
-			signoff({ confirm: () => false }).run({ ...weighing, budget: 10 }),
-		).rejects.toThrow("over budget");
-		expect(printed()).toContain("over the 10 budget");
 	});
 });

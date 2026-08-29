@@ -11,9 +11,8 @@ import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { NodePs, type Ps } from "webappwiz/system";
 import { type Clock, SystemClock } from "webappwiz/time";
 import { diff } from "./changed";
-import { ask, type Confirm } from "./judge";
 import { mode } from "./mode";
-import { count, divider, overBudget, tokens, usd } from "./report";
+import { count, divider, tokens } from "./report";
 
 export interface SignoffRunOptions {
 	/** The directory whose change is being weighed. */
@@ -26,8 +25,6 @@ export interface SignoffRunOptions {
 	/** The ref the change is measured against: everything since it is the
 	 * change. */
 	since: string;
-	/** Tokens a run may read before it asks whether you meant it. */
-	budget: number;
 }
 
 /**
@@ -41,15 +38,12 @@ export interface SignoffRunOptions {
  */
 /** What a `Signoff` runs through. */
 export interface SignoffOptions {
-	/** Who is asked before a run goes over budget; the terminal by default. */
-	confirmer?: Confirm;
 	log?: Logger;
 	ps?: Ps;
 	clock?: Clock;
 }
 
 export class Signoff {
-	private confirmer: Confirm;
 	private log: Logger;
 	private ps: Ps;
 	private clock: Clock;
@@ -59,7 +53,6 @@ export class Signoff {
 		private defaultAgent: string,
 		opts: SignoffOptions = {},
 	) {
-		this.confirmer = opts.confirmer ?? ask;
 		this.log = opts.log ?? new ConsoleLogger();
 		this.ps = opts.ps ?? new NodePs();
 		this.clock = opts.clock ?? new SystemClock();
@@ -82,19 +75,11 @@ export class Signoff {
 				: opts,
 		);
 		const review = this.review(patch, added, opts.since);
-		const predicted = tokens(review.bytes ?? 0);
 		this.log.info(
 			`weighing ${opts.since}..working tree against ` +
 				`${count(this.rules.length, "rule")}, reading ` +
-				`${predicted}+ tokens with ${agent.label}`,
+				`${tokens(review.bytes ?? 0)}+ tokens with ${agent.label}`,
 		);
-		if (predicted > opts.budget) {
-			this.log.info(overBudget(predicted, opts.budget));
-			if (!(await this.confirmer.confirm("Run anyway?"))) {
-				// Before the spawn, so nothing has been paid for.
-				throw new Error("over budget");
-			}
-		}
 		this.say(await this.judge(review, agent, dir));
 	}
 
@@ -109,9 +94,8 @@ export class Signoff {
 			ps: this.ps,
 			clock: this.clock,
 		});
-		harness.events.on("finished", ({ took, cost }) => {
-			const spent = cost === undefined ? "" : `  ${usd(cost)}`;
-			this.log.info(color.gray(`read in ${took.human()}${spent}`));
+		harness.events.on("finished", ({ took }) => {
+			this.log.info(color.gray(`read in ${took.human()}`));
 		});
 		return await harness.run([review], agent, { cwd: dir });
 	}

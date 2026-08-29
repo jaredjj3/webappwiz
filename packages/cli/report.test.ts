@@ -2,17 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { Violation } from "@webappwiz/rules";
 import { color } from "webappwiz/log";
 import { Duration } from "webappwiz/time";
-import {
-	divider,
-	estimate,
-	finding,
-	finished,
-	overBudget,
-	planned,
-	summary,
-	tokens,
-	usd,
-} from "./report";
+import { divider, finding, finished, planned, summary, tokens } from "./report";
 
 describe("report", () => {
 	const plan = {
@@ -21,7 +11,6 @@ describe("report", () => {
 		calls: 52,
 		estimate: 589_000,
 		concurrency: 4,
-		cost: 1.23,
 		agent: "claude -p --model haiku",
 	};
 	const violation = (over: Partial<Violation> = {}): Violation => ({
@@ -63,7 +52,7 @@ describe("report", () => {
 		);
 	});
 
-	it("sizes a call, and says what it cost, when a review finds nothing", () => {
+	it("sizes a call when a review finds nothing", () => {
 		const lines = finished({
 			rules: ["doc-comments-address-users"],
 			files: 25,
@@ -129,16 +118,13 @@ describe("report", () => {
 			"  rules     7",
 			"  calls     52, 4 at a time",
 			"  reading   589K+ tokens",
-			"  cost      $1.23+",
 			"  agent     claude -p --model haiku",
 			"",
 		]);
 	});
 
-	it("leaves out the concurrency and the price when it has neither", () => {
-		expect(
-			plain(planned({ ...plan, concurrency: undefined, cost: undefined })),
-		).toEqual([
+	it("leaves out the concurrency when it has none", () => {
+		expect(plain(planned({ ...plan, concurrency: undefined }))).toEqual([
 			"",
 			"  files     203",
 			"  rules     7",
@@ -149,22 +135,8 @@ describe("report", () => {
 		]);
 	});
 
-	it("colors the money and leaves every other figure plain", () => {
-		const lines = planned(plan).join("\n");
-
-		expect(lines).toContain(color.green("$1.23+"));
-		expect(lines).toContain("  203");
-		expect(lines).toContain("  589K+ tokens");
-		expect(lines).toContain("  claude -p --model haiku");
-	});
-
 	it("names no command when there is no agent to name", () => {
-		const bare = {
-			...plan,
-			agent: undefined,
-			concurrency: undefined,
-			cost: undefined,
-		};
+		const bare = { ...plan, agent: undefined, concurrency: undefined };
 
 		expect(plain(planned(bare))).toEqual([
 			"",
@@ -193,86 +165,5 @@ describe("report", () => {
 		const name = "a".repeat(80);
 
 		expect(color.strip(divider(name))).toBe(`--- ${name} ---`);
-	});
-
-	it("says both numbers and the flag when a run is over budget", () => {
-		expect(color.strip(overBudget(589_000, 200_000))).toBe(
-			"! this run reads at least 589K tokens, over the 200K budget, " +
-				"and the real cost will be higher. Raise it with --budget.",
-		);
-	});
-
-	it("quotes the money too when the agent over budget has a price", () => {
-		expect(color.strip(overBudget(589_000, 200_000, 1.767))).toBe(
-			"! this run reads at least 589K tokens, over the 200K budget, " +
-				"and the real cost will be higher. That is $1.767 or more. " +
-				"Raise it with --budget.",
-		);
-	});
-
-	it("spends two decimals on a run's total and four on a single call", () => {
-		expect(usd(12.3)).toBe("$12.30");
-		expect(usd(0.056097)).toBe("$0.0561");
-	});
-
-	it("says what a review cost beside how long it took", () => {
-		const lines = finished({
-			rules: ["doc-comments-address-users"],
-			files: 25,
-			violations: [],
-			took: Duration.secs(8.25),
-			cost: 0.0912,
-			done: 2,
-			total: 6,
-		});
-
-		expect(plain(lines)).toEqual([
-			"✓ [2/6] (1 rule, 25 files): clean in 8.3s  $0.0912",
-		]);
-	});
-
-	it("totals what a run cost under the tally", () => {
-		expect(color.strip(summary([], Duration.secs(3), 1.62))).toBe(
-			"✓ no violations in 3.0s  $1.62 total",
-		);
-	});
-
-	it("prices a plan against every agent, floor first, under the plan itself", () => {
-		const lines = plain(estimate(203, 7, 52, 480_000, {}));
-
-		expect(lines.slice(0, 5)).toEqual([
-			"",
-			"  files     203",
-			"  rules     7",
-			"  calls     52",
-			"  reading   480K+ tokens",
-		]);
-		expect(lines.slice(6, 10)).toEqual([
-			"  agent    floor",
-			"  haiku    $0.48+",
-			"  sonnet   $1.44+",
-			"  opus     $2.40+",
-		]);
-	});
-
-	it("says a run is what turns the floor into a measurement", () => {
-		expect(plain(estimate(203, 7, 52, 480_000, {})).join("\n")).toContain(
-			"Run one of these and the estimate is measured against it next time.",
-		);
-	});
-
-	it("adds the measured per-call overhead to the floor, once per call", () => {
-		const lines = plain(estimate(203, 7, 52, 480_000, { haiku: 0.065 }));
-
-		expect(lines[6]).toBe("  agent    floor    measured");
-		// $0.48 of files, and 52 calls charging $0.065 each on top of them
-		expect(lines[7]).toBe("  haiku    $0.48+   $3.86");
-	});
-
-	it("leaves the measurement blank for an agent no run has priced", () => {
-		const lines = plain(estimate(203, 7, 52, 480_000, { haiku: 0.065 }));
-
-		expect(lines[8]).toBe("  sonnet   $1.44+");
-		expect(lines[9]).toBe("  opus     $2.40+");
 	});
 });

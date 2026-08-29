@@ -59,16 +59,13 @@ of files.
 
 ```bash
 bunx @webappwiz/cli judge . --agent haiku
-bunx @webappwiz/cli judge . --estimate        # what would this read, and cost
 bunx @webappwiz/cli judge . --print           # print the prompts, spawn nothing
 bunx @webappwiz/cli judge . --since main      # only what changed
 ```
 
 Each rule's code half runs first, free, and only what it escalates reaches an
-agent. `--budget` caps what a run may read before it asks whether you meant it;
-`--estimate` answers that without having to guess a budget low enough to be
-refused. `--print`, `--estimate` and running are three things to do with one
-plan, so passing two of them is an error rather than one quietly winning. Code excuses itself from a rule with a `rule-ignore <id>: <reason>`
+agent. `--print` and running are two things to do with one plan, so passing
+both is an error rather than one quietly winning. Code excuses itself from a rule with a `rule-ignore <id>: <reason>`
 comment above the line, or `rule-ignore-file <id>: <reason>` for the file.
 
 ## update

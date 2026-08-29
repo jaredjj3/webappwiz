@@ -82,18 +82,15 @@ describe("Harness", () => {
 		expect(call).toContain("# Classes");
 	});
 
-	it("reads the findings and the price out of the agent's envelope", async () => {
-		const billed: Array<number | undefined> = [];
+	it("reads the findings out of the agent's envelope", async () => {
 		ps.setCaptureOutput(
 			JSON.stringify({
 				type: "result",
-				total_cost_usd: 0.056097,
 				result:
 					'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "a second class"}]',
 			}),
 			"",
 		);
-		harness.events.on("finished", (finished) => billed.push(finished.cost));
 
 		const findings = await harness.run([review("a", "Classes")], agent);
 
@@ -105,7 +102,6 @@ describe("Harness", () => {
 				message: "a second class",
 			},
 		]);
-		expect(billed).toEqual([0.056097]);
 	});
 
 	it("finds the array inside the prose the agent wrapped it in", async () => {
@@ -132,19 +128,6 @@ describe("Harness", () => {
 		expect(findings).toEqual([
 			{ rule: "Scope", message: "9 files changed, limit 5" },
 		]);
-	});
-
-	it("reports no price for an agent that answers with the bare array", async () => {
-		const billed: Array<number | undefined> = [];
-		ps.setCaptureOutput(
-			'[{"rule": "Classes", "message": "a second class"}]',
-			"",
-		);
-		harness.events.on("finished", (finished) => billed.push(finished.cost));
-
-		await harness.run([review("a", "Classes")], agent);
-
-		expect(billed).toEqual([undefined]);
 	});
 
 	it("drops a finding filed under a rule the review was not checking", async () => {

@@ -22,24 +22,9 @@ import {
 } from "webappwiz/system";
 import { type Clock, SystemClock } from "webappwiz/time";
 import { changed } from "./changed";
-import { calibrate, floor, overheads, predict } from "./cost";
 import { mode } from "./mode";
-import {
-	count,
-	divider,
-	estimate,
-	finished,
-	overBudget,
-	planned,
-	summary,
-	tokens,
-} from "./report";
+import { count, divider, finished, planned, summary, tokens } from "./report";
 import { table } from "./table";
-
-/** Asked before a run spends more than it was allowed to. */
-export interface Confirm {
-	confirm(question: string): boolean | Promise<boolean>;
-}
 
 export interface ShowOptions {
 	/** The rule to print, as `rules ls` lists it. */
@@ -53,14 +38,10 @@ export interface JudgeOptions {
 	exec?: string;
 	/** Print the prompts to the logger and spawn nothing. */
 	print?: boolean;
-	/** Print what a run would read and stop. */
-	estimate?: boolean;
 	/** Files per review. */
 	chunk: number;
 	/** Narrows the run to what git says has changed since this ref. */
 	since?: string;
-	/** Tokens a run may read before it asks whether you meant it. */
-	budget: number;
 }
 
 /** What a whole plan reads: every review's prompt and the files it names. */
@@ -76,23 +57,10 @@ const isFileRule = (rule: Rule): rule is FileRule => "files" in rule;
 const title = (rule: Rule): string =>
 	/^#\s+(.+)$/m.exec(rule.document)?.[1]?.trim() ?? rule.id;
 
-/**
- * Answers on the terminal, and answers no without one: a run nobody is watching
- * should stop and say the number rather than block forever waiting to be told
- * to go ahead.
- */
-export const ask: Confirm = {
-	confirm: (question) =>
-		process.stdin.isTTY === true &&
-		/^y(es)?$/i.test((prompt(`${question} [y/N]`) ?? "").trim()),
-};
-
 /** What a `JudgeCommands` runs through, and what else it lists. */
 export interface JudgeCommandsOptions {
 	/** Rules only a reader applies, listed beside the ones a run checks. */
 	signoffRules?: Rule[];
-	/** Who is asked before a run goes over budget; the terminal by default. */
-	confirmer?: Confirm;
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
@@ -102,7 +70,6 @@ export interface JudgeCommandsOptions {
 
 export class JudgeCommands {
 	private signoffRules: Rule[];
-	private confirmer: Confirm;
 	private log: Logger;
 	private fs: Fs;
 	private ps: Ps;
@@ -114,7 +81,6 @@ export class JudgeCommands {
 		opts: JudgeCommandsOptions = {},
 	) {
 		this.signoffRules = opts.signoffRules ?? [];
-		this.confirmer = opts.confirmer ?? ask;
 		this.log = opts.log ?? new ConsoleLogger();
 		this.fs = opts.fs ?? new NodeFs();
 		this.ps = opts.ps ?? new NodePs();
@@ -172,10 +138,7 @@ export class JudgeCommands {
 	 * it spawns nothing and prints the prompts instead, for an agent that would
 	 * rather hand them to subagents of its own.
 	 *
-	 * `since` narrows the run to what git says has changed, and `budget` caps
-	 * what it may read before asking whether you meant it. Under `estimate` it
-	 * prints that size and stops, which is the answer to "what would this cost"
-	 * without having to guess a budget low enough to be refused.
+	 * `since` narrows the run to what git says has changed.
 	 */
 	async judge(opts: JudgeOptions): Promise<void> {
 		const how = mode(opts);
@@ -210,60 +173,19 @@ export class JudgeCommands {
 			return;
 		}
 		const read = new Set(reviews.flatMap((review) => review.files)).size;
-		const predicted = estimated(reviews);
-		const calls = reviews.length;
-		if (how === "estimate") {
-			// No budget check: being asked to approve a number is what running
-			// --estimate is instead of.
-			for (const line of estimate(
-				read,
-				rules.length,
-				calls,
-				predicted,
-				await overheads(this.ps.cwd(), { fs: this.fs }),
-			)) {
-				this.log.info(line);
-			}
-			return;
-		}
 		const agent = this.agent(config, opts);
-		// What the cost is predicted from and recorded against, which is the
-		// config's model as readily as one the caller named.
-		const model = this.model(config, opts);
-		// Against where wiz was run rather than the directory being judged: what
-		// a call costs over its files is a fact about this project, and judging
-		// one package of it should leave the measurement where the next run of any
-		// scope will find it.
-		const root = this.ps.cwd();
-		const measured = await overheads(root, { fs: this.fs });
 		const started = this.clock.now();
-		// Priced whether or not it is over budget: what a run will cost is worth
-		// knowing every time, not only on the runs that trip a limit.
-		const cost =
-			model === undefined
-				? undefined
-				: predict(model, predicted, calls, measured);
 		this.log.info(
 			planned({
 				files: read,
 				rules: rules.length,
-				calls,
-				estimate: predicted,
+				calls: reviews.length,
+				estimate: estimated(reviews),
 				concurrency: config.concurrency,
-				cost,
 				agent: agent.label,
 			}).join("\n"),
 		);
-		if (predicted > opts.budget) {
-			this.log.info(overBudget(predicted, opts.budget, cost));
-			if (!(await this.confirmer.confirm("Run anyway?"))) {
-				// Throwing before run is what cancels: nothing has been spawned yet.
-				throw new Error("over budget");
-			}
-		}
 
-		let spent = 0;
-		let billed = false;
 		const found: Violation[][] = [];
 		const harness = new Harness({
 			log: this.log,
@@ -271,10 +193,6 @@ export class JudgeCommands {
 			clock: this.clock,
 		});
 		harness.events.on("finished", (review) => {
-			if (review.cost !== undefined) {
-				spent += review.cost;
-				billed = true;
-			}
 			const at = reviews[review.at];
 			if (!at) {
 				return;
@@ -288,7 +206,6 @@ export class JudgeCommands {
 				files: at.files.length,
 				violations,
 				took: review.took,
-				cost: review.cost,
 				done: review.done,
 				total: review.total,
 			})) {
@@ -301,20 +218,7 @@ export class JudgeCommands {
 		});
 		const violations = found.flat();
 		this.log.info("");
-		this.log.info(
-			summary(
-				violations,
-				this.clock.now().subtract(started),
-				billed ? spent : undefined,
-			),
-		);
-		await this.record(
-			model,
-			root,
-			predicted,
-			calls,
-			billed ? spent : undefined,
-		);
+		this.log.info(summary(violations, this.clock.now().subtract(started)));
 		const errors = violations.filter(
 			(violation) => violation.level === "error",
 		).length;
@@ -323,54 +227,10 @@ export class JudgeCommands {
 		}
 	}
 
-	/**
-	 * Measures what one call cost over the files it was handed and leaves that
-	 * behind, so the next `--estimate` on this agent has something better than a
-	 * floor. Per call rather than per token, because that is how the charge
-	 * falls: an agent pays for its own system prompt once per spawn, whatever it
-	 * was asked to read, so a figure taken from a two-call run still holds for a
-	 * fifteen-call one.
-	 *
-	 * A run nobody priced records nothing, and a failed write is said aloud
-	 * rather than thrown: the agents have already been paid for by this point,
-	 * and losing the measurement costs the next estimate accuracy, not the run.
-	 */
-	private async record(
-		agent: string | undefined,
-		root: string,
-		predicted: number,
-		calls: number,
-		spent?: number,
-	): Promise<void> {
-		if (agent === undefined || spent === undefined || calls <= 0) {
-			return;
-		}
-		const listed = floor(agent, predicted);
-		if (listed === undefined) {
-			return;
-		}
-		const call = (spent - listed) / calls;
-		if (call <= 0) {
-			// Billed less than the files alone were priced at, so this run says
-			// nothing about the overhead. Leave any earlier measurement alone.
-			return;
-		}
-		try {
-			await calibrate(root, agent, call, { fs: this.fs });
-		} catch (error) {
-			this.log.error(`could not record what this run cost: ${error}`);
-		}
-	}
-
 	/** The agent a command runs with: what it was told, else the config's. */
 	private agent(config: RuleSet, opts: AgentOptions): Agent {
-		const model = this.model(config, opts);
-		return agentCommand(model === undefined ? opts : { agent: model });
-	}
-
-	/** The model a run asks, or undefined for an `--exec` command, which is a
-	 * model nothing here can name or price. */
-	private model(config: RuleSet, opts: AgentOptions): string | undefined {
-		return opts.exec === undefined ? (opts.agent ?? config.agent) : undefined;
+		return agentCommand(
+			opts.exec === undefined ? { agent: opts.agent ?? config.agent } : opts,
+		);
 	}
 }

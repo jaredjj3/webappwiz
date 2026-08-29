@@ -72,20 +72,12 @@ webappwiz
 		default: false,
 		description: "print the prompts and run no agent at all",
 	})
-	.option("estimate", t.boolean(), {
-		default: false,
-		description: "print what a run would read, and run nothing",
-	})
 	.option("chunk", t.number(), {
 		default: 25,
 		description: "files per review",
 	})
 	.option("since", t.optional(t.string()), {
 		description: "only check files added or changed since this git ref",
-	})
-	.option("budget", t.number(), {
-		default: 200_000,
-		description: "confirm before reading more than this many tokens",
 	})
 	.action((opts, deps) => judge(deps).judge(opts));
 
@@ -109,10 +101,6 @@ webappwiz
 	.option("since", t.string(), {
 		default: "main",
 		description: "the ref the change is measured against",
-	})
-	.option("budget", t.number(), {
-		default: 200_000,
-		description: "confirm before reading more than this many tokens",
 	})
 	.action((opts, { log, ps, clock }) =>
 		new Signoff(SIGNOFF_RULES, JUDGE_RULES.agent, {

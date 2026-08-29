@@ -91,9 +91,9 @@ never given, for the same reason and just as loudly.
 ## The agent
 
 `--agent` names one of `haiku`, `sonnet` or `opus`; `--exec` hands the prompt
-to a command of your own instead. `--output-format json` is how a model run
-reports what it was billed, which is the only place a real dollar figure comes
-from, so an `--exec` run reports no money rather than guessing it.
+to a command of your own instead. `--output-format json` wraps a model run's
+answer in an envelope the harness can read token usage out of, so an `--exec`
+run reports no tokens rather than guessing them.
 
 ## No config file
 

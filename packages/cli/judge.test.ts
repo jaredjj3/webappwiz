@@ -6,7 +6,7 @@ import { NodeGlob } from "webappwiz/system";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { Duration } from "webappwiz/time";
 import { FakeClock } from "webappwiz/time/testing";
-import { type Confirm, JudgeCommands } from "./judge";
+import { JudgeCommands } from "./judge";
 
 describe("JudgeCommands", () => {
 	let fs: FakeFs;
@@ -16,24 +16,17 @@ describe("JudgeCommands", () => {
 
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
-	const commands = (config: RuleSet, confirm?: Confirm) =>
+	const commands = (config: RuleSet) =>
 		new JudgeCommands(config, {
 			log,
 			fs,
 			ps,
 			clock,
 			glob: new NodeGlob(),
-			confirmer: confirm,
 		});
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
 	const oneRule = defineRules({ rules: [one()] });
-	// budget high enough that only the tests about budgets ever meet it
-	const judging = {
-		dir: "/p",
-		agent: "haiku",
-		chunk: 25,
-		budget: 1_000_000,
-	};
+	const judging = { dir: "/p", agent: "haiku", chunk: 25 };
 
 	beforeEach(async () => {
 		fs = new FakeFs();
@@ -222,33 +215,6 @@ describe("JudgeCommands", () => {
 		);
 	});
 
-	it("spawns nothing when the estimate is over budget and nobody says go", async () => {
-		await fs.write("/p/a.ts", "class A {}");
-		ps.setCaptureOutput("[]", "");
-
-		expect(
-			commands(oneRule, { confirm: () => false }).judge({
-				...judging,
-				budget: 10,
-			}),
-		).rejects.toThrow("over budget");
-		expect(printed()).toContain("over the 10 budget");
-		expect(ps.getCalls()).toEqual([]);
-	});
-
-	it("runs over budget once the caller says go", async () => {
-		await fs.write("/p/a.ts", "class A {}");
-		ps.setCaptureOutput("[]", "");
-
-		await commands(oneRule, { confirm: () => true }).judge({
-			...judging,
-			budget: 10,
-		});
-
-		expect(ps.getCalls()).toHaveLength(1);
-		expect(printed()).toContain("no violations");
-	});
-
 	it("checks only what changed when --since names a ref", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 		await fs.write("/p/b.ts", "class B {}");
@@ -264,49 +230,6 @@ describe("JudgeCommands", () => {
 		expect(printed()).toContain("--- one (1 file) ---");
 		expect(printed()).toContain("- a.ts");
 		expect(printed()).not.toContain("- b.ts");
-	});
-
-	it("prints what a run would read and spawns nothing under --estimate", async () => {
-		await fs.write("/p/a.ts", "class A {}");
-
-		await commands(oneRule).judge({
-			...judging,
-			agent: undefined,
-			estimate: true,
-		});
-
-		expect(printed()).toContain(
-			["  files     1", "  rules     1", "  calls     1"].join("\n"),
-		);
-		expect(printed()).toMatch(/reading {3}\d[\d.]*K?\+ tokens/);
-		expect(ps.getCalls()).toEqual([]);
-	});
-
-	it("names no agent under --estimate, having none to run", async () => {
-		await fs.write("/p/a.ts", "class A {}");
-
-		await commands(oneRule).judge({
-			...judging,
-			agent: undefined,
-			estimate: true,
-		});
-
-		expect(printed()).not.toContain("claude -p");
-	});
-
-	it("measures only what changed when --estimate is given a --since", async () => {
-		await fs.write("/p/a.ts", "class A {}");
-		await fs.write("/p/b.ts", "class B {}");
-		ps.setCaptureOutput("a.ts\n", "");
-
-		await commands(oneRule).judge({
-			...judging,
-			agent: undefined,
-			estimate: true,
-			since: "main",
-		});
-
-		expect(printed()).toContain(["  files     1", "  rules     1"].join("\n"));
 	});
 
 	it("refuses a flag that prints together with one that runs", async () => {
