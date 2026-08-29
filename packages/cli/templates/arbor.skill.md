@@ -48,7 +48,7 @@ Act on how the wait ends:
   mid-merge can read as `orphaned` for a moment, so `wait` once more before
   believing it, then say so and ask.
 - exit 14 `timeout`, still `working` or `merging`: `wait` again (with
-  `--timeout-seconds` if the task looks close), or offer the choice of
+  `--timeout-secs` if the task looks close), or offer the choice of
   working alongside it or picking up something else, saying what you have not
   started.
 
