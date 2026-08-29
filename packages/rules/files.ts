@@ -34,7 +34,9 @@ export interface Violation {
 
 /** How much of the tree a run covers, and how finely it is cut up. */
 export interface PlanOptions {
-	/** Files per review. Chunks are counted in files, not tokens. */
+	/** Files per review, on average: it sets how many reviews a group becomes,
+	 * and the files spread over them by size, so a review of big files carries
+	 * fewer of them. */
 	chunk?: number;
 	/**
 	 * Narrows the run to these files, named the way the globs are, for a caller
@@ -137,10 +139,34 @@ export class Files {
 		}
 		const reviews: FileReview[] = [];
 		for (const group of groups.values()) {
-			// chunks are counted in files, not tokens: switch to a byte budget when
-			// repos with a few huge files start overflowing a review.
-			for (let i = 0; i < group.files.length; i += chunk) {
-				const slice = group.files.slice(i, i + chunk);
+			// As many reviews as slicing by count would have made, but balanced by
+			// bytes rather than cut in walk order: one review of big files would
+			// otherwise hold the run open after every other worker went idle.
+			// Biggest file to the lightest review each time gets them even enough.
+			const bins = Array.from(
+				{ length: Math.ceil(group.files.length / chunk) },
+				() => ({ files: [] as string[], bytes: 0 }),
+			);
+			const bySize = [...group.files].sort(
+				(left, right) => (size.get(right) ?? 0) - (size.get(left) ?? 0),
+			);
+			for (const file of bySize) {
+				const bin = bins.reduce((least, candidate) =>
+					candidate.bytes < least.bytes ? candidate : least,
+				);
+				bin.files.push(file);
+				bin.bytes += size.get(file) ?? 0;
+			}
+			for (const bin of bins) {
+				if (bin.files.length === 0) {
+					// Every file was weightless, so the first bin took them all.
+					continue;
+				}
+				// Back in path order: the agent reads a directory listing, not a
+				// ranking by size.
+				const slice = bin.files.sort((left, right) =>
+					left.localeCompare(right),
+				);
 				const draft: Omit<FileReview, "bytes"> = {
 					rules: group.rules,
 					label: group.rules.map((rule) => rule.id).join(", "),
@@ -160,7 +186,9 @@ export class Files {
 				});
 			}
 		}
-		return reviews;
+		// Heaviest first: the longest calls start immediately, with the quick ones
+		// filling in around them, instead of one late straggler ending the run.
+		return reviews.sort((left, right) => right.bytes - left.bytes);
 	}
 
 	/**

@@ -98,6 +98,30 @@ describe("Files", () => {
 		]);
 	});
 
+	it("balances a group's files over its reviews by size, heaviest review first", async () => {
+		await fs.write("/p/src/big.ts", "x".repeat(1000));
+
+		// three files over chunks of two makes two reviews: the big file alone,
+		// and the two small ones together, with the heavy review leading
+		const reviews = await files.plan([rule("Classes")], "/p", { chunk: 2 });
+
+		expect(reviews.map((review) => review.files)).toEqual([
+			["src/big.ts"],
+			["src/a.ts", "src/b.ts"],
+		]);
+	});
+
+	it("makes one review of weightless files rather than several empty ones", async () => {
+		await fs.write("/p/src/a.ts", "");
+		await fs.write("/p/src/b.ts", "");
+
+		const reviews = await files.plan([rule("Classes")], "/p", { chunk: 1 });
+
+		expect(reviews.map((review) => review.files)).toEqual([
+			["src/a.ts", "src/b.ts"],
+		]);
+	});
+
 	it("warns on stderr when a rule matches nothing", async () => {
 		await files.plan([rule("Python", "**/*.py")], "/p", { chunk: 25 });
 
