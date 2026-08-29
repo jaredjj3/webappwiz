@@ -2,7 +2,8 @@
 
 Interfaces for the things that touch the machine, so code under test doesn't
 have to: `Fs` (filesystem), `Ps` (processes), `IpProvider`/`HostMapper`
-(loopback IPs and hostname mapping), plus `Lock`, built on those seams.
+(loopback IPs and hostname mapping), `PortProvider` (ports), plus `Lock`,
+built on those seams.
 
 ```ts
 import { NodeFs, NodePs } from "webappwiz/system";
@@ -46,3 +47,19 @@ signals and uncaught exceptions.
 
 `MemoryLock` holds nothing but itself, so it only serializes callers inside one
 process that share the instance. Waiters are served in the order they arrived.
+
+A `PortProvider` answers which port to listen on. Ask for the one you would
+rather have and use what comes back, so a server keeps a predictable URL when
+it can and still starts when something already holds that port. Port 0 comes
+back unchanged, meaning any port will do.
+
+```ts
+const ports = new NodePortProvider();
+
+const port = await ports.get(4269);
+```
+
+`NodePortProvider` binds each candidate and lets it go again, so the answer is
+open at the moment it is given rather than when the caller acts on it. A caller
+that cannot afford to lose that race should retry its own bind on `EADDRINUSE`
+instead.
