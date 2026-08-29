@@ -48,10 +48,6 @@ export interface Cacheable extends IConstruct {
 	readonly cacheKey: string;
 }
 
-function zoneIdFor(domainName: string): string {
-	return `HostedZone-${domainName.replace(/[^a-zA-Z0-9]/g, "-")}`;
-}
-
 /**
  * A domain served from an internal ALB via a CloudFront VPC origin (the ALB is never exposed to
  * the public internet), with an edge WAF rate limit and an optional set of other domains that
@@ -292,4 +288,8 @@ export class Domain extends Construct {
 			]),
 		});
 	}
+}
+
+function zoneIdFor(domainName: string): string {
+	return `HostedZone-${domainName.replace(/[^a-zA-Z0-9]/g, "-")}`;
 }

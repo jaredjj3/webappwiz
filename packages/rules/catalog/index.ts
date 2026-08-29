@@ -4,6 +4,7 @@ export { ClassesOverFunctionExports } from "./classes-over-function-exports";
 export { CommentsSayWhyNotWhat } from "./comments-say-why-not-what";
 export { DevServersFindAPort } from "./dev-servers-find-a-port";
 export { DocCommentsAddressUsers } from "./doc-comments-address-users";
+export { ExportLeadsTheFile } from "./export-leads-the-file";
 export { FakesOverMocks } from "./fakes-over-mocks";
 export { MatchersOverTestLogic } from "./matchers-over-test-logic";
 export { NamedOptionsLast } from "./named-options-last";

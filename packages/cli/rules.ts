@@ -4,6 +4,7 @@ import {
 	CommentsSayWhyNotWhat,
 	DevServersFindAPort,
 	DocCommentsAddressUsers,
+	ExportLeadsTheFile,
 	FakesOverMocks,
 	MatchersOverTestLogic,
 	NamedOptionsLast,
@@ -33,6 +34,7 @@ export const JUDGE_RULES = defineRules({
 	rules: [
 		new NoEmDashes(),
 		new OneClassPerFile(),
+		new ExportLeadsTheFile(),
 		new ParametersDeclareFields(),
 		new ClassesOverFunctionExports(),
 		new ObjectsOverCallbacks(),

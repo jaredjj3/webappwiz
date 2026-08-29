@@ -17,10 +17,6 @@ const BUMPS = ["patch", "minor"] as const satisfies readonly Bump[];
  */
 const SKILLS = ["packages/cli/templates/arbor.skill.md"];
 
-function isBump(value: string): value is Bump {
-	return (BUMPS as readonly string[]).includes(value);
-}
-
 export interface ShipOptions {
 	/** How far to move the version: patch or minor. Major is refused here. */
 	bump: string;
@@ -68,4 +64,8 @@ export async function ship(opts: ShipOptions): Promise<void> {
 		fs: opts.fs,
 		ps,
 	});
+}
+
+function isBump(value: string): value is Bump {
+	return (BUMPS as readonly string[]).includes(value);
 }
