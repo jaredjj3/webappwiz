@@ -27,28 +27,33 @@ its changed files:
 `git -C "$(arbor path <task>)" diff --name-only main...task/<task>`
 (`arbor show <task>` for its plan; neither takes its lease).
 
-If nothing overlaps, carry on. If something does, do not pick a side
-yourself: `arbor add` your task if you have not already, record the overlap
-in `ARBOR.md` (which task, which files), then `arbor escalate` and ask the
-user whether to wait for the other task, work alongside it and accept the
-rebase, or drop yours. If they choose to wait, re-check periodically. A
-status is only true for the moment you read it,
-so re-run `arbor ls` every time you are about to repeat one. Act on what it
-becomes:
+If nothing overlaps, carry on. If something does, `arbor add` your task if you
+have not already, record the overlap in `ARBOR.md` (which task, which files),
+then `arbor wait <task>` on the task you overlap with: let it land first and
+your rebase is onto its work rather than against it.
 
-- gone from `arbor ls`: it landed. Redo the overlap check (trunk moved) and
-  carry on.
+Waiting is the answer to plain overlap, however much of it there is. Escalate
+instead only when the other task is doing something majorly different from
+yours, or contrary to it: rewriting what you are extending, or asked for the
+opposite of what you were. Then `arbor escalate` and ask the user whether to
+wait for it, work alongside it and accept the rebase, or drop yours.
+
+Act on how the wait ends:
+
+- `removed`: it landed or was dropped. Redo the overlap check (trunk moved)
+  and carry on.
 - `escalated`: your work is blocked on a person too. Tell the human what it
   is blocked on and wait.
-- `orphaned`, `stray`, `unrecorded` or `unknown` with nobody driving it: that
-  tree is broken. Say so and ask. (A tree mid-merge can read as `orphaned`
-  for a moment, so trust a broken status only if it survives a second look.)
-- still `working` or `merging` after however long the human would tolerate
-  hearing nothing: offer the choice of waiting longer, working alongside, or
-  picking up something else, and say what you have not started.
+- `orphaned`, `stray`, `unrecorded` or `unknown`: that tree is broken. A tree
+  mid-merge can read as `orphaned` for a moment, so `wait` once more before
+  believing it, then say so and ask.
+- exit 14 `timeout`, still `working` or `merging`: `wait` again (with
+  `--timeout-seconds` if the task looks close), or offer the choice of
+  working alongside it or picking up something else, saying what you have not
+  started.
 
 A `stale` lease on a `working` task is normal (arbor only heartbeats while a
-command runs): when waiting, watch a task's status, never its lease.
+command runs): watch a task's status, never its lease.
 
 ## Workflow
 
