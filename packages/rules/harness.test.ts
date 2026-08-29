@@ -126,6 +126,24 @@ describe("Harness", () => {
 		expect(read).toEqual([undefined]);
 	});
 
+	it("says when a worker picks a review up, before its agent returns", async () => {
+		ps.setCaptureOutput("[]", "");
+		const events: string[] = [];
+		harness.events.on("started", ({ at, worker }) =>
+			events.push(`started ${at} w${worker}`),
+		);
+		harness.events.on("finished", ({ at }) => events.push(`finished ${at}`));
+
+		await harness.run([review("a"), review("b")], agent, { concurrency: 1 });
+
+		expect(events).toEqual([
+			"started 0 w0",
+			"finished 0",
+			"started 1 w0",
+			"finished 1",
+		]);
+	});
+
 	it("says which slot ran each review, so spend can be watched per worker", async () => {
 		ps.setCaptureOutput("[]", "");
 		const workers: number[] = [];

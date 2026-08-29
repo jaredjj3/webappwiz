@@ -16,6 +16,8 @@ describe("JudgeCommands", () => {
 
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
+	// No terminal, so every test here takes the line-by-line path unless it
+	// hands in a screen of its own.
 	const commands = (config: RuleSet) =>
 		new JudgeCommands(config, {
 			log,
@@ -23,6 +25,7 @@ describe("JudgeCommands", () => {
 			ps,
 			clock,
 			glob: new NodeGlob(),
+			screen: { tty: false, width: 80, write: () => {} },
 		});
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
 	const oneRule = defineRules({ rules: [one()] });
@@ -239,6 +242,46 @@ describe("JudgeCommands", () => {
 		expect(printed()).toContain(
 			["  files     1", "  rules     1", "  calls     1"].join("\n"),
 		);
+	});
+
+	it("draws a live worker block on a terminal, then dumps the report", async () => {
+		const writes: string[] = [];
+		const live = new JudgeCommands(oneRule, {
+			log,
+			fs,
+			ps,
+			clock,
+			glob: new NodeGlob(),
+			screen: { tty: true, width: 100, write: (text) => writes.push(text) },
+		});
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		await live.judge(judging);
+
+		const block = color.strip(writes.join(""));
+		expect(block).toContain("w1  one (1 file, ~"); // the review in flight
+		expect(block).toContain("idle  1 call"); // and the worker run dry
+		expect(printed()).toContain("✓ [1/1]"); // the report still lands, after
+	});
+
+	it("stays line-by-line under --ci, drawing nothing", async () => {
+		const writes: string[] = [];
+		const live = new JudgeCommands(oneRule, {
+			log,
+			fs,
+			ps,
+			clock,
+			glob: new NodeGlob(),
+			screen: { tty: true, width: 100, write: (text) => writes.push(text) },
+		});
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		await live.judge({ ...judging, ci: true });
+
+		expect(writes).toEqual([]);
+		expect(printed()).toContain("✓ [1/1]");
 	});
 
 	it("checks only what changed when --since names a ref", async () => {

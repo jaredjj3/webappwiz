@@ -82,6 +82,10 @@ webappwiz
 	.option("concurrency-override", t.optional(t.number()), {
 		description: "agent calls in flight at once, over the config's concurrency",
 	})
+	.option("ci", t.boolean(), {
+		default: false,
+		description: "line-by-line output with no live progress block",
+	})
 	.action((opts, deps) => judge(deps).judge(opts));
 
 webappwiz

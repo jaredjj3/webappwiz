@@ -35,8 +35,19 @@ export interface Finished {
 	total: number;
 }
 
+/** A review the moment a worker picks it up, for a caller showing what is in
+ * flight while the agents are out. */
+export interface Started {
+	/** The review's place in the list `run` was given. */
+	at: number;
+	/** Which pool slot took it, 0-based. */
+	worker: number;
+}
+
 /** What a run reports as it goes, for a caller that prints as findings land. */
 export type HarnessEvents = {
+	/** One review, the moment a worker starts its agent. */
+	started: Started;
 	/** One review, the moment its agent returns. */
 	finished: Finished;
 };
@@ -102,6 +113,7 @@ export class Harness {
 				if (!review) {
 					return;
 				}
+				this.dispatcher.dispatch("started", { at, worker: slot });
 				const started = this.clock.now();
 				const { findings, tokens } = await this.spawn(review, agent, cwd);
 				done += 1;

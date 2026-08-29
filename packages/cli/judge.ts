@@ -23,6 +23,7 @@ import {
 import { type Clock, SystemClock } from "webappwiz/time";
 import { changed } from "./changed";
 import { mode } from "./mode";
+import { Progress, type Screen, terminal } from "./progress";
 import { count, divider, finished, planned, summary, tokens } from "./report";
 import { table } from "./table";
 
@@ -44,6 +45,8 @@ export interface JudgeOptions {
 	since?: string;
 	/** Agent calls in flight at once, over the config's `concurrency`. */
 	"concurrency-override"?: number;
+	/** Line-by-line output with no live block, the way a log wants it. */
+	ci?: boolean;
 }
 
 /** What a whole plan reads: every review's prompt and the files it names. */
@@ -63,6 +66,8 @@ const title = (rule: Rule): string =>
 export interface JudgeCommandsOptions {
 	/** Rules only a reader applies, listed beside the ones a run checks. */
 	signoffRules?: Rule[];
+	/** Where live progress draws; this process's terminal by default. */
+	screen?: Screen;
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
@@ -72,6 +77,7 @@ export interface JudgeCommandsOptions {
 
 export class JudgeCommands {
 	private signoffRules: Rule[];
+	private screen: Screen;
 	private log: Logger;
 	private fs: Fs;
 	private ps: Ps;
@@ -83,6 +89,7 @@ export class JudgeCommands {
 		opts: JudgeCommandsOptions = {},
 	) {
 		this.signoffRules = opts.signoffRules ?? [];
+		this.screen = opts.screen ?? terminal();
 		this.log = opts.log ?? new ConsoleLogger();
 		this.fs = opts.fs ?? new NodeFs();
 		this.ps = opts.ps ?? new NodePs();
@@ -194,10 +201,29 @@ export class JudgeCommands {
 		// spent so far is a fact about this report, not about running reviews.
 		const byWorker = new Map<number, number>();
 		let spent: number | undefined;
+		// Live on a terminal, plain lines under --ci or anywhere else: a block
+		// redrawn into a log is escape codes, not progress.
+		const progress =
+			opts.ci !== true && this.screen.tty
+				? new Progress(this.screen, { clock: this.clock })
+				: undefined;
+		// The lines the block deferred, in completion order so the dump's
+		// [n/total] counters read in sequence.
+		const deferred: string[][] = [];
 		const harness = new Harness({
 			log: this.log,
 			ps: this.ps,
 			clock: this.clock,
+		});
+		harness.events.on("started", ({ at, worker }) => {
+			const review = reviews[at];
+			if (review) {
+				progress?.started(worker, {
+					label: review.label,
+					files: review.files.length,
+					bytes: review.bytes,
+				});
+			}
 		});
 		harness.events.on("finished", (review) => {
 			const at = reviews[review.at];
@@ -214,7 +240,8 @@ export class JudgeCommands {
 			// moment its agent returns rather than waiting on a second pass.
 			const violations = files.violations(at, review.findings, dir);
 			found[review.at] = violations;
-			for (const line of finished({
+			progress?.finished(review.worker, review.tokens);
+			const lines = finished({
 				rules: review.rules,
 				files: at.files.length,
 				violations,
@@ -224,11 +251,23 @@ export class JudgeCommands {
 				workerTokens,
 				done: review.done,
 				total: review.total,
-			})) {
-				this.log.info(line);
+			});
+			if (progress) {
+				deferred[review.done - 1] = lines;
+			} else {
+				for (const line of lines) {
+					this.log.info(line);
+				}
 			}
 		});
-		await harness.run(reviews, agent, { cwd: dir, concurrency });
+		try {
+			await harness.run(reviews, agent, { cwd: dir, concurrency });
+		} finally {
+			progress?.stop();
+		}
+		for (const line of deferred.flat()) {
+			this.log.info(line);
+		}
 		const violations = found.flat();
 		this.log.info("");
 		this.log.info(

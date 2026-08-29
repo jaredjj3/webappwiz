@@ -24,7 +24,8 @@ export const divider = (name?: string): string => {
 	return color.dim(opening.padEnd(Math.max(72, opening.length + 3), "-"));
 };
 
-const compact = new Intl.NumberFormat("en", { notation: "compact" });
+/** How every token figure prints: "14K", not "14,000". */
+export const compact = new Intl.NumberFormat("en", { notation: "compact" });
 
 /**
  * What a plan costs to read, at the four-bytes-a-token rule of thumb. Rough on

@@ -61,11 +61,15 @@ of files.
 bunx @webappwiz/cli judge . --agent haiku
 bunx @webappwiz/cli judge . --print           # print the prompts, spawn nothing
 bunx @webappwiz/cli judge . --since main      # only what changed
+bunx @webappwiz/cli judge . --ci              # plain lines, no live block
 ```
 
 Each rule's code half runs first, free, and only what it escalates reaches an
-agent. `--print` and running are two things to do with one plan, so passing
-both is an error rather than one quietly winning. Code excuses itself from a rule with a `rule-ignore <id>: <reason>`
+agent. On a terminal a run draws a live line per worker (the review it is on,
+how long it has been out, and what it has spent), then dumps the report in one
+block; `--ci`, or any output that is not a terminal, prints line by line as
+reviews finish instead. `--print` and running are two things to do with one
+plan, so passing both is an error rather than one quietly winning. Code excuses itself from a rule with a `rule-ignore <id>: <reason>`
 comment above the line, or `rule-ignore-file <id>: <reason>` for the file.
 
 ## update
