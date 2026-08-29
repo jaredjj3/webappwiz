@@ -32,12 +32,6 @@ export interface Violation {
 	code: string;
 }
 
-/** Answers whether a rule's escalation was already judged clean on these
- * exact bytes; where the verdicts live is the caller's business. */
-export interface CleanCache {
-	clean(rule: FileRule, file: string, text: string): boolean;
-}
-
 /** How much of the tree a run covers, and how finely it is cut up. */
 export interface PlanOptions {
 	/** Files per review, on average: it sets how many reviews a group becomes,
@@ -50,8 +44,6 @@ export interface PlanOptions {
 	 * nothing left in it is still worth saying so.
 	 */
 	only?: Set<string>;
-	/** Past clean verdicts, so an unchanged file is not judged again. */
-	cache?: CleanCache;
 }
 
 /** Files per review when a caller does not say. */
@@ -99,7 +91,7 @@ export class Files {
 	async plan(
 		rules: FileRule[],
 		dir: string,
-		{ chunk = DEFAULT_CHUNK, only, cache }: PlanOptions = {},
+		{ chunk = DEFAULT_CHUNK, only }: PlanOptions = {},
 	): Promise<FileReview[]> {
 		const checker = new Checker(rules, { glob: this.glob });
 		const all: string[] = [];
@@ -121,14 +113,10 @@ export class Files {
 		}
 		files.sort((left, right) => left.path.localeCompare(right.path));
 		const { escalations } = checker.check(files);
-		const texts = new Map(files.map((file) => [file.path, file.text]));
 		// Seeded in rule order, so reviews land in the order the config lists the
 		// rules rather than the order the walk found their files.
 		const wanted = new Map<FileRule, string[]>(rules.map((rule) => [rule, []]));
 		for (const { rule, path } of escalations) {
-			if (cache?.clean(rule, path, texts.get(path) ?? "")) {
-				continue;
-			}
 			wanted.get(rule)?.push(path);
 		}
 		for (const rule of rules) {

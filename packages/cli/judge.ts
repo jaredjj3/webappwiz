@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import {
 	type Agent,
 	type AgentOptions,
@@ -22,7 +21,6 @@ import {
 	type Ps,
 } from "webappwiz/system";
 import { type Clock, SystemClock } from "webappwiz/time";
-import { JudgeCache } from "./cache";
 import { changed } from "./changed";
 import { mode } from "./mode";
 import { count, divider, finished, planned, summary, tokens } from "./report";
@@ -162,17 +160,9 @@ export class JudgeCommands {
 			return;
 		}
 		const files = new Files({ log: this.log, fs: this.fs, glob: this.glob });
-		// Only a run reads or writes verdicts: --print shows the full plan.
-		// Against where wiz was run rather than the directory being judged, so
-		// judging one package leaves its verdicts where any scope finds them.
-		const cache =
-			how === "run"
-				? await JudgeCache.load(this.ps.cwd(), { fs: this.fs })
-				: undefined;
 		const reviews = await files.plan(rules, dir, {
 			chunk: opts.chunk,
 			only,
-			cache,
 		});
 		if (how === "print") {
 			for (const review of reviews) {
@@ -191,7 +181,6 @@ export class JudgeCommands {
 		this.log.info(
 			planned({
 				files: read,
-				cached: cache?.hits,
 				rules: rules.length,
 				calls: reviews.length,
 				estimate: estimated(reviews),
@@ -225,20 +214,6 @@ export class JudgeCommands {
 			// moment its agent returns rather than waiting on a second pass.
 			const violations = files.violations(at, review.findings, dir);
 			found[review.at] = violations;
-			if (cache && !review.failed) {
-				// Every (rule, file) pair the call cleared is a verdict; a failed
-				// call cleared nothing, however empty its findings.
-				const dirty = new Set(
-					violations.map((violation) => `${violation.id}\n${violation.file}`),
-				);
-				for (const rule of at.rules) {
-					for (const file of at.files) {
-						if (!dirty.has(`${rule.id}\n${join(dir, file)}`)) {
-							cache.record(rule, file);
-						}
-					}
-				}
-			}
 			for (const line of finished({
 				rules: review.rules,
 				files: at.files.length,
@@ -254,15 +229,6 @@ export class JudgeCommands {
 			}
 		});
 		await harness.run(reviews, agent, { cwd: dir, concurrency });
-		if (cache) {
-			try {
-				await cache.save();
-			} catch (error) {
-				// The agents already ran: losing the verdicts costs the next run a
-				// re-judge, not this one its report.
-				this.log.error(`could not record clean verdicts: ${error}`);
-			}
-		}
 		const violations = found.flat();
 		this.log.info("");
 		this.log.info(

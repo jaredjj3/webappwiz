@@ -27,9 +27,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
-# clean verdicts from past judge runs, so unchanged files skip the agent
-.wiz
-
 # a release under way; the last part to land deletes it (wiz ship)
 RELEASE
 

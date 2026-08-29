@@ -241,54 +241,6 @@ describe("JudgeCommands", () => {
 		);
 	});
 
-	it("skips a file judged clean last run and unchanged since", async () => {
-		await fs.write("/p/a.ts", "class A {}");
-		ps.setCaptureOutput("[]", "");
-
-		await commands(oneRule).judge(judging);
-		await commands(oneRule).judge(judging);
-
-		expect(ps.getCalls()).toHaveLength(1); // the second run spawned nothing
-		expect(printed()).toContain("cached    1 check clean");
-	});
-
-	it("re-judges a file once it changes", async () => {
-		await fs.write("/p/a.ts", "class A {}");
-		ps.setCaptureOutput("[]", "");
-
-		await commands(oneRule).judge(judging);
-		await fs.write("/p/a.ts", "class A {}\nclass B {}");
-		await commands(oneRule).judge(judging);
-
-		expect(ps.getCalls()).toHaveLength(2);
-	});
-
-	it("re-judges a file its last run found a violation in", async () => {
-		await fs.write("/p/a.ts", "class A {}\nclass B {}");
-		ps.setCaptureOutput(
-			'[{"rule": "one", "file": "a.ts", "line": 2, "message": "a second class"}]',
-			"",
-		);
-
-		await expect(commands(oneRule).judge(judging)).rejects.toThrow("1 error");
-		await expect(commands(oneRule).judge(judging)).rejects.toThrow("1 error");
-
-		expect(ps.getCalls()).toHaveLength(2);
-	});
-
-	it("clears nothing from a call that failed", async () => {
-		await fs.write("/p/a.ts", "class A {}");
-		ps.setCaptureOutput("", "boom");
-		ps.simulate(async () => 1);
-
-		await commands(oneRule).judge(judging);
-		ps.setCaptureOutput("[]", "");
-		ps.simulate(async () => 0);
-		await commands(oneRule).judge(judging);
-
-		expect(ps.getCalls()).toHaveLength(2); // the failure cached no verdicts
-	});
-
 	it("checks only what changed when --since names a ref", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 		await fs.write("/p/b.ts", "class B {}");
