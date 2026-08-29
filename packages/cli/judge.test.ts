@@ -260,8 +260,8 @@ describe("JudgeCommands", () => {
 		await live.judge(judging);
 
 		const drawn = color.strip(writes.join(""));
-		expect(drawn).toContain("0/1 calls · 1 running"); // the call out
-		expect(drawn).toContain("1/1 calls · 0 running"); // and the call home
+		expect(drawn).toContain("0/1 calls · judging 1 file"); // the call out
+		expect(drawn).toContain("1/1 calls · clean so far"); // and the call home
 		expect(printed()).toContain("✓ [1/1]"); // the report still lands, after
 	});
 

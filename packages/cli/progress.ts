@@ -1,7 +1,7 @@
 import type { Resource } from "webappwiz/disposable";
 import { color } from "webappwiz/log";
 import { Duration, SystemTimer, type Timer } from "webappwiz/time";
-import { compact } from "./report";
+import { compact, count } from "./report";
 
 /**
  * Where live progress draws. `tty` is whether a line can be redrawn in
@@ -18,16 +18,20 @@ export const terminal = (): Screen => ({
 	write: (text) => process.stdout.write(text),
 });
 
-/** A run as the status line shows it: how far along, and what it has spent. */
+/** A run as the status line shows it: how far along, what it is on, what it
+ * has spent, and what it has found. */
 export interface RunView {
 	/** Calls finished. */
 	done: number;
 	/** Calls the run will make in all. */
 	total: number;
-	/** Calls out right now. */
-	running: number;
+	/** Files the calls out right now are reading. Every review names at least
+	 * one, so zero here is the same as nothing running. */
+	files: number;
 	/** Tokens spent so far, when any agent has reported usage. */
 	tokens?: number;
+	/** Violations found so far; said aloud once the first call is home. */
+	problems: number;
 }
 
 const BAR = 20;
@@ -41,15 +45,21 @@ export const FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "
  * spinner's walk; with nothing running there is nothing to spin.
  */
 export function render(view: RunView, frame = 0): string {
-	const spin =
-		view.running === 0 ? " " : (FRAMES[frame % FRAMES.length] ?? " ");
+	const spin = view.files === 0 ? " " : (FRAMES[frame % FRAMES.length] ?? " ");
 	const filled = Math.round((BAR * view.done) / Math.max(1, view.total));
 	const bar =
 		color.green("█".repeat(filled)) + color.dim("░".repeat(BAR - filled));
+	const judging =
+		view.files === 0 ? "" : ` · judging ${count(view.files, "file")}`;
 	const spent =
 		view.tokens === undefined ? "" : ` · ${compact.format(view.tokens)} tokens`;
+	// Silent until a call is home: "clean so far" off zero calls is a guess.
+	const found =
+		view.done === 0
+			? ""
+			: ` · ${view.problems === 0 ? "clean so far" : count(view.problems, "problem")}`;
 	return `${color.green(spin)} ${bar}  ${color.gray(
-		`${view.done}/${view.total} calls · ${view.running} running${spent}`,
+		`${view.done}/${view.total} calls${judging}${spent}${found}`,
 	)}`;
 }
 
@@ -66,7 +76,8 @@ export interface ProgressOptions {
  */
 export class Progress {
 	private done = 0;
-	private running = 0;
+	private files = 0;
+	private problems = 0;
 	private tokens: number | undefined;
 	private drawn = false;
 	private frame = 0;
@@ -84,14 +95,17 @@ export class Progress {
 		}, Duration.ms(100));
 	}
 
-	started(): void {
-		this.running += 1;
+	/** A call went out over this many files. */
+	started(files: number): void {
+		this.files += files;
 		this.draw();
 	}
 
-	finished(spent?: number): void {
-		this.running -= 1;
+	/** A call came home: the files it read, what it spent, what it found. */
+	finished(files: number, spent?: number, problems = 0): void {
+		this.files -= files;
 		this.done += 1;
+		this.problems += problems;
 		if (spent !== undefined) {
 			this.tokens = (this.tokens ?? 0) + spent;
 		}
@@ -117,8 +131,9 @@ export class Progress {
 			{
 				done: this.done,
 				total: this.total,
-				running: this.running,
+				files: this.files,
 				tokens: this.tokens,
+				problems: this.problems,
 			},
 			this.frame,
 		);

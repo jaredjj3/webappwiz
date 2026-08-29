@@ -215,7 +215,9 @@ export class JudgeCommands {
 			ps: this.ps,
 			clock: this.clock,
 		});
-		harness.events.on("started", () => progress?.started());
+		harness.events.on("started", ({ at }) =>
+			progress?.started(reviews[at]?.files.length ?? 0),
+		);
 		harness.events.on("finished", (review) => {
 			const at = reviews[review.at];
 			if (!at) {
@@ -231,7 +233,7 @@ export class JudgeCommands {
 			// moment its agent returns rather than waiting on a second pass.
 			const violations = files.violations(at, review.findings, dir);
 			found[review.at] = violations;
-			progress?.finished(review.tokens);
+			progress?.finished(at.files.length, review.tokens, violations.length);
 			const lines = finished({
 				rules: review.rules,
 				files: at.files.length,
