@@ -66,13 +66,10 @@ export function planned({
 	const rows = [
 		[color.dim("files"), String(files)],
 		[color.dim("rules"), String(rules)],
-		[
-			color.dim("calls"),
-			String(calls) +
-				(concurrency === undefined
-					? ""
-					: color.dim(`, ${concurrency} at a time`)),
-		],
+		[color.dim("calls"), String(calls)],
+		...(concurrency === undefined
+			? []
+			: [[color.dim("workers"), String(concurrency)]]),
 		[color.dim("reading"), `${compact.format(estimate)}+ tokens`],
 	];
 	if (agent !== undefined) {

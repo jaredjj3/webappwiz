@@ -230,7 +230,7 @@ describe("JudgeCommands", () => {
 
 		await commands(oneRule).judge({ ...judging, "concurrency-override": 2 });
 
-		expect(printed()).toContain("calls     1, 2 at a time");
+		expect(printed()).toContain("workers   2");
 	});
 
 	it("prints the plan as lines rather than as one logged array", async () => {
