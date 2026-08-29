@@ -54,12 +54,12 @@ it can and still starts when something already holds that port. Port 0 comes
 back unchanged, meaning any port will do.
 
 ```ts
-const ports = new NodePortProvider();
+const ports = new OpenPortProvider();
 
 const port = await ports.get(4269);
 ```
 
-`NodePortProvider` binds each candidate and lets it go again, so the answer is
+`OpenPortProvider` binds each candidate and lets it go again, so the answer is
 open at the moment it is given rather than when the caller acts on it. A caller
 that cannot afford to lose that race should retry its own bind on `EADDRINUSE`
 instead.

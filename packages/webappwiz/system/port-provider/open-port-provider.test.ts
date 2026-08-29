@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { createServer, type Server } from "node:net";
-import { NodePortProvider } from "./node-port-provider";
+import { OpenPortProvider } from "./open-port-provider";
 
-describe("NodePortProvider", () => {
+describe("OpenPortProvider", () => {
 	const held: Server[] = [];
 
 	/** Binds a port and keeps it, answering with the port it got. */
@@ -29,16 +29,16 @@ describe("NodePortProvider", () => {
 		const free = await hold();
 		await release();
 
-		expect(await new NodePortProvider().get(free)).toBe(free);
+		expect(await new OpenPortProvider().get(free)).toBe(free);
 	});
 
 	it("looks past a port something else is holding", async () => {
 		const taken = await hold();
 
-		expect(await new NodePortProvider().get(taken)).toBeGreaterThan(taken);
+		expect(await new OpenPortProvider().get(taken)).toBeGreaterThan(taken);
 	});
 
 	it("hands back 0 unchanged, so whatever binds it chooses", async () => {
-		expect(await new NodePortProvider().get(0)).toBe(0);
+		expect(await new OpenPortProvider().get(0)).toBe(0);
 	});
 });

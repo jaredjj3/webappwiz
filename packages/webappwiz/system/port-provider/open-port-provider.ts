@@ -8,7 +8,7 @@ const SPAN = 20;
  * Finds an open port by binding one and letting it go again, which is the only
  * way to ask the machine rather than guess at what it is running.
  */
-export class NodePortProvider implements PortProvider {
+export class OpenPortProvider implements PortProvider {
 	async get(from: number): Promise<number> {
 		for (let port = from; port < from + SPAN; port++) {
 			// sequential on purpose: the first open port is the answer, and probing
