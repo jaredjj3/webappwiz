@@ -16,6 +16,7 @@ import {
 	ResourcesAreDisposable,
 	SimpleTestSetup,
 	TestsNotWeakened,
+	TestsOwnTheirState,
 	VisualWorkTested,
 } from "@webappwiz/rules/catalog";
 
@@ -37,6 +38,7 @@ export const JUDGE_RULES = defineRules({
 		new ObjectsOverCallbacks(),
 		new NamedOptionsLast(),
 		new SimpleTestSetup(),
+		new TestsOwnTheirState(),
 		new FakesOverMocks(),
 		new MatchersOverTestLogic(),
 		new CommentsSayWhyNotWhat(),

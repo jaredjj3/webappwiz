@@ -7,12 +7,12 @@ condition after. If a title leads with the action under test instead of the
 observable behavior, rewrite it.
 
 A test file opens on what is being tested, not on the machinery that sets it
-up or runs it. Setup lives in `beforeEach`; when that grows past a few plain
-lines, it moves to a test harness in a separate file, and the test file goes
-back to being obvious. Loops, iterators, and helper functions inside a test
-file are not banned, but each one trades obviousness for cleverness: a reader
-should follow every test top to bottom without executing anything in their
-head.
+up or runs it. Shared setup lives in the `beforeEach` of the `describe` whose
+tests need it, and stays there: it never moves out to a harness, because
+`tests-own-their-state` keeps state where a reader can see it. Loops,
+iterators, and helper functions inside a test file are not banned, but each one
+trades obviousness for cleverness: a reader should follow every test top to
+bottom without executing anything in their head.
 
 ## Good
 
@@ -39,26 +39,6 @@ describe("cart", () => {
 	it("throws when the cart is closed", () => {
 		cart.close();
 		expect(() => cart.add(pear)).toThrow();
-	});
-});
-```
-
-Setup too involved for `beforeEach` moves behind a harness:
-
-```ts
-import { beforeEach, describe, expect, it } from "bun:test";
-import { CheckoutHarness } from "./checkout-harness";
-
-describe("checkout", () => {
-	let harness: CheckoutHarness;
-
-	beforeEach(() => {
-		harness = new CheckoutHarness();
-	});
-
-	it("charges the card for the cart total", () => {
-		harness.buy(apple);
-		expect(harness.charged()).toBe(apple.price);
 	});
 });
 ```
