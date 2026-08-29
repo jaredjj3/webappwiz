@@ -27,7 +27,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
-# what the last judge run cost, which calibrates the next estimate
+# clean verdicts from past judge runs, so unchanged files skip the agent
 .wiz
 
 # a release under way; the last part to land deletes it (wiz ship)

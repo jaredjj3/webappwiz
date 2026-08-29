@@ -41,6 +41,8 @@ export const tokens = (bytes: number): number => Math.ceil(bytes / 4);
  */
 export interface Planned {
 	files: number;
+	/** Escalations answered by the clean-verdict cache, skipped from the calls. */
+	cached?: number;
 	rules: number;
 	calls: number;
 	/** Tokens the plan can see, which is a floor on what the run reads. */
@@ -53,6 +55,7 @@ export interface Planned {
 
 export function planned({
 	files,
+	cached,
 	rules,
 	calls,
 	estimate,
@@ -64,6 +67,10 @@ export function planned({
 	// are dim and the figures plain, so a scan lands on the numbers.
 	const rows = [
 		[color.dim("files"), String(files)],
+		// No row for a cold cache: "cached 0 checks" reads as something wrong.
+		...(cached
+			? [[color.dim("cached"), `${count(cached, "check")} clean`]]
+			: []),
 		[color.dim("rules"), String(rules)],
 		[
 			color.dim("calls"),

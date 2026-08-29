@@ -31,6 +31,9 @@ export interface Finished {
 	/** Which pool slot ran the call, 0-based, so a caller can watch what each
 	 * worker is spending as the run goes. */
 	worker: number;
+	/** True when the agent exited nonzero or answered with no array: empty
+	 * findings from a failed call clear nothing. */
+	failed: boolean;
 	done: number;
 	total: number;
 }
@@ -103,7 +106,11 @@ export class Harness {
 					return;
 				}
 				const started = this.clock.now();
-				const { findings, tokens } = await this.spawn(review, agent, cwd);
+				const { findings, tokens, failed } = await this.spawn(
+					review,
+					agent,
+					cwd,
+				);
 				done += 1;
 				this.dispatcher.dispatch("finished", {
 					at,
@@ -113,6 +120,7 @@ export class Harness {
 					took: this.clock.now().subtract(started),
 					tokens,
 					worker: slot,
+					failed,
 					done,
 					total: reviews.length,
 				});
@@ -128,7 +136,7 @@ export class Harness {
 		review: Review,
 		agent: Agent,
 		cwd?: string,
-	): Promise<{ findings: Finding[]; tokens?: number }> {
+	): Promise<{ findings: Finding[]; tokens?: number; failed: boolean }> {
 		const argv = [...agent.argv, prompt(review)];
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(argv, {
 			cwd,
@@ -137,14 +145,14 @@ export class Harness {
 			this.log.error(
 				`agent exited ${exitCode} on ${review.label}: ${stderr.trim() || "no stderr"}`,
 			);
-			return { findings: [] };
+			return { findings: [], failed: true };
 		}
 		const reported = parse(stdout);
 		if (reported === null) {
 			this.log.error(
 				`agent returned no JSON array on ${review.label}: ${stdout.trim().slice(0, 200)}`,
 			);
-			return { findings: [] };
+			return { findings: [], failed: true };
 		}
 		const findings: Finding[] = [];
 		for (const report of reported.findings) {
@@ -158,7 +166,7 @@ export class Harness {
 			}
 			findings.push(report);
 		}
-		return { findings, tokens: reported.tokens };
+		return { findings, tokens: reported.tokens, failed: false };
 	}
 }
 
