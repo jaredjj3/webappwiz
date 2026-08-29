@@ -117,16 +117,38 @@ Anything else worth saying goes after this block, not instead of it.
 ## ARBOR.md
 
 Your session can die at any moment; `ARBOR.md` is what lets a stranger
-`arbor claim` the task and continue. Fill in `## Goal` (one or two lines on
-what done means), list the file paths you plan to touch under `## Files`,
-and list every step you can foresee under `## Next` as `- [ ]` items,
-roughly one commit each. Move items to `## Done` as you finish them: those
-checkboxes are the only progress the task reports. Decisions, dead ends and
-how to verify go under `## Notes`. Keep the whole file current throughout
-implementation, not at the end: after each step lands, check it off, and
-when the set of files you are touching changes, change `## Files` to match.
-A stale plan is worse than none, and a session that dies mid-task reports
-nothing.
+`arbor claim` the task and continue. Fill in the stub `add` wrote to this
+shape:
+
+````markdown
+# <task>
+
+## Goal
+
+One or two lines on what done means.
+
+## Files
+
+- every/path/you/plan/to/touch.ts
+
+## Done
+
+- [x] finished steps move here: these checkboxes are the only progress the
+      task reports
+
+## Next
+
+- [ ] every step you can foresee, roughly one commit each
+
+## Notes
+
+Decisions, dead ends, and how to verify.
+````
+
+Keep the whole file current throughout implementation, not at the end: after
+each step lands, check it off and move it to `## Done`, and when the set of
+files you are touching changes, change `## Files` to match. A stale plan is
+worse than none, and a session that dies mid-task reports nothing.
 
 `arbor show <task>` prints the file and every way it departs from the
 expected shape; run it on your own task after writing the file. `add` excludes
