@@ -28,11 +28,13 @@ its changed files:
 (`arbor show <task>` for its plan; neither takes its lease).
 
 If nothing overlaps, carry on. If something does, `arbor add` your task if you
-have not already, record the overlap in `ARBOR.md` (which task, which files),
-then `arbor wait <task>` on the task you overlap with: let it land first and
-your rebase is onto its work rather than against it.
+have not already and record the overlap in `ARBOR.md` (which task, which
+files). Some overlap is normal: work alongside and accept the rebase. Only
+when the overlap is significant and you expect merge conflicts that would be
+hard to resolve, `arbor wait <task>` on the task you overlap with instead:
+let it land first and your rebase is onto its work rather than against it.
 
-Waiting is the answer to plain overlap, however much of it there is. Escalate
+Waiting is caution, reserved for overlap that warrants it. Escalate
 instead only when the other task is doing something majorly different from
 yours, or contrary to it: rewriting what you are extending, or asked for the
 opposite of what you were. Then `arbor escalate` and ask the user whether to
