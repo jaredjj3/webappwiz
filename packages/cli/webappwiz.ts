@@ -79,6 +79,9 @@ webappwiz
 	.option("since", t.optional(t.string()), {
 		description: "only check files added or changed since this git ref",
 	})
+	.option("concurrency-override", t.optional(t.number()), {
+		description: "agent calls in flight at once, over the config's concurrency",
+	})
 	.action((opts, deps) => judge(deps).judge(opts));
 
 webappwiz

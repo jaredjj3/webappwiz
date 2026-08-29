@@ -42,6 +42,8 @@ export interface JudgeOptions {
 	chunk: number;
 	/** Narrows the run to what git says has changed since this ref. */
 	since?: string;
+	/** Agent calls in flight at once, over the config's `concurrency`. */
+	"concurrency-override"?: number;
 }
 
 /** What a whole plan reads: every review's prompt and the files it names. */
@@ -174,6 +176,7 @@ export class JudgeCommands {
 		}
 		const read = new Set(reviews.flatMap((review) => review.files)).size;
 		const agent = this.agent(config, opts);
+		const concurrency = opts["concurrency-override"] ?? config.concurrency;
 		const started = this.clock.now();
 		this.log.info(
 			planned({
@@ -181,7 +184,7 @@ export class JudgeCommands {
 				rules: rules.length,
 				calls: reviews.length,
 				estimate: estimated(reviews),
-				concurrency: config.concurrency,
+				concurrency,
 				agent: agent.label,
 			}).join("\n"),
 		);
@@ -225,10 +228,7 @@ export class JudgeCommands {
 				this.log.info(line);
 			}
 		});
-		await harness.run(reviews, agent, {
-			cwd: dir,
-			concurrency: config.concurrency,
-		});
+		await harness.run(reviews, agent, { cwd: dir, concurrency });
 		const violations = found.flat();
 		this.log.info("");
 		this.log.info(

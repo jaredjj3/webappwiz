@@ -17,7 +17,7 @@ export const DEFAULT_AGENT = "haiku";
 /** Agent calls at once. A call is minutes of latency and no local work, so the
  * cap is about the provider's rate limits and your patience, not this machine:
  * raise it in the config when the limits allow. */
-export const DEFAULT_CONCURRENCY = 4;
+export const DEFAULT_CONCURRENCY = 8;
 
 /** The rules a run checks and the two knobs it has. There is no config file
  * and no implicit set: this is a constant a caller writes and passes in. */

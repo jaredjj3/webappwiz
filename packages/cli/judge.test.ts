@@ -221,6 +221,15 @@ describe("JudgeCommands", () => {
 		expect(printed()).toMatch(/reading {3}\d[\d.]*K?\+ tokens/);
 	});
 
+	it("lets --concurrency-override beat the config's concurrency", async () => {
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput("[]", "");
+
+		await commands(oneRule).judge({ ...judging, "concurrency-override": 2 });
+
+		expect(printed()).toContain("calls     1, 2 at a time");
+	});
+
 	it("prints the plan as lines rather than as one logged array", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
