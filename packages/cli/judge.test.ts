@@ -25,7 +25,7 @@ describe("JudgeCommands", () => {
 			ps,
 			clock,
 			glob: new NodeGlob(),
-			screen: { tty: false, width: 80, write: () => {} },
+			screen: { tty: false, write: () => {} },
 		});
 	const one = (document = ruleDoc("One")) => testRule("one", { document });
 	const oneRule = defineRules({ rules: [one()] });
@@ -244,7 +244,7 @@ describe("JudgeCommands", () => {
 		);
 	});
 
-	it("draws a live worker block on a terminal, then dumps the report", async () => {
+	it("draws a live status line on a terminal, then dumps the report", async () => {
 		const writes: string[] = [];
 		const live = new JudgeCommands(oneRule, {
 			log,
@@ -252,16 +252,16 @@ describe("JudgeCommands", () => {
 			ps,
 			clock,
 			glob: new NodeGlob(),
-			screen: { tty: true, width: 100, write: (text) => writes.push(text) },
+			screen: { tty: true, write: (text) => writes.push(text) },
 		});
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");
 
 		await live.judge(judging);
 
-		const block = color.strip(writes.join(""));
-		expect(block).toContain("w1  one (1 file, ~"); // the review in flight
-		expect(block).toContain("idle  1 call"); // and the worker run dry
+		const drawn = color.strip(writes.join(""));
+		expect(drawn).toContain("0/1 calls · 1 running"); // the call out
+		expect(drawn).toContain("1/1 calls · 0 running"); // and the call home
 		expect(printed()).toContain("✓ [1/1]"); // the report still lands, after
 	});
 
@@ -273,7 +273,7 @@ describe("JudgeCommands", () => {
 			ps,
 			clock,
 			glob: new NodeGlob(),
-			screen: { tty: true, width: 100, write: (text) => writes.push(text) },
+			screen: { tty: true, write: (text) => writes.push(text) },
 		});
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");

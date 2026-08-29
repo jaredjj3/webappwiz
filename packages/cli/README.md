@@ -65,8 +65,8 @@ bunx @webappwiz/cli judge . --ci              # plain lines, no live block
 ```
 
 Each rule's code half runs first, free, and only what it escalates reaches an
-agent. On a terminal a run draws a live line per worker (the review it is on,
-how long it has been out, and what it has spent), then dumps the report in one
+agent. On a terminal a run draws a live status line (a bar over the calls,
+how many are out, and the tokens spent so far), then dumps the report in one
 block; `--ci`, or any output that is not a terminal, prints line by line as
 reviews finish instead. `--print` and running are two things to do with one
 plan, so passing both is an error rather than one quietly winning. Code excuses itself from a rule with a `rule-ignore <id>: <reason>`

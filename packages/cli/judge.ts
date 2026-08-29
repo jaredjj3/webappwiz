@@ -201,11 +201,11 @@ export class JudgeCommands {
 		// spent so far is a fact about this report, not about running reviews.
 		const byWorker = new Map<number, number>();
 		let spent: number | undefined;
-		// Live on a terminal, plain lines under --ci or anywhere else: a block
+		// Live on a terminal, plain lines under --ci or anywhere else: a line
 		// redrawn into a log is escape codes, not progress.
 		const progress =
 			opts.ci !== true && this.screen.tty
-				? new Progress(this.screen, { clock: this.clock })
+				? new Progress(this.screen, reviews.length)
 				: undefined;
 		// The lines the block deferred, in completion order so the dump's
 		// [n/total] counters read in sequence.
@@ -215,16 +215,7 @@ export class JudgeCommands {
 			ps: this.ps,
 			clock: this.clock,
 		});
-		harness.events.on("started", ({ at, worker }) => {
-			const review = reviews[at];
-			if (review) {
-				progress?.started(worker, {
-					label: review.label,
-					files: review.files.length,
-					bytes: review.bytes,
-				});
-			}
-		});
+		harness.events.on("started", () => progress?.started());
 		harness.events.on("finished", (review) => {
 			const at = reviews[review.at];
 			if (!at) {
@@ -240,7 +231,7 @@ export class JudgeCommands {
 			// moment its agent returns rather than waiting on a second pass.
 			const violations = files.violations(at, review.findings, dir);
 			found[review.at] = violations;
-			progress?.finished(review.worker, review.tokens);
+			progress?.finished(review.tokens);
 			const lines = finished({
 				rules: review.rules,
 				files: at.files.length,
