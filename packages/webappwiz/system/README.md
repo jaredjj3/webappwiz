@@ -48,16 +48,24 @@ signals and uncaught exceptions.
 `MemoryLock` holds nothing but itself, so it only serializes callers inside one
 process that share the instance. Waiters are served in the order they arrived.
 
-A `PortProvider` answers which port to listen on. Ask for the one you would
-rather have and use what comes back, so a server keeps a predictable URL when
-it can and still starts when something already holds that port. Port 0 comes
-back unchanged, meaning any port will do.
+A `PortProvider` answers which port to listen on, and `get()` takes nothing:
+which ports it will consider is settled when it is made, so a server keeps a
+predictable URL when it can and still starts when something already holds that
+port.
 
 ```ts
-const ports = new OpenPortProvider();
+// 4269 if it is open, else the next open port up to 4288
+const port = await OpenPortProvider.span({ from: 4269, span: 20 }).get();
 
-const port = await ports.get(4269);
+// exactly 5432, or a throw
+const pg = await new OpenPortProvider({ from: 5432 }).get();
+
+// 0, meaning whatever binds it chooses
+const any = await OpenPortProvider.any().get();
 ```
+
+A range that covers no ports, or reaches past 65535, throws when the provider
+is made rather than when it is asked, so a bad one never reaches a caller.
 
 `OpenPortProvider` binds each candidate and lets it go again, so the answer is
 open at the moment it is given rather than when the caller acts on it. A caller
