@@ -82,15 +82,23 @@ describe("Harness", () => {
 		expect(call).toContain("# Classes");
 	});
 
-	it("reads the findings out of the agent's envelope", async () => {
+	it("reads the findings and the token usage out of the agent's envelope", async () => {
+		const read: Array<number | undefined> = [];
 		ps.setCaptureOutput(
 			JSON.stringify({
 				type: "result",
+				usage: {
+					input_tokens: 4,
+					output_tokens: 120,
+					cache_creation_input_tokens: 5_000,
+					cache_read_input_tokens: 7_000,
+				},
 				result:
 					'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "a second class"}]',
 			}),
 			"",
 		);
+		harness.events.on("finished", (finished) => read.push(finished.tokens));
 
 		const findings = await harness.run([review("a", "Classes")], agent);
 
@@ -102,6 +110,32 @@ describe("Harness", () => {
 				message: "a second class",
 			},
 		]);
+		expect(read).toEqual([12_124]); // every kind of token, as one figure
+	});
+
+	it("reports no usage for an agent that answers with the bare array", async () => {
+		const read: Array<number | undefined> = [];
+		ps.setCaptureOutput(
+			'[{"rule": "Classes", "message": "a second class"}]',
+			"",
+		);
+		harness.events.on("finished", (finished) => read.push(finished.tokens));
+
+		await harness.run([review("a", "Classes")], agent);
+
+		expect(read).toEqual([undefined]);
+	});
+
+	it("says which slot ran each review, so spend can be watched per worker", async () => {
+		ps.setCaptureOutput("[]", "");
+		const workers: number[] = [];
+		harness.events.on("finished", (finished) => workers.push(finished.worker));
+
+		await harness.run([review("a"), review("b"), review("c")], agent, {
+			concurrency: 1,
+		});
+
+		expect(workers).toEqual([0, 0, 0]); // one slot took every review
 	});
 
 	it("finds the array inside the prose the agent wrapped it in", async () => {

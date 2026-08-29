@@ -21,6 +21,16 @@ export interface Finished {
 	findings: Finding[];
 	/** How long this review's agent took. */
 	took: Duration;
+	/**
+	 * Tokens this review's call touched, straight from the agent's envelope:
+	 * input, output, and cache both ways. Undefined for an agent that reports
+	 * no usage, which is any `--exec` command: reports leave the figure off
+	 * rather than guess it.
+	 */
+	tokens?: number;
+	/** Which pool slot ran the call, 0-based, so a caller can watch what each
+	 * worker is spending as the run goes. */
+	worker: number;
 	done: number;
 	total: number;
 }
@@ -86,14 +96,14 @@ export class Harness {
 		// A worker per slot, each taking the next review as it frees up, so a slow
 		// review holds up only itself: the cap is the provider's rate limit, not
 		// this machine's, since a call is latency and no local work.
-		const worker = async (): Promise<void> => {
+		const worker = async (slot: number): Promise<void> => {
 			for (let at = next++; at < reviews.length; at = next++) {
 				const review = reviews[at];
 				if (!review) {
 					return;
 				}
 				const started = this.clock.now();
-				const findings = await this.spawn(review, agent, cwd);
+				const { findings, tokens } = await this.spawn(review, agent, cwd);
 				done += 1;
 				this.dispatcher.dispatch("finished", {
 					at,
@@ -101,6 +111,8 @@ export class Harness {
 					rules: review.rules.map((rule) => rule.id),
 					findings,
 					took: this.clock.now().subtract(started),
+					tokens,
+					worker: slot,
 					done,
 					total: reviews.length,
 				});
@@ -108,7 +120,7 @@ export class Harness {
 			}
 		};
 		const slots = Math.max(1, Math.min(concurrency, reviews.length));
-		await Promise.all(Array.from({ length: slots }, worker));
+		await Promise.all(Array.from({ length: slots }, (_, slot) => worker(slot)));
 		return found.flat();
 	}
 
@@ -116,7 +128,7 @@ export class Harness {
 		review: Review,
 		agent: Agent,
 		cwd?: string,
-	): Promise<Finding[]> {
+	): Promise<{ findings: Finding[]; tokens?: number }> {
 		const argv = [...agent.argv, prompt(review)];
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(argv, {
 			cwd,
@@ -125,17 +137,17 @@ export class Harness {
 			this.log.error(
 				`agent exited ${exitCode} on ${review.label}: ${stderr.trim() || "no stderr"}`,
 			);
-			return [];
+			return { findings: [] };
 		}
 		const reported = parse(stdout);
 		if (reported === null) {
 			this.log.error(
 				`agent returned no JSON array on ${review.label}: ${stdout.trim().slice(0, 200)}`,
 			);
-			return [];
+			return { findings: [] };
 		}
 		const findings: Finding[] = [];
-		for (const report of reported) {
+		for (const report of reported.findings) {
 			if (!review.rules.some((rule) => rule.id === report.rule)) {
 				// Aloud, not dropped in silence: a finding filed under a misspelled
 				// id is still a finding somebody paid for.
@@ -146,20 +158,25 @@ export class Harness {
 			}
 			findings.push(report);
 		}
-		return findings;
+		return { findings, tokens: reported.tokens };
 	}
 }
 
 /**
- * The answer, out of whatever envelope the agent wrote it in.
- * `--output-format json` wraps the text in an object; an `--exec` command
- * prints the array on its own.
+ * The answer and what it read, out of whatever envelope the agent wrote it
+ * in. `--output-format json` wraps the text in an object with a `usage`
+ * beside it; an `--exec` command prints the array on its own and reports no
+ * usage at all.
  */
-function parse(stdout: string): Finding[] | null {
-	return array(unwrap(stdout).result);
+function parse(
+	stdout: string,
+): { findings: Finding[]; tokens?: number } | null {
+	const envelope = unwrap(stdout);
+	const findings = array(envelope.result);
+	return findings === null ? null : { findings, tokens: envelope.tokens };
 }
 
-function unwrap(stdout: string): { result: string } {
+function unwrap(stdout: string): { result: string; tokens?: number } {
 	let value: unknown;
 	try {
 		value = JSON.parse(stdout);
@@ -174,7 +191,28 @@ function unwrap(stdout: string): { result: string } {
 	) {
 		return { result: stdout };
 	}
-	return { result: value.result };
+	return {
+		result: value.result,
+		tokens: spent("usage" in value ? value.usage : undefined),
+	};
+}
+
+/**
+ * Every token a call touched, as one figure: input, output, and cache reads
+ * and writes all count, because the question the report answers with it is
+ * where the spend is going, not what any one kind costs.
+ */
+function spent(usage: unknown): number | undefined {
+	if (typeof usage !== "object" || usage === null) {
+		return undefined;
+	}
+	const total = Object.entries(usage)
+		.filter(
+			(entry): entry is [string, number] =>
+				entry[0].endsWith("_tokens") && typeof entry[1] === "number",
+		)
+		.reduce((sum, [, count]) => sum + count, 0);
+	return total > 0 ? total : undefined;
 }
 
 /**

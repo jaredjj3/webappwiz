@@ -93,6 +93,12 @@ export interface Finished {
 	violations: Violation[];
 	/** How long this review's agent took. */
 	took: Duration;
+	/** Tokens this review's call touched, when the agent reported usage. */
+	tokens?: number;
+	/** Which worker ran the call, 0-based. */
+	worker: number;
+	/** Tokens that worker has touched so far, this review included. */
+	workerTokens?: number;
 	done: number;
 	total: number;
 }
@@ -106,6 +112,9 @@ export function finished({
 	files,
 	violations,
 	took,
+	tokens,
+	worker,
+	workerTokens,
 	done,
 	total,
 }: Finished): string[] {
@@ -115,7 +124,17 @@ export function finished({
 	const heading =
 		`${color.gray(`[${done}/${total}]`)} ` +
 		color.gray(`(${count(rules.length, "rule")}, ${count(files, "file")})`);
-	const tail = `${color.gray(`in ${took.human()}`)}`;
+	// No tokens rather than a zero when the agent reported none: an `--exec`
+	// command reading nothing and one that never said are different things.
+	// Workers are named from 1, the way the run counts its calls.
+	const spent =
+		tokens === undefined
+			? ""
+			: `  ${compact.format(tokens)} tokens` +
+				(workerTokens === undefined
+					? ""
+					: ` (w${worker + 1}: ${compact.format(workerTokens)})`);
+	const tail = `${color.gray(`in ${took.human()}${spent}`)}`;
 	if (violations.length === 0) {
 		return [`${color.green("✓")} ${heading}: clean ${tail}`];
 	}
@@ -144,8 +163,14 @@ export function finding(violation: Violation): string[] {
 	return lines;
 }
 
-export function summary(violations: Violation[], took: Duration): string {
-	const elapsed = color.gray(`in ${took.human()}`);
+export function summary(
+	violations: Violation[],
+	took: Duration,
+	tokens?: number,
+): string {
+	const spent =
+		tokens === undefined ? "" : `  ${compact.format(tokens)} tokens total`;
+	const elapsed = color.gray(`in ${took.human()}${spent}`);
 	if (violations.length === 0) {
 		return `${color.green("✓ no violations")} ${elapsed}`;
 	}

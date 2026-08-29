@@ -7,10 +7,10 @@ export interface Agent {
 /**
  * The models `--agent` names, so a run can pick one without a command.
  *
- * `--output-format json` wraps the answer in an envelope that also carries what
- * the call was billed, which is the only place a real dollar figure comes from:
- * there is no price list to fetch, and pricing tokens ourselves would miss the
- * agent's own system prompt, which is most of what a small call costs.
+ * `--output-format json` wraps the answer in an envelope that also carries the
+ * call's token usage, which is the only place a real figure comes from:
+ * counting bytes ourselves would miss the agent's own system prompt and
+ * whatever it re-reads as it works, which is most of what a small call reads.
  */
 export const AGENTS: Record<string, string[]> = {
 	haiku: ["claude", "-p", "--output-format", "json", "--model", "haiku"],

@@ -187,6 +187,10 @@ export class JudgeCommands {
 		);
 
 		const found: Violation[][] = [];
+		// Running totals, kept here rather than in the harness: what a worker has
+		// spent so far is a fact about this report, not about running reviews.
+		const byWorker = new Map<number, number>();
+		let spent: number | undefined;
 		const harness = new Harness({
 			log: this.log,
 			ps: this.ps,
@@ -197,6 +201,12 @@ export class JudgeCommands {
 			if (!at) {
 				return;
 			}
+			let workerTokens: number | undefined;
+			if (review.tokens !== undefined) {
+				workerTokens = (byWorker.get(review.worker) ?? 0) + review.tokens;
+				byWorker.set(review.worker, workerTokens);
+				spent = (spent ?? 0) + review.tokens;
+			}
 			// Sync, off what the plan already read, so a review's findings print the
 			// moment its agent returns rather than waiting on a second pass.
 			const violations = files.violations(at, review.findings, dir);
@@ -206,6 +216,9 @@ export class JudgeCommands {
 				files: at.files.length,
 				violations,
 				took: review.took,
+				tokens: review.tokens,
+				worker: review.worker,
+				workerTokens,
 				done: review.done,
 				total: review.total,
 			})) {
@@ -218,7 +231,9 @@ export class JudgeCommands {
 		});
 		const violations = found.flat();
 		this.log.info("");
-		this.log.info(summary(violations, this.clock.now().subtract(started)));
+		this.log.info(
+			summary(violations, this.clock.now().subtract(started), spent),
+		);
 		const errors = violations.filter(
 			(violation) => violation.level === "error",
 		).length;

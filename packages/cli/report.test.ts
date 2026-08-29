@@ -58,11 +58,30 @@ describe("report", () => {
 			files: 25,
 			violations: [],
 			took: Duration.secs(8.25),
+			worker: 0,
 			done: 2,
 			total: 6,
 		});
 
 		expect(plain(lines)).toEqual(["✓ [2/6] (1 rule, 25 files): clean in 8.3s"]);
+	});
+
+	it("says what a review read and the worker's running total beside it", () => {
+		const lines = finished({
+			rules: ["doc-comments-address-users"],
+			files: 25,
+			violations: [],
+			took: Duration.secs(8.25),
+			tokens: 12_300,
+			worker: 2,
+			workerTokens: 45_100,
+			done: 2,
+			total: 6,
+		});
+
+		expect(plain(lines)).toEqual([
+			"✓ [2/6] (1 rule, 25 files): clean in 8.3s  12K tokens (w3: 45K)",
+		]);
 	});
 
 	it("leaves the rule ids out of a heading, since a finding names its own", () => {
@@ -71,6 +90,7 @@ describe("report", () => {
 			files: 4,
 			violations: [],
 			took: Duration.secs(8.25),
+			worker: 0,
 			done: 2,
 			total: 6,
 		});
@@ -84,6 +104,7 @@ describe("report", () => {
 			files: 4,
 			violations: [violation(), violation({ line: 9 })],
 			took: Duration.secs(41),
+			worker: 0,
 			done: 3,
 			total: 6,
 		});
@@ -108,6 +129,12 @@ describe("report", () => {
 
 		expect(color.strip(tally)).toBe(
 			"✖ 2 problems (1 error, 1 warning) in 1m 30s",
+		);
+	});
+
+	it("totals what a run read under the tally", () => {
+		expect(color.strip(summary([], Duration.secs(3), 312_000))).toBe(
+			"✓ no violations in 3.0s  312K tokens total",
 		);
 	});
 

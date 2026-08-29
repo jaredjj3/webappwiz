@@ -87,6 +87,23 @@ describe("JudgeCommands", () => {
 		expect(printed()).toContain("│ class B {}");
 	});
 
+	it("tracks what each worker has read as reviews finish", async () => {
+		await fs.write("/p/a.ts", "class A {}");
+		ps.setCaptureOutput(
+			JSON.stringify({
+				type: "result",
+				usage: { input_tokens: 48_000, output_tokens: 100 },
+				result: "[]",
+			}),
+			"",
+		);
+
+		await commands(oneRule).judge(judging);
+
+		expect(printed()).toContain("clean in 0ms  48K tokens (w1: 48K)");
+		expect(printed()).toContain("no violations in 0ms  48K tokens total");
+	});
+
 	it("says the code conforms when the agent finds nothing", async () => {
 		await fs.write("/p/a.ts", "class A {}");
 		ps.setCaptureOutput("[]", "");

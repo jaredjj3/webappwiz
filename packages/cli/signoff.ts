@@ -94,8 +94,9 @@ export class Signoff {
 			ps: this.ps,
 			clock: this.clock,
 		});
-		harness.events.on("finished", ({ took }) => {
-			this.log.info(color.gray(`read in ${took.human()}`));
+		harness.events.on("finished", ({ took, tokens: read }) => {
+			const spent = read === undefined ? "" : `  ${read} tokens`;
+			this.log.info(color.gray(`read in ${took.human()}${spent}`));
 		});
 		return await harness.run([review], agent, { cwd: dir });
 	}
