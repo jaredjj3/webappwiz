@@ -55,11 +55,18 @@ export class FakePs implements Ps {
 		}
 	}
 
+	/** Runs the "exit" handlers on the way out, as a real process does. */
 	exit(code: number): void {
-		if (!this.exited) {
-			this.exitCode = code;
-			this.exited = true;
+		if (this.exited) {
+			return;
 		}
+		this.exitCode = code;
+		const handlers = this.handlers.get("exit") ?? [];
+		this.handlers.delete("exit");
+		for (const handler of handlers) {
+			handler();
+		}
+		this.exited = true;
 	}
 
 	on(signal: string, handler: () => void): void {
