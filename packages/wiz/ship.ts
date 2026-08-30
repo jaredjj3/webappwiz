@@ -15,7 +15,10 @@ const BUMPS = ["patch", "minor"] as const satisfies readonly Bump[];
  * stamping the template is what keeps `skills ls` from calling them stale the
  * moment a release lands.
  */
-const SKILLS = ["packages/cli/templates/arbor.skill.md"];
+const SKILLS = [
+	"packages/cli/templates/arbor.skill.md",
+	"packages/cli/templates/webappwiz.skill.md",
+];
 
 export interface ShipOptions {
 	/** How far to move the version: patch or minor. Major is refused here. */

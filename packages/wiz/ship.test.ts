@@ -13,7 +13,10 @@ describe("ship", () => {
 	];
 
 	/** Every skill the release stamps, as `SKILLS` in ship.ts lists them. */
-	const SKILLS = ["/repo/packages/cli/templates/arbor.skill.md"];
+	const SKILLS = [
+		"/repo/packages/cli/templates/arbor.skill.md",
+		"/repo/packages/cli/templates/webappwiz.skill.md",
+	];
 
 	let log: MemoryLogger;
 	let ps: FakePs;
@@ -30,7 +33,7 @@ describe("ship", () => {
 			JSON.stringify({ name: "@scope/solo", version: "1.2.3" }),
 		);
 		for (const path of SKILLS) {
-			await fs.write(path, "---\nname: arbor\nversion: 1.2.3\n---\n");
+			await fs.write(path, "---\nversion: 1.2.3\n---\n");
 		}
 	});
 
