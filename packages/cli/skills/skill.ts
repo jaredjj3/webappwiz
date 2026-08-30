@@ -2,6 +2,7 @@ import { dirname } from "node:path";
 import type { Logger } from "webappwiz/log";
 import type { Fs } from "webappwiz/system";
 import arbor from "../templates/arbor.skill.md" with { type: "text" };
+import webappwiz from "../templates/webappwiz.skill.md" with { type: "text" };
 
 /** Skill name to the document a project installs under that name. */
 export type Skills = Record<string, string>;
@@ -15,7 +16,7 @@ export type Skills = Record<string, string>;
  * a skill is a line here rather than a file that a directory listing may or may
  * not happen to pick up.
  */
-export const bundled: Skills = { arbor };
+export const bundled: Skills = { arbor, webappwiz };
 
 export function versionOf(md: string): string | null {
 	// frontmatter only, so a `version:` inside a fenced example in the body is

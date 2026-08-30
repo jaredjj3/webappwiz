@@ -101,10 +101,14 @@ bunx @webappwiz/cli skills update ./project
 ```
 
 ```
-SKILL  SHIPS  INSTALLED
-arbor  1.4.0  1.3.0
-other  1.4.0  -
+SKILL      SHIPS  INSTALLED
+arbor      1.4.0  1.3.0
+webappwiz  1.4.0  -
 ```
+
+Two ship: `arbor`, which lands an agent's work from its own worktree, and
+`webappwiz`, which sends an agent to the package's catalogue before it writes
+infrastructure by hand.
 
 `add` installs one skill by name. `update` refreshes the ones a project already
 has and never installs a new one: which skills a project uses is its own
