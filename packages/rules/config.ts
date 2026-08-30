@@ -10,9 +10,10 @@ export interface RunnerOptions {
 	concurrency: number;
 }
 
-/** The cheapest model that reads a rule and a file well enough to judge it.
- * Anything slower is a decision to make per project, in the config. */
-export const DEFAULT_AGENT = "haiku";
+/** The model that reads a rule and a file well enough to judge it without
+ * second-guessing. Anything else is a decision to make per project, in the
+ * config. */
+export const DEFAULT_AGENT = "sonnet";
 
 /** Agent calls at once. A call is minutes of latency and no local work, so the
  * cap is about the provider's rate limits and your patience, not this machine:
