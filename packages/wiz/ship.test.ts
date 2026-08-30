@@ -6,11 +6,7 @@ import { ship } from "./ship";
 describe("ship", () => {
 	// The gate runs through the same FakePs the release does, so its commands
 	// show up in `getCalls()` ahead of anything the release itself spawns.
-	const GATE = [
-		"bunx biome check .",
-		"bunx tsc --noEmit",
-		"bun test --pass-with-no-tests --parallel",
-	];
+	const GATE = ["bunx biome check .", "bunx tsc --noEmit"];
 
 	/** Every skill the release stamps, as `SKILLS` in ship.ts lists them. */
 	const SKILLS = [
@@ -79,12 +75,12 @@ describe("ship", () => {
 		}
 	});
 
-	it("stops on a red suite, before anything is stamped", async () => {
+	it("stops on a red gate, before anything is stamped", async () => {
 		ps.simulate(async () =>
-			ps.getCalls().at(-1)?.startsWith("bun test") ? 1 : 0,
+			ps.getCalls().at(-1)?.startsWith("bunx tsc") ? 1 : 0,
 		);
 
-		await expect(ship(opts())).rejects.toThrow("Tests failed");
+		await expect(ship(opts())).rejects.toThrow("Typechecking failed");
 
 		expect(ps.getCalls()).toEqual(GATE);
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(

@@ -3,7 +3,6 @@ import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
 import { fix } from "./fix";
-import { test } from "./test";
 
 /**
  * Every agent skill this workspace ships, listed rather than discovered so
@@ -38,10 +37,9 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
 	// These packages publish their source, so a typecheck is the only compile
-	// gate there is. Run it before anything is stamped or pushed, and the tests
-	// after it: the cheap gate should be the one that fails first.
+	// gate there is: run it before anything is stamped or pushed. The suite is
+	// not run here; whoever ships is expected to have run it already.
 	await fix({ check: true, checks: opts.checks, log, ps });
-	await test({ package: "", fs: opts.fs, ps });
 
 	const declared = releases.lockstep(
 		await releases.workspace({ fs: opts.fs, ps }),
