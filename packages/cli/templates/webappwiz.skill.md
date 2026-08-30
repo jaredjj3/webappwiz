@@ -53,8 +53,7 @@ here. A wrong module taken up is worse than one written twice.
 
 ## Rules
 
-- Never edit the webappwiz repository from this project's thread. It lands work
-  through its own worktrees.
+- Never edit the webappwiz repository from this project's thread.
 - Never copy its source into this project.
 - Reading the table is the whole check, and it is cheap. Do it before adding a
   dependency, not after.
