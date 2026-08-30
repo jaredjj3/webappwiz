@@ -37,8 +37,7 @@ describe("ship", () => {
 		}
 	});
 
-	const opts = (bump: string) => ({
-		bump,
+	const opts = () => ({
 		checks: { run: async () => true },
 		prompt: () => "y",
 		log,
@@ -46,38 +45,23 @@ describe("ship", () => {
 		ps,
 	});
 
-	it("refuses a bump nobody has heard of", async () => {
-		await expect(ship(opts("resume"))).rejects.toThrow(
-			'unknown version bump "resume" (expected patch, minor)',
-		);
-		expect(ps.getCalls()).toEqual([]);
-	});
-
-	it("refuses major, which would carry every package out of 0.x", async () => {
-		await expect(ship(opts("major"))).rejects.toThrow("major would leave 0.x");
-		expect(ps.getCalls()).toEqual([]);
-		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
-			"1.2.3",
-		);
-	});
-
 	it("finishes a release that failed, at the version RELEASE holds", async () => {
 		await fs.write(
 			"/repo/RELEASE",
-			JSON.stringify({ version: "1.2.4", done: [] }),
+			JSON.stringify({ version: "1.3.0", done: [] }),
 		);
 
-		await ship(opts("minor"));
+		await ship(opts());
 
-		// 1.3.0 is what the bump asked for; RELEASE holding 1.2.4 overrules it.
+		// A patch would have stamped 1.2.4; RELEASE holding 1.3.0 overrules it.
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
-			"1.2.4",
+			"1.3.0",
 		);
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
 	});
 
 	it("gates before it releases the workspace it found", async () => {
-		await ship(opts("patch"));
+		await ship(opts());
 
 		expect(ps.getCalls().slice(0, GATE.length)).toEqual(GATE);
 		expect(ps.getCalls()).toContain("bun publish --access public");
@@ -88,7 +72,7 @@ describe("ship", () => {
 	});
 
 	it("carries every skill copy to the version the packages went out at", async () => {
-		await ship(opts("patch"));
+		await ship(opts());
 
 		for (const path of SKILLS) {
 			expect(await fs.read(path)).toContain("version: 1.2.4\n");
@@ -100,7 +84,7 @@ describe("ship", () => {
 			ps.getCalls().at(-1)?.startsWith("bun test") ? 1 : 0,
 		);
 
-		await expect(ship(opts("patch"))).rejects.toThrow("Tests failed");
+		await expect(ship(opts())).rejects.toThrow("Tests failed");
 
 		expect(ps.getCalls()).toEqual(GATE);
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
