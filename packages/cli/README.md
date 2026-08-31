@@ -9,7 +9,6 @@ bunx @webappwiz/cli skills add arbor   # install an agent skill
 bunx @webappwiz/cli skills update      # refresh the ones already installed
 bunx @webappwiz/cli rules ls           # every rule there is
 bunx @webappwiz/cli judge .            # check a directory against them
-bunx @webappwiz/cli signoff            # does this change need a person?
 ```
 
 ## rules
@@ -31,26 +30,9 @@ agent is handed verbatim.
 
 The `SET` column is which of the two lists a rule is in. `judge` rules are what
 `judge` checks files against, file by file. `signoff` rules have no glob and no
-level because they are about a change rather than a file: `signoff` weighs them,
-and what they answer is whether it needs a person rather than where the code is
-wrong.
-
-## signoff
-
-Weighs a change against the signoff rules and exits 1 with a reason when one of
-them wants a person to look before it merges. One agent call over the whole
-diff, since that is what these rules are about.
-
-```bash
-bunx @webappwiz/cli signoff                    # everything since main
-bunx @webappwiz/cli signoff --since HEAD~3     # measured against another ref
-bunx @webappwiz/cli signoff --print            # the rules, to apply yourself
-```
-
-`--print` is the cheapest signoff there is: the agent about to merge reads the
-rules and weighs its own change, spawning nothing. A project points its agent
-instructions at that rather than at a list of rule ids, which goes stale the
-next time a rule is added.
+level because they are about a change rather than a file: no command runs them,
+so the agent about to merge reads them (`rules show <id>`) and weighs its own
+change.
 
 ## judge
 

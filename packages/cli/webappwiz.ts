@@ -9,7 +9,6 @@ import { JudgeCommands } from "./judge";
 // rather than read, so declaring the commands needs no filesystem.
 import { version } from "./package.json";
 import { JUDGE_RULES, SIGNOFF_RULES } from "./rules";
-import { Signoff } from "./signoff";
 import { add } from "./skills/add";
 import { ls } from "./skills/ls";
 import { update as updateSkills } from "./skills/update";
@@ -87,35 +86,6 @@ webappwiz
 		description: "line-by-line output with no live progress block",
 	})
 	.action((opts, deps) => judge(deps).judge(opts));
-
-webappwiz
-	.command("signoff")
-	.description("weigh a change against the rules that ask for a person")
-	.arg("dir", t.string(), {
-		default: ".",
-		description: "directory whose change is weighed (default: .)",
-	})
-	.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
-		description: "model to weigh it with (default: the config's agent)",
-	})
-	.option("exec", t.optional(t.string()), {
-		description: "command the prompt is passed to, instead of --agent",
-	})
-	.option("print", t.boolean(), {
-		default: false,
-		description: "print the rules to apply yourself, and run no agent",
-	})
-	.option("since", t.string(), {
-		default: "main",
-		description: "the ref the change is measured against",
-	})
-	.action((opts, { log, ps, clock }) =>
-		new Signoff(SIGNOFF_RULES, JUDGE_RULES.agent, {
-			log,
-			ps,
-			clock,
-		}).run(opts),
-	);
 
 const rules = webappwiz
 	.group("rules")
