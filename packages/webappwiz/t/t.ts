@@ -2,6 +2,7 @@ import type { Infer, Schema } from "./schema";
 import { SchemaArray } from "./schema-array";
 import { SchemaBoolean } from "./schema-boolean";
 import { SchemaEnum } from "./schema-enum";
+import { SchemaNullable } from "./schema-nullable";
 import { SchemaNumber } from "./schema-number";
 import { SchemaObject } from "./schema-object";
 import { SchemaOptional } from "./schema-optional";
@@ -20,4 +21,6 @@ export const t = {
 	array: <T>(item: Schema<T>): Schema<T[]> => new SchemaArray(item),
 	optional: <T>(inner: Schema<T>): Schema<T | undefined> =>
 		new SchemaOptional(inner),
+	nullable: <T>(inner: Schema<T>): Schema<T | null> =>
+		new SchemaNullable(inner),
 };

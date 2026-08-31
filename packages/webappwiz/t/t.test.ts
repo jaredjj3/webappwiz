@@ -100,6 +100,13 @@ describe("t", () => {
 		expect(() => maybe.parse(null)).toThrow("expected string");
 	});
 
+	it("accepts null but still checks present values when nullable", () => {
+		const hook = t.nullable(t.string());
+		expect(hook.parse(null)).toBeNull();
+		expect(hook.parse("ada")).toBe("ada");
+		expect(() => hook.parse(undefined)).toThrow("expected string");
+	});
+
 	it("decodes JSON strings when parsing objects and arrays", () => {
 		const todo = t.object({ title: t.string() });
 		expect(todo.coerce('{"title":"milk"}')).toEqual({ title: "milk" });
