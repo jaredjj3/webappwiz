@@ -1,6 +1,6 @@
 {
 	"name": "@webappwiz/rules",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"description": "Checking code against rules an agent has to read to apply",
 	"license": "MIT",
 	"author": "Jared Johnson",
