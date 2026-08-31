@@ -15,6 +15,7 @@
 		"./assert": "./assert/index.ts",
 		"./browser": "./browser/index.ts",
 		"./cmd": "./cmd/index.ts",
+		"./config": "./config/index.ts",
 		"./disposable": "./disposable/index.ts",
 		"./events": "./events/index.ts",
 		"./geometry": "./geometry/index.ts",
