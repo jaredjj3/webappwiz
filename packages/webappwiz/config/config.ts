@@ -48,11 +48,11 @@ export class Config<T extends Record<string, unknown>> {
 	}
 }
 
+// rule-ignore one-class-per-file: the value Config.factory returns; a separate file would hide that it exists only to keep Config's constructor private
 class ConfigFactory<T extends Record<string, unknown>> {
+	// rule-ignore objects-over-callbacks: the callback is Config's private constructor, handed over by Config.factory; an interface would force it public
 	constructor(
 		private schema: Schema<T>,
-		// handed over by `Config.factory` so the `Config` constructor stays
-		// private
 		private configFactory: (
 			schema: Schema<T>,
 			value: Record<string, unknown>,
