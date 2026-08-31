@@ -42,22 +42,8 @@ describe("JudgeCommands", () => {
 	it("shows each rule as a table row when listing", () => {
 		commands(oneRule).ls();
 
-		expect(printed()).toContain("id    rule   set     level   files");
-		expect(printed()).toContain("one   One    judge   error");
-	});
-
-	it("lists the rules only a reader applies beside the ones a run checks", () => {
-		new JudgeCommands(oneRule, {
-			signoffRules: [{ id: "two", document: ruleDoc("Two") }],
-			log,
-			fs,
-			ps,
-			clock,
-			glob: new NodeGlob(),
-		}).ls();
-
-		expect(printed()).toContain("one   One    judge");
-		expect(printed()).toContain("two   Two    signoff");
+		expect(printed()).toContain("id    rule   level   files");
+		expect(printed()).toContain("one   One    error");
 	});
 
 	it("prints one rule in full when shown its id", () => {

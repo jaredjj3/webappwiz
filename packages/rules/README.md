@@ -9,8 +9,8 @@ files to send in the first place.
 It also owns webappwiz's own rules: a class and a markdown document each, all of
 them in [`rules/`](./rules) and exported from `@webappwiz/rules/rules`. Nothing
 here assembles them into a set. A caller names the rules it wants, as
-[`@webappwiz/cli`](../cli/rules.ts) does in `JUDGE_RULES` and `SIGNOFF_RULES`,
-hands the list in, and reads violations back.
+[`@webappwiz/cli`](../cli/rules.ts) does in `JUDGE_RULES`, hands the list in,
+and reads violations back.
 
 ## A rule
 

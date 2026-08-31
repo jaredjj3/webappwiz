@@ -3,7 +3,6 @@ import {
 	type AgentOptions,
 	agentCommand,
 	type FileReview,
-	type FileRule,
 	Files,
 	Harness,
 	type Rule,
@@ -53,10 +52,6 @@ export interface JudgeOptions {
 const estimated = (reviews: FileReview[]): number =>
 	tokens(reviews.reduce((bytes, review) => bytes + review.bytes, 0));
 
-/** Whether a rule is one a run checks files against, rather than one only a
- * reader applies. */
-const isFileRule = (rule: Rule): rule is FileRule => "files" in rule;
-
 /** A rule's title, off the first `# ` line of its document: the whole of what
  * a listing needs, without a markdown parser to get it. */
 const title = (rule: Rule): string =>
@@ -64,8 +59,6 @@ const title = (rule: Rule): string =>
 
 /** What a `JudgeCommands` runs through, and what else it lists. */
 export interface JudgeCommandsOptions {
-	/** Rules only a reader applies, listed beside the ones a run checks. */
-	signoffRules?: Rule[];
 	/** Where live progress draws; this process's terminal by default. */
 	screen?: Screen;
 	log?: Logger;
@@ -76,7 +69,6 @@ export interface JudgeCommandsOptions {
 }
 
 export class JudgeCommands {
-	private signoffRules: Rule[];
 	private screen: Screen;
 	private log: Logger;
 	private fs: Fs;
@@ -88,7 +80,6 @@ export class JudgeCommands {
 		private rules: RuleSet,
 		opts: JudgeCommandsOptions = {},
 	) {
-		this.signoffRules = opts.signoffRules ?? [];
 		this.screen = opts.screen ?? terminal();
 		this.log = opts.log ?? new ConsoleLogger();
 		this.fs = opts.fs ?? new NodeFs();
@@ -97,29 +88,21 @@ export class JudgeCommands {
 		this.glob = opts.glob ?? new NodeGlob();
 	}
 
-	/**
-	 * Lists every rule there is, one row each, ids first for citing. The rules a
-	 * run checks and the ones only a reader applies are one list with a SET
-	 * column, because "what rules are there" is one question.
-	 */
+	/** Lists every rule there is, one row each, ids first for citing. */
 	ls(): void {
-		const rows = [["id", "rule", "set", "level", "files"].map(color.dim)];
+		const rows = [["id", "rule", "level", "files"].map(color.dim)];
 		for (const rule of this.rules.rules) {
-			rows.push([rule.id, title(rule), "judge", rule.level, rule.files]);
-		}
-		for (const rule of this.signoffRules) {
-			rows.push([rule.id, title(rule), "signoff", "", ""]);
+			rows.push([rule.id, title(rule), rule.level, rule.files]);
 		}
 		this.log.info(table(rows).join("\n"));
 	}
 
 	/**
 	 * Prints one rule in full: what it covers, and the document an agent is
-	 * given, verbatim. Take the id from `rules ls` or from a finding. This is
-	 * how a reader applies a rule nothing runs for them.
+	 * given, verbatim. Take the id from `rules ls` or from a finding.
 	 */
 	show(opts: ShowOptions): void {
-		const all: Rule[] = [...this.rules.rules, ...this.signoffRules];
+		const all = this.rules.rules;
 		const rule = all.find((candidate) => candidate.id === opts.id);
 		if (!rule) {
 			throw new Error(
@@ -129,13 +112,9 @@ export class JudgeCommands {
 		const rows = [
 			[color.dim("id"), rule.id],
 			[color.dim("rule"), title(rule)],
+			[color.dim("level"), rule.level],
+			[color.dim("files"), rule.files],
 		];
-		if (isFileRule(rule)) {
-			rows.push(
-				[color.dim("level"), rule.level],
-				[color.dim("files"), rule.files],
-			);
-		}
 		this.log.info(table(rows).join("\n"));
 		this.log.info("");
 		this.log.info(rule.document.trim());

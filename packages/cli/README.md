@@ -14,25 +14,18 @@ bunx @webappwiz/cli judge .            # check a directory against them
 ## rules
 
 Every rule webappwiz judges itself by is named in [`rules.ts`](./rules.ts), as
-`JUDGE_RULES` and `SIGNOFF_RULES`, off the classes
-[`@webappwiz/rules`](../rules/rules) ships. There is no config file and no
-preset: a rule is in one of those lists or it does not exist.
+`JUDGE_RULES`, off the classes [`@webappwiz/rules`](../rules/rules) ships.
+There is no config file and no preset: a rule is in that list or it does not
+exist.
 
 ```
-ID                  RULE                       SET      LEVEL    FILES
-no-em-dashes        No em dashes               judge    error    **/*.ts
-one-class-per-file  One class per file         judge    error    **/*.ts
-visual-work-tested  Visual work is tested      signoff
+ID                  RULE                 LEVEL    FILES
+no-em-dashes        No em dashes         error    **/*.ts
+one-class-per-file  One class per file   error    **/*.ts
 ```
 
 `rules show <id>` prints one in full: its glob, its level, and the document an
 agent is handed verbatim.
-
-The `SET` column is which of the two lists a rule is in. `judge` rules are what
-`judge` checks files against, file by file. `signoff` rules have no glob and no
-level because they are about a change rather than a file: no command runs them,
-so the agent about to merge reads them (`rules show <id>`) and weighs its own
-change.
 
 ## judge
 

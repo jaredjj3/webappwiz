@@ -16,6 +16,4 @@ export { ParametersDeclareFields } from "./parameters-declare-fields";
 export { ReactiveOverUseState } from "./reactive-over-use-state";
 export { ResourcesAreDisposable } from "./resources-are-disposable";
 export { SimpleTestSetup } from "./simple-test-setup";
-export { TestsNotWeakened } from "./tests-not-weakened";
 export { TestsOwnTheirState } from "./tests-own-their-state";
-export { VisualWorkTested } from "./visual-work-tested";
