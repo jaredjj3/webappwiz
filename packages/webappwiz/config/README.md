@@ -1,8 +1,12 @@
 # webappwiz/config
 
-A validated, frozen record of settings. Declare the shape once with
-[webappwiz/t](../t), and every `Config` made from it has already passed the
-schema: there is no constructor to reach around.
+A validated, frozen record of settings, for when the values arrive from an
+untyped context: `process.env`, a JSON file, CLI flags. Declare the shape once
+with [webappwiz/t](../t), and every `Config` made from it has already passed
+the schema: there is no constructor to reach around.
+
+If the settings never leave typed code, you don't need this: a plain interface
+and an object literal already give you everything `Config` would.
 
 ```ts
 import { Config } from "webappwiz/config";
