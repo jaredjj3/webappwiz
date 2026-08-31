@@ -13,12 +13,12 @@ const settings = Config.factory({
 	port: t.number(),
 });
 
-const config = settings.create(JSON.parse(raw));
+const config = settings.parse(JSON.parse(raw));
 config.get("port"); // number
 config.toRecord(); // frozen { host: string; port: number }
 ```
 
-`create` throws a `SchemaError` naming the key that failed. `update` merges and
+`parse` throws a `SchemaError` naming the key that failed. `update` merges and
 revalidates into a new `Config`, leaving the original untouched:
 
 ```ts
