@@ -1,6 +1,6 @@
 {
 	"name": "@webappwiz/cli",
-	"version": "0.0.8",
+	"version": "0.0.9",
 	"description": "The webappwiz CLI: judge code against rules and manage agent skills",
 	"license": "MIT",
 	"author": "Jared Johnson",
