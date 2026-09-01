@@ -24,8 +24,8 @@ export interface Finished {
 	/**
 	 * Tokens this review's call touched, straight from the agent's envelope:
 	 * input, output, and cache both ways. Undefined for an agent that reports
-	 * no usage, which is any `--exec` command: reports leave the figure off
-	 * rather than guess it.
+	 * no usage, which is any command printing its answer bare: reports leave
+	 * the figure off rather than guess it.
 	 */
 	tokens?: number;
 	/** Which pool slot ran the call, 0-based, so a caller can watch what each
@@ -176,9 +176,9 @@ export class Harness {
 
 /**
  * The answer and what it read, out of whatever envelope the agent wrote it
- * in. `--output-format json` wraps the text in an object with a `usage`
- * beside it; an `--exec` command prints the array on its own and reports no
- * usage at all.
+ * in. Asked for JSON, claude wraps the text in a `result` with a `usage`
+ * beside it and gemini in a `response` with a `stats`; a command printing the
+ * array on its own reports no usage at all.
  */
 function parse(
 	stdout: string,
@@ -195,18 +195,24 @@ function unwrap(stdout: string): { result: string; tokens?: number } {
 	} catch {
 		return { result: stdout };
 	}
-	if (
-		typeof value !== "object" ||
-		value === null ||
-		!("result" in value) ||
-		typeof value.result !== "string"
-	) {
+	if (typeof value !== "object" || value === null) {
 		return { result: stdout };
 	}
-	return {
-		result: value.result,
-		tokens: spent("usage" in value ? value.usage : undefined),
-	};
+	if ("result" in value && typeof value.result === "string") {
+		return {
+			result: value.result,
+			tokens: spent("usage" in value ? value.usage : undefined),
+		};
+	}
+	if ("response" in value && typeof value.response === "string") {
+		return {
+			result: value.response,
+			tokens: modelled("stats" in value ? value.stats : undefined),
+		};
+	}
+	// JSON, but not an envelope either agent writes: the answer is whatever it
+	// printed, which `array` still has a chance of finding brackets in.
+	return { result: stdout };
 }
 
 /**
@@ -224,6 +230,31 @@ function spent(usage: unknown): number | undefined {
 				entry[0].endsWith("_tokens") && typeof entry[1] === "number",
 		)
 		.reduce((sum, [, count]) => sum + count, 0);
+	return total > 0 ? total : undefined;
+}
+
+/**
+ * The same figure out of gemini's `stats`, which counts per model rather than
+ * per call: a run that falls back to a second model reports both, so the
+ * call's spend is their `tokens.total` added up.
+ */
+function modelled(stats: unknown): number | undefined {
+	if (typeof stats !== "object" || stats === null || !("models" in stats)) {
+		return undefined;
+	}
+	const models = stats.models;
+	if (typeof models !== "object" || models === null) {
+		return undefined;
+	}
+	let total = 0;
+	for (const metrics of Object.values(models)) {
+		// `total` already covers prompt, candidates and thoughts, so summing the
+		// rest of `tokens` beside it would count the same tokens twice.
+		const tokens: unknown = metrics?.tokens?.total;
+		if (typeof tokens === "number") {
+			total += tokens;
+		}
+	}
 	return total > 0 ? total : undefined;
 }
 

@@ -90,10 +90,12 @@ never given, for the same reason and just as loudly.
 
 ## The agent
 
-`--agent` names one of `haiku`, `sonnet` or `opus`; `--exec` hands the prompt
-to a command of your own instead. `--output-format json` wraps a model run's
-answer in an envelope the harness can read token usage out of, so an `--exec`
-run reports no tokens rather than guessing them.
+`--agent` names one of `haiku`, `sonnet`, `opus` or `gemini`; `--exec` hands
+the prompt to a command of your own instead, such as
+`gemini -o json -m gemini-2.5-flash` to pick a gemini model. Asked for JSON,
+both CLIs wrap their answer in an envelope the harness reads token usage out
+of, so a command that prints its answer bare reports no tokens rather than
+guessing them.
 
 ## No config file
 

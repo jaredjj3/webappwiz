@@ -9,15 +9,24 @@ describe("agentCommand", () => {
 		});
 	});
 
-	it("asks a model shorthand for the envelope that carries what it cost", () => {
+	it("spawns gemini on its own CLI's default model", () => {
+		expect(agentCommand({ agent: "gemini" })).toEqual({
+			argv: ["gemini", "-o", "json"],
+			label: "gemini -o json",
+		});
+	});
+
+	it("asks every shorthand for the envelope that carries what it cost", () => {
 		for (const agent of ["haiku", "sonnet", "opus"]) {
 			expect(agentCommand({ agent }).argv).toContain("--output-format");
 		}
+		expect(agentCommand({ agent: "gemini" }).argv).toContain("-o");
 	});
 
 	it("refuses to pick an agent when nothing names one", () => {
 		expect(() => agentCommand({})).toThrow(
-			"a run needs an agent, so say which: --agent <haiku|sonnet|opus>, " +
+			"a run needs an agent, so say which: --agent " +
+				"<haiku|sonnet|opus|gemini>, " +
 				"--exec <command>, or --print to print the prompts and run nothing",
 		);
 	});
@@ -37,7 +46,7 @@ describe("agentCommand", () => {
 
 	it("lists the models it knows when named one it does not", () => {
 		expect(() => agentCommand({ agent: "gpt" })).toThrow(
-			'no agent "gpt". Known agents: haiku, sonnet, opus',
+			'no agent "gpt". Known agents: haiku, sonnet, opus, gemini',
 		);
 	});
 });

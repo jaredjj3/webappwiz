@@ -113,6 +113,56 @@ describe("Harness", () => {
 		expect(read).toEqual([12_124]); // every kind of token, as one figure
 	});
 
+	it("reads the findings and the token usage out of gemini's envelope", async () => {
+		const read: Array<number | undefined> = [];
+		ps.setCaptureOutput(
+			JSON.stringify({
+				response:
+					'[{"rule": "Classes", "file": "src/a.ts", "line": 1, "message": "a second class"}]',
+				stats: {
+					// Two models, because a run that falls back reports both, and
+					// `total` beside the counts it already covers, because summing
+					// those too would count the same tokens twice.
+					models: {
+						"gemini-2.5-pro": {
+							tokens: { prompt: 4, candidates: 120, thoughts: 76, total: 200 },
+						},
+						"gemini-2.5-flash": { tokens: { prompt: 1, total: 12 } },
+					},
+					files: { totalLinesAdded: 0, totalLinesRemoved: 0 },
+				},
+			}),
+			"",
+		);
+		harness.events.on("finished", (finished) => read.push(finished.tokens));
+
+		const findings = await harness.run([review("a", "Classes")], agent);
+
+		expect(findings).toEqual([
+			{
+				rule: "Classes",
+				file: "src/a.ts",
+				line: 1,
+				message: "a second class",
+			},
+		]);
+		expect(read).toEqual([212]);
+	});
+
+	it("says nothing was found when gemini answers with an error instead", async () => {
+		ps.setCaptureOutput(
+			JSON.stringify({
+				error: { type: "FatalAuthenticationError", message: "timed out" },
+			}),
+			"",
+		);
+
+		const findings = await harness.run([review("a", "Classes")], agent);
+
+		expect(findings).toEqual([]);
+		expect(errors()[0]).toContain("no JSON array on a");
+	});
+
 	it("reports no usage for an agent that answers with the bare array", async () => {
 		const read: Array<number | undefined> = [];
 		ps.setCaptureOutput(

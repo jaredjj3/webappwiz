@@ -7,15 +7,20 @@ export interface Agent {
 /**
  * The models `--agent` names, so a run can pick one without a command.
  *
- * `--output-format json` wraps the answer in an envelope that also carries the
- * call's token usage, which is the only place a real figure comes from:
- * counting bytes ourselves would miss the agent's own system prompt and
- * whatever it re-reads as it works, which is most of what a small call reads.
+ * JSON output wraps the answer in an envelope that also carries the call's
+ * token usage, which is the only place a real figure comes from: counting
+ * bytes ourselves would miss the agent's own system prompt and whatever it
+ * re-reads as it works, which is most of what a small call reads.
+ *
+ * `gemini` names no model, unlike the claude entries where the key is the
+ * model: its CLI's own default is one fewer version number to keep current,
+ * and `--exec "gemini -o json -m <model>"` picks one when it matters.
  */
 export const AGENTS: Record<string, string[]> = {
 	haiku: ["claude", "-p", "--output-format", "json", "--model", "haiku"],
 	sonnet: ["claude", "-p", "--output-format", "json", "--model", "sonnet"],
 	opus: ["claude", "-p", "--output-format", "json", "--model", "opus"],
+	gemini: ["gemini", "-o", "json"],
 };
 
 /** The two ways to say what runs a review, of which a caller passes one. */
