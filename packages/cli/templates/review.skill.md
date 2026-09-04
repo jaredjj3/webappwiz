@@ -1,7 +1,7 @@
 ---
 name: review
 description: "Review a change against the RULE.md rules in this project's .wiz/rules directory by handing blocks of rules to separate agents, without reading a rule yourself. Use only when the project has a .wiz/rules directory and the user asks to run, check, or apply the rules, the wiz rules, or the webappwiz rules to a change, or asks to write, add, or edit a rule there. Not for a general code review, a pull request review, a security review, or any review that does not name the rules."
-version: 0.0.14
+version: 0.0.15
 ---
 
 # Reviewing against the rules
@@ -62,7 +62,7 @@ being taught: the file as a heading, then one line a finding, the line number
 first, then the level the block listed beside that rule's path, then the
 message, then the rule that raised it, padded into columns.
 
-The level carries its emoji, ❌ for an error and ⚠️ for a warning, because a
+The level carries its emoji, 🛑 for an error and ⚠️ for a warning, because a
 page of findings is skimmed for the serious ones before it is read. Every
 finding line gets exactly one, so the columns stay even whatever width the
 terminal gives it; pad them by eye rather than by counting characters.
@@ -77,17 +77,17 @@ terminal gives it; pad them by eye rather than by counting characters.
 ### packages/cli/rules/review.ts
 
 ```
-  42  ❌ error    the export sits below two helpers     export-leads-the-file
+  42  🛑 error    the export sits below two helpers     export-leads-the-file
   87  ⚠️ warning  the comment restates the next line    comments-say-why-not-what
 ```
 
 ### packages/cli/skills/add.ts
 
 ```
-  13  ❌ error    the options object is not last        named-options-last
+  13  🛑 error    the options object is not last        named-options-last
 ```
 
-❌ 3 problems (2 errors, 1 warning)
+🛑 3 problems (2 errors, 1 warning)
 ````
 
 A file no rule found anything in does not appear. A review that found nothing
