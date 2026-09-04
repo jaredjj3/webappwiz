@@ -2,7 +2,6 @@ import { describe, expect, it } from "bun:test";
 import { MemoryLogger } from "webappwiz/log";
 import { NodeGlob } from "webappwiz/system";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
-import { FakeClock } from "webappwiz/time/testing";
 import { webappwiz } from "./webappwiz";
 
 describe("webappwiz", () => {
@@ -19,7 +18,6 @@ describe("webappwiz", () => {
 				log: new MemoryLogger(),
 				fs,
 				ps: new FakePs(),
-				clock: new FakeClock(),
 				glob: new NodeGlob(),
 			},
 			["update", "/p", "--version", "1.2.3"],

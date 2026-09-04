@@ -1,6 +1,6 @@
 import { ConsoleLogger } from "webappwiz/log";
-import { NodeFs } from "webappwiz/system";
-import { available, bundled, copy, type ProjectOptions } from "./skill";
+import { Documents } from "../documents";
+import { bundled, type ProjectOptions, SKILLS } from "./skill";
 
 /**
  * Refreshes the skills a project already has. Which skills those are is the
@@ -9,17 +9,9 @@ import { available, bundled, copy, type ProjectOptions } from "./skill";
  */
 export async function update(opts: ProjectOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
-	const fs = opts.fs ?? new NodeFs();
-	const installed = await fs
-		.readdir(`${opts.dir}/.agents/skills`)
-		.catch((): string[] => []); // no .agents/skills at all is just "none installed"
-	const skills = opts.skills ?? bundled;
-	const ours = available(skills).filter(([name]) => installed.includes(name));
-	if (ours.length === 0) {
+	const documents = new Documents(opts.skills ?? bundled, SKILLS, opts);
+	const refreshed = await documents.update(opts.dir);
+	if (refreshed.length === 0) {
 		log.info(`no webappwiz skills in ${opts.dir}: add one with \`skills add\``);
-		return;
-	}
-	for (const [name, doc] of ours) {
-		await copy(name, doc, opts.dir, { log, fs });
 	}
 }

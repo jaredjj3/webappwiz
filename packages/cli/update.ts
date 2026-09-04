@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, walk } from "webappwiz/system";
+import { update as updateRules } from "./rules/update";
 import type { Skills } from "./skills/skill";
 import { update as updateSkills } from "./skills/update";
 
@@ -25,6 +26,8 @@ export interface UpdateOptions {
 	fs?: Fs;
 	/** The skills to refresh with; the ones this package ships by default. */
 	skills?: Skills;
+	/** The rules to refresh with; the catalog by default. */
+	rules?: Record<string, string>;
 }
 
 /**
@@ -32,7 +35,7 @@ export interface UpdateOptions {
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
  * Installed skills are copies of files those packages ship, so they are
- * refreshed too.
+ * refreshed too, and so are the rules copied in from the catalog.
  */
 export async function update(opts: UpdateOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -55,4 +58,5 @@ export async function update(opts: UpdateOptions): Promise<void> {
 	}
 	log.info(`${count} package.json pinned to ${opts.version}`);
 	await updateSkills({ dir: opts.dir, log: log, fs: fs, skills: opts.skills });
+	await updateRules({ dir: opts.dir, log, fs, rules: opts.rules });
 }

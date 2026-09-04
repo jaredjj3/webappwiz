@@ -44,7 +44,7 @@ Called like: <the call site, written the way the caller wants to write it>.
 ```
 
 Describe the gap and stop. Do not design the API in the handoff: that repo has a
-style guide and a judge, and neither of them is here.
+style guide and a review, and neither of them is here.
 
 ## It does not fit
 

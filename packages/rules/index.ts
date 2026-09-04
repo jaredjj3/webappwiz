@@ -1,18 +1,21 @@
 // rule-ignore-file one-dir-per-interface: this is the package entry point named in
 // package.json exports, not a barrel sitting inside an interface's directory
+export { Block, type BlockOptions } from "./block";
+export { type ChangedFile, type ChangedOptions, changed } from "./changed";
+export { RULE_FILE, RULES_ROOT } from "./layout";
 export {
-	AGENTS,
-	type Agent,
-	type AgentOptions,
-	agentCommand,
-} from "./agent";
-export { Check } from "./check";
-export { defineRules, type RuleSet } from "./config";
-export { type FileReview, Files, type Violation } from "./files";
-export type { Finding } from "./finding";
-export { type Finished, Harness } from "./harness";
-export { Hit } from "./hit";
-export { prompt } from "./prompt";
-export type { Review } from "./review";
-export type { FileRule, FileText, Level, Rule, Verdict } from "./rule";
-export { SyntaxKind, type Token, tokens } from "./scan";
+	COMPLEXITIES,
+	type Complexity,
+	LEVELS,
+	type Level,
+	type ParseOptions,
+	Rule,
+	RuleError,
+} from "./rule";
+export {
+	DEFAULT_CHUNK,
+	type LoadOptions,
+	type ReviewOptions,
+	Rules,
+} from "./rules";
+export { template } from "./template";

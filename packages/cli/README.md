@@ -1,51 +1,71 @@
 # @webappwiz/cli
 
-Keeps a project in step with a webappwiz release.
+Keeps a project in step with a webappwiz release, and divides a review of its
+rules up for an agent to run.
 
 ```bash
-bunx @webappwiz/cli update             # pin webappwiz deps, like bun update
-bunx @webappwiz/cli skills ls          # what there is, and what you have
-bunx @webappwiz/cli skills add arbor   # install an agent skill
-bunx @webappwiz/cli skills update      # refresh the ones already installed
-bunx @webappwiz/cli rules ls           # every rule there is
-bunx @webappwiz/cli judge .            # check a directory against them
+bunx @webappwiz/cli update                 # pin webappwiz deps, like bun update
+bunx @webappwiz/cli skills ls              # what there is, and what you have
+bunx @webappwiz/cli skills add review      # install an agent skill
+bunx @webappwiz/cli skills update          # refresh the ones already installed
+bunx @webappwiz/cli rules ls               # every rule there is, and what you have
+bunx @webappwiz/cli rules new <name>       # scaffold a rule of your own
+bunx @webappwiz/cli rules add <id>         # copy a shipped rule in
+bunx @webappwiz/cli rules update           # refresh the copies
+bunx @webappwiz/cli rules review --since main   # divide a review up
 ```
 
 ## rules
 
-Every rule webappwiz judges itself by is named in [`rules.ts`](./rules.ts), as
-`JUDGE_RULES`, off the classes [`@webappwiz/rules`](../rules/rules) ships.
-There is no config file and no preset: a rule is in that list or it does not
-exist.
+A project's rules live in `.wiz/rules`, one directory per rule holding a
+`RULE.md`: markdown with a little frontmatter, and no code. A rule is there or
+it does not run. The ones that ship come from
+[`@webappwiz/rules`](../rules)'s catalog, and a project's own sit beside them
+in the same shape.
 
 ```
-ID                  RULE                 LEVEL    FILES
-no-em-dashes        No em dashes         error    **/*.ts
-one-class-per-file  One class per file   error    **/*.ts
+rule                 level    complexity   files          ships    installed   description
+no-em-dashes         error    low          **/*.{ts,md}   0.1.0    0.1.0       No em dashes, and no en dashes between words.
+one-class-per-file   error    low          **/*.ts        0.1.0    -           A file declares one top-level class.
+mine                 error    medium       **/*.ts        -        local       What this project wants.
 ```
 
-`rules show <id>` prints one in full: its glob, its level, and the document an
-agent is handed verbatim.
+`ls` validates every rule the project has and refuses to list a broken one,
+naming the file and line instead. `new` writes a `RULE.md` to fill in, with a
+comment saying what goes where. `add` copies a shipped rule in, where it runs
+and can be edited; `update` refreshes those copies and leaves the project's
+own alone. Both replace what is there, as `skills` does.
 
-## judge
+### review
 
-Runs the rules over a directory, one agent call per set of rules sharing a set
-of files.
+Nothing here spawns an agent. `review` asks git what changed since a ref,
+matches each rule's glob against it, and prints one block of work per rule
+that matched, cut into several when a rule matched more than `--chunk` files:
 
-```bash
-bunx @webappwiz/cli judge . --agent haiku
-bunx @webappwiz/cli judge . --print           # print the prompts, spawn nothing
-bunx @webappwiz/cli judge . --since main      # only what changed
-bunx @webappwiz/cli judge . --ci              # plain lines, no live block
+```
+2 files changed since main; 2 rules matched, 2 blocks to review
+
+## no-em-dashes (2 files, complexity low)
+hints: A grep for the two characters finds every candidate.
+
+Read `.wiz/rules/no-em-dashes/RULE.md` and apply that rule, and only that
+rule, to the files listed below. ...
+
+- src/a.ts
+- src/b.ts (new)
+
+Reply with only a JSON array, one element per violation, or [] when there
+is none: [{"file": ..., "line": ..., "message": ...}]
 ```
 
-Each rule's code half runs first, free, and only what it escalates reaches an
-agent. On a terminal a run draws a live status line (a bar over the calls,
-how many are out, and the tokens spent so far), then dumps the report in one
-block; `--ci`, or any output that is not a terminal, prints line by line as
-reviews finish instead. `--print` and running are two things to do with one
-plan, so passing both is an error rather than one quietly winning. Code excuses itself from a rule with a `rule-ignore <id>: <reason>`
-comment above the line, or `rule-ignore-file <id>: <reason>` for the file.
+A block is the whole prompt for one subagent. It names the rule's file rather
+than quoting it, so the agent that prints the blocks and spawns the subagents
+never reads a rule, and the rules stay out of its context. The heading
+carries the rule's complexity, and its hints when it has any, for choosing a
+model. The `review` skill teaches an agent the loop.
+
+Code excuses itself from a rule with a `rule-ignore <id>: <reason>` comment
+above the line, or `rule-ignore-file <id>: <reason>` for the file.
 
 ## update
 
@@ -57,7 +77,7 @@ combination nobody tested.
 The default version is this package's own, which is the point of `bunx`: the
 release you invoke is the release you get. `--version` pins something else.
 `workspace:` ranges are left alone; inside a monorepo they already track each
-other.
+other. Installed skills and copied rules are refreshed too.
 
 ```bash
 bunx @webappwiz/cli update ./apps --version 1.4.0
@@ -71,17 +91,19 @@ visible rather than merely wrong.
 
 ```bash
 bunx @webappwiz/cli skills ls ./project
-bunx @webappwiz/cli skills add arbor ./project
+bunx @webappwiz/cli skills add review ./project
 bunx @webappwiz/cli skills update ./project
 ```
 
 ```
 SKILL      SHIPS  INSTALLED
 arbor      1.4.0  1.3.0
+review     1.4.0  -
 webappwiz  1.4.0  -
 ```
 
-Two ship: `arbor`, which lands an agent's work from its own worktree, and
+Three ship: `arbor`, which lands an agent's work from its own worktree;
+`review`, which runs the rules through subagents without reading one; and
 `webappwiz`, which sends an agent to the package's catalogue before it writes
 infrastructure by hand.
 

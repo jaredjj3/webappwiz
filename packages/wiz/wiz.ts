@@ -19,7 +19,7 @@ wiz
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action((opts, { log, fs, ps, glob }) => fix({ ...opts, log, fs, ps, glob }));
+	.action((opts, { log, ps }) => fix({ ...opts, log, ps }));
 
 wiz
 	.command("path")

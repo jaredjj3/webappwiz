@@ -1,7 +1,7 @@
 {
 	"name": "@webappwiz/rules",
 	"version": "0.0.10",
-	"description": "Checking code against rules an agent has to read to apply",
+	"description": "Rules written in markdown, and the review work they divide a change into",
 	"license": "MIT",
 	"author": "Jared Johnson",
 	"repository": {
@@ -21,8 +21,5 @@
 	},
 	"dependencies": {
 		"webappwiz": "workspace:*"
-	},
-	"peerDependencies": {
-		"typescript": "^7"
 	}
 }

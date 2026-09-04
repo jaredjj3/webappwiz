@@ -1,14 +1,16 @@
-import { AGENTS } from "@webappwiz/rules";
+import { DEFAULT_CHUNK } from "@webappwiz/rules";
 import { cli, type Deps } from "webappwiz/cmd";
 import type { Fs, Glob } from "webappwiz/system";
 import { t } from "webappwiz/t";
-import type { Clock } from "webappwiz/time";
-import { JudgeCommands } from "./judge";
 // Every @webappwiz package is released in lockstep, so this one's version is
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
 import { version } from "./package.json";
-import { JUDGE_RULES } from "./rules";
+import { add as addRule } from "./rules/add";
+import { ls as lsRules } from "./rules/ls";
+import { newRule } from "./rules/new";
+import { review } from "./rules/review";
+import { update as updateRules } from "./rules/update";
 import { add } from "./skills/add";
 import { ls } from "./skills/ls";
 import { update as updateSkills } from "./skills/update";
@@ -17,7 +19,6 @@ import { update } from "./update";
 /** What webappwiz's commands are run with, on top of what any cli needs. */
 export interface CommandDeps extends Deps {
 	fs: Fs;
-	clock: Clock;
 	glob: Glob;
 }
 
@@ -41,74 +42,81 @@ webappwiz
 	})
 	.action((opts, { log, fs }) => update({ ...opts, log, fs }));
 
-// `judge` and `rules` are siblings rather than one nested in the other: the
-// rule set is shared, with `wiz fix` enforcing the rules that carry a check
-// and `judge` the ones only an agent can decide, so neither owns it.
-const judge = ({ log, fs, ps, clock, glob }: CommandDeps): JudgeCommands =>
-	new JudgeCommands(JUDGE_RULES, { log, fs, ps, clock, glob });
-
-webappwiz
-	.command("judge")
-	.description("check a directory against the config, one agent per glob")
-	.arg("dir", t.string(), {
-		default: ".",
-		description: "directory to judge (default: .)",
-	})
-	.option("agent", t.optional(t.enum(Object.keys(AGENTS))), {
-		description: "model to check with (default: the config's agent)",
-	})
-	.option("exec", t.optional(t.string()), {
-		description: "command the prompt is passed to, instead of --agent",
-	})
-	.option("print", t.boolean(), {
-		default: false,
-		description: "print the prompts and run no agent at all",
-	})
-	.option("chunk", t.number(), {
-		default: 25,
-		description: "files per review",
-	})
-	.option("since", t.optional(t.string()), {
-		description: "only check files added or changed since this git ref",
-	})
-	.option("concurrency-override", t.optional(t.number()), {
-		description: "agent calls in flight at once, over the config's concurrency",
-	})
-	.option("ci", t.boolean(), {
-		default: false,
-		description: "line-by-line output with no live progress block",
-	})
-	.action((opts, deps) => judge(deps).judge(opts));
-
 const rules = webappwiz
 	.group("rules")
-	.description("list and print the rules, to run or to read yourself");
+	.description("keep rules in .wiz/rules, and divide a review of them up");
 
 rules
 	.command("ls")
-	.description("list the rules")
-	.action((_opts, deps) => judge(deps).ls());
+	.description("list the rules there are, and what the project has of them")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to inspect (default: .)",
+	})
+	.action((opts, { log, fs }) => lsRules({ ...opts, log, fs }));
 
 rules
-	.command("show")
-	.description("print one rule in full, by the id `rules ls` gives it")
-	.arg("id", t.string(), { description: "rule id" })
-	.action((opts, deps) => judge(deps).show(opts));
+	.command("new")
+	.description("scaffold a rule to fill in, under .wiz/rules/<name>")
+	.arg("name", t.string(), { description: "rule id, kebab case" })
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to add it to (default: .)",
+	})
+	.action((opts, { log, fs }) => newRule({ ...opts, log, fs }));
 
-const skillsGroup = webappwiz
+rules
+	.command("add")
+	.description("copy a shipped rule into the project")
+	.arg("rule", t.string(), { description: "rule id, as `rules ls` lists it" })
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to add it to (default: .)",
+	})
+	.action((opts, { log, fs }) => addRule({ ...opts, log, fs }));
+
+rules
+	.command("update")
+	.description("refresh the shipped rules the project has copies of")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to refresh (default: .)",
+	})
+	.action((opts, { log, fs }) => updateRules({ ...opts, log, fs }));
+
+rules
+	.command("review")
+	.description("print one block of review work per rule the change touches")
+	.arg("dir", t.string(), {
+		default: ".",
+		description: "project to review (default: .)",
+	})
+	.option("since", t.string(), {
+		default: "HEAD",
+		description: "git ref the change is measured from (default: HEAD)",
+	})
+	.option("chunk", t.number(), {
+		default: DEFAULT_CHUNK,
+		description: "files per block, at most",
+	})
+	.action((opts, { log, fs, ps, glob }) =>
+		review({ ...opts, log, fs, ps, glob }),
+	);
+
+const skills = webappwiz
 	.group("skills")
 	.description("manage webappwiz agent skills in .agents/skills");
 
-skillsGroup
+skills
 	.command("ls")
 	.description("list the skills there are, and what the project has of them")
 	.arg("dir", t.string(), {
 		default: ".",
 		description: "project to inspect (default: .)",
 	})
-	.action((opts, { log, fs }) => ls({ ...opts, log: log, fs: fs }));
+	.action((opts, { log, fs }) => ls({ ...opts, log, fs }));
 
-skillsGroup
+skills
 	.command("add")
 	.description("add a skill to a project")
 	.arg("skill", t.string(), { description: "skill name" })
@@ -116,13 +124,13 @@ skillsGroup
 		default: ".",
 		description: "project to add it to (default: .)",
 	})
-	.action((opts, { log, fs }) => add({ ...opts, log: log, fs: fs }));
+	.action((opts, { log, fs }) => add({ ...opts, log, fs }));
 
-skillsGroup
+skills
 	.command("update")
 	.description("refresh the skills a project already has")
 	.arg("dir", t.string(), {
 		default: ".",
 		description: "project to refresh (default: .)",
 	})
-	.action((opts, { log, fs }) => updateSkills({ ...opts, log: log, fs: fs }));
+	.action((opts, { log, fs }) => updateSkills({ ...opts, log, fs }));

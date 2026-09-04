@@ -7,18 +7,15 @@ import { fix } from "./fix";
 describe("fix", () => {
 	let log: MemoryLogger;
 	let ps: FakePs;
-	let clean: boolean;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
-		clean = true;
 	});
 
-	const run = (check: boolean) =>
-		fix({ check, checks: { run: async () => clean }, log, ps });
+	const run = (check: boolean) => fix({ check, log, ps });
 
-	it("writes fixes by default, then checks and typechecks", async () => {
+	it("writes fixes by default, then typechecks", async () => {
 		await run(false);
 
 		expect(ps.getCalls()).toEqual([
@@ -37,12 +34,5 @@ describe("fix", () => {
 		ps.exit(1); // FakePs returns this exit code from every spawn
 
 		await expect(run(false)).rejects.toThrow("Biome check failed");
-	});
-
-	it("throws when a check fails, without typechecking", async () => {
-		clean = false;
-
-		await expect(run(false)).rejects.toThrow("Checks failed");
-		expect(ps.getCalls()).toEqual(["bunx biome check --write --unsafe ."]);
 	});
 });

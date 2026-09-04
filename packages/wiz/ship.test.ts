@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import { catalog } from "@webappwiz/rules/catalog";
 import { MemoryLogger } from "webappwiz/log";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { ship } from "./ship";
@@ -8,10 +9,15 @@ describe("ship", () => {
 	// show up in `getCalls()` ahead of anything the release itself spawns.
 	const GATE = ["bunx biome check .", "bunx tsc --noEmit"];
 
-	/** Every skill the release stamps, as `SKILLS` in ship.ts lists them. */
+	/** Every document the release stamps: the skills `SKILLS` in ship.ts
+	 * lists, and every rule the catalog ships. */
 	const SKILLS = [
 		"/repo/packages/cli/templates/arbor.skill.md",
+		"/repo/packages/cli/templates/review.skill.md",
 		"/repo/packages/cli/templates/webappwiz.skill.md",
+		...Object.keys(catalog).map(
+			(id) => `/repo/packages/rules/catalog/${id}/RULE.md`,
+		),
 	];
 
 	let log: MemoryLogger;
@@ -34,7 +40,6 @@ describe("ship", () => {
 	});
 
 	const opts = () => ({
-		checks: { run: async () => true },
 		prompt: () => "y",
 		log,
 		fs,

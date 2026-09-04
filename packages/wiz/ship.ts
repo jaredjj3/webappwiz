@@ -1,4 +1,4 @@
-import type { Check } from "@webappwiz/rules";
+import { catalog } from "@webappwiz/rules/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
@@ -13,12 +13,20 @@ import { fix } from "./fix";
  */
 const SKILLS = [
 	"packages/cli/templates/arbor.skill.md",
+	"packages/cli/templates/review.skill.md",
 	"packages/cli/templates/webappwiz.skill.md",
 ];
 
+/**
+ * Every rule the catalog ships, stamped the same way and for the same reason:
+ * a project's copy says which release it came from. The roster is the
+ * catalog's own, so a rule added there is stamped without a line here.
+ */
+const RULES = Object.keys(catalog).map(
+	(id) => `packages/rules/catalog/${id}/RULE.md`,
+);
+
 export interface ShipOptions {
-	/** The rules the gate runs; the workspace's own by default. */
-	checks?: Pick<Check, "run">;
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
@@ -39,11 +47,13 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 	// These packages publish their source, so a typecheck is the only compile
 	// gate there is: run it before anything is stamped or pushed. The suite is
 	// not run here; whoever ships is expected to have run it already.
-	await fix({ check: true, checks: opts.checks, log, ps });
+	await fix({ check: true, log, ps });
 
 	const declared = releases.lockstep(
 		await releases.workspace({ fs: opts.fs, ps }),
-		...SKILLS.map((path) => releases.skill(path, { fs: opts.fs })),
+		...[...SKILLS, ...RULES].map((path) =>
+			releases.skill(path, { fs: opts.fs }),
+		),
 	);
 	await declared.release({
 		bump: "patch",
