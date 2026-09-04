@@ -42,13 +42,16 @@ describe("Rules", () => {
 	});
 
 	it("reports every broken rule at once, by path and line", async () => {
-		await install("alpha", ruleDoc("alpha").replace("## Bad", "## Worse"));
+		await install(
+			"alpha",
+			ruleDoc("alpha").replace("level: error", "level: loud"),
+		);
 		await fs.mkdir("/p/.wiz/rules/empty");
 		await install("gamma", ruleDoc("delta"));
 
 		await expect(Rules.load("/p", { fs })).rejects.toThrow(
 			[
-				".wiz/rules/alpha/RULE.md:9: no `## Bad` section",
+				".wiz/rules/alpha/RULE.md:5: level: expected one of error, warning",
 				".wiz/rules/empty/RULE.md: missing",
 				'.wiz/rules/gamma/RULE.md:2: name: "delta" does not match its directory "gamma"',
 			].join("\n"),

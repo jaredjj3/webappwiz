@@ -4,8 +4,7 @@ import { Rule } from "./rule";
 import { ruleDoc } from "./testing";
 
 describe("Block", () => {
-	const rule = (hints?: string) =>
-		Rule.parse(ruleDoc("no-foo", { complexity: "low", hints }));
+	const rule = () => Rule.parse(ruleDoc("no-foo", { complexity: "low" }));
 
 	it("heads itself with the rule, the size, and the complexity", () => {
 		const block = new Block(rule(), [{ path: "a.ts", added: false }]);
@@ -39,25 +38,6 @@ describe("Block", () => {
 
 		expect(prompt).toContain("`git diff main -- <file>`");
 		expect(prompt).toContain("\n- a.ts\n- b.ts (new)\n");
-	});
-
-	it("carries the rule's hints under the heading, when it has any", () => {
-		const prompt = new Block(rule("grep first"), [
-			{ path: "a.ts", added: false },
-		]).prompt("main");
-
-		expect(prompt.split("\n").slice(0, 2)).toEqual([
-			"## no-foo (1 file, complexity low)",
-			"hints: grep first",
-		]);
-	});
-
-	it("leaves the hints line out when the rule has none", () => {
-		const prompt = new Block(rule(), [{ path: "a.ts", added: false }]).prompt(
-			"main",
-		);
-
-		expect(prompt).not.toContain("hints:");
 	});
 
 	it("names the ignore markers for this rule", () => {

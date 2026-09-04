@@ -4,7 +4,6 @@ description: Logic with several moving parts lives in a class a component reads 
 files: "**/*.{ts,tsx}"
 level: warning
 complexity: high
-hints: Files without useState cannot break this: grep first.
 version: 0.0.10
 ---
 # Reactive over useState

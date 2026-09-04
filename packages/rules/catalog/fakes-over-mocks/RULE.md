@@ -4,7 +4,6 @@ description: A test hands in a fake of a focused interface rather than mocking o
 files: "**/*.test.ts"
 level: error
 complexity: medium
-hints: Files without mock or spyOn cannot break this: grep first.
 version: 0.0.10
 ---
 # Fakes over mocks

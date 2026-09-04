@@ -1,6 +1,6 @@
 ---
-name: review
-description: Review a change against the project's rules in .wiz/rules by handing each rule to a subagent, never reading a rule yourself. Use after the work is done and its tests pass, whenever asked to review, lint, or check style against the rules, and whenever asked to write, add, or change a rule.
+name: rules-review
+description: "Review a change against the RULE.md rules in this project's .wiz/rules directory by handing each rule to a subagent, without reading a rule yourself. Use only when the project has a .wiz/rules directory and the user asks to run, check, or apply the rules, the wiz rules, or the webappwiz rules to a change, or asks to write, add, or edit a rule there. Not for a general code review, a pull request review, a security review, or any review that does not name the rules."
 version: 0.0.10
 ---
 
@@ -37,20 +37,16 @@ report it as unanswered rather than guessing what it found.
 
 ## Choosing a model
 
-Every heading carries the rule's complexity, and a `hints:` line when the
-rule has more to say:
+Every heading carries the rule's complexity:
 
 ```
 ## no-em-dashes (3 files, complexity low)
-hints: A grep for the two characters finds every candidate.
 ```
 
 Complexity is how hard the rule is to judge. `low` is a grep or a count:
 give it the cheapest, fastest model available. `high` is design judgment
 across a whole file: give it the strongest. `medium` is whatever the harness
-uses by default. The hints say what judging takes, such as that a file
-without some construct cannot break the rule, so the subagent may write a
-one-off script to cull files before reading any.
+uses by default.
 
 ## Fixing
 
@@ -75,10 +71,11 @@ When asked to write a rule, or to add one from the catalog:
 - `rules new <name>` scaffolds `.wiz/rules/<name>/RULE.md` to fill in. The
   frontmatter has `description`, `files` (the glob a review matches changed
   files against), `level` (`error` or `warning`), `complexity` (`low`,
-  `medium` or `high`), and optionally `hints`. The body has a title, the
-  prose a subagent judges by, and `## Good` and `## Bad` sections with
-  examples. Fill it in, delete the comment that explains it, and run
-  `rules ls`: it validates every rule and names the line that is wrong.
+  `medium` or `high`). The body is yours, as a skill's is: the template
+  suggests a title, the prose a subagent judges by, and `## Good` and
+  `## Bad` sections with examples, and nothing checks for them. Fill it in,
+  delete the comment that explains it, and run `rules ls`: it validates the
+  frontmatter of every rule and names the line that is wrong.
 
 Rules are English. A rule that only concerns some files says so in its glob;
 a rule that only concerns files with some construct says so in its prose, and

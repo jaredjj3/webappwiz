@@ -38,11 +38,8 @@ export class Block {
 	prompt(since: string): string {
 		const path = `${RULES_ROOT}/${this.rule.id}/${RULE_FILE}`;
 		const id = this.rule.id;
-		const lines = [this.heading()];
-		if (this.rule.hints !== undefined) {
-			lines.push(`hints: ${this.rule.hints}`);
-		}
-		lines.push(
+		const lines = [
+			this.heading(),
 			"",
 			`Read \`${path}\` and apply that rule, and only that rule, to the files ` +
 				`listed below. Judge only what changed since \`${since}\`: run ` +
@@ -61,7 +58,7 @@ export class Block {
 				'there is none: [{"file": "<path>", "line": <1-based line>, ' +
 				'"message": "<what the code does that the rule forbids: one ' +
 				'lowercase clause, naming the construct, never the fix>"}]',
-		);
+		];
 		return lines.join("\n");
 	}
 }

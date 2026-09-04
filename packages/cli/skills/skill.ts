@@ -2,7 +2,9 @@ import type { Logger } from "webappwiz/log";
 import type { Fs } from "webappwiz/system";
 import type { Layout } from "../documents";
 import arbor from "../templates/arbor.skill.md" with { type: "text" };
-import review from "../templates/review.skill.md" with { type: "text" };
+import rulesReview from "../templates/rules-review.skill.md" with {
+	type: "text",
+};
 import webappwiz from "../templates/webappwiz.skill.md" with { type: "text" };
 
 /** Skill name to the document a project installs under that name. */
@@ -17,7 +19,11 @@ export type Skills = Record<string, string>;
  * a skill is a line here rather than a file that a directory listing may or may
  * not happen to pick up.
  */
-export const bundled: Skills = { arbor, review, webappwiz };
+export const bundled: Skills = {
+	arbor,
+	"rules-review": rulesReview,
+	webappwiz,
+};
 
 /** Where a project keeps its skills, the way every agent harness reads them. */
 export const SKILLS: Layout = {

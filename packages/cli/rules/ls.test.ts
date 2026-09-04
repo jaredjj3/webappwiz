@@ -81,10 +81,13 @@ describe("rules ls", () => {
 	});
 
 	it("refuses to list a project whose rules do not parse", async () => {
-		await install("broken", ruleDoc("broken").replace("## Bad", ""));
+		await install(
+			"broken",
+			ruleDoc("broken").replace("level: error", "level: loud"),
+		);
 
 		await expect(ls({ dir: "/p", log, fs, rules })).rejects.toThrow(
-			".wiz/rules/broken/RULE.md:9: no `## Bad` section",
+			".wiz/rules/broken/RULE.md:5: level: expected one of error, warning",
 		);
 	});
 });

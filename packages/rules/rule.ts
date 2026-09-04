@@ -31,20 +31,18 @@ const FRONTMATTER = t.object({
 	files: t.optional(t.string()),
 	level: t.enum(LEVELS),
 	complexity: t.enum(COMPLEXITIES),
-	hints: t.optional(t.string()),
 	version: t.optional(t.string()),
 });
 
 const NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-const HEADINGS = ["Good", "Bad"];
 
 /**
  * One rule, parsed out of its `RULE.md`: the frontmatter a listing and a plan
  * read, and the document a subagent is told to read for itself.
  *
- * Only `parse` makes one, so holding a `Rule` means the document passed:
- * every field a plan needs is there, and the body has the headings that keep
- * rules alike.
+ * Only `parse` makes one, so holding a `Rule` means the frontmatter passed:
+ * every field a plan needs is there. The body is the rule author's, the way a
+ * skill's is, and nothing here reads it.
  */
 export class Rule {
 	private constructor(
@@ -56,8 +54,6 @@ export class Rule {
 		readonly files: string,
 		readonly level: Level,
 		readonly complexity: Complexity,
-		/** Free text for the parent, about what judging this rule takes. */
-		readonly hints: string | undefined,
 		/** The release it shipped in; null for a rule written locally. */
 		readonly version: string | null,
 		/** The whole file, verbatim. */
@@ -91,25 +87,12 @@ export class Rule {
 				`name: "${front.name}" does not match its directory "${opts.id}"`,
 			);
 		}
-		const title = md.sections.find((section) => section.level === 1);
-		if (!title) {
-			throw fail(lineOf(text, "---", 2), "no title: add a `# ` heading");
-		}
-		for (const heading of HEADINGS) {
-			const found = md.sections.some(
-				(section) => section.level === 2 && section.heading === heading,
-			);
-			if (!found) {
-				throw fail(title.line, `no \`## ${heading}\` section`);
-			}
-		}
 		return new Rule(
 			front.name,
 			front.description,
 			front.files ?? "**/*",
 			front.level,
 			front.complexity,
-			front.hints || undefined,
 			front.version ?? null,
 			text,
 		);
@@ -123,19 +106,14 @@ export class Rule {
 
 /**
  * The 1-based line `key:` sits on in the frontmatter, so an error points at
- * it; the `nth` line that is only `---` when asked for the fence instead. Line
- * 1 when neither is there, which is the opening fence.
+ * it. Line 1, the opening fence, when the key is not there.
  */
-function lineOf(text: string, key: string, nth = 1): number {
-	let seen = 0;
+function lineOf(text: string, key: string): number {
 	for (const [index, line] of text.split("\n").entries()) {
-		if (key === "---" ? line === "---" : line.startsWith(`${key}:`)) {
-			seen++;
-			if (seen === nth) {
-				return index + 1;
-			}
+		if (line.startsWith(`${key}:`)) {
+			return index + 1;
 		}
-		if (index > 0 && line === "---" && key !== "---") {
+		if (index > 0 && line === "---") {
 			break;
 		}
 	}

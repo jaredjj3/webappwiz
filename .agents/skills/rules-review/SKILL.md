@@ -1,0 +1,1 @@
+../../../packages/cli/templates/rules-review.skill.md

@@ -4,7 +4,6 @@ description: A file declares one top-level class.
 files: "**/*.ts"
 level: error
 complexity: low
-hints: Counting top-level class declarations settles it; a one-off script can do the counting.
 version: 0.0.10
 ---
 # One class per file

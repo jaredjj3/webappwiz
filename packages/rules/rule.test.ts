@@ -11,7 +11,6 @@ describe("Rule", () => {
 				files: "**/*.tsx",
 				level: "warning",
 				complexity: "high",
-				hints: "grep for foo",
 				version: "1.2.3",
 			}),
 		);
@@ -22,7 +21,6 @@ describe("Rule", () => {
 			files: "**/*.tsx",
 			level: "warning",
 			complexity: "high",
-			hints: "grep for foo",
 			version: "1.2.3",
 		});
 	});
@@ -39,21 +37,12 @@ describe("Rule", () => {
 		expect(Rule.parse(doc).files).toEqual("**/*");
 	});
 
-	it("has no hints and no version when the frontmatter has none", () => {
-		const rule = Rule.parse(ruleDoc("no-foo"));
-
-		expect(rule.hints).toBeUndefined();
-		expect(rule.version).toBeNull();
-	});
-
-	it("treats an empty hints line as no hints", () => {
-		const rule = Rule.parse(ruleDoc("no-foo", { hints: "" }));
-
-		expect(rule.hints).toBeUndefined();
+	it("has no version when the frontmatter has none", () => {
+		expect(Rule.parse(ruleDoc("no-foo")).version).toBeNull();
 	});
 
 	it("rejects a document with no frontmatter, at line 1", () => {
-		expect(() => Rule.parse("# No foo\n\n## Good\n\n## Bad\n")).toThrow(
+		expect(() => Rule.parse("# No foo\n")).toThrow(
 			new RuleError("RULE.md:1: no frontmatter: a rule opens with a --- block"),
 		);
 	});
@@ -91,26 +80,11 @@ describe("Rule", () => {
 		);
 	});
 
-	it("requires a title", () => {
-		const doc = ruleDoc("no-foo").replace("# no-foo\n", "");
+	it("leaves the body to its author, the way a skill's is", () => {
+		const doc =
+			"---\nname: no-foo\ndescription: x\nlevel: error\ncomplexity: low\n---\n";
 
-		expect(() => Rule.parse(doc)).toThrow(
-			new RuleError("RULE.md:7: no title: add a `# ` heading"),
-		);
-	});
-
-	it("requires the Good and Bad sections, and says which is missing", () => {
-		const doc = ruleDoc("no-foo").replace("## Bad", "## Worse");
-
-		expect(() => Rule.parse(doc)).toThrow(
-			new RuleError("RULE.md:9: no `## Bad` section"),
-		);
-	});
-
-	it("does not take a deeper heading for a section", () => {
-		const doc = ruleDoc("no-foo").replace("## Good", "### Good");
-
-		expect(() => Rule.parse(doc)).toThrow(/no `## Good` section/);
+		expect(Rule.parse(doc).id).toEqual("no-foo");
 	});
 
 	it("matches a file by its glob", () => {

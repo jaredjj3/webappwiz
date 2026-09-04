@@ -4,7 +4,6 @@ description: A file's dependency-taking functions become one class that takes th
 files: "**/*.ts"
 level: error
 complexity: high
-hints: Design judgment across a whole file: read the exports together, not one at a time.
 version: 0.0.10
 ---
 # Classes over function exports

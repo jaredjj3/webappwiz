@@ -13,7 +13,7 @@ import { fix } from "./fix";
  */
 const SKILLS = [
 	"packages/cli/templates/arbor.skill.md",
-	"packages/cli/templates/review.skill.md",
+	"packages/cli/templates/rules-review.skill.md",
 	"packages/cli/templates/webappwiz.skill.md",
 ];
 

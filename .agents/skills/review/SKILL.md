@@ -1,1 +1,0 @@
-../../../packages/cli/templates/review.skill.md

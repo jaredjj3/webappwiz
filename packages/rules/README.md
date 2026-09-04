@@ -19,7 +19,6 @@ description: Modules export named bindings, never a default.
 files: "**/*.{ts,tsx}"
 level: error
 complexity: low
-hints: A grep for `export default` finds every candidate.
 ---
 
 # No default exports
@@ -32,12 +31,13 @@ Why, and what counts.
 ```
 
 `Rule.parse` is the only way to make one, so holding a `Rule` means the
-document passed: the frontmatter has `name`, `description`, `level` and
-`complexity`, the name matches its directory, and the body has a title and
-`## Good` and `## Bad` sections. Anything else fails with `path:line: why`.
+frontmatter passed: it has `name`, `description`, `level` and `complexity`,
+and the name matches its directory. Anything else fails with `path:line: why`.
+The body is the author's, the way a skill's is: the template suggests a
+title and `## Good` and `## Bad` sections, and nothing checks for them.
 
 `files` is the glob a review matches changed files against; anything finer
-is the subagent's job, which is what `hints` is for. `complexity` (`low`,
+is the subagent's job. `complexity` (`low`,
 `medium`, `high`) is how hard the rule is to judge, so the parent agent can
 pick a model for the subagent. A rule that shipped carries `version`; one a
 project wrote does not.
@@ -60,11 +60,10 @@ files, cut into several when a rule matches more than `chunk`.
 A block's `prompt` is the whole of what a subagent is told: the rule's path,
 the files, how to see the change, and the reply contract. It names the
 rule's file rather than quoting it, so whoever prints the prompt never reads
-the rule. Its heading carries the complexity and hints for whoever chooses
-the model.
+the rule. Its heading carries the complexity for whoever chooses the model.
 
 ## The template
 
 `template(name)` is the `RULE.md` that `rules new` writes: every field a
-review needs, the headings a rule has to have, and a comment saying what goes
+review needs, the shape a rule usually takes, and a comment saying what goes
 where. It parses as it is.

@@ -4,7 +4,6 @@ description: No em dashes, and no en dashes between words, in code, comments or 
 files: "**/*.{ts,md}"
 level: error
 complexity: low
-hints: A grep for the two characters finds every candidate; only the digit-range exception needs reading.
 version: 0.0.10
 ---
 <!-- rule-ignore-file no-em-dashes: the Bad examples have to show one -->

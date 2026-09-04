@@ -86,10 +86,10 @@ describe("rules review", () => {
 	});
 
 	it("refuses to review with a rule that does not parse", async () => {
-		await install("broken", ruleDoc("broken").replace("# broken", ""));
+		await install("broken", ruleDoc("broken").replace(/^name:.*\n/m, ""));
 
 		await expect(review(reviewing())).rejects.toThrow(
-			".wiz/rules/broken/RULE.md:7: no title: add a `# ` heading",
+			".wiz/rules/broken/RULE.md:1: name: ",
 		);
 	});
 });

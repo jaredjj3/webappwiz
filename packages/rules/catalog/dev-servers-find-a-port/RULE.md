@@ -4,7 +4,6 @@ description: A dev server tries the next port when its default is taken, and rep
 files: "**/*.ts"
 level: error
 complexity: low
-hints: Only files that start a listener can break this: grep for serve, listen or port first.
 version: 0.0.10
 ---
 # Dev servers find a port

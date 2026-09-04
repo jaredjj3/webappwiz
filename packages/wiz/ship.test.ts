@@ -13,7 +13,7 @@ describe("ship", () => {
 	 * lists, and every rule the catalog ships. */
 	const SKILLS = [
 		"/repo/packages/cli/templates/arbor.skill.md",
-		"/repo/packages/cli/templates/review.skill.md",
+		"/repo/packages/cli/templates/rules-review.skill.md",
 		"/repo/packages/cli/templates/webappwiz.skill.md",
 		...Object.keys(catalog).map(
 			(id) => `/repo/packages/rules/catalog/${id}/RULE.md`,

@@ -6,7 +6,7 @@ rules up for an agent to run.
 ```bash
 bunx @webappwiz/cli update                 # pin webappwiz deps, like bun update
 bunx @webappwiz/cli skills ls              # what there is, and what you have
-bunx @webappwiz/cli skills add review      # install an agent skill
+bunx @webappwiz/cli skills add rules-review   # install an agent skill
 bunx @webappwiz/cli skills update          # refresh the ones already installed
 bunx @webappwiz/cli rules ls               # every rule there is, and what you have
 bunx @webappwiz/cli rules new <name>       # scaffold a rule of your own
@@ -30,9 +30,10 @@ one-class-per-file   error    low          **/*.ts        0.1.0    -           A
 mine                 error    medium       **/*.ts        -        local       What this project wants.
 ```
 
-`ls` validates every rule the project has and refuses to list a broken one,
-naming the file and line instead. `new` writes a `RULE.md` to fill in, with a
-comment saying what goes where. `add` copies a shipped rule in, where it runs
+`ls` validates the frontmatter of every rule the project has and refuses to
+list a broken one, naming the file and line instead. The body is the author's,
+as a skill's is. `new` writes a `RULE.md` to fill in, with a comment saying
+what goes where. `add` copies a shipped rule in, where it runs
 and can be edited; `update` refreshes those copies and leaves the project's
 own alone. Both replace what is there, as `skills` does.
 
@@ -46,7 +47,6 @@ that matched, cut into several when a rule matched more than `--chunk` files:
 2 files changed since main; 2 rules matched, 2 blocks to review
 
 ## no-em-dashes (2 files, complexity low)
-hints: A grep for the two characters finds every candidate.
 
 Read `.wiz/rules/no-em-dashes/RULE.md` and apply that rule, and only that
 rule, to the files listed below. ...
@@ -61,8 +61,8 @@ is none: [{"file": ..., "line": ..., "message": ...}]
 A block is the whole prompt for one subagent. It names the rule's file rather
 than quoting it, so the agent that prints the blocks and spawns the subagents
 never reads a rule, and the rules stay out of its context. The heading
-carries the rule's complexity, and its hints when it has any, for choosing a
-model. The `review` skill teaches an agent the loop.
+carries the rule's complexity, for choosing a model. The `rules-review` skill
+teaches an agent the loop.
 
 Code excuses itself from a rule with a `rule-ignore <id>: <reason>` comment
 above the line, or `rule-ignore-file <id>: <reason>` for the file.
@@ -91,19 +91,20 @@ visible rather than merely wrong.
 
 ```bash
 bunx @webappwiz/cli skills ls ./project
-bunx @webappwiz/cli skills add review ./project
+bunx @webappwiz/cli skills add rules-review ./project
 bunx @webappwiz/cli skills update ./project
 ```
 
 ```
-SKILL      SHIPS  INSTALLED
-arbor      1.4.0  1.3.0
-review     1.4.0  -
-webappwiz  1.4.0  -
+SKILL         SHIPS  INSTALLED
+arbor         1.4.0  1.3.0
+rules-review  1.4.0  -
+webappwiz     1.4.0  -
 ```
 
 Three ship: `arbor`, which lands an agent's work from its own worktree;
-`review`, which runs the rules through subagents without reading one; and
+`rules-review`, which runs the rules through subagents without reading one;
+and
 `webappwiz`, which sends an agent to the package's catalogue before it writes
 infrastructure by hand.
 

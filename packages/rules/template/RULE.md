@@ -9,9 +9,8 @@ complexity: medium
 <!-- Frontmatter: `files` is the glob a review matches changed files against;
 anything finer is the subagent's job. `level` is error or warning.
 `complexity` is low when a grep or a count settles the rule, high when it
-takes design judgment across a file, medium between; a `hints:` line may add
-anything else that helps the parent choose a model or the subagent get
-started. Delete this comment. -->
+takes design judgment across a file, medium between. The body is yours: the
+headings below are a suggestion, not a requirement. Delete this comment. -->
 
 # {{title}}
 

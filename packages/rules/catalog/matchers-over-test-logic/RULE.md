@@ -4,7 +4,6 @@ description: A test carries no if and no for; a matcher decides what the logic w
 files: "**/*.test.ts"
 level: error
 complexity: low
-hints: Grep for if, for and while inside it blocks; the rest is reading each hit.
 version: 0.0.10
 ---
 # Matchers over test logic
