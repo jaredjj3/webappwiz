@@ -37,6 +37,9 @@ import resourcesAreDisposable from "./resources-are-disposable/RULE.md" with {
 	type: "text",
 };
 import simpleTestSetup from "./simple-test-setup/RULE.md" with { type: "text" };
+import testSetupNamesWhatItMakes from "./test-setup-names-what-it-makes/RULE.md" with {
+	type: "text",
+};
 import testsOwnTheirState from "./tests-own-their-state/RULE.md" with {
 	type: "text",
 };
@@ -62,5 +65,6 @@ export const catalog: Record<string, string> = {
 	"reactive-over-use-state": reactiveOverUseState,
 	"resources-are-disposable": resourcesAreDisposable,
 	"simple-test-setup": simpleTestSetup,
+	"test-setup-names-what-it-makes": testSetupNamesWhatItMakes,
 	"tests-own-their-state": testsOwnTheirState,
 };
