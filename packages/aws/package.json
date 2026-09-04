@@ -1,6 +1,6 @@
 {
 	"name": "@webappwiz/aws",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"description": "CDK constructs for running a web app on AWS: network, database, image, service and domain",
 	"license": "MIT",
 	"author": "Jared Johnson",

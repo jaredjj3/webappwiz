@@ -4,7 +4,7 @@ description: Tests set up their own state; a harness only names steps and never 
 files: "**/*.test.ts"
 level: error
 complexity: medium
-version: 0.0.10
+version: 0.0.11
 ---
 # Tests own their state
 

@@ -4,7 +4,7 @@ description: An interface with implementations gets a directory named after it, 
 files: "**/*.ts"
 level: warning
 complexity: medium
-version: 0.0.10
+version: 0.0.11
 ---
 # One directory per interface
 

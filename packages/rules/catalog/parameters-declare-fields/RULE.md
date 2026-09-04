@@ -4,7 +4,7 @@ description: A constructor parameter copied straight into a field of the same na
 files: "**/*.ts"
 level: error
 complexity: low
-version: 0.0.10
+version: 0.0.11
 ---
 # Parameters declare fields
 

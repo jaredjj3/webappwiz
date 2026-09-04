@@ -4,7 +4,7 @@ description: One describe per file, it titles that complete the sentence, shared
 files: "**/*.test.ts"
 level: error
 complexity: low
-version: 0.0.10
+version: 0.0.11
 ---
 # Simple test setup
 

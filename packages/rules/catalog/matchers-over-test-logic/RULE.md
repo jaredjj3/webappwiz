@@ -4,7 +4,7 @@ description: A test carries no if and no for; a matcher decides what the logic w
 files: "**/*.test.ts"
 level: error
 complexity: low
-version: 0.0.10
+version: 0.0.11
 ---
 # Matchers over test logic
 

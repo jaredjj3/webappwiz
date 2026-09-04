@@ -4,7 +4,7 @@ description: Whatever holds a timer, listener, socket or handle implements Resou
 files: "**/*.ts"
 level: error
 complexity: medium
-version: 0.0.10
+version: 0.0.11
 ---
 # Resources are disposable
 
