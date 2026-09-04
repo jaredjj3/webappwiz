@@ -5,7 +5,7 @@ files: "**/*.{ts,md}"
 level: error
 complexity: low
 recommended: true
-version: 0.0.12
+version: 0.0.13
 ---
 <!-- rule-ignore-file no-em-dashes: the Bad examples have to show one -->
 

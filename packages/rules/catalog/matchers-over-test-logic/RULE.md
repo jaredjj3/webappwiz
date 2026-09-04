@@ -5,7 +5,7 @@ files: "**/*.test.ts"
 level: error
 complexity: low
 recommended: true
-version: 0.0.12
+version: 0.0.13
 ---
 # Matchers over test logic
 
