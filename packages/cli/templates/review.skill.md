@@ -1,6 +1,6 @@
 ---
 name: review
-description: "Review a change against the RULE.md rules in this project's .wiz/rules directory by handing each rule to a separate agent, without reading a rule yourself. Use only when the project has a .wiz/rules directory and the user asks to run, check, or apply the rules, the wiz rules, or the webappwiz rules to a change, or asks to write, add, or edit a rule there. Not for a general code review, a pull request review, a security review, or any review that does not name the rules."
+description: "Review a change against the RULE.md rules in this project's .wiz/rules directory by handing blocks of rules to separate agents, without reading a rule yourself. Use only when the project has a .wiz/rules directory and the user asks to run, check, or apply the rules, the wiz rules, or the webappwiz rules to a change, or asks to write, add, or edit a rule there. Not for a general code review, a pull request review, a security review, or any review that does not name the rules."
 version: 0.0.12
 ---
 
@@ -10,8 +10,8 @@ The rules are markdown, one per directory under `.wiz/rules`, each a `RULE.md`
 another agent reads. You never read one. Reading rules loads their prose into
 your context and you start reasoning about style instead of running the
 review, so the whole loop is built to keep them out of your sight: the CLI
-divides the work into blocks that name a rule's file, and whoever gets the
-block opens it.
+divides the work into blocks that name the rules' files, and whoever gets the
+block opens them.
 
 Run the CLI with `bunx @webappwiz/cli rules <command>`. `rules --help` lists
 the commands; this file covers only what the CLI cannot tell you.
@@ -23,32 +23,35 @@ the commands; this file covers only what the CLI cannot tell you.
 2. Run `rules review --since <ref>`, with the ref the change is measured from:
    `main` for a branch, `HEAD` for uncommitted work. It prints a summary line
    and then one block per unit of work, each starting with a `## ` heading.
+   A block gathers the rules that match the same files, so its agent reads
+   each file once and judges it against all of them rather than once a rule.
 3. Run every block through whatever this harness gives you for parallel work:
    subagents, background tasks, a workflow, worktrees, whatever is at hand.
    One agent per block, started together, each given the whole block verbatim
-   as its prompt and nothing else. The block already says which file to read,
+   as its prompt and nothing else. The block already says which rules to read,
    which files to judge, how to see the change, and how to answer. Never put
    two blocks in front of the same agent, and never run one yourself: both
    end with rules in a context that is supposed to stay clear of them. If
    nothing here runs work in parallel, still send one block to one agent and
    do it in turn.
-4. Collect the replies. Each is a JSON array of `{file, line, message}`, empty
-   when the rule found nothing.
-5. Report the findings grouped by file, each with its rule id and the rule's
-   level from the block heading. Then stop. Fixing is a separate decision.
+4. Collect the replies. Each is a JSON array of `{rule, file, line, message}`,
+   empty when the block's rules found nothing.
+5. Report the findings grouped by file, each with its rule id and that rule's
+   level, which the block lists beside the rule's path. Then stop. Fixing is a
+   separate decision.
 
 If a block's reply is not a JSON array, run that block again once, then
 report it as unanswered rather than guessing what it found.
 
 ## Choosing a model
 
-Every heading carries the rule's complexity:
+A block holds rules of one complexity, and its heading carries it:
 
 ```
-## no-em-dashes (3 files, complexity low)
+## block 6 (5 rules, 8 files, complexity low)
 ```
 
-Complexity is how hard the rule is to judge. `low` is a grep or a count:
+Complexity is how hard a rule is to judge. `low` is a grep or a count:
 give it the cheapest, fastest model available. `high` is design judgment
 across a whole file: give it the strongest. `medium` is whatever the harness
 uses by default. Ignore all of this when the system you run the blocks

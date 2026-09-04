@@ -34,8 +34,9 @@ describe("rules review", () => {
 		log = new MemoryLogger();
 	});
 
-	it("prints one block per rule the change touches, after a summary", async () => {
+	it("gathers the rules a block holds, and prints them after a summary", async () => {
 		await install("no-foo", ruleDoc("no-foo", { complexity: "low" }));
+		await install("no-fox", ruleDoc("no-fox", { complexity: "low" }));
 		await install("no-bar", ruleDoc("no-bar", { files: "**/*.md" }));
 		await install("no-baz", ruleDoc("no-baz", { files: "**/*.py" }));
 		ps.setCaptureOutput("src/a.ts\nREADME.md\n", "");
@@ -43,10 +44,16 @@ describe("rules review", () => {
 		await review(reviewing());
 
 		expect(printed().split("\n")[0]).toEqual(
-			"2 files changed since main; 2 rules matched, 2 blocks to review",
+			"2 files changed since main; 3 rules matched, 2 blocks to review",
 		);
-		expect(printed()).toContain("\n## no-bar (1 file, complexity medium)\n");
-		expect(printed()).toContain("\n## no-foo (1 file, complexity low)\n");
+		expect(printed()).toContain(
+			"\n## block 1 (1 rule, 1 file, complexity medium)\n",
+		);
+		expect(printed()).toContain(
+			"\n## block 2 (2 rules, 1 file, complexity low)\n",
+		);
+		expect(printed()).toContain("`.wiz/rules/no-foo/RULE.md` (no-foo, error)");
+		expect(printed()).toContain("`.wiz/rules/no-fox/RULE.md` (no-fox, error)");
 		expect(printed()).not.toContain("no-baz");
 	});
 

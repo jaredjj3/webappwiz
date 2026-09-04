@@ -58,13 +58,21 @@ for (const block of rules.review(files, { chunk: 25 })) {
 
 `Rules.load` reads every rule under `<dir>/.wiz/rules` and reports every
 broken one at once. `changed` asks git what is new or different since a ref,
-committed or not. `review` gives one `Block` per rule that matches any of the
-files, cut into several when a rule matches more than `chunk`.
+committed or not. `review` gathers the rules that share a complexity and match
+the same files, and gives a `Block` per gathering, so one subagent reads each
+of those files once and judges it against every rule in the block rather than
+once a rule.
 
-A block's `prompt` is the whole of what a subagent is told: the rule's path,
-the files, how to see the change, and the reply contract. It names the
-rule's file rather than quoting it, so whoever prints the prompt never reads
+A block's `prompt` is the whole of what a subagent is told: each rule's path
+and level, the files, how to see the change, and the reply contract. It names
+a rule's file rather than quoting it, so whoever prints the prompt never reads
 the rule. Its heading carries the complexity for whoever chooses the model.
+
+`CAPS` is how much a block may hold, by complexity: a rule cap, which is what
+keeps the review fanned out when one file changed, and a budget of rule-file
+pairs, which keeps a wide, deep block from becoming a long serial slog. `low`
+batches wide, `high` takes a block per rule, and `chunk` caps the files in any
+of them.
 
 ## The template
 

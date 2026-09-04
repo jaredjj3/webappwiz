@@ -2,16 +2,16 @@ import { type Fs, type Glob, NodeFs, NodeGlob } from "webappwiz/system";
 import { Block } from "./block";
 import type { ChangedFile } from "./changed";
 import { RULE_FILE, RULES_ROOT } from "./layout";
-import { Rule, RuleError } from "./rule";
+import { type Complexity, Rule, RuleError } from "./rule";
 
 /** What `load` reads through; the real filesystem by default. */
 export interface LoadOptions {
 	fs?: Fs;
 }
 
-/** How a review cuts the changed files up. */
+/** How a review cuts the work up. */
 export interface ReviewOptions {
-	/** Files per block, at most. A rule matching more gets several blocks. */
+	/** Files per block, at most. A block over more files gets split. */
 	chunk?: number;
 	/** Matches globs to paths; the real matcher by default. */
 	glob?: Glob;
@@ -19,6 +19,37 @@ export interface ReviewOptions {
 
 /** Files per block when a caller does not say. */
 export const DEFAULT_CHUNK = 25;
+
+/** How much one block may hold. */
+export interface Cap {
+	/** Rules per block, at most. */
+	rules: number;
+	/** Rule-file pairs per block, at most: how much judging one agent does. */
+	pairs: number;
+}
+
+/**
+ * What each complexity reviews under. Two caps, because they stop different
+ * things: the pair budget keeps a wide, deep block from becoming a long serial
+ * slog, and the rule cap is what keeps the review fanned out when one file
+ * changed and the pair budget alone would hand that file every rule.
+ *
+ * `low` batches wide because a grep or a count settles it. `high` stays at one
+ * rule a block, where a second rule in the prompt costs more attention than
+ * the reread it saves, so `chunk` alone bounds it.
+ */
+export const CAPS: Record<Complexity, Cap> = {
+	low: { rules: 8, pairs: 40 },
+	medium: { rules: 4, pairs: 16 },
+	high: { rules: 1, pairs: Number.POSITIVE_INFINITY },
+};
+
+/** Rules of one complexity, and the files every one of them matches. */
+interface Rectangle {
+	complexity: Complexity;
+	rules: Rule[];
+	files: ChangedFile[];
+}
 
 /**
  * The rules a project has: every `RULE.md` under `.wiz/rules`, validated, in
@@ -76,32 +107,74 @@ export class Rules {
 	}
 
 	/**
-	 * One block per rule that matches any of the changed files, in id order,
-	 * cut into several when a rule matches more than `chunk` files. A rule
-	 * matching nothing gets no block: there is nothing to say about it.
+	 * The blocks a change divides into: rules that match the same files, of
+	 * the same complexity, gathered so one subagent reads each of those files
+	 * once and judges it against all of them. A gathering wider or deeper than
+	 * its complexity's `CAPS` allows is split, and so is one over more than
+	 * `chunk` files. A rule matching nothing gets no block: there is nothing to
+	 * say about it.
 	 */
 	review(files: ChangedFile[], opts: ReviewOptions = {}): Block[] {
 		const chunk = opts.chunk ?? DEFAULT_CHUNK;
 		const glob = opts.glob ?? new NodeGlob();
 		const blocks: Block[] = [];
+		for (const rectangle of this.rectangles(files, glob)) {
+			const cap = CAPS[rectangle.complexity];
+			for (const rules of split(rectangle.rules, cap.rules)) {
+				const most = Math.max(
+					1,
+					Math.min(chunk, Math.floor(cap.pairs / rules.length)),
+				);
+				for (const part of split(rectangle.files, most)) {
+					blocks.push(new Block(blocks.length + 1, rules, part));
+				}
+			}
+		}
+		return blocks;
+	}
+
+	/**
+	 * The rules that share a complexity and a set of matched files, in id
+	 * order. Every rule in one applies to every file in it, so a block cut
+	 * from it is square and nothing needs saying about which rule reads which
+	 * file.
+	 */
+	private rectangles(files: ChangedFile[], glob: Glob): Rectangle[] {
+		const found = new Map<string, Rectangle>();
 		for (const rule of this.all) {
 			const matched = files.filter((file) => rule.matches(file.path, glob));
 			if (matched.length === 0) {
 				continue;
 			}
-			// spread evenly rather than filling to the chunk, so the last block
-			// is not left with a stray file or two
-			const parts = Math.ceil(matched.length / chunk);
-			const size = Math.ceil(matched.length / parts);
-			for (let part = 0; part < parts; part++) {
-				blocks.push(
-					new Block(rule, matched.slice(part * size, (part + 1) * size), {
-						part: part + 1,
-						parts,
-					}),
-				);
+			// keyed on the files matched rather than the glob that matched them,
+			// so `**/*.ts` and `**/*.{ts,md}` are one rectangle when no `.md`
+			// file changed, which is the common case
+			const key = [rule.complexity, ...matched.map((file) => file.path)].join(
+				"\n",
+			);
+			const rectangle = found.get(key);
+			if (rectangle === undefined) {
+				found.set(key, {
+					complexity: rule.complexity,
+					rules: [rule],
+					files: matched,
+				});
+			} else {
+				rectangle.rules.push(rule);
 			}
 		}
-		return blocks;
+		return [...found.values()];
 	}
+}
+
+/**
+ * `items` in as few parts as `most` allows, spread evenly rather than filled
+ * to `most`, so the last part is not left with a stray item or two.
+ */
+function split<T>(items: readonly T[], most: number): T[][] {
+	const parts = Math.ceil(items.length / most);
+	const size = Math.ceil(items.length / parts);
+	return Array.from({ length: parts }, (_, part) =>
+		items.slice(part * size, (part + 1) * size),
+	);
 }

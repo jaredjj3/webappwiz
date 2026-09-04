@@ -16,10 +16,10 @@ export interface ReviewOptions {
 }
 
 /**
- * Divides a change into blocks of work, one rule over the changed files it
- * matches, and prints them for a parent agent to hand to subagents. Nothing
- * is spawned and no rule is quoted: each block names the rule's file, and the
- * subagent reads it.
+ * Divides a change into blocks of work, each the rules of one complexity over
+ * the changed files they all match, and prints them for a parent agent to hand
+ * to subagents. Nothing is spawned and no rule is quoted: each block names its
+ * rules' files, and the subagent reads them.
  */
 export async function review(opts: ReviewOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -43,7 +43,9 @@ export async function review(opts: ReviewOptions): Promise<void> {
 		);
 		return;
 	}
-	const matched = new Set(blocks.map((block) => block.rule.id)).size;
+	const matched = new Set(
+		blocks.flatMap((block) => block.rules.map((rule) => rule.id)),
+	).size;
 	log.info(
 		`${count(files.length, "file")} changed since ${opts.since}; ` +
 			`${count(matched, "rule")} matched, ${count(blocks.length, "block")} to review`,

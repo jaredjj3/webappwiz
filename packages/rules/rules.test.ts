@@ -67,24 +67,86 @@ describe("Rules", () => {
 		expect(rules.get("beta")).toBeUndefined();
 	});
 
-	it("plans one block per rule that matches a changed file", () => {
-		const rules = Rules.of([
-			Rule.parse(ruleDoc("tests", { files: "**/*.test.ts" })),
-			Rule.parse(ruleDoc("source", { files: "**/*.ts" })),
-			Rule.parse(ruleDoc("docs", { files: "**/*.md" })),
-		]);
-
-		const blocks = rules.review([file("a.ts"), file("a.test.ts", true)]);
-
-		expect(
-			blocks.map((block) => [
-				block.rule.id,
+	const plan = (rules: Rules, files: ChangedFile[], chunk?: number) =>
+		rules
+			.review(files, chunk === undefined ? {} : { chunk })
+			.map((block) => [
+				block.number,
+				block.rules.map((rule) => rule.id),
 				block.files.map((file) => file.path),
-			]),
-		).toEqual([
-			["source", ["a.ts", "a.test.ts"]],
-			["tests", ["a.test.ts"]],
+			]);
+
+	it("gathers the rules that match the same files, by complexity", () => {
+		const rules = Rules.of([
+			Rule.parse(ruleDoc("alpha", { complexity: "low" })),
+			Rule.parse(ruleDoc("beta", { complexity: "low" })),
+			Rule.parse(ruleDoc("gamma", { complexity: "medium" })),
+			Rule.parse(
+				ruleDoc("delta", { complexity: "low", files: "**/*.test.ts" }),
+			),
 		]);
+
+		expect(plan(rules, [file("a.ts"), file("a.test.ts")])).toEqual([
+			[1, ["alpha", "beta"], ["a.ts", "a.test.ts"]],
+			[2, ["delta"], ["a.test.ts"]],
+			[3, ["gamma"], ["a.ts", "a.test.ts"]],
+		]);
+	});
+
+	it("gathers on the files matched, not the glob that matched them", () => {
+		const rules = Rules.of([
+			Rule.parse(ruleDoc("alpha", { complexity: "low", files: "**/*.ts" })),
+			Rule.parse(ruleDoc("beta", { complexity: "low", files: "**/*.{ts,md}" })),
+		]);
+
+		expect(plan(rules, [file("a.ts")])).toEqual([
+			[1, ["alpha", "beta"], ["a.ts"]],
+		]);
+		expect(plan(rules, [file("a.ts"), file("a.md")])).toEqual([
+			[1, ["alpha"], ["a.ts"]],
+			[2, ["beta"], ["a.ts", "a.md"]],
+		]);
+	});
+
+	it("gives a high-complexity rule a block to itself", () => {
+		const rules = Rules.of(
+			["alpha", "beta"].map((id) =>
+				Rule.parse(ruleDoc(id, { complexity: "high" })),
+			),
+		);
+
+		expect(plan(rules, [file("a.ts")])).toEqual([
+			[1, ["alpha"], ["a.ts"]],
+			[2, ["beta"], ["a.ts"]],
+		]);
+	});
+
+	it("splits a gathering wider than its complexity's rule cap", () => {
+		const ids = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+		const rules = Rules.of(
+			ids.map((id) => Rule.parse(ruleDoc(id, { complexity: "low" }))),
+		);
+
+		const blocks = rules.review([file("a.ts")]);
+
+		expect(blocks.map((block) => block.rules.map((rule) => rule.id))).toEqual([
+			["a", "b", "c", "d", "e"],
+			["f", "g", "h", "i"],
+		]);
+	});
+
+	it("splits a gathering deeper than its complexity's pair budget", () => {
+		const rules = Rules.of(
+			["a", "b", "c", "d"].map((id) =>
+				Rule.parse(ruleDoc(id, { complexity: "medium" })),
+			),
+		);
+		const files = ["v", "w", "x", "y", "z"].map((name) => file(`${name}.ts`));
+
+		const blocks = rules.review(files);
+
+		expect(blocks.map((block) => block.files.length)).toEqual([3, 2]);
+		expect(blocks[0]?.rules.length).toEqual(4);
 	});
 
 	it("keeps which files are new, for the prompt to say so", () => {
@@ -95,17 +157,13 @@ describe("Rules", () => {
 		expect(block?.files).toEqual([{ path: "a.ts", added: true }]);
 	});
 
-	it("cuts a rule with more files than the chunk into even blocks", () => {
+	it("cuts a block with more files than the chunk into even blocks", () => {
 		const rules = Rules.of([Rule.parse(ruleDoc("source"))]);
 		const files = ["a", "b", "c", "d", "e"].map((name) => file(`${name}.ts`));
 
-		const blocks = rules.review(files, { chunk: 4 });
-
-		expect(
-			blocks.map((block) => [block.part, block.parts, block.files.length]),
-		).toEqual([
-			[1, 2, 3],
-			[2, 2, 2],
+		expect(plan(rules, files, 4)).toEqual([
+			[1, ["source"], ["a.ts", "b.ts", "c.ts"]],
+			[2, ["source"], ["d.ts", "e.ts"]],
 		]);
 	});
 

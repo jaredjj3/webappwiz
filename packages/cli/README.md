@@ -48,29 +48,45 @@ after that, since a copied rule is the project's to edit or delete.
 ### review
 
 Nothing here spawns an agent. `review` asks git what changed since a ref,
-matches each rule's glob against it, and prints one block of work per rule
-that matched, cut into several when a rule matched more than `--chunk` files:
+matches each rule's glob against it, and prints the blocks of work that
+divides into. A block gathers the rules of one complexity that match the same
+files, so the agent that gets it reads each of those files once and judges it
+against all of them:
 
 ```
-2 files changed since main; 2 rules matched, 2 blocks to review
+2 files changed since main; 3 rules matched, 2 blocks to review
 
-## no-em-dashes (2 files, complexity low)
+## block 1 (2 rules, 2 files, complexity low)
 
-Read `.wiz/rules/no-em-dashes/RULE.md` and apply that rule, and only that
-rule, to the files listed below. ...
+Read each rule listed below and apply those rules, and only those, to the
+files listed after them. ...
+
+Rules:
+
+- `.wiz/rules/no-em-dashes/RULE.md` (no-em-dashes, error)
+- `.wiz/rules/one-class-per-file/RULE.md` (one-class-per-file, error)
+
+Files:
 
 - src/a.ts
 - src/b.ts (new)
 
 Reply with only a JSON array, one element per violation, or [] when there
-is none: [{"file": ..., "line": ..., "message": ...}]
+is none: [{"rule": ..., "file": ..., "line": ..., "message": ...}]
 ```
 
-A block is the whole prompt for one subagent. It names the rule's file rather
+A block is the whole prompt for one subagent. It names each rule's file rather
 than quoting it, so the agent that prints the blocks and spawns the subagents
 never reads a rule, and the rules stay out of its context. The heading
-carries the rule's complexity, for choosing a model. The `review` skill teaches
-an agent the loop.
+carries the complexity its rules share, for choosing a model, and each rule is
+listed with its level, so findings can be reported without opening anything.
+
+How wide a block goes depends on that complexity: a `low` rule is a grep, so
+several ride together, while a `high` rule takes a block to itself, where a
+second rule in the prompt would cost more attention than the reread it saves.
+`--chunk` caps the files in a block whatever the complexity.
+
+The `review` skill teaches an agent the loop.
 
 Code excuses itself from a rule with a `rule-ignore <id>: <reason>` comment
 above the line, or `rule-ignore-file <id>: <reason>` for the file.

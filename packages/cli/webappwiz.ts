@@ -97,7 +97,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 
 	rules
 		.command("review")
-		.description("print one block of review work per rule the change touches")
+		.description("print the blocks of review work the change divides into")
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "project to review (default: .)",

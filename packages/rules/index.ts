@@ -1,4 +1,4 @@
-export { Block, type BlockOptions } from "./block";
+export { Block } from "./block";
 export { type ChangedFile, type ChangedOptions, changed } from "./changed";
 export { RULE_FILE, RULES_ROOT } from "./layout";
 export {
@@ -11,6 +11,8 @@ export {
 	RuleError,
 } from "./rule";
 export {
+	CAPS,
+	type Cap,
 	DEFAULT_CHUNK,
 	type LoadOptions,
 	type ReviewOptions,
