@@ -31,6 +31,9 @@ const FRONTMATTER = t.object({
 	files: t.optional(t.string()),
 	level: t.enum(LEVELS),
 	complexity: t.enum(COMPLEXITIES),
+	// frontmatter arrives as strings, so the two spellings of a boolean are an
+	// enum here rather than t.boolean()
+	recommended: t.optional(t.enum(["true", "false"])),
 	version: t.optional(t.string()),
 });
 
@@ -54,6 +57,12 @@ export class Rule {
 		readonly files: string,
 		readonly level: Level,
 		readonly complexity: Complexity,
+		/**
+		 * Whether a catalog offers this rule as one to start with, which is what
+		 * `rules add --recommended` copies in. A project's own rule says nothing
+		 * by saying nothing: it is already installed.
+		 */
+		readonly recommended: boolean,
 		/** The release it shipped in; null for a rule written locally. */
 		readonly version: string | null,
 		/** The whole file, verbatim. */
@@ -93,6 +102,7 @@ export class Rule {
 			front.files ?? "**/*",
 			front.level,
 			front.complexity,
+			front.recommended === "true",
 			front.version ?? null,
 			text,
 		);

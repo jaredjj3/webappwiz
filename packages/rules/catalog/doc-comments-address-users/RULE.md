@@ -4,6 +4,7 @@ description: A doc comment on an export tells users what it is for, not maintain
 files: "**/*.ts"
 level: error
 complexity: medium
+recommended: true
 version: 0.0.12
 ---
 # Doc comments address users

@@ -4,6 +4,7 @@ description: A parameter that is called after the call returns is an event or a 
 files: "**/*.ts"
 level: warning
 complexity: high
+recommended: true
 version: 0.0.12
 ---
 # Objects over callbacks

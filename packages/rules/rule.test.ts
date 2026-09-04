@@ -11,6 +11,7 @@ describe("Rule", () => {
 				files: "**/*.tsx",
 				level: "warning",
 				complexity: "high",
+				recommended: true,
 				version: "1.2.3",
 			}),
 		);
@@ -21,8 +22,27 @@ describe("Rule", () => {
 			files: "**/*.tsx",
 			level: "warning",
 			complexity: "high",
+			recommended: true,
 			version: "1.2.3",
 		});
+	});
+
+	it("recommends a rule only when its frontmatter says so", () => {
+		expect(Rule.parse(ruleDoc("no-foo")).recommended).toBe(false);
+		expect(
+			Rule.parse(ruleDoc("no-foo", { recommended: false })).recommended,
+		).toBe(false);
+	});
+
+	it("rejects a recommended that is neither true nor false", () => {
+		const doc = ruleDoc("no-foo", { recommended: true }).replace(
+			"recommended: true",
+			"recommended: yes",
+		);
+
+		expect(() => Rule.parse(doc)).toThrow(
+			/^RULE\.md:7: recommended: expected one of true, false/,
+		);
 	});
 
 	it("keeps the whole document verbatim", () => {

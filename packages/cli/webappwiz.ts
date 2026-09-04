@@ -70,11 +70,19 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 
 	rules
 		.command("add")
-		.description("copy a shipped rule into the project")
-		.arg("rule", t.string(), { description: "rule id, as `rules ls` lists it" })
+		.description("copy shipped rules in: one by id, or every recommended one")
+		.arg("rule", t.string(), {
+			default: "",
+			description:
+				"rule id, as `rules ls` lists it; the project with --recommended",
+		})
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "project to add it to (default: .)",
+		})
+		.option("recommended", t.boolean(), {
+			default: false,
+			description: "copy every rule that recommends itself, instead of one",
 		})
 		.action((opts, { log, fs }) => addRule({ ...opts, log, fs }));
 

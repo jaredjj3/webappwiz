@@ -6,6 +6,7 @@ export interface RuleDocOptions {
 	files?: string;
 	level?: Level;
 	complexity?: Complexity;
+	recommended?: boolean;
 	version?: string;
 }
 
@@ -18,6 +19,9 @@ export const ruleDoc = (name: string, opts: RuleDocOptions = {}): string =>
 		`files: "${opts.files ?? "**/*.ts"}"`,
 		`level: ${opts.level ?? "error"}`,
 		`complexity: ${opts.complexity ?? "medium"}`,
+		...(opts.recommended === undefined
+			? []
+			: [`recommended: ${opts.recommended}`]),
 		...(opts.version === undefined ? [] : [`version: ${opts.version}`]),
 		"---",
 		"",

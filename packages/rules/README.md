@@ -8,7 +8,8 @@ which files.
 It also owns webappwiz's own rules, one `RULE.md` per directory under
 [`catalog/`](./catalog), exported from `@webappwiz/rules/catalog` as id to
 document. A project copies the ones it wants into `.wiz/rules` with
-`@webappwiz/cli rules add`, and writes its own beside them.
+`@webappwiz/cli rules add`, or the ones the catalog recommends with
+`rules add --recommended`, and writes its own beside them.
 
 ## A rule
 
@@ -19,6 +20,7 @@ description: Modules export named bindings, never a default.
 files: "**/*.{ts,tsx}"
 level: error
 complexity: low
+recommended: true
 ---
 
 # No default exports
@@ -39,8 +41,10 @@ title and `## Good` and `## Bad` sections, and nothing checks for them.
 `files` is the glob a review matches changed files against; anything finer
 is the subagent's job. `complexity` (`low`,
 `medium`, `high`) is how hard the rule is to judge, so the parent agent can
-pick a model for the subagent. A rule that shipped carries `version`; one a
-project wrote does not.
+pick a model for the subagent. `recommended: true` puts a rule in the set
+`rules add --recommended` installs, which is for a rule that reads on any
+project rather than one about a stack it may not have. A rule that shipped
+carries `version`; one a project wrote does not.
 
 ## A review
 

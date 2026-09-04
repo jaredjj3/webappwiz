@@ -11,6 +11,7 @@ bunx @webappwiz/cli skills update          # refresh the ones already installed
 bunx @webappwiz/cli rules ls               # every rule there is, and what you have
 bunx @webappwiz/cli rules new <name>       # scaffold a rule of your own
 bunx @webappwiz/cli rules add <id>         # copy a shipped rule in
+bunx @webappwiz/cli rules add --recommended   # copy the recommended ones
 bunx @webappwiz/cli rules update           # refresh the copies
 bunx @webappwiz/cli rules review --since main   # divide a review up
 ```
@@ -24,10 +25,10 @@ it does not run. The ones that ship come from
 in the same shape.
 
 ```
-rule                 level    complexity   files          ships    installed   description
-no-em-dashes         error    low          **/*.{ts,md}   0.1.0    0.1.0       No em dashes, and no en dashes between words.
-one-class-per-file   error    low          **/*.ts        0.1.0    -           A file declares one top-level class.
-mine                 error    medium       **/*.ts        -        local       What this project wants.
+rule                 level    complexity   recommended   files          ships    installed   description
+no-em-dashes         error    low          yes           **/*.{ts,md}   0.1.0    0.1.0       No em dashes, and no en dashes between words.
+one-class-per-file   error    low          yes           **/*.ts        0.1.0    -           A file declares one top-level class.
+mine                 error    medium       -             **/*.ts        -        local       What this project wants.
 ```
 
 `ls` validates the frontmatter of every rule the project has and refuses to
@@ -36,6 +37,13 @@ as a skill's is. `new` writes a `RULE.md` to fill in, with a comment saying
 what goes where. `add` copies a shipped rule in, where it runs
 and can be edited; `update` refreshes those copies and leaves the project's
 own alone. Both replace what is there, as `skills` does.
+
+`add --recommended` copies every rule the catalog recommends, which is the
+way to start: the rules that read on any TypeScript, without the ones that
+are about a stack a project may not have. It takes no rule id, so the
+directory is the only positional it reads, with the flag last as everywhere
+else here: `rules add ./project --recommended`. A project decides for itself
+after that, since a copied rule is the project's to edit or delete.
 
 ### review
 

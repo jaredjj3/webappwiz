@@ -74,7 +74,8 @@ When asked to write a rule, or to add one from the catalog:
 
 - `rules ls` lists every rule that ships and every rule the project has.
 - `rules add <id>` copies a shipped rule into `.wiz/rules/<id>/RULE.md`,
-  where it runs and can be edited.
+  where it runs and can be edited. `rules add --recommended` copies every
+  rule the catalog recommends at once, which is how a project starts.
 - `rules new <name>` scaffolds `.wiz/rules/<name>/RULE.md` to fill in. The
   frontmatter has `description`, `files` (the glob a review matches changed
   files against), `level` (`error` or `warning`), `complexity` (`low`,

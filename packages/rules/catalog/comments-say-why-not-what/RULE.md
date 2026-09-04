@@ -4,6 +4,7 @@ description: A comment explains why the code is as it is, never what it plainly 
 files: "**/*.ts"
 level: error
 complexity: medium
+recommended: true
 version: 0.0.12
 ---
 # Comments say why, not what

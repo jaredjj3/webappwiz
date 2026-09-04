@@ -4,6 +4,7 @@ description: Test setup is named for the thing it makes, never a harness.
 files: "**/{*.test,testing}.ts"
 level: error
 complexity: low
+recommended: true
 version: 0.0.12
 ---
 # Test setup names what it makes

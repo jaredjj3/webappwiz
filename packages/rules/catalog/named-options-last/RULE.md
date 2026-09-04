@@ -4,6 +4,7 @@ description: Settings go in one named opts object, after the parameters a caller
 files: "**/*.ts"
 level: warning
 complexity: medium
+recommended: true
 version: 0.0.12
 ---
 # Named options last

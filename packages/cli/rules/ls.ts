@@ -24,6 +24,7 @@ export async function ls(opts: RulesProjectOptions): Promise<void> {
 			"rule",
 			"level",
 			"complexity",
+			"recommended",
 			"files",
 			"ships",
 			"installed",
@@ -47,6 +48,9 @@ export async function ls(opts: RulesProjectOptions): Promise<void> {
 			id,
 			rule.level,
 			rule.complexity,
+			// what the catalog says, since that is what --recommended reads: a
+			// rule the project wrote is nobody's recommendation
+			shipped.get(id)?.recommended ? "yes" : "-",
 			rule.files,
 			ships ?? "-",
 			installed ?? "-",
