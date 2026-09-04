@@ -3,7 +3,7 @@
 // every package here is published, and a published entry point that imports a
 // test tool is broken for anyone who installs it.
 //
-// Imported per file rather than preloaded through bunfig. `wiz test` runs
+// Imported per file rather than preloaded through bunfig. `wiz dev test` runs
 // `bun test --parallel`, a worker per file, so importing it here registers
 // happy-dom only in the workers that asked for a DOM. A preload would register
 // it in every worker, and happy-dom replaces 33 globals: not just the HTTP

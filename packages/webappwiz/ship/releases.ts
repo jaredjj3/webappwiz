@@ -91,7 +91,7 @@ export class releases {
 	/**
 	 * The workspace's own release: every public package around the working
 	 * directory onto npm, tagged, with GitHub release notes. This is what
-	 * `wiz ship` runs when nothing declares otherwise.
+	 * `wiz dev ship` runs when nothing declares otherwise.
 	 */
 	static async workspace(opts: WorkspaceReleaseOptions = {}): Promise<Release> {
 		const ps = opts.ps ?? new NodePs();

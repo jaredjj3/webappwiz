@@ -171,10 +171,10 @@ command by the path it was reached through, so the same cli answers correctly
 under both spellings.
 
 ```ts
-export const webappwiz = cli<AppDeps>("webappwiz");
-webappwiz.command("update").action(/* … */); // webappwiz update
+export const tool = cli<AppDeps>("tool");
+tool.command("update").action(/* … */); // tool update
 
-wiz.mount("cli", webappwiz);                 // wiz cli update
+app.mount("tool", tool);                // app tool update
 ```
 
 The type argument is what keeps that honest: a program can only mount a cli

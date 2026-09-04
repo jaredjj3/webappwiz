@@ -27,7 +27,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
-# a release under way; the last part to land deletes it (wiz ship)
+# a release under way; the last part to land deletes it (wiz dev ship)
 RELEASE
 
 # IntelliJ based IDEs

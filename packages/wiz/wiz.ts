@@ -1,18 +1,25 @@
 import type { CommandDeps } from "@webappwiz/cli/webappwiz";
 import { webappwiz } from "@webappwiz/cli/webappwiz";
-import { cli } from "webappwiz/cmd";
 import { t } from "webappwiz/t";
 import { fix } from "./fix";
 import { path } from "./path";
 import { ship } from "./ship";
 import { test } from "./test";
 
-/** Everything `wiz` is run with. The mounted `cli` commands need the same. */
+/** Everything `wiz` is run with, which is what the cli it is built on needs. */
 export type WizDeps = CommandDeps;
 
-export const wiz = cli<WizDeps>("wiz");
+/**
+ * `wiz` is the `webappwiz` cli under a shorter name, so a project gets `wiz
+ * rules` and `wiz skills` without a prefix. Working on this repo is the
+ * unusual case, so the commands that only make sense inside it live under
+ * `wiz dev`.
+ */
+export const wiz = webappwiz("wiz");
 
-wiz
+const dev = wiz.group("dev").description("work on the webappwiz workspace");
+
+dev
 	.command("fix")
 	.description("format, check, and typecheck the workspace")
 	.option("check", t.boolean(), {
@@ -21,7 +28,7 @@ wiz
 	})
 	.action((opts, { log, ps }) => fix({ ...opts, log, ps }));
 
-wiz
+dev
 	.command("path")
 	.description("manage bin/ on your shell PATH")
 	.option("add", t.boolean(), {
@@ -34,12 +41,12 @@ wiz
 	})
 	.action((opts, { log, fs, ps }) => path({ ...opts, log, fs, ps }));
 
-wiz
+dev
 	.command("ship")
 	.description("release every package in the workspace at one patch version")
 	.action((_opts, { log, fs, ps }) => ship({ log, fs, ps }));
 
-wiz
+dev
 	.command("test")
 	.description("run the workspace tests")
 	.arg("package", t.string(), {
@@ -47,5 +54,3 @@ wiz
 		description: "only test this package (default: all)",
 	})
 	.action((opts, { fs, ps }) => test({ ...opts, fs, ps }));
-
-wiz.mount("cli", webappwiz.description("run @webappwiz/cli against a project"));

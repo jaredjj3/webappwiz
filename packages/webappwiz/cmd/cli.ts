@@ -105,7 +105,7 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 	 * left to propagate: only the root's `run` ends the process, so a group
 	 * nested three deep still fails once, at the top. `path` is the spelling
 	 * that reached this cli, which only the caller knows: a mounted cli is
-	 * `wiz cli` in one program and `webappwiz` on its own.
+	 * named one way on its own and another under the program that mounts it.
 	 */
 	exec(
 		argv: string[],

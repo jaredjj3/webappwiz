@@ -22,18 +22,18 @@ describe("wiz", () => {
 	const out = () =>
 		log.entries.map((entry) => color.strip(entry.message)).join("\n");
 
-	it("lists its commands, the mounted cli group included", () => {
+	it("lists the cli's own commands, with the workspace ones under dev", () => {
 		wiz.run(deps, []);
 
 		expect(out()).toContain("Usage: wiz <command> [options]");
-		expect(out()).toContain("fix   format, check, and typecheck the workspace");
-		expect(out()).toContain("run @webappwiz/cli against a project");
+		expect(out()).toContain("rules   keep rules in .wiz/rules");
+		expect(out()).toContain("dev     work on the webappwiz workspace");
 	});
 
 	// Nothing here touches the real filesystem: the action reads the workspace
 	// off the FakeFs it was run with, and refuses there.
 	it("runs a command against the dependencies it is given", async () => {
-		await wiz.run(deps, ["test", "nope"]);
+		await wiz.run(deps, ["dev", "test", "nope"]);
 
 		expect(out()).toContain("error: no such package: nope");
 		expect(ps.getExitCode()).toBe(1);

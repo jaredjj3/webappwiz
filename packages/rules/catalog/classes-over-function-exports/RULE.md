@@ -75,7 +75,7 @@ export function stamp(message: string, now: () => Date): string {
 A cli action is a function, and takes its dependencies where its options are:
 
 ```ts
-// fix.ts, the action behind `wiz fix`, with fix.test.ts beside it
+// fix.ts, the action behind `wiz dev fix`, with fix.test.ts beside it
 export interface FixOptions {
 	/** Report problems without writing fixes, as CI wants it. */
 	check: boolean;

@@ -13,7 +13,7 @@ review, so the whole loop is built to keep them out of your sight: the CLI
 divides the work into blocks that name a rule's file, and whoever gets the
 block opens it.
 
-Run the CLI with `bunx @webappwiz/cli rules <command>` (or `wiz cli rules`
+Run the CLI with `bunx @webappwiz/cli rules <command>` (or `wiz rules`
 if `wiz` is on PATH). `rules --help` lists the commands; this file covers
 only what the CLI cannot tell you.
 

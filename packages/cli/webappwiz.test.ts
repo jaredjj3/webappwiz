@@ -13,7 +13,7 @@ describe("webappwiz", () => {
 			JSON.stringify({ dependencies: { webappwiz: "0.1.0" } }, null, "\t"),
 		);
 
-		await webappwiz.run(
+		await webappwiz().run(
 			{
 				log: new MemoryLogger(),
 				fs,
