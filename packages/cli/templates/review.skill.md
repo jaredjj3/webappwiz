@@ -126,23 +126,31 @@ through does not let you choose one.
 
 ## Fixing
 
-When asked to fix what the review found, run one agent per finding, in
-parallel the same way and in its own worktree the same way, each given a
-prompt like this and nothing else about the rule:
+When asked to fix what the review found, run one agent per file, in parallel
+the same way and in its own worktree the same way, each given every finding
+that file has and a prompt like this, and nothing else about the rules:
 
 ```
-Read `.wiz/rules/<id>/RULE.md`. In `<file>` at line <line>, the code <message>.
-Change the code so it follows the rule, touching as little as you can, and
-reply with the diff.
+Read `.wiz/rules/<id>/RULE.md` for each rule named below. In `<file>`:
+- line <line>: the code <message> (rule <id>)
+- line <line>: the code <message> (rule <id>)
+Change the code so it follows those rules, touching as little as you can.
 ```
 
-It reads the rule and decides the fix. You still have not read it.
+It reads the rules and decides the fixes. You still have not read them.
 
-The agents are writing this time, so the tree each one holds is its own and the
-diffs come back to you: apply them to the real tree yourself. Two findings in
-one file go one agent after the other rather than both at once, since their
-diffs land on the same lines, and the line a finding names has moved by the
-time the second agent looks for it.
+A file at a time, not a finding at a time, because two findings in one file are
+usually one piece of work. Hand them to separate agents and the second one
+meets the first one's fix as ordinary existing code, with nothing on it to say
+it was a decision, and rewrites back over it on its way to its own finding.
+Running the two in order does not help, since the reverting happens in order
+too, and both agents report success either way.
+
+The agents are writing this time, and each holds a tree of its own, so the work
+has to come back to you. Where this project has a way to land an agent's
+branch, tell it to commit and use that: a branch is exact, where a diff an
+agent retypes into its reply is not. Where there is none, have it reply with
+the diff and apply that yourself.
 
 ## Writing a rule
 
