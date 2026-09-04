@@ -8,7 +8,7 @@ import { bundled, type ProjectOptions, SKILLS } from "./skill";
  * project holds is the only thing `add` and `update` cannot tell it, so that
  * is what this is for.
  */
-export async function ls(opts: ProjectOptions): Promise<void> {
+export async function list(opts: ProjectOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const documents = new Documents(opts.skills ?? bundled, SKILLS, opts);
 	const rows = [["skill", "ships", "installed"].map(color.dim)];

@@ -22,7 +22,7 @@ do not retry, another agent owns the tree.
 ## Before you start
 
 Other agents may already be working. Before creating anything, list the files
-you expect to touch, then `arbor ls`, and for each task in flight compare with
+you expect to touch, then `arbor list`, and for each task in flight compare with
 its changed files:
 `git -C "$(arbor path <task>)" diff --name-only main...task/<task>`
 (`arbor show <task>` for its plan; neither takes its lease).

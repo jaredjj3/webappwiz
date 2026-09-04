@@ -8,7 +8,7 @@ import { fix } from "./fix";
  * Every agent skill this workspace ships, listed rather than discovered so
  * that adding one is a line here. Each is the document `@webappwiz/cli`
  * bundles; this repo's own `.agents/skills` copies are symlinks to them, so
- * stamping the template is what keeps `skills ls` from calling them stale the
+ * stamping the template is what keeps `skills list` from calling them stale the
  * moment a release lands.
  */
 const SKILLS = [

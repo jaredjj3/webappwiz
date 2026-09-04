@@ -2,7 +2,7 @@ import { Documents } from "../documents";
 import { bundled, type ProjectOptions, SKILLS } from "./skill";
 
 export interface AddOptions extends ProjectOptions {
-	/** The skill to install, as `skills ls` names it. */
+	/** The skill to install, as `skills list` names it. */
 	skill: string;
 }
 

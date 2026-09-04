@@ -6,12 +6,12 @@ import { t } from "webappwiz/t";
 // rather than read, so declaring the commands needs no filesystem.
 import { version } from "./package.json";
 import { add as addRule } from "./rules/add";
-import { ls as lsRules } from "./rules/ls";
+import { list as listRules } from "./rules/list";
 import { newRule } from "./rules/new";
 import { review } from "./rules/review";
 import { update as updateRules } from "./rules/update";
 import { add } from "./skills/add";
-import { ls } from "./skills/ls";
+import { list } from "./skills/list";
 import { update as updateSkills } from "./skills/update";
 import { update } from "./update";
 
@@ -49,13 +49,13 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.description("keep rules in .wiz/rules, and divide a review of them up");
 
 	rules
-		.command("ls")
+		.command("list")
 		.description("list the rules there are, and what the project has of them")
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "project to inspect (default: .)",
 		})
-		.action((opts, { log, fs }) => lsRules({ ...opts, log, fs }));
+		.action((opts, { log, fs }) => listRules({ ...opts, log, fs }));
 
 	rules
 		.command("new")
@@ -73,7 +73,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.arg("rule", t.string(), {
 			default: "",
 			description:
-				"rule id, as `rules ls` lists it; the project with --recommended",
+				"rule id, as `rules list` names it; the project with --recommended",
 		})
 		.arg("dir", t.string(), {
 			default: ".",
@@ -119,13 +119,13 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.description("manage webappwiz agent skills in .agents/skills");
 
 	skills
-		.command("ls")
+		.command("list")
 		.description("list the skills there are, and what the project has of them")
 		.arg("dir", t.string(), {
 			default: ".",
 			description: "project to inspect (default: .)",
 		})
-		.action((opts, { log, fs }) => ls({ ...opts, log, fs }));
+		.action((opts, { log, fs }) => list({ ...opts, log, fs }));
 
 	skills
 		.command("add")

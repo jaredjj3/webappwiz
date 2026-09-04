@@ -121,7 +121,7 @@ It reads the rule and decides the fix. You still have not read it.
 
 When asked to write a rule, or to add one from the catalog:
 
-- `rules ls` lists every rule that ships and every rule the project has.
+- `rules list` lists every rule that ships and every rule the project has.
 - `rules add <id>` copies a shipped rule into `.wiz/rules/<id>/RULE.md`,
   where it runs and can be edited. `rules add --recommended` copies every
   rule the catalog recommends at once, which is how a project starts.
@@ -131,7 +131,7 @@ When asked to write a rule, or to add one from the catalog:
   `medium` or `high`). The body is yours, as a skill's is: the template
   suggests a title, the prose an agent judges by, and `## Good` and
   `## Bad` sections with examples, and nothing checks for them. Fill it in,
-  delete the comment that explains it, and run `rules ls`: it validates the
+  delete the comment that explains it, and run `rules list`: it validates the
   frontmatter of every rule and names the line that is wrong.
 
 Rules are English. A rule that only concerns some files says so in its glob;

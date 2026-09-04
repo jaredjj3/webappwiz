@@ -128,13 +128,13 @@ interface AppDeps extends Deps {
 
 export const app = cli<AppDeps>("app");
 
-app.command("ls").action((opts, { fs, log }) => /* … */);
+app.command("list").action((opts, { fs, log }) => /* … */);
 
 // index.ts, the bin: the only place a real dependency is made
 await app.run({ fs: new NodeFs() });
 
 // app.test.ts
-await app.run({ log: new MemoryLogger(), ps: new FakePs(), fs: new FakeFs() }, ["ls"]);
+await app.run({ log: new MemoryLogger(), ps: new FakePs(), fs: new FakeFs() }, ["list"]);
 ```
 
 `Deps` is the minimum: a `Logger` to print help and errors through, and a `Ps`

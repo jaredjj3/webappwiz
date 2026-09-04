@@ -238,7 +238,7 @@ describe("Command", () => {
 		).toThrow("missing required argument <task>");
 
 		let got: unknown;
-		new Command("ls")
+		new Command("list")
 			.arg("task", t.string(), { default: "all" })
 			.action((opts) => {
 				got = opts;

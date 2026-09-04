@@ -1,6 +1,6 @@
 ---
 name: {{name}}
-description: One line saying what the rule wants, as `rules ls` shows it.
+description: One line saying what the rule wants, as `rules list` shows it.
 files: "**/*.ts"
 level: error
 complexity: medium

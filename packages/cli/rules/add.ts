@@ -4,7 +4,7 @@ import { Documents } from "../documents";
 import { offered, RULES, type RulesProjectOptions } from "./rule-set";
 
 export interface AddOptions extends RulesProjectOptions {
-	/** The rule to install, as `rules ls` names it; empty with `recommended`. */
+	/** The rule to install, as `rules list` names it; empty with `recommended`. */
 	rule: string;
 	/** Install every rule on offer that recommends itself, instead of one. */
 	recommended?: boolean;

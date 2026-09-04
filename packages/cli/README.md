@@ -5,10 +5,10 @@ rules up for an agent to run.
 
 ```bash
 bunx @webappwiz/cli update                 # pin webappwiz deps, like bun update
-bunx @webappwiz/cli skills ls              # what there is, and what you have
+bunx @webappwiz/cli skills list            # what there is, and what you have
 bunx @webappwiz/cli skills add review      # install an agent skill
 bunx @webappwiz/cli skills update          # refresh the ones already installed
-bunx @webappwiz/cli rules ls               # every rule there is, and what you have
+bunx @webappwiz/cli rules list             # every rule there is, and what you have
 bunx @webappwiz/cli rules new <name>       # scaffold a rule of your own
 bunx @webappwiz/cli rules add <id>         # copy a shipped rule in
 bunx @webappwiz/cli rules add --recommended   # copy the recommended ones
@@ -31,7 +31,7 @@ one-class-per-file   error    low          yes           **/*.ts        0.1.0   
 mine                 error    medium       -             **/*.ts        -        local       What this project wants.
 ```
 
-`ls` validates the frontmatter of every rule the project has and refuses to
+`list` validates the frontmatter of every rule the project has and refuses to
 list a broken one, naming the file and line instead. The body is the author's,
 as a skill's is. `new` writes a `RULE.md` to fill in, with a comment saying
 what goes where. `add` copies a shipped rule in, where it runs
@@ -116,7 +116,7 @@ Each skill's frontmatter carries the version it came from, so a stale copy is
 visible rather than merely wrong.
 
 ```bash
-bunx @webappwiz/cli skills ls ./project
+bunx @webappwiz/cli skills list ./project
 bunx @webappwiz/cli skills add review ./project
 bunx @webappwiz/cli skills update ./project
 ```
@@ -135,8 +135,9 @@ infrastructure by hand.
 
 `add` installs one skill by name. `update` refreshes the ones a project already
 has and never installs a new one: which skills a project uses is its own
-business, and a skill nobody chose should not arrive by way of an update. `ls`
-answers the one thing neither can: which version a project is actually holding.
+business, and a skill nobody chose should not arrive by way of an update.
+`list` answers the one thing neither can: which version a project is actually
+holding.
 
 Both replace what is there; local edits to a synced skill do not survive, and
 are not meant to.

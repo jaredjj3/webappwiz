@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { ruleDoc } from "@webappwiz/rules/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { FakeFs } from "webappwiz/system/testing";
-import { ls } from "./ls";
+import { list } from "./list";
 
-describe("rules ls", () => {
+describe("rules list", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
 	const rules = {
@@ -36,7 +36,7 @@ describe("rules ls", () => {
 	});
 
 	it("lists every shipped rule with what a review needs to know of it", async () => {
-		await ls({ dir: "/p", log, fs, rules });
+		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toEqual(
 			[
@@ -50,7 +50,7 @@ describe("rules ls", () => {
 	it("shows the version a copy came from beside the one that ships", async () => {
 		await install("no-foo", ruleDoc("no-foo", { version: "0.9.0" }));
 
-		await ls({ dir: "/p", log, fs, rules });
+		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain(
 			"no-foo   error     medium       yes           **/*.ts   1.0.0   0.9.0",
@@ -61,7 +61,7 @@ describe("rules ls", () => {
 	it("lists a rule the project wrote itself as local", async () => {
 		await install("mine", ruleDoc("mine", { description: "Mine." }));
 
-		await ls({ dir: "/p", log, fs, rules });
+		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain(
 			"mine     error     medium       -             **/*.ts   -       local       Mine.",
@@ -75,7 +75,7 @@ describe("rules ls", () => {
 			ruleDoc("no-foo", { description: "Edited.", version: "1.0.0" }),
 		);
 
-		await ls({ dir: "/p", log, fs, rules });
+		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain("Edited.");
 		expect(printed()).not.toContain("No foo.");
@@ -87,7 +87,7 @@ describe("rules ls", () => {
 			ruleDoc("broken").replace("level: error", "level: loud"),
 		);
 
-		await expect(ls({ dir: "/p", log, fs, rules })).rejects.toThrow(
+		await expect(list({ dir: "/p", log, fs, rules })).rejects.toThrow(
 			".wiz/rules/broken/RULE.md:5: level: expected one of error, warning",
 		);
 	});

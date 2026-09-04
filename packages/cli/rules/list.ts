@@ -9,7 +9,7 @@ import { offered, RULES, type RulesProjectOptions } from "./rule-set";
  * could add, one row each. A rule the project holds a copy of shows the
  * version it came from beside the one that ships, so a stale copy is visible.
  */
-export async function ls(opts: RulesProjectOptions): Promise<void> {
+export async function list(opts: RulesProjectOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const documents = new Documents(offered(opts), RULES, opts);
 	// Loading validates: a rule in the project that would not review is an

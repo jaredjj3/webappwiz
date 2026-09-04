@@ -4,7 +4,7 @@ import skeleton from "./template/RULE.md" with { type: "text" };
 /**
  * A `RULE.md` for a rule named `name`, ready to fill in: every field a review
  * needs, the shape a rule usually takes, and a comment saying what goes where.
- * It parses as it is, so `rules ls` accepts it before it is written.
+ * It parses as it is, so `rules list` accepts it before it is written.
  */
 export function template(name: string): string {
 	const title = name
