@@ -28,14 +28,14 @@ the commands; this file covers only what the CLI cannot tell you.
    Read the summary line before anything else: when it says more blocks than
    about twenty, stop and ask before starting any (see below).
 3. Run every block through whatever this harness gives you for parallel work:
-   subagents, background tasks, a workflow, worktrees, whatever is at hand.
-   One agent per block, started together, each given the whole block verbatim
-   as its prompt and nothing else. The block already says which rules to read,
-   which files to judge, how to see the change, and how to answer. Never put
-   two blocks in front of the same agent, and never run one yourself: both
-   end with rules in a context that is supposed to stay clear of them. If
-   nothing here runs work in parallel, still send one block to one agent and
-   do it in turn.
+   subagents, background tasks, a workflow, whatever is at hand. One agent per
+   block, started together, each in a worktree of its own, each given the whole
+   block verbatim as its prompt and nothing else. The block already says which
+   rules to read, which files to judge, how to see the change, and how to
+   answer. Never put two blocks in front of the same agent, and never run one
+   yourself: both end with rules in a context that is supposed to stay clear of
+   them. If nothing here runs work in parallel, still send one block to one
+   agent and do it in turn.
 4. Collect the replies. Each is a JSON array of `{rule, file, line, message}`,
    empty when the block's rules found nothing.
 5. Report the findings grouped by file, each with its rule id and that rule's
@@ -44,6 +44,27 @@ the commands; this file covers only what the CLI cannot tell you.
 
 If a block's reply is not a JSON array, run that block again once, then
 report it as unanswered rather than guessing what it found.
+
+## One worktree an agent
+
+Every agent you start works in a checkout of its own, however this harness
+makes one. Agents sharing a working tree overwrite each other's work.
+
+What goes wrong is not two agents editing one file. It is an agent tidying up.
+One of them runs the project's own fix or test command to check itself, and
+that command rewrites files across the repo, or fails in files the agent never
+touched because another agent is halfway through writing them. It cannot tell
+that work from its own mess, so it reaches for `git stash` or `git checkout --`
+to find out, and takes every other agent's work with it. Then it reports
+success, because the edit it made is still there in the file it was looking at.
+
+Where the harness cannot give an agent its own tree, say so in the prompt: no
+command that changes git state, `stash`, `checkout`, `restore`, `reset` and
+`clean` alike, and nothing run repo-wide. It checks the files its block names
+and nothing else.
+
+Either way, look at the files yourself before you report what the agents found
+or changed. An agent whose work was destroyed still says it succeeded.
 
 ## When the review is expensive
 
@@ -106,8 +127,8 @@ through does not let you choose one.
 ## Fixing
 
 When asked to fix what the review found, run one agent per finding, in
-parallel the same way, each given a prompt like this and nothing else about
-the rule:
+parallel the same way and in its own worktree the same way, each given a
+prompt like this and nothing else about the rule:
 
 ```
 Read `.wiz/rules/<id>/RULE.md`. In `<file>` at line <line>, the code <message>.
@@ -116,6 +137,12 @@ reply with the diff.
 ```
 
 It reads the rule and decides the fix. You still have not read it.
+
+The agents are writing this time, so the tree each one holds is its own and the
+diffs come back to you: apply them to the real tree yourself. Two findings in
+one file go one agent after the other rather than both at once, since their
+diffs land on the same lines, and the line a finding names has moved by the
+time the second agent looks for it.
 
 ## Writing a rule
 
