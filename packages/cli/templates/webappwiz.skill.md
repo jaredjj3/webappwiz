@@ -1,6 +1,6 @@
 ---
 name: webappwiz
-description: "Check whether the webappwiz package already covers a piece of infrastructure before writing it by hand or adding a dependency for it. Read this before writing any of: time, clocks, durations or timers; logging; id generation; HTTP serving; CLI argument parsing; background tasks or queues; web workers; markdown parsing; typed event emitters; 2D geometry or spatial indexes; filesystem, env or process access; typed RPC over fetch; schema validation; AbortSignal plumbing; disposable resources; browser scroll, animation frames or visibility. Also use whenever the user says webappwiz."
+description: "Check whether the webappwiz package already covers a piece of infrastructure before writing it by hand or adding a dependency for it. Read this before writing any of: time, clocks, durations or timers; logging; id generation; HTTP serving; CLI argument parsing; background tasks or queues; web workers; markdown parsing; typed event emitters; 2D geometry or spatial indexes; filesystem, env or process access; typed RPC over fetch; schema validation; AbortSignal plumbing; disposable resources; browser scroll, animation frames or visibility. Also use when asked to update or upgrade webappwiz in a project, and whenever the user says webappwiz."
 version: 0.0.11
 ---
 
@@ -50,6 +50,25 @@ style guide and a review, and neither of them is here.
 
 One line naming the subpath you read and why it is not the one, then write it
 here. A wrong module taken up is worse than one written twice.
+
+## Updating
+
+`bunx @webappwiz/cli update` rewrites every webappwiz dependency under the
+directory to one version, since they are released together and a project
+running two of them at different versions is running a combination nobody
+tested. The version is the one you invoked, which is what `bunx` is for.
+Installed skills and copied rules are refreshed with it, and local edits to
+those do not survive.
+
+It edits manifests and stops. Nothing is installed until you run `bun install`
+yourself, and nothing is verified until you run this project's typecheck and
+tests.
+
+What broke is read the same way as anything else here: the module's own README
+and the exports of its `index.ts`, not the one-line blurb and not a guess. If
+the new version dropped what this project was using, that is a gap: leave the
+local code working, and hand it over with the block above. Do not vendor,
+fork, or patch `node_modules` to get the build green.
 
 ## Rules
 
