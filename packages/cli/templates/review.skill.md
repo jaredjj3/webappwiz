@@ -39,9 +39,10 @@ the commands; this file covers only what the CLI cannot tell you.
 4. Collect the replies. Each is a JSON array of `{rule, file, line, message}`,
    empty when the block's rules found nothing.
 5. Write the report, findings then fix plan, to a timestamped file under
-   `.wiz/reviews`, and print the same thing in your reply. Then stop. Fixing
-   is a separate decision, and the plan is there to be cut down or ignored,
-   not to be started.
+   `.wiz/reviews`, and print the same thing in your reply. Then ask the user
+   whether to run the fix plan as written, change it, or leave it, and stop
+   there. Fixing is a separate decision, and the plan is there to be cut down
+   or ignored, not to be started.
 
 If a block's reply is not a JSON array, run that block again once, then
 report it as unanswered rather than guessing what it found.
@@ -118,10 +119,19 @@ is spent.
 say so.
 ````
 
-Then offer it in your reply: the plan runs only if asked, and the user can
-take a part of it instead, by file or by level. Dropping the warnings and
-fixing the errors is the usual answer, and a plan of many agents is worth
-saying out loud the way an expensive review is. Wait for the answer.
+Printing the plan is not offering it. End your reply with the question itself,
+in as many words: ask the user whether to run the plan as written, to change it
+before it runs, or to leave it. A plan that merely sits at the bottom of a
+report gets read as work you are about to start, and the user finds out you
+started it by seeing the files change.
+
+Say what changing it means, since the user cannot shrink a plan they cannot see
+the seams of: they can take part of it instead, by file or by level. Dropping
+the warnings and fixing the errors is the usual answer. A plan of many agents
+is worth saying out loud the way an expensive review is.
+
+Then wait. Nothing runs until the user answers, and an answer to some other
+question is not an answer to this one.
 
 ## One worktree an agent
 

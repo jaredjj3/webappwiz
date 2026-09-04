@@ -43,5 +43,8 @@ ARBOR.md
 .playwright-mcp
 .arbor-shots
 
+# review reports (wiz rules review)
+.wiz/reviews
+
 # the arbor dev page, compiled by packages/arbor/build.ts
 packages/arbor/dev/build
