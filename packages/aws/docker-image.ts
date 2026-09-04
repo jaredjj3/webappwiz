@@ -15,8 +15,6 @@ type Env = {
 	secrets?: Record<string, secretsmanager.ISecret>;
 };
 
-// rule-ignore one-dir-per-interface: apps composing this package supply their own
-// images, so the contract is the point even with one implementation shipped here
 /** What a service needs from an image: how to run it, and what to run it with. */
 export interface ServiceImage {
 	/** A content hash of the built image, stable while the image is unchanged. */

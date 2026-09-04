@@ -1,5 +1,3 @@
-// rule-ignore-file one-dir-per-interface: this is the package entry point named in
-// package.json exports, not a barrel sitting inside an interface's directory
 export type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs/fs";
 export { NodeFs } from "./fs/node-fs";
 export type { Glob } from "./glob/glob";

@@ -1,5 +1,3 @@
-// rule-ignore-file one-dir-per-interface: a barrel for the one directory this
-// package exists to ship, listed so that adding a rule is a line here
 import classesOverFunctionExports from "./classes-over-function-exports/RULE.md" with {
 	type: "text",
 };
@@ -27,9 +25,6 @@ import objectsOverCallbacks from "./objects-over-callbacks/RULE.md" with {
 	type: "text",
 };
 import oneClassPerFile from "./one-class-per-file/RULE.md" with {
-	type: "text",
-};
-import oneDirPerInterface from "./one-dir-per-interface/RULE.md" with {
 	type: "text",
 };
 import parametersDeclareFields from "./parameters-declare-fields/RULE.md" with {
@@ -63,7 +58,6 @@ export const catalog: Record<string, string> = {
 	"no-em-dashes": noEmDashes,
 	"objects-over-callbacks": objectsOverCallbacks,
 	"one-class-per-file": oneClassPerFile,
-	"one-dir-per-interface": oneDirPerInterface,
 	"parameters-declare-fields": parametersDeclareFields,
 	"reactive-over-use-state": reactiveOverUseState,
 	"resources-are-disposable": resourcesAreDisposable,
