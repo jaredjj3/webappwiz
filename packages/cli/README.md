@@ -6,7 +6,7 @@ rules up for an agent to run.
 ```bash
 bunx @webappwiz/cli update                 # pin webappwiz deps, like bun update
 bunx @webappwiz/cli skills ls              # what there is, and what you have
-bunx @webappwiz/cli skills add rules-review   # install an agent skill
+bunx @webappwiz/cli skills add review      # install an agent skill
 bunx @webappwiz/cli skills update          # refresh the ones already installed
 bunx @webappwiz/cli rules ls               # every rule there is, and what you have
 bunx @webappwiz/cli rules new <name>       # scaffold a rule of your own
@@ -61,8 +61,8 @@ is none: [{"file": ..., "line": ..., "message": ...}]
 A block is the whole prompt for one subagent. It names the rule's file rather
 than quoting it, so the agent that prints the blocks and spawns the subagents
 never reads a rule, and the rules stay out of its context. The heading
-carries the rule's complexity, for choosing a model. The `rules-review` skill
-teaches an agent the loop.
+carries the rule's complexity, for choosing a model. The `review` skill teaches
+an agent the loop.
 
 Code excuses itself from a rule with a `rule-ignore <id>: <reason>` comment
 above the line, or `rule-ignore-file <id>: <reason>` for the file.
@@ -91,20 +91,19 @@ visible rather than merely wrong.
 
 ```bash
 bunx @webappwiz/cli skills ls ./project
-bunx @webappwiz/cli skills add rules-review ./project
+bunx @webappwiz/cli skills add review ./project
 bunx @webappwiz/cli skills update ./project
 ```
 
 ```
-SKILL         SHIPS  INSTALLED
-arbor         1.4.0  1.3.0
-rules-review  1.4.0  -
-webappwiz     1.4.0  -
+SKILL      SHIPS  INSTALLED
+arbor      1.4.0  1.3.0
+review     1.4.0  -
+webappwiz  1.4.0  -
 ```
 
 Three ship: `arbor`, which lands an agent's work from its own worktree;
-`rules-review`, which runs the rules through subagents without reading one;
-and
+`review`, which runs the rules through subagents without reading one; and
 `webappwiz`, which sends an agent to the package's catalogue before it writes
 infrastructure by hand.
 
