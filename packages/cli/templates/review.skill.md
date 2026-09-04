@@ -1,7 +1,7 @@
 ---
 name: review
 description: "Review a change against the RULE.md rules in this project's .wiz/rules directory by handing blocks of rules to separate agents, without reading a rule yourself. Use only when the project has a .wiz/rules directory and the user asks to run, check, or apply the rules, the wiz rules, or the webappwiz rules to a change, or asks to write, add, or edit a rule there. Not for a general code review, a pull request review, a security review, or any review that does not name the rules."
-version: 0.0.12
+version: 0.0.13
 ---
 
 # Reviewing against the rules
@@ -38,12 +38,84 @@ the commands; this file covers only what the CLI cannot tell you.
    agent and do it in turn.
 4. Collect the replies. Each is a JSON array of `{rule, file, line, message}`,
    empty when the block's rules found nothing.
-5. Report the findings grouped by file, each with its rule id and that rule's
-   level, which the block lists beside the rule's path. Then stop. Fixing is a
-   separate decision.
+5. Write the report, findings then fix plan, to a timestamped file under
+   `.wiz/reviews`, and print the same thing in your reply. Then stop. Fixing
+   is a separate decision, and the plan is there to be cut down or ignored,
+   not to be started.
 
 If a block's reply is not a JSON array, run that block again once, then
 report it as unanswered rather than guessing what it found.
+
+## The report
+
+The report goes in a file of its own, named for the moment the review
+finished: `.wiz/reviews/2026-09-04-143251.md`, `YYYY-MM-DD-HHMMSS` in local
+time, so a listing sorts oldest first and two reviews of one change never
+collide. Create `.wiz/reviews` if it is not there. Print the same report in
+your reply and print the path with it, since the file is the copy that
+outlives the session.
+
+It opens with the summary line as `rules review` printed it, so the page says
+what it covered. Then the findings, grouped by file and laid out the way a
+linter lays them out, because that is the shape everyone already reads without
+being taught: the file as a heading, then one line a finding, the line number
+first, then the level the block listed beside that rule's path, then the
+message, then the rule that raised it, padded into columns.
+
+````markdown
+# Review 2026-09-04 14:32:51
+
+9 files changed since main; 17 rules matched, 6 blocks to review.
+
+## Findings
+
+### packages/cli/rules/review.ts
+
+```
+  42  error    the export sits below two helpers       export-leads-the-file
+  87  warning  the comment restates the next line      comments-say-why-not-what
+```
+
+### packages/cli/skills/add.ts
+
+```
+  13  error    the options object is not last          named-options-last
+```
+
+3 problems (2 errors, 1 warning)
+````
+
+A file no rule found anything in does not appear. A review that found nothing
+says so where the findings would be, and still gets its file: a record that
+the rules ran and were quiet is worth as much as a list of what they caught.
+A block that never answered goes under `## Unanswered` with its heading line
+and the files it covered, so what the review missed is on the page rather than
+absent from it, and so is any block the user chose not to run.
+
+## The fix plan
+
+The report ends with the plan, because a page of findings raises the question
+of who fixes them, and how the fixing divides is already settled: one agent a
+file, holding every finding that file has. So the plan is arithmetic on the
+findings, and writing it out is what lets the user shrink it before anything
+is spent.
+
+````markdown
+## Fix plan
+
+| agent | file | findings | rules |
+| ----- | ---- | -------- | ----- |
+| 1 | `packages/cli/rules/review.ts` | 2 | export-leads-the-file, comments-say-why-not-what |
+| 2 | `packages/cli/skills/add.ts` | 1 | named-options-last |
+
+2 agents, run together, each in a worktree of its own. Nothing runs until you
+say so.
+````
+
+Then offer it in your reply: the plan runs only if asked, and the user can
+take a part of it instead, by file or by level. Dropping the warnings and
+fixing the errors is the usual answer, and a plan of many agents is worth
+saying out loud the way an expensive review is. Wait for the answer.
 
 ## One worktree an agent
 
@@ -126,9 +198,10 @@ through does not let you choose one.
 
 ## Fixing
 
-When asked to fix what the review found, run one agent per file, in parallel
-the same way and in its own worktree the same way, each given every finding
-that file has and a prompt like this, and nothing else about the rules:
+When the user takes the fix plan, or the part of it they picked, run it: one
+agent a file, in parallel the same way and in its own worktree the same way,
+each given every finding that file has and a prompt like this, and nothing
+else about the rules:
 
 ```
 Read `.wiz/rules/<id>/RULE.md` for each rule named below. In `<file>`:
