@@ -63,7 +63,8 @@ command runs): watch a task's status, never its lease.
    is invoked with a branch argument (`/arbor feature/auth`), or the user
    names the branch the work should land on, pass it as `--base` to every
    task you create for that request. Otherwise omit `--base`; never guess a
-   base from the currently checked-out branch.
+   base from the currently checked-out branch, unless you are handing out part
+   of your own task (below).
 2. Fill in the `ARBOR.md` stub `add` wrote at the worktree root (see below)
    before touching code.
 3. Do the work, updating `ARBOR.md` as you go; commit with git (arbor never
@@ -72,6 +73,26 @@ command runs): watch a task's status, never its lease.
 
 A successful merge deletes the worktree, and your working directory with it:
 `cd` to the main tree (merge prints its path) before running anything else.
+
+## Handing out part of your task
+
+arbor runs from inside a worktree as well as from the main tree, so you can
+hand part of your own task to other agents from within yours. Each part gets
+its own task based on yours: `arbor add <part> --base task/<your task>`, then
+`arbor merge` as usual. It lands on your branch rather than trunk, and you
+land the lot with your own merge.
+
+A part lands by fast-forwarding your branch where it is checked out, which is
+the tree you are standing in, so:
+
+- Keep your tree committed while parts are out. Git refuses a merge that would
+  overwrite uncommitted changes, and that failure lands on the other agent
+  rather than on you.
+- Expect files to appear and change under you. After a part lands, re-read
+  what you are about to edit instead of writing it from memory.
+
+Split only along lines that make separate tasks: a part is worth handing out
+when saying what it needs is shorter than doing it.
 
 ## Escalation
 
