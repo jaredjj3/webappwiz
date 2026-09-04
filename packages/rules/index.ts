@@ -1,4 +1,5 @@
 export { Block } from "./block";
+export { Budget, type Cap } from "./budget";
 export { type ChangedFile, type ChangedOptions, changed } from "./changed";
 export { RULE_FILE, RULES_ROOT } from "./layout";
 export {
@@ -11,9 +12,6 @@ export {
 	RuleError,
 } from "./rule";
 export {
-	CAPS,
-	type Cap,
-	DEFAULT_CHUNK,
 	type LoadOptions,
 	type ReviewOptions,
 	Rules,

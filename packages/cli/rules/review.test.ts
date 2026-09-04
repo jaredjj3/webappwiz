@@ -18,10 +18,10 @@ describe("rules review", () => {
 		await fs.write(`/p/.wiz/rules/${id}/RULE.md`, doc);
 	};
 
-	const reviewing = (since = "main") => ({
+	const reviewing = (since = "main", budget?: number) => ({
 		dir: "/p",
 		since,
-		chunk: 25,
+		budget,
 		log,
 		fs,
 		ps,
@@ -55,6 +55,21 @@ describe("rules review", () => {
 		expect(printed()).toContain("`.wiz/rules/no-foo/RULE.md` (no-foo, error)");
 		expect(printed()).toContain("`.wiz/rules/no-fox/RULE.md` (no-fox, error)");
 		expect(printed()).not.toContain("no-baz");
+	});
+
+	it("holds a block to the pairs it is budgeted", async () => {
+		await install("no-foo", ruleDoc("no-foo", { complexity: "low" }));
+		await install("no-fox", ruleDoc("no-fox", { complexity: "low" }));
+		ps.setCaptureOutput("a.ts\nb.ts\nc.ts\nd.ts\n", "");
+
+		await review(reviewing("main", 4));
+
+		expect(printed()).toContain(
+			"\n## block 1 (2 rules, 2 files, complexity low)\n",
+		);
+		expect(printed()).toContain(
+			"\n## block 2 (2 rules, 2 files, complexity low)\n",
+		);
 	});
 
 	it("measures the change from the ref it is given", async () => {

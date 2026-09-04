@@ -1,4 +1,4 @@
-import { changed, Rules } from "@webappwiz/rules";
+import { Budget, changed, Rules } from "@webappwiz/rules";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import type { Fs, Glob, Ps } from "webappwiz/system";
 
@@ -7,8 +7,11 @@ export interface ReviewOptions {
 	dir: string;
 	/** The git ref the change is measured from. */
 	since: string;
-	/** Files per block, at most. */
-	chunk: number;
+	/**
+	 * Rule-file pairs per block, at most, for every complexity; what each
+	 * complexity is worth when not given.
+	 */
+	budget?: number;
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
@@ -34,7 +37,13 @@ export async function review(opts: ReviewOptions): Promise<void> {
 		log.info(`nothing has changed since ${opts.since}`);
 		return;
 	}
-	const blocks = rules.review(files, { chunk: opts.chunk, glob: opts.glob });
+	const blocks = rules.review(files, {
+		budget:
+			opts.budget === undefined
+				? Budget.default()
+				: Budget.default().withPairs(opts.budget),
+		glob: opts.glob,
+	});
 	const count = (total: number, noun: string) =>
 		`${total} ${noun}${total === 1 ? "" : "s"}`;
 	if (blocks.length === 0) {

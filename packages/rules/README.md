@@ -51,7 +51,7 @@ carries `version`; one a project wrote does not.
 ```ts
 const rules = await Rules.load(dir);
 const files = await changed(dir, "main");
-for (const block of rules.review(files, { chunk: 25 })) {
+for (const block of rules.review(files, { budget: Budget.default() })) {
 	console.log(block.prompt("main"));
 }
 ```
@@ -68,11 +68,13 @@ and level, the files, how to see the change, and the reply contract. It names
 a rule's file rather than quoting it, so whoever prints the prompt never reads
 the rule. Its heading carries the complexity for whoever chooses the model.
 
-`CAPS` is how much a block may hold, by complexity: a rule cap, which is what
-keeps the review fanned out when one file changed, and a budget of rule-file
-pairs, which keeps a wide, deep block from becoming a long serial slog. `low`
-batches wide, `high` takes a block per rule, and `chunk` caps the files in any
-of them.
+`Budget` is how much a block may hold, by complexity, and the caller's to set:
+a rule cap, which is what keeps the review fanned out when one file changed,
+and a budget of rule-file pairs, which keeps a wide, deep block from becoming
+a long serial slog. `Budget.default()` batches `low` wide and gives `high` a
+block a rule; `Budget.of` states a roster in full, and `withPairs` re-budgets
+every complexity at once. Files are what the pairs buy, so a block of `r`
+rules takes `pairs / r` of them.
 
 ## The template
 

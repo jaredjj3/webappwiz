@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { FakeFs } from "webappwiz/system/testing";
+import { Budget } from "./budget";
 import type { ChangedFile } from "./changed";
 import { Rule } from "./rule";
 import { Rules } from "./rules";
@@ -67,9 +68,14 @@ describe("Rules", () => {
 		expect(rules.get("beta")).toBeUndefined();
 	});
 
-	const plan = (rules: Rules, files: ChangedFile[], chunk?: number) =>
+	const plan = (rules: Rules, files: ChangedFile[], pairs?: number) =>
 		rules
-			.review(files, chunk === undefined ? {} : { chunk })
+			.review(
+				files,
+				pairs === undefined
+					? {}
+					: { budget: Budget.default().withPairs(pairs) },
+			)
 			.map((block) => [
 				block.number,
 				block.rules.map((rule) => rule.id),
@@ -121,7 +127,7 @@ describe("Rules", () => {
 		]);
 	});
 
-	it("splits a gathering wider than its complexity's rule cap", () => {
+	it("splits a gathering wider than its rule cap", () => {
 		const ids = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 		const rules = Rules.of(
 			ids.map((id) => Rule.parse(ruleDoc(id, { complexity: "low" }))),
@@ -135,7 +141,7 @@ describe("Rules", () => {
 		]);
 	});
 
-	it("splits a gathering deeper than its complexity's pair budget", () => {
+	it("splits a gathering deeper than its pair budget", () => {
 		const rules = Rules.of(
 			["a", "b", "c", "d"].map((id) =>
 				Rule.parse(ruleDoc(id, { complexity: "medium" })),
@@ -157,7 +163,7 @@ describe("Rules", () => {
 		expect(block?.files).toEqual([{ path: "a.ts", added: true }]);
 	});
 
-	it("cuts a block with more files than the chunk into even blocks", () => {
+	it("cuts a block with more files than its budget into even blocks", () => {
 		const rules = Rules.of([Rule.parse(ruleDoc("source"))]);
 		const files = ["a", "b", "c", "d", "e"].map((name) => file(`${name}.ts`));
 

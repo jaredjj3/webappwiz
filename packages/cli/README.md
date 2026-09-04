@@ -84,7 +84,9 @@ listed with its level, so findings can be reported without opening anything.
 How wide a block goes depends on that complexity: a `low` rule is a grep, so
 several ride together, while a `high` rule takes a block to itself, where a
 second rule in the prompt would cost more attention than the reread it saves.
-`--chunk` caps the files in a block whatever the complexity.
+`--budget` is the lever over all of it, the rule-file pairs a block may hold,
+which is the files it takes when it holds one rule. A block of five rules
+under `--budget 40` takes eight files.
 
 The `review` skill teaches an agent the loop.
 

@@ -1,5 +1,6 @@
 import { type Fs, type Glob, NodeFs, NodeGlob } from "webappwiz/system";
 import { Block } from "./block";
+import { Budget } from "./budget";
 import type { ChangedFile } from "./changed";
 import { RULE_FILE, RULES_ROOT } from "./layout";
 import { type Complexity, Rule, RuleError } from "./rule";
@@ -11,38 +12,11 @@ export interface LoadOptions {
 
 /** How a review cuts the work up. */
 export interface ReviewOptions {
-	/** Files per block, at most. A block over more files gets split. */
-	chunk?: number;
+	/** How much a block may hold; the default budget when not given. */
+	budget?: Budget;
 	/** Matches globs to paths; the real matcher by default. */
 	glob?: Glob;
 }
-
-/** Files per block when a caller does not say. */
-export const DEFAULT_CHUNK = 25;
-
-/** How much one block may hold. */
-export interface Cap {
-	/** Rules per block, at most. */
-	rules: number;
-	/** Rule-file pairs per block, at most: how much judging one agent does. */
-	pairs: number;
-}
-
-/**
- * What each complexity reviews under. Two caps, because they stop different
- * things: the pair budget keeps a wide, deep block from becoming a long serial
- * slog, and the rule cap is what keeps the review fanned out when one file
- * changed and the pair budget alone would hand that file every rule.
- *
- * `low` batches wide because a grep or a count settles it. `high` stays at one
- * rule a block, where a second rule in the prompt costs more attention than
- * the reread it saves, so `chunk` alone bounds it.
- */
-export const CAPS: Record<Complexity, Cap> = {
-	low: { rules: 8, pairs: 40 },
-	medium: { rules: 4, pairs: 16 },
-	high: { rules: 1, pairs: Number.POSITIVE_INFINITY },
-};
 
 /** Rules of one complexity, and the files every one of them matches. */
 interface Rectangle {
@@ -110,23 +84,21 @@ export class Rules {
 	 * The blocks a change divides into: rules that match the same files, of
 	 * the same complexity, gathered so one subagent reads each of those files
 	 * once and judges it against all of them. A gathering wider or deeper than
-	 * its complexity's `CAPS` allows is split, and so is one over more than
-	 * `chunk` files. A rule matching nothing gets no block: there is nothing to
-	 * say about it.
+	 * `budget` allows is cut until it fits. A rule matching nothing gets no
+	 * block: there is nothing to say about it.
 	 */
 	review(files: ChangedFile[], opts: ReviewOptions = {}): Block[] {
-		const chunk = opts.chunk ?? DEFAULT_CHUNK;
+		const budget = opts.budget ?? Budget.default();
 		const glob = opts.glob ?? new NodeGlob();
 		const blocks: Block[] = [];
-		for (const rectangle of this.rectangles(files, glob)) {
-			const cap = CAPS[rectangle.complexity];
-			for (const rules of split(rectangle.rules, cap.rules)) {
-				const most = Math.max(
-					1,
-					Math.min(chunk, Math.floor(cap.pairs / rules.length)),
-				);
-				for (const part of split(rectangle.files, most)) {
-					blocks.push(new Block(blocks.length + 1, rules, part));
+		for (const { complexity, rules, files: matched } of this.rectangles(
+			files,
+			glob,
+		)) {
+			for (const held of split(rules, budget.rules(complexity))) {
+				const most = budget.files(complexity, held.length);
+				for (const part of split(matched, most)) {
+					blocks.push(new Block(blocks.length + 1, held, part));
 				}
 			}
 		}

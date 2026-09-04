@@ -25,6 +25,9 @@ the commands; this file covers only what the CLI cannot tell you.
    and then one block per unit of work, each starting with a `## ` heading.
    A block gathers the rules that match the same files, so its agent reads
    each file once and judges it against all of them rather than once a rule.
+   How wide and deep a block goes follows its complexity; `--budget <pairs>`
+   holds every block to fewer rule-file pairs when a review is too costly, or
+   more when a change is large enough that the agents are the cost.
 3. Run every block through whatever this harness gives you for parallel work:
    subagents, background tasks, a workflow, worktrees, whatever is at hand.
    One agent per block, started together, each given the whole block verbatim

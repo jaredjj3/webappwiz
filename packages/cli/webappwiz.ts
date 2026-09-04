@@ -1,4 +1,3 @@
-import { DEFAULT_CHUNK } from "@webappwiz/rules";
 import { type Cli, cli, type Deps } from "webappwiz/cmd";
 import type { Fs, Glob } from "webappwiz/system";
 import { t } from "webappwiz/t";
@@ -106,9 +105,10 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: "HEAD",
 			description: "git ref the change is measured from (default: HEAD)",
 		})
-		.option("chunk", t.number(), {
-			default: DEFAULT_CHUNK,
-			description: "files per block, at most",
+		.option("budget", t.number(), {
+			default: undefined,
+			description:
+				"rule-file pairs per block, at most, for every complexity (default: what each is worth)",
 		})
 		.action((opts, { log, fs, ps, glob }) =>
 			review({ ...opts, log, fs, ps, glob }),
