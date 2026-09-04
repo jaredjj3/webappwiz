@@ -4,7 +4,7 @@ description: Tests set up their own state; shared setup only names steps and nev
 files: "**/{*.test,testing}.ts"
 level: error
 complexity: medium
-version: 0.0.11
+version: 0.0.12
 ---
 # Tests own their state
 

@@ -4,7 +4,7 @@ description: No em dashes, and no en dashes between words, in code, comments or 
 files: "**/*.{ts,md}"
 level: error
 complexity: low
-version: 0.0.11
+version: 0.0.12
 ---
 <!-- rule-ignore-file no-em-dashes: the Bad examples have to show one -->
 

@@ -4,7 +4,7 @@ description: A test hands in a fake of a focused interface rather than mocking o
 files: "**/*.test.ts"
 level: error
 complexity: medium
-version: 0.0.11
+version: 0.0.12
 ---
 # Fakes over mocks
 

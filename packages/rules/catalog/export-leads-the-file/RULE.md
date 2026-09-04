@@ -4,7 +4,7 @@ description: The export a file is named for sits on its first screen, with helpe
 files: "**/*.ts"
 level: error
 complexity: low
-version: 0.0.11
+version: 0.0.12
 ---
 # Export leads the file
 

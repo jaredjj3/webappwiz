@@ -4,7 +4,7 @@ description: A file declares one top-level class.
 files: "**/*.ts"
 level: error
 complexity: low
-version: 0.0.11
+version: 0.0.12
 ---
 # One class per file
 
