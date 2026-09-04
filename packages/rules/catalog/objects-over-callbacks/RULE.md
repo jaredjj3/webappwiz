@@ -1,6 +1,6 @@
 ---
 name: objects-over-callbacks
-description: A parameter that is called after the call returns is an event or a dependency, not a callback.
+description: A function called after the call returns is an event or a dependency, and a function type you name is an interface.
 files: "**/*.ts"
 level: warning
 complexity: high
@@ -9,7 +9,7 @@ version: 0.0.12
 ---
 # Objects over callbacks
 
-This rule is about the parameters you declare, not the calls you make.
+This rule is about the function types you declare, not the calls you make.
 Passing a function to an API someone else declared, like `.map`, `.then`,
 `.action` or `Events.on`, is that API's contract and never a violation.
 A function-typed parameter of your own is judged by when the callee runs
@@ -27,6 +27,14 @@ An options bag of callbacks such as `{ onStart, onError }` is an events
 interface begging to exist. When a bare function genuinely is the cleanest
 design, keep it and `rule-ignore` the declaration with the reason: one
 marker at the declaration covers every call site.
+
+A function type you give a name is the same choice one step out. A named
+type exists to be implemented, so make it an interface with a method once
+more than one thing implements it, or a second implementation is coming,
+or anything has to inject it. A method has a name to call, and an
+implementation has a class to hold its own dependencies, which is what
+injection and extension need. A named function type with one local
+implementation that nothing injects can stay a function type.
 
 ## Good
 
@@ -59,6 +67,22 @@ export class Saver {
 }
 ```
 
+A contract with more than one implementation is an interface:
+
+```ts
+export interface Detector<Input, Output> {
+	detect(input: Input): Output;
+}
+
+export class RegexDetector implements Detector<string, boolean> {
+	constructor(private pattern: RegExp) {}
+
+	detect(input: string): boolean {
+		return this.pattern.test(input);
+	}
+}
+```
+
 A function run during the call to compute its result is fine:
 
 ```ts
@@ -85,5 +109,15 @@ export class Saver {
 		write(path);
 		onDone();
 	}
+}
+```
+
+A named function type that several things implement, and something injects:
+
+```ts
+export type Detector<Input, Output> = (input: Input) => Output;
+
+export class Scanner {
+	constructor(private detect: Detector<string, boolean>) {}
 }
 ```
