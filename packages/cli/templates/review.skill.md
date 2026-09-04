@@ -25,9 +25,8 @@ the commands; this file covers only what the CLI cannot tell you.
    and then one block per unit of work, each starting with a `## ` heading.
    A block gathers the rules that match the same files, so its agent reads
    each file once and judges it against all of them rather than once a rule.
-   How wide and deep a block goes follows its complexity; `--budget <pairs>`
-   holds every block to fewer rule-file pairs when a review is too costly, or
-   more when a change is large enough that the agents are the cost.
+   Read the summary line before anything else: when it says more blocks than
+   about twenty, stop and ask before starting any (see below).
 3. Run every block through whatever this harness gives you for parallel work:
    subagents, background tasks, a workflow, worktrees, whatever is at hand.
    One agent per block, started together, each given the whole block verbatim
@@ -45,6 +44,50 @@ the commands; this file covers only what the CLI cannot tell you.
 
 If a block's reply is not a JSON array, run that block again once, then
 report it as unanswered rather than guessing what it found.
+
+## When the review is expensive
+
+Printing blocks spawns nothing, so `rules review` itself costs nothing; the
+agents are the cost, and the summary line counts them. Each one reads its
+rules, its files and the diff, so a review of twenty blocks is twenty agents
+started at once, each reading files, and the bill climbs with the change and
+with how many rules the project has. Past about twenty blocks, or fewer when
+the files themselves are large, do not start them. Tell the user the summary
+line as printed, that this many agents are about to start together, and ask
+how to proceed. Wait for the answer; a review nobody asked to pay for is worse
+than one that waits. The ways to shrink it:
+
+- Measure from a nearer ref, so `--since` covers less of the change.
+- Run only the blocks whose files the user cares about, and say which were
+  skipped when reporting.
+- Raise `--budget` so fewer, larger blocks cover the same change.
+
+`--budget <pairs>` is the most rule-file pairs one block holds, one number
+applied to every complexity in place of the defaults (40 for `low`, 16 for
+`medium`, 25 for `high`). Rules per block stay capped as they were, so a block
+of `r` rules takes `budget / r` files: four `medium` rules under `--budget 32`
+cover eight files a block instead of four. Fewer, larger blocks means fewer
+agents, and each rule and file read fewer times over. Run `rules review`
+again with the flag and the summary line shows the new count before anything
+is spent; take a number the user agrees to, not one that merely gets under
+the line.
+
+What raising it costs, and say so when offering it:
+
+- Each agent holds more in its context, so its judgment thins: it reads each
+  file less carefully and misses more. `high` rules suffer most, since the
+  default hands them one rule a block on purpose, and a bigger budget hands
+  that rule more files.
+- One number lands on every complexity. A raise that is mild for `low` is
+  large for `medium`, whose default is the smallest.
+- Each block runs longer, so fewer agents does not mean a faster review, and
+  a block too big for its agent to read in full answers about the part it
+  read.
+- It cannot merge blocks the rule cap splits: with one changed file and
+  sixteen `low` rules there are two blocks at any budget.
+
+Lowering it is the reverse: more, smaller, sharper blocks, worth it when a
+change is small and the findings matter more than the agents.
 
 ## Choosing a model
 

@@ -8,8 +8,9 @@ export interface ReviewOptions {
 	/** The git ref the change is measured from. */
 	since: string;
 	/**
-	 * Rule-file pairs per block, at most, for every complexity; what each
-	 * complexity is worth when not given.
+	 * Rule-file pairs one block holds, at most, one number for every
+	 * complexity in place of what each is worth by default. Rules per block
+	 * stay capped, so a block of `r` rules takes `budget / r` files.
 	 */
 	budget?: number;
 	log?: Logger;

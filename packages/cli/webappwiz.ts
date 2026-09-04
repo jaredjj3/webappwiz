@@ -108,7 +108,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.option("budget", t.number(), {
 			default: undefined,
 			description:
-				"rule-file pairs per block, at most, for every complexity (default: what each is worth)",
+				"rule-file pairs one block holds, at most; a block is one agent's work, some rules of one complexity over the changed files they match, so 4 rules under 16 is 4 files. Higher means fewer, bigger blocks (default: 40 low, 16 medium, 25 high complexity)",
 		})
 		.action((opts, { log, fs, ps, glob }) =>
 			review({ ...opts, log, fs, ps, glob }),
