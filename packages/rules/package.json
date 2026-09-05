@@ -1,6 +1,6 @@
 {
 	"name": "@webappwiz/rules",
-	"version": "0.0.13",
+	"version": "0.0.14",
 	"description": "Rules written in markdown, and the review work they divide a change into",
 	"license": "MIT",
 	"author": "Jared Johnson",
