@@ -56,6 +56,14 @@ collide. Create `.wiz/reviews` if it is not there. Print the same report in
 your reply and print the path with it, since the file is the copy that
 outlives the session.
 
+Keep the directory out of git. Before writing the first report, ask git whether
+it is ignored already with `git check-ignore -q .wiz/reviews`, and when it is
+not, add `.wiz/reviews` to the project's `.gitignore` yourself, under a comment
+that says what it holds. A report is one session's reading of one change, so it
+goes stale the moment the change lands and it is worth nothing to anyone
+reviewing the commit that carries it. Left tracked, the reports arrive in every
+diff, every branch grows its own set, and merging them is work no one wanted.
+
 It opens with the summary line as `rules review` printed it, so the page says
 what it covered. Then the findings, grouped by file and laid out the way a
 linter lays them out, because that is the shape everyone already reads without
