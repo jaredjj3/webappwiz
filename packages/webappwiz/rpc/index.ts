@@ -1,4 +1,15 @@
 export { Client, type ClientOptions } from "./client";
-export type { Context, Contract, Handlers, In, Out } from "./contract";
-export { RpcError } from "./error";
+export type {
+	ClientInput,
+	Context,
+	Contract,
+	FileResult,
+	Files,
+	HandlerOutput,
+	Handlers,
+	In,
+	Out,
+	Output,
+} from "./contract";
+export { RpcError, type RpcErrorCode } from "./error";
 export { Service, type ServiceOptions } from "./service";
