@@ -5,7 +5,7 @@ files: "**/*.ts"
 level: warning
 complexity: high
 recommended: true
-version: 0.0.15
+version: 0.0.16
 ---
 # Objects over callbacks
 

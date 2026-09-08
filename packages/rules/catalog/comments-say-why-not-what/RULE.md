@@ -5,7 +5,7 @@ files: "**/*.ts"
 level: error
 complexity: medium
 recommended: true
-version: 0.0.15
+version: 0.0.16
 ---
 # Comments say why, not what
 
