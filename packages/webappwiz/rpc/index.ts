@@ -14,4 +14,9 @@ export type {
 	Output,
 } from "./contract";
 export { RpcError, type RpcErrorCode } from "./error";
-export { Service, type ServiceOptions } from "./service";
+export {
+	type Middleware,
+	type MiddlewareContext,
+	Service,
+	type ServiceOptions,
+} from "./service";

@@ -2,6 +2,19 @@ import type { Contract, Handlers } from "./contract";
 import { RpcError } from "./error";
 import { checkFiles, encode, protocol, validate } from "./transport";
 
+export type MiddlewareContext = {
+	/** The matched operation name. Middleware runs only for valid routes and verbs. */
+	readonly method: string;
+	readonly request: Request;
+	/** Application response headers, shared with the handler and other middleware. */
+	readonly headers: Headers;
+};
+/** Await next exactly once, or throw to reject. The RPC codec owns the response. */
+export type Middleware = (
+	ctx: MiddlewareContext,
+	next: () => Promise<void>,
+) => Promise<void>;
+
 export type ServiceOptions = {
 	/**
 	 * Allowed browser origin, e.g. "*" or "https://app.example.com". Omit to
@@ -10,6 +23,8 @@ export type ServiceOptions = {
 	cors?: string;
 	/** Maximum buffered request body, including multipart overhead. Default: 16 MiB. */
 	maxRequestBytes?: number;
+	/** Wrap every matched operation, in registration order, before reading its body. */
+	middleware?: readonly Middleware[];
 };
 
 /**
@@ -34,10 +49,7 @@ export class Service<C extends Contract> {
 			throw new Error("maxRequestBytes must be a positive safe integer");
 		}
 		for (const name of Object.keys(contract)) {
-			if (
-				!Object.hasOwn(handlers, name) ||
-				typeof handlers[name] !== "function"
-			) {
+			if (!hasHandler(handlers, name)) {
 				throw new Error(`missing RPC handler: ${name}`);
 			}
 		}
@@ -93,6 +105,47 @@ export class Service<C extends Contract> {
 		if (req.method !== verb) {
 			return failure(405, `${name} requires ${verb}`, "method_not_allowed");
 		}
+		const headers = new Headers();
+		let response: Response | undefined;
+		try {
+			await runMiddleware(
+				this.opts.middleware ?? [],
+				{ method: name, request: req, headers },
+				async () => {
+					response = await this.execute(name, method, req, url, headers);
+				},
+			);
+			if (!response) {
+				throw new Error("middleware did not complete the operation");
+			}
+		} catch (error) {
+			response = executionFailure(name, error);
+		}
+		// Response constructors copy Headers. Apply application headers once more so
+		// middleware's post-next changes reach both successful and failed calls.
+		for (const key of [...response.headers.keys()]) {
+			if (!reservedHeaders.has(key)) {
+				response.headers.delete(key);
+			}
+		}
+		for (const [key, value] of headers) {
+			if (!reservedHeaders.has(key) && key !== "set-cookie") {
+				response.headers.set(key, value);
+			}
+		}
+		for (const cookie of headers.getSetCookie()) {
+			response.headers.append("set-cookie", cookie);
+		}
+		return response;
+	}
+
+	private async execute(
+		name: string,
+		method: Contract[string],
+		req: Request,
+		url: URL,
+		headers: Headers,
+	): Promise<Response> {
 		let input: unknown;
 		let files = {};
 		try {
@@ -192,7 +245,6 @@ export class Service<C extends Contract> {
 				"request_invalid",
 			);
 		}
-		const headers = new Headers();
 		let output: unknown;
 		try {
 			// The validated lookup cannot be correlated with its mapped handler by TS.
@@ -205,16 +257,7 @@ export class Service<C extends Contract> {
 				} as never,
 			);
 		} catch (e) {
-			if (
-				e instanceof RpcError &&
-				Number.isInteger(e.status) &&
-				e.status >= 400 &&
-				e.status <= 599
-			) {
-				return failure(e.status, e.message, "handler_error");
-			}
-			console.error(`rpc ${name}:`, e);
-			return failure(500, "internal error", "internal_error");
+			return executionFailure(name, e);
 		}
 		try {
 			return await encode(method.output, output, headers);
@@ -276,4 +319,86 @@ async function readBody(
 		offset += chunk.byteLength;
 	}
 	return body;
+}
+
+/** Class methods may be inherited, but Object.prototype is never an RPC implementation. */
+function hasHandler(handlers: object, name: string): boolean {
+	let current: object | null = handlers;
+	while (current !== null && current !== Object.prototype) {
+		const descriptor = Object.getOwnPropertyDescriptor(current, name);
+		if (descriptor) {
+			if (current !== handlers && name === "constructor") {
+				return false;
+			}
+			return typeof descriptor.value === "function";
+		}
+		current = Object.getPrototypeOf(current);
+	}
+	return false;
+}
+
+function executionFailure(name: string, error: unknown): Response {
+	if (
+		error instanceof RpcError &&
+		Number.isInteger(error.status) &&
+		error.status >= 400 &&
+		error.status <= 599
+	) {
+		return failure(error.status, error.message, "handler_error");
+	}
+	console.error(`rpc ${name}:`, error);
+	return failure(500, "internal error", "internal_error");
+}
+
+const reservedHeaders = new Set([
+	"content-type",
+	"content-disposition",
+	"content-length",
+	"content-encoding",
+	"transfer-encoding",
+	protocol,
+	"x-webappwiz-rpc-error",
+]);
+
+async function runMiddleware(
+	middleware: readonly Middleware[],
+	ctx: MiddlewareContext,
+	terminal: () => Promise<void>,
+): Promise<void> {
+	const run = async (index: number): Promise<void> => {
+		const step = middleware[index];
+		if (step === undefined) {
+			return terminal();
+		}
+		let called = false;
+		let closed = false;
+		let repeated = false;
+		let pending: Promise<void> | undefined;
+		try {
+			const result: unknown = await step(ctx, () => {
+				if (closed || called) {
+					repeated = true;
+					throw new Error(
+						"middleware next must be called exactly once during execution",
+					);
+				}
+				called = true;
+				pending = run(index + 1);
+				// Observe rejections immediately, even if middleware forgets to await next.
+				void pending.catch(() => {});
+				return pending;
+			});
+			if (!called || repeated || result !== undefined) {
+				throw new Error(
+					"middleware must await next once or throw; returning a response is not supported",
+				);
+			}
+			await pending;
+		} finally {
+			closed = true;
+			// Do not leave a started handler running after the HTTP call completes.
+			await pending?.catch(() => {});
+		}
+	};
+	await run(0);
 }

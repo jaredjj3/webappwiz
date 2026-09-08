@@ -76,6 +76,103 @@ also derive from the operation. Schemas with `unknown` input (including `t`)
 use their output type for typed caller/handler values rather than accepting
 anything.
 
+## Service middleware and class implementations
+
+`ServiceOptions.middleware` wraps every matched operation before its body is
+read. No middleware declaration is needed in the contract:
+
+```ts
+import { Service, type Middleware } from "webappwiz/rpc";
+
+const timing: Middleware = async (ctx, next) => {
+  const start = performance.now();
+  try {
+    await next();
+  } finally {
+    console.log(ctx.method, performance.now() - start);
+  }
+};
+
+const service = new Service(contract, handlers, {
+  middleware: [timing],
+});
+```
+
+Middleware receives the operation name as `ctx.method`, the original
+`ctx.request`, and shared `ctx.headers`. It returns `Promise<void>` and must
+await `next()` exactly once, or throw to reject the call. Registration order is
+outermost first: `[a, b]` executes `a before`, `b before`, operation, `b after`,
+`a after`. `next()` includes input/file validation, handler execution and output
+validation/encoding. Timing does not include the client's download time.
+
+Authentication can be implemented with injected dependencies captured in the
+middleware closure. It runs before JSON or multipart buffering:
+
+```ts
+import { RpcError, type Middleware } from "webappwiz/rpc";
+
+const authenticated: Middleware = async ({ request, headers }, next) => {
+  if (!await sessions.authenticate(request)) {
+    headers.set("www-authenticate", "Bearer");
+    throw new RpcError(401, "Sign in required");
+  }
+  await next();
+};
+```
+
+Explicit RpcErrors from middleware use the existing `handler_error` category.
+Unexpected exceptions are logged and become sanitized `internal_error` 500s.
+A thrown error after `next()` replaces the prepared response with an RPC error.
+Handler and validation failures are already converted to RPC responses inside
+`next()`, so they resolve it normally; middleware `finally` still runs. This
+hook does not add typed identity context. Resource authorization using validated
+inputs can live in the injected handler implementation.
+
+Changes to application headers before or after `next()` reach the final response,
+including failures; deleting a header and appending multiple Set-Cookie values
+are supported. The codec still owns content type, disposition, length, encoding
+and RPC headers. Middleware cannot return a Response or substitute an output.
+Calling `next` twice or returning normally without calling it is an internal
+error, and never executes the handler twice. Do not consume the request body
+in middleware. Unknown routes, wrong HTTP verbs and CORS preflights bypass this
+hook; wrap `service.fetch` for logging those HTTP requests too.
+
+Handler implementations may be POJOs or class instances. Prototype methods,
+including inherited methods, retain their `this` receiver, allowing constructor
+injection. For the audio-processing contract above:
+
+```ts
+import { type Context, type Handlers, type In, Service } from "webappwiz/rpc";
+
+type Process = typeof contract.process;
+
+// A focused service can implement a subset contract; all methods in the
+// supplied contract must have implementations.
+const processingContract = { process: contract.process };
+
+interface Processor {
+  enqueue(audio: File, instrument: string): Promise<string>;
+}
+
+class AudioService implements Handlers<typeof processingContract> {
+  constructor(private readonly processor: Processor) {}
+
+  async process(input: In<Process>, ctx: Context<Process>) {
+    return {
+      jobId: await this.processor.enqueue(ctx.files.audio, input.instrument),
+    };
+  }
+}
+
+const service = new Service(processingContract, new AudioService(processor), {
+  middleware: [timing, authenticated],
+});
+```
+
+TypeScript's `implements` checks method signatures but does not infer parameter
+types. Use `In<Operation>` and `Context<Operation>` as shown. Ordinary
+Object.prototype methods do not count as implementations of RPC operations.
+
 ## Binary declarations
 
 `files` names the operation's multipart attachment fields; `Binary` declares
