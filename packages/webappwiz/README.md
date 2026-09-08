@@ -24,7 +24,6 @@ the rest unread.
 | [`webappwiz/assert`](./assert) | The invariants a type cannot state, checked at runtime |
 | [`webappwiz/browser`](./browser) | The browser platform behind interfaces: scrolling, animation frames, device and visibility |
 | [`webappwiz/cmd`](./cmd) | Builds a CLI: subcommands, typed positional arguments and flag options |
-| [`webappwiz/config`](./config) | A validated, frozen record of settings, declared once as a `webappwiz/t` shape |
 | [`webappwiz/disposable`](./disposable) | Resources that must be released, and stacks that release them in reverse order |
 | [`webappwiz/events`](./events) | Typed event dispatch, with a read-only view to hand to whoever listens |
 | [`webappwiz/geometry`](./geometry) | The 2D value types a web app keeps rewriting: `Rect`, `Position` and a `QuadTree` |
@@ -33,7 +32,6 @@ the rest unread.
 | [`webappwiz/md`](./md) | A markdown document as a data source: frontmatter fields, sections and code blocks |
 | [`webappwiz/ship`](./ship) | Releases every package in a workspace together, at one version |
 | [`webappwiz/system`](./system) | Interfaces for the things that touch the machine, so code under test doesn't |
-| [`webappwiz/t`](./t) | A small zod-shaped validator: `parse` validates a decoded value, `coerce` turns a raw string into one |
 | [`webappwiz/task`](./task) | Somewhere to say "this needs doing again" without saying when |
 | [`webappwiz/time`](./time) | Time as a seam: `Duration`, `Clock` and `Timer`, with fakes for each |
 | [`webappwiz/worker`](./worker) | Work sent somewhere else and answered, behind an interface |

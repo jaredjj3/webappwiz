@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "webappwiz/log";
-import { t } from "webappwiz/t";
 import { z } from "zod";
 import { Command } from "./command";
 
 /**
  * Against the real zod, not a stand-in. What this package claims is that a
- * caller who already has a validation library does not have to learn `t` to
+ * caller who already has a validation library can use it to
  * declare a command, and only the real thing settles whether that is true.
  */
 describe("Command with zod", () => {
@@ -45,7 +44,7 @@ describe("Command with zod", () => {
 			.exec(["ada"], { log });
 	});
 
-	it("coerces through zod the way it coerces through ours", () => {
+	it("coerces numeric strings through zod", () => {
 		let got: number | undefined;
 
 		new Command("serve")
@@ -58,7 +57,7 @@ describe("Command with zod", () => {
 		expect(got).toBe(8080);
 	});
 
-	it("raises a zod refusal as an error, the way it raises one of ours", () => {
+	it("raises a zod refusal as an error", () => {
 		const run = () =>
 			new Command("serve")
 				.arg("port", z.coerce.number().int().max(65535))
@@ -68,21 +67,7 @@ describe("Command with zod", () => {
 		expect(run).toThrow();
 	});
 
-	it("mixes the two, since nothing says a command line picks one", () => {
-		let got: unknown;
-
-		new Command("copy")
-			.arg("from", t.string())
-			.arg("to", z.string())
-			.action((opts) => {
-				got = opts;
-			})
-			.exec(["a", "b"], { log });
-
-		expect(got).toEqual({ from: "a", to: "b" });
-	});
-
-	it("lets a zod schema say absence is allowed, the way ours does", () => {
+	it("lets a zod schema say absence is allowed", () => {
 		let got: string | undefined = "untouched";
 
 		new Command("greet")
@@ -133,7 +118,7 @@ describe("Command with zod", () => {
 		expect(got).toBe("from the caller");
 	});
 
-	it("takes the default a schema carries itself, which ours cannot express", () => {
+	it("takes the default a schema carries itself", () => {
 		// Absence is put to the schema by validating `undefined`, so a schema that
 		// answers with a value of its own supplies it. Nothing had to be taught
 		// about zod for that to work.

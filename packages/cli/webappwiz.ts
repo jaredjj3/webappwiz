@@ -1,6 +1,6 @@
 import { type Cli, cli, type Deps } from "webappwiz/cmd";
 import type { Fs, Glob } from "webappwiz/system";
-import { t } from "webappwiz/t";
+import { z } from "zod";
 // Every @webappwiz package is released in lockstep, so this one's version is
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
@@ -34,11 +34,11 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	program
 		.command("update")
 		.description("pin every webappwiz dependency in a tree to one version")
-		.arg("dir", t.string(), {
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "directory to scan recursively (default: .)",
 		})
-		.option("version", t.string(), {
+		.option("version", z.string(), {
 			default: version,
 			description: "version to pin to",
 		})
@@ -51,7 +51,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	rules
 		.command("list")
 		.description("list the rules there are, and what the project has of them")
-		.arg("dir", t.string(), {
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "project to inspect (default: .)",
 		})
@@ -60,8 +60,8 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	rules
 		.command("new")
 		.description("scaffold a rule to fill in, under .wiz/rules/<name>")
-		.arg("name", t.string(), { description: "rule id, kebab case" })
-		.arg("dir", t.string(), {
+		.arg("name", z.string(), { description: "rule id, kebab case" })
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "project to add it to (default: .)",
 		})
@@ -70,25 +70,29 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	rules
 		.command("add")
 		.description("copy shipped rules in: one by id, or every recommended one")
-		.arg("rule", t.string(), {
+		.arg("rule", z.string(), {
 			default: "",
 			description:
 				"rule id, as `rules list` names it; the project with --recommended",
 		})
-		.arg("dir", t.string(), {
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "project to add it to (default: .)",
 		})
-		.option("recommended", t.boolean(), {
-			default: false,
-			description: "copy every rule that recommends itself, instead of one",
-		})
+		.option(
+			"recommended",
+			z.string().transform((raw) => raw !== "false"),
+			{
+				default: false,
+				description: "copy every rule that recommends itself, instead of one",
+			},
+		)
 		.action((opts, { log, fs }) => addRule({ ...opts, log, fs }));
 
 	rules
 		.command("update")
 		.description("refresh the shipped rules the project has copies of")
-		.arg("dir", t.string(), {
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "project to refresh (default: .)",
 		})
@@ -97,15 +101,15 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	rules
 		.command("review")
 		.description("print the blocks of review work the change divides into")
-		.arg("dir", t.string(), {
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "project to review (default: .)",
 		})
-		.option("since", t.string(), {
+		.option("since", z.string(), {
 			default: "HEAD",
 			description: "git ref the change is measured from (default: HEAD)",
 		})
-		.option("budget", t.number(), {
+		.option("budget", z.coerce.number(), {
 			default: undefined,
 			description:
 				"rule-file pairs one block holds, at most; a block is one agent's work, some rules of one complexity over the changed files they match, so 4 rules under 16 is 4 files. Higher means fewer, bigger blocks (default: 40 low, 16 medium, 25 high complexity)",
@@ -121,7 +125,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	skills
 		.command("list")
 		.description("list the skills there are, and what the project has of them")
-		.arg("dir", t.string(), {
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "project to inspect (default: .)",
 		})
@@ -130,8 +134,8 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	skills
 		.command("add")
 		.description("add a skill to a project")
-		.arg("skill", t.string(), { description: "skill name" })
-		.arg("dir", t.string(), {
+		.arg("skill", z.string(), { description: "skill name" })
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "project to add it to (default: .)",
 		})
@@ -140,7 +144,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	skills
 		.command("update")
 		.description("refresh the skills a project already has")
-		.arg("dir", t.string(), {
+		.arg("dir", z.string(), {
 			default: ".",
 			description: "project to refresh (default: .)",
 		})

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { ConsoleLogger, color, MemoryLogger } from "webappwiz/log";
 import { NodePs } from "webappwiz/system";
 import { FakePs } from "webappwiz/system/testing";
-import { t } from "webappwiz/t";
+import { z } from "zod";
 import { cli } from "./cli";
 import type { Deps } from "./deps";
 
@@ -48,8 +48,8 @@ describe("cli", () => {
 		const wiz = cli("wiz");
 		wiz
 			.command("greet")
-			.option("name", t.string())
-			.option("count", t.number())
+			.option("name", z.string())
+			.option("count", z.coerce.number())
 			.action((opts) => {
 				got = opts;
 			});
@@ -116,7 +116,7 @@ describe("cli", () => {
 		const wiz = cli("wiz");
 		wiz
 			.command("n")
-			.option("x", t.number())
+			.option("x", z.coerce.number())
 			.action(() => {});
 		wiz.run(deps, ["n", "--x", "abc"]);
 		expect(String(log.entries.at(-1)?.message)).toMatch(/^error: .*number/);
@@ -127,7 +127,7 @@ describe("cli", () => {
 		const wiz = cli("wiz");
 		wiz
 			.command("r")
-			.option("must", t.string())
+			.option("must", z.string())
 			.action(() => {});
 		wiz.run(deps, ["r"]);
 		expect(log.entries.at(-1)?.message).toBe(
@@ -172,7 +172,7 @@ describe("cli", () => {
 		wiz
 			.group("skills")
 			.command("add")
-			.option("name", t.string())
+			.option("name", z.string())
 			.action((opts) => {
 				got = opts;
 			});
@@ -215,7 +215,7 @@ describe("cli", () => {
 		wiz
 			.group("skills")
 			.command("add")
-			.arg("skill", t.string())
+			.arg("skill", z.string())
 			.action(() => {});
 		wiz.run(deps, ["skills", "add", "--help"]);
 		expect(color.strip(log.entries.at(-1)?.message)).toContain(
@@ -304,8 +304,8 @@ describe("cli", () => {
 		s2s
 			.command("test")
 			.allowUnknownOption()
-			.arg("pkg", t.string(), { default: "" })
-			.rest("args", t.string())
+			.arg("pkg", z.string(), { default: "" })
+			.rest("args", z.string())
 			.action((opts) => {
 				got = opts;
 			});
@@ -313,7 +313,7 @@ describe("cli", () => {
 		e2e
 			.command("run")
 			.allowUnknownOption()
-			.rest("args", t.string())
+			.rest("args", z.string())
 			.action((opts) => {
 				got = { pkg: "", args: opts.args };
 			});

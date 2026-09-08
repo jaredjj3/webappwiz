@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { color, MemoryLogger } from "webappwiz/log";
-import { t } from "webappwiz/t";
+import { z } from "zod";
 import { Command } from "./command";
 
 describe("Command", () => {
@@ -13,8 +13,8 @@ describe("Command", () => {
 	it("parses --flag value into typed opts and hands them to the action", () => {
 		let got: { name: string; count: number } | undefined;
 		new Command("greet")
-			.option("name", t.string())
-			.option("count", t.number())
+			.option("name", z.string())
+			.option("count", z.coerce.number())
 			.action((opts) => {
 				got = opts;
 			})
@@ -25,7 +25,7 @@ describe("Command", () => {
 	it("supports --key=value form", () => {
 		let parsed = 0;
 		new Command("x")
-			.option("n", t.number())
+			.option("n", z.coerce.number())
 			.action((opts) => {
 				parsed = opts.n;
 			})
@@ -36,8 +36,11 @@ describe("Command", () => {
 	it("parses a bare boolean flag as true and --flag=false as false", () => {
 		let got: { loud: boolean; name: string } | undefined;
 		const cmd = new Command("f")
-			.option("loud", t.boolean())
-			.option("name", t.string())
+			.option(
+				"loud",
+				z.string().transform((raw) => raw !== "false"),
+			)
+			.option("name", z.string())
 			.action((opts) => {
 				got = opts;
 			});
@@ -45,10 +48,14 @@ describe("Command", () => {
 		expect(got).toEqual({ loud: true, name: "ada" });
 		cmd.exec(["--loud=false", "--name", "ada"], { log });
 		expect(got).toEqual({ loud: false, name: "ada" });
+		for (const raw of ["", "0", "no", "FALSE"]) {
+			cmd.exec([`--loud=${raw}`, "--name", "ada"], { log });
+			expect(got).toEqual({ loud: true, name: "ada" });
+		}
 	});
 
 	it("throws on a flag it was never given", () => {
-		const cmd = new Command("p").option("name", t.string()).action(() => {});
+		const cmd = new Command("p").option("name", z.string()).action(() => {});
 
 		expect(() => cmd.exec(["--name", "ada", "--nmae", "bob"], { log })).toThrow(
 			"unknown option --nmae",
@@ -56,7 +63,7 @@ describe("Command", () => {
 	});
 
 	it("throws on a positional past the ones it declares", () => {
-		const cmd = new Command("p").arg("task", t.string()).action(() => {});
+		const cmd = new Command("p").arg("task", z.string()).action(() => {});
 
 		expect(() => cmd.exec(["alpha", "extra"], { log })).toThrow(
 			'unexpected argument "extra"',
@@ -65,8 +72,12 @@ describe("Command", () => {
 
 	it("names the unknown flag before an argument it could blame instead", () => {
 		const cmd = new Command("p")
-			.arg("task", t.string())
-			.option("force", t.boolean(), { default: false })
+			.arg("task", z.string())
+			.option(
+				"force",
+				z.string().transform((raw) => raw !== "false"),
+				{ default: false },
+			)
 			.action(() => {});
 
 		expect(() => cmd.exec(["--frce"], { log })).toThrow(
@@ -77,8 +88,12 @@ describe("Command", () => {
 	it("uses defaults for absent flags and the given value when present", () => {
 		let got: { add: boolean; name: string } | undefined;
 		const cmd = new Command("d")
-			.option("add", t.boolean(), { default: false })
-			.option("name", t.string(), { default: "anon" })
+			.option(
+				"add",
+				z.string().transform((raw) => raw !== "false"),
+				{ default: false },
+			)
+			.option("name", z.string(), { default: "anon" })
 			.action((opts) => {
 				got = opts;
 			});
@@ -90,7 +105,7 @@ describe("Command", () => {
 
 	it("still requires an option whose meta only has a description", () => {
 		const cmd = new Command("r")
-			.option("must", t.string(), { description: "required" })
+			.option("must", z.string(), { description: "required" })
 			.action(() => {});
 		expect(() => cmd.exec([], { log })).toThrow(
 			"missing required option --must",
@@ -100,7 +115,7 @@ describe("Command", () => {
 	it("leaves an optional option undefined when it is absent, with no default", () => {
 		let got: unknown;
 		new Command("judge")
-			.option("agent", t.optional(t.string()))
+			.option("agent", z.optional(z.string()))
 			.action((opts) => {
 				got = opts;
 			})
@@ -111,7 +126,7 @@ describe("Command", () => {
 	it("leaves an optional positional undefined when it is absent", () => {
 		let got: unknown;
 		new Command("show")
-			.arg("task", t.optional(t.string()))
+			.arg("task", z.optional(z.string()))
 			.action((opts) => {
 				got = opts;
 			})
@@ -120,7 +135,9 @@ describe("Command", () => {
 	});
 
 	it("propagates schema parse errors to the caller", () => {
-		const cmd = new Command("n").option("x", t.number()).action(() => {});
+		const cmd = new Command("n")
+			.option("x", z.coerce.number())
+			.action(() => {});
 		expect(() => cmd.exec(["--x", "abc"], { log })).toThrow(/number/);
 	});
 
@@ -148,8 +165,8 @@ describe("Command", () => {
 		let ran = false;
 		new Command("greet")
 			.description("greet someone")
-			.option("name", t.string(), { description: "who to greet" })
-			.option("count", t.number(), {
+			.option("name", z.string(), { description: "who to greet" })
+			.option("count", z.coerce.number(), {
 				default: 1,
 				description: "how many times",
 			})
@@ -172,7 +189,7 @@ describe("Command", () => {
 
 	it("says nothing about the default of an option that defaults to undefined", () => {
 		new Command("greet")
-			.option("name", t.optional(t.string()), {
+			.option("name", z.optional(z.string()), {
 				default: undefined,
 				description: "who to greet",
 			})
@@ -189,7 +206,7 @@ describe("Command", () => {
 	it("prints help for -h just as for --help", () => {
 		let ran = false;
 		new Command("x")
-			.option("n", t.number())
+			.option("n", z.coerce.number())
 			.action(() => {
 				ran = true;
 			})
@@ -204,8 +221,8 @@ describe("Command", () => {
 
 	it("types the action's opts statically", () => {
 		new Command("typed")
-			.option("name", t.string())
-			.option("count", t.number())
+			.option("name", z.string())
+			.option("count", z.coerce.number())
 			.action((opts) => {
 				const name: string = opts.name;
 				const count: number = opts.count;
@@ -220,8 +237,12 @@ describe("Command", () => {
 	it("binds positional args by declaration order, alongside options", () => {
 		let got: { task: string; force: boolean } | undefined;
 		new Command("prune")
-			.arg("task", t.string())
-			.option("force", t.boolean(), { default: false })
+			.arg("task", z.string())
+			.option(
+				"force",
+				z.string().transform((raw) => raw !== "false"),
+				{ default: false },
+			)
 			.action((opts) => {
 				got = opts;
 			})
@@ -232,14 +253,14 @@ describe("Command", () => {
 	it("throws when a positional is missing, unless it has a default", () => {
 		expect(() =>
 			new Command("prune")
-				.arg("task", t.string())
+				.arg("task", z.string())
 				.action(() => {})
 				.exec([], { log }),
 		).toThrow("missing required argument <task>");
 
 		let got: unknown;
 		new Command("list")
-			.arg("task", t.string(), { default: "all" })
+			.arg("task", z.string(), { default: "all" })
 			.action((opts) => {
 				got = opts;
 			})
@@ -249,8 +270,8 @@ describe("Command", () => {
 
 	it("collects the arguments past the declared ones into rest()", () => {
 		const cmd = new Command("test")
-			.arg("pkg", t.string(), { default: "" })
-			.rest("args", t.string())
+			.arg("pkg", z.string(), { default: "" })
+			.rest("args", z.string())
 			.action((opts) => {
 				got = opts;
 			});
@@ -269,7 +290,7 @@ describe("Command", () => {
 	it("reads each of the rest through the schema it was given", () => {
 		let got: { ports: number[] } | undefined;
 		new Command("open")
-			.rest("ports", t.number())
+			.rest("ports", z.coerce.number())
 			.action((opts) => {
 				got = opts;
 			})
@@ -279,11 +300,11 @@ describe("Command", () => {
 
 	it("throws when anything is declared after rest(), at declaration time", () => {
 		expect(() =>
-			new Command("test").rest("args", t.string()).arg("pkg", t.string()),
+			new Command("test").rest("args", z.string()).arg("pkg", z.string()),
 		).toThrow("args takes every remaining argument");
 
 		expect(() =>
-			new Command("test").rest("args", t.string()).rest("more", t.string()),
+			new Command("test").rest("args", z.string()).rest("more", z.string()),
 		).toThrow("args already takes every remaining argument");
 	});
 
@@ -291,8 +312,12 @@ describe("Command", () => {
 		let got: { check: boolean; args: string[] } | undefined;
 		new Command("test")
 			.allowUnknownOption()
-			.option("check", t.boolean(), { default: false })
-			.rest("args", t.string())
+			.option(
+				"check",
+				z.string().transform((raw) => raw !== "false"),
+				{ default: false },
+			)
+			.rest("args", z.string())
 			.action((opts) => {
 				got = opts;
 			})
@@ -309,7 +334,7 @@ describe("Command", () => {
 		let got: { task: string } | undefined;
 		new Command("show")
 			.allowExcessArguments()
-			.arg("task", t.string())
+			.arg("task", z.string())
 			.action((opts) => {
 				got = opts;
 			})
@@ -320,8 +345,8 @@ describe("Command", () => {
 	it("stops reading options at the first argument with passThroughOptions", () => {
 		const cmd = new Command("serve")
 			.passThroughOptions()
-			.option("port", t.number(), { default: 0 })
-			.rest("args", t.string())
+			.option("port", z.coerce.number(), { default: 0 })
+			.rest("args", z.string())
 			.action((opts) => {
 				got = opts;
 			});
@@ -336,7 +361,7 @@ describe("Command", () => {
 
 	it("passes everything after a bare -- through as arguments", () => {
 		let got: { args: string[] } | undefined;
-		const cmd = new Command("test").rest("args", t.string()).action((opts) => {
+		const cmd = new Command("test").rest("args", z.string()).action((opts) => {
 			got = opts;
 		});
 
@@ -350,7 +375,7 @@ describe("Command", () => {
 
 	it("keeps refusing unknown flags and extra arguments by default", () => {
 		const cmd = new Command("test")
-			.arg("pkg", t.string(), { default: "" })
+			.arg("pkg", z.string(), { default: "" })
 			.action(() => {});
 
 		expect(() => cmd.exec(["web", "viewframe"], { log })).toThrow(
@@ -366,8 +391,8 @@ describe("Command", () => {
 
 	it("shows a variadic as [args...] in the usage line and the argument list", () => {
 		new Command("test")
-			.arg("pkg", t.string(), { default: "" })
-			.rest("args", t.string(), { description: "passed to the runner" })
+			.arg("pkg", z.string(), { default: "" })
+			.rest("args", z.string(), { description: "passed to the runner" })
 			.action(() => {})
 			.exec(["--help"], { log }, [], "s2s test");
 
@@ -381,8 +406,8 @@ describe("Command", () => {
 
 	it("shows arguments in the usage line and their own section in help", () => {
 		new Command("escalate")
-			.arg("reason", t.string(), { description: "why this needs a human" })
-			.arg("note", t.string(), { default: "" })
+			.arg("reason", z.string(), { description: "why this needs a human" })
+			.arg("note", z.string(), { default: "" })
 			.action(() => {})
 			.exec(["--help"], { log }, [], "arbor escalate");
 

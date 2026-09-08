@@ -1,20 +1,20 @@
 # webappwiz/cmd
 
 Builds a CLI: subcommands, positional `.arg()`s and `--flag` options typed by
-[webappwiz/t](../t) or any other [Standard Schema](https://standardschema.dev),
+[Zod](https://zod.dev) or any other [Standard Schema](https://standardschema.dev),
 and generated `--help`.
 
 ```ts
 import { cli } from "webappwiz/cmd";
-import { t } from "webappwiz/t";
+import { z } from "zod";
 
 export const app = cli("app");
 
 app
 	.command("greet")
 	.description("say hello")
-	.arg("name", t.string(), { description: "who to greet" })
-	.option("loud", t.boolean(), { default: false })
+	.arg("name", z.string(), { description: "who to greet" })
+	.option("loud", z.string().transform((raw) => raw !== "false"), { default: false })
 	.action((opts, { log }) => log.info(opts.loud ? "HI" : "hi", opts.name));
 
 await app.run({});
@@ -42,8 +42,8 @@ and declaring anything after it throws where it is declared.
 ```ts
 app
 	.command("run")
-	.arg("script", t.string())
-	.rest("args", t.string(), { description: "passed to the script" })
+	.arg("script", z.string())
+	.rest("args", z.string(), { description: "passed to the script" })
 	.action((opts, { ps }) => ps.spawn([opts.script, ...opts.args])); // string[]
 ```
 
@@ -61,8 +61,8 @@ and mean what they do there.
 app
 	.command("test")
 	.allowUnknownOption()
-	.arg("pkg", t.string(), { default: "" })
-	.rest("args", t.string())
+	.arg("pkg", z.string(), { default: "" })
+	.rest("args", z.string())
 	.action((opts, { ps }) => ps.spawn(["bun", "test", opts.pkg, ...opts.args]));
 ```
 
@@ -91,7 +91,7 @@ the only short flag is `-h`.
 
 ## Schemas
 
-`arg` and `option` take a `t` schema or anyone else's, so bring zod, valibot or
+`arg` and `option` take any Standard Schema, so bring Zod, Valibot or
 arktype if you already have one:
 
 ```ts
@@ -104,9 +104,15 @@ app
 	.action(/* … */);
 ```
 
-**Reach for the coercing form.** A command line arrives as strings. A `t`
-schema knows that and reads them; anything else is handed the string as it
-came, so `z.coerce.number()` works where `z.number()` refuses "3000".
+**Reach for the coercing form.** A command line arrives as strings, so
+`z.coerce.number()` works where `z.number()` refuses "3000".
+For flags, a bare `--flag` arrives as `"true"`. Use `z.stringbool()` for
+recognized boolean spellings, or `z.string().transform((raw) => raw !== "false")`
+to treat only the literal `"false"` as false. Do not use `z.coerce.boolean()`:
+the string `"false"` becomes true.
+
+Validation is synchronous. Async schemas are unsupported. Validation errors
+are ordinary errors naming the first issue and its dotted path.
 
 Whether an argument may be left out is put to the schema by validating
 absence, so `z.string().optional()` says it may, and `z.string()
@@ -154,7 +160,7 @@ name is longer.
 ```ts
 const skills = app.group("skills").description("manage skills");
 
-skills.command("add").arg("skill", t.string()).action(/* … */);
+skills.command("add").arg("skill", z.string()).action(/* … */);
 skills.command("update").action(/* … */);
 ```
 

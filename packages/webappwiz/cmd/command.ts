@@ -1,6 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { color, type Logger } from "webappwiz/log";
-import { ours, type Schema, validate } from "webappwiz/t";
 import type { Deps } from "./deps";
 import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 
@@ -10,12 +9,10 @@ import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 type Action<O, C> = (parsed: O, ctx: C) => unknown;
 
 /**
- * What an option or a positional is declared with. A `t` schema knows how to
- * read a command line, since a command line is made of strings; any other
- * Standard Schema is handed the string as it arrived, so a zod caller writes
- * `z.coerce.number()` where they would otherwise write `z.number()`.
+ * A Standard Schema that accepts command-line strings. Use
+ * `z.coerce.number()` for numeric arguments, for example.
  */
-export type Arg<T> = Schema<T> | StandardSchemaV1<unknown, T>;
+export type Arg<T> = StandardSchemaV1<unknown, T>;
 
 /** What a caller can say about an option or a positional beyond its schema. */
 export type Meta<T> = {
@@ -102,7 +99,7 @@ export class Command<O, C extends object = object> {
 
 	/**
 	 * The last positional, collecting every argument left over as an array. The
-	 * schema describes one of them, so `rest("args", t.string())` arrives as
+	 * schema describes one of them, so `rest("args", z.string())` arrives as
 	 * `string[]`, empty when there was nothing left. Only one is allowed, and
 	 * nothing may be declared after it.
 	 */
@@ -382,25 +379,28 @@ export class Command<O, C extends object = object> {
 	}
 }
 
-/**
- * One command-line token as the value its schema says it is. A `t` schema
- * coerces, because it was built knowing the input is a string. Anything else
- * gets the string handed to it, which is why a foreign schema has to be one
- * that accepts strings.
- */
+/** Validates a command-line string and reports the first issue with its path. */
 function read<T>(schema: Arg<T>, raw: string): T {
-	return ours(schema) ? schema.coerce(raw) : validate(schema, raw);
+	const result = schema["~standard"].validate(raw);
+	if (result instanceof Promise) {
+		throw new Error(
+			`${schema["~standard"].vendor} validated asynchronously, which is not supported here`,
+		);
+	}
+	if (result.issues === undefined) {
+		return result.value;
+	}
+	const issue = result.issues[0];
+	const path = (issue?.path ?? [])
+		.map((segment) =>
+			String(typeof segment === "object" ? segment.key : segment),
+		)
+		.join(".");
+	const message = issue?.message ?? "invalid";
+	throw new Error(path ? `${path}: ${message}` : message);
 }
 
-/**
- * What an absent option or argument binds to, or nothing when leaving it out is
- * not allowed.
- *
- * The question is put by validating absence, which is the only way to put it
- * that every schema can answer: `isOptional` is ours and the interface has no
- * equivalent. Asking this way costs nothing and gains something, since a schema
- * carrying its own default answers with that default rather than with nothing.
- */
+/** A schema accepting undefined can allow absence or supply its own default. */
 function absent(schema: Arg<unknown>): { value: unknown } | null {
 	const result = schema["~standard"].validate(undefined);
 	if (result instanceof Promise || result.issues !== undefined) {

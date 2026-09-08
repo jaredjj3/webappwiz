@@ -20,5 +20,5 @@ Both throw `AssertError`. `assert.unreachable()` states that control cannot get
 here, which is what the default of an exhaustive switch wants.
 
 This is for what should never happen. Input arriving from outside the program
-is not that: parse it with [webappwiz/t](../t), which is built to tell a caller
+is not that: parse it with [Zod](https://zod.dev), which is built to tell a caller
 what was wrong with what they sent.

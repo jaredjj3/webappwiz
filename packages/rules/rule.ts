@@ -1,6 +1,6 @@
 import { Markdown } from "webappwiz/md";
 import type { Glob } from "webappwiz/system";
-import { t } from "webappwiz/t";
+import { z } from "zod";
 
 /** How loudly a violation reports. */
 export type Level = "error" | "warning";
@@ -25,16 +25,20 @@ export interface ParseOptions {
 	id?: string;
 }
 
-const FRONTMATTER = t.object({
-	name: t.string(),
-	description: t.string(),
-	files: t.optional(t.string()),
-	level: t.enum(LEVELS),
-	complexity: t.enum(COMPLEXITIES),
+const FRONTMATTER = z.object({
+	name: z.string(),
+	description: z.string(),
+	files: z.optional(z.string()),
+	level: z.enum(LEVELS, { error: `expected one of ${LEVELS.join(", ")}` }),
+	complexity: z.enum(COMPLEXITIES, {
+		error: `expected one of ${COMPLEXITIES.join(", ")}`,
+	}),
 	// frontmatter arrives as strings, so the two spellings of a boolean are an
-	// enum here rather than t.boolean()
-	recommended: t.optional(t.enum(["true", "false"])),
-	version: t.optional(t.string()),
+	// enum here rather than z.boolean()
+	recommended: z.optional(
+		z.enum(["true", "false"], { error: "expected one of true, false" }),
+	),
+	version: z.optional(z.string()),
 });
 
 const NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -80,8 +84,12 @@ export class Rule {
 		}
 		const parsed = FRONTMATTER.safeParse(md.fields);
 		if (!parsed.success) {
-			const key = parsed.error.path[0] ?? "frontmatter";
-			throw fail(lineOf(text, key), `${key}: ${parsed.error.reason}`);
+			const issue = parsed.error.issues[0];
+			const key = String(issue?.path[0] ?? "frontmatter");
+			throw fail(
+				lineOf(text, key),
+				`${key}: ${issue?.message ?? "invalid frontmatter"}`,
+			);
 		}
 		const front = parsed.data;
 		if (!NAME.test(front.name)) {

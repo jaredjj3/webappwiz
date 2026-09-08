@@ -1,6 +1,6 @@
 import type { CommandDeps } from "@webappwiz/cli/webappwiz";
 import { webappwiz } from "@webappwiz/cli/webappwiz";
-import { t } from "webappwiz/t";
+import { z } from "zod";
 import { fix } from "./fix";
 import { path } from "./path";
 import { ship } from "./ship";
@@ -22,23 +22,35 @@ const dev = wiz.group("dev").description("work on the webappwiz workspace");
 dev
 	.command("fix")
 	.description("format, check, and typecheck the workspace")
-	.option("check", t.boolean(), {
-		default: false,
-		description: "report problems without writing fixes (for CI)",
-	})
+	.option(
+		"check",
+		z.string().transform((raw) => raw !== "false"),
+		{
+			default: false,
+			description: "report problems without writing fixes (for CI)",
+		},
+	)
 	.action((opts, { log, ps }) => fix({ ...opts, log, ps }));
 
 dev
 	.command("path")
 	.description("manage bin/ on your shell PATH")
-	.option("add", t.boolean(), {
-		default: false,
-		description: "add bin/ to your PATH",
-	})
-	.option("remove", t.boolean(), {
-		default: false,
-		description: "remove bin/ from your PATH",
-	})
+	.option(
+		"add",
+		z.string().transform((raw) => raw !== "false"),
+		{
+			default: false,
+			description: "add bin/ to your PATH",
+		},
+	)
+	.option(
+		"remove",
+		z.string().transform((raw) => raw !== "false"),
+		{
+			default: false,
+			description: "remove bin/ from your PATH",
+		},
+	)
 	.action((opts, { log, fs, ps }) => path({ ...opts, log, fs, ps }));
 
 dev
@@ -49,7 +61,7 @@ dev
 dev
 	.command("test")
 	.description("run the workspace tests")
-	.arg("package", t.string(), {
+	.arg("package", z.string(), {
 		default: "",
 		description: "only test this package (default: all)",
 	})

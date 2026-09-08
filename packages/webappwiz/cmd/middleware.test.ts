@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "webappwiz/log";
 import { FakePs } from "webappwiz/system/testing";
-import { t } from "webappwiz/t";
+import { z } from "zod";
 import { cli } from "./cli";
 import { Command } from "./command";
 import type { Deps } from "./deps";
@@ -45,7 +45,7 @@ describe("middleware", () => {
 			);
 		app
 			.command("who")
-			.arg("greeting", t.string())
+			.arg("greeting", z.string())
 			.action((opts, ctx) =>
 				seen.push(`${opts.greeting} ${ctx.user} ${ctx.id}`),
 			);

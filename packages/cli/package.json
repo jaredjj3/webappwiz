@@ -26,7 +26,8 @@
 	},
 	"dependencies": {
 		"@webappwiz/rules": "workspace:*",
-		"webappwiz": "workspace:*"
+		"webappwiz": "workspace:*",
+		"zod": "^4.4.3"
 	},
 	"peerDependencies": {
 		"typescript": "^7"
