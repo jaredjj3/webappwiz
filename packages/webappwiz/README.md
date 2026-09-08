@@ -28,11 +28,9 @@ the rest unread.
 | [`webappwiz/disposable`](./disposable) | Resources that must be released, and stacks that release them in reverse order |
 | [`webappwiz/events`](./events) | Typed event dispatch, with a read-only view to hand to whoever listens |
 | [`webappwiz/geometry`](./geometry) | The 2D value types a web app keeps rewriting: `Rect`, `Position` and a `QuadTree` |
-| [`webappwiz/http`](./http) | Serving HTTP, and the parts of doing so that every app writes again |
 | [`webappwiz/id`](./id) | A source of identifiers behind an interface, so tests can make them predictable |
 | [`webappwiz/log`](./log) | Logging behind a `Logger` interface, with decorators and an in-memory double |
 | [`webappwiz/md`](./md) | A markdown document as a data source: frontmatter fields, sections and code blocks |
-| [`webappwiz/rpc`](./rpc) | A typed contract of query and mutation methods, served and called over fetch |
 | [`webappwiz/ship`](./ship) | Releases every package in a workspace together, at one version |
 | [`webappwiz/system`](./system) | Interfaces for the things that touch the machine, so code under test doesn't |
 | [`webappwiz/t`](./t) | A small zod-shaped validator: `parse` validates a decoded value, `coerce` turns a raw string into one |
@@ -48,8 +46,7 @@ main entry point, so importing a task queue on a server does not reach for
 
 - Needs a browser: `webappwiz/browser`, `webappwiz/task/browser`,
   `webappwiz/worker/web`
-- Needs a server: `webappwiz/cmd`, `webappwiz/http/bun`, `webappwiz/ship`,
-  `webappwiz/system`
+- Needs a server: `webappwiz/cmd`, `webappwiz/ship`, `webappwiz/system`
 
 `platform.test.ts` holds that line, failing if an entry point that runs
 anywhere starts reaching one that does not.

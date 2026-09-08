@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { Duration } from "webappwiz/time";
-import { BunHttpServer } from "./bun-http-server";
-import type { Listening } from "./http-server";
+import { BunHttpServer, type Listening } from "./http-server";
 
 describe("BunHttpServer", () => {
 	let listening: Listening;

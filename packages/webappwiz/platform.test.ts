@@ -14,7 +14,6 @@ const PLATFORM: Record<string, "browser" | "node"> = {
 	"./task/browser": "browser",
 	"./worker/web": "browser",
 	"./cmd": "node",
-	"./http/bun": "node",
 	"./ship": "node",
 	"./ship/testing": "node",
 	"./system": "node",

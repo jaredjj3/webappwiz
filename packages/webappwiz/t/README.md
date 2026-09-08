@@ -44,8 +44,8 @@ validate(z.coerce.number(), "42"); // 42, and so does valibot or arktype
 ```
 
 It throws the same `SchemaError` whichever library wrote the schema, so a
-caller handles one error type. `webappwiz/cmd` and `webappwiz/rpc` are built
-on that: nothing in either of them requires you to use `t`.
+caller handles one error type. `webappwiz/cmd` is built on that: nothing in it
+requires you to use `t`.
 
 Two things the interface has no room for, which is why `t` still has them:
 
