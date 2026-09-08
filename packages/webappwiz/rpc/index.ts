@@ -12,11 +12,11 @@ export type {
 	NamedFileResult,
 	Out,
 	Output,
+	RequestContext,
 } from "./contract";
 export { RpcError, type RpcErrorCode } from "./error";
 export {
 	type Middleware,
-	type MiddlewareContext,
 	Service,
 	type ServiceOptions,
 } from "./service";

@@ -71,11 +71,17 @@ export type Files<M> = M extends { files: infer F extends FileFields }
 				: never]?: Attachment<F[K]>;
 		}
 	: Record<string, never>;
-/** Per-request handles. Attachment fields are inferred from the operation. */
-export type Context<M = unknown> = {
-	request: Request;
-	headers: Headers;
-	files: Files<M>;
+/** Available before body parsing, shared by middleware and operation handlers. */
+export interface RequestContext {
+	/** The matched RPC operation name. */
+	readonly method: string;
+	readonly request: Request;
+	/** Mutable response headers. The reference itself cannot be replaced. */
+	readonly headers: Headers;
+}
+/** Handler context adds validated attachments inferred from the operation. */
+export type Context<M = unknown> = RequestContext & {
+	readonly files: Files<M>;
 };
 export type Handlers<C extends Contract> = {
 	[K in keyof C]: (

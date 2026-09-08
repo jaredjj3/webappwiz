@@ -8,6 +8,7 @@ import {
 	type Handlers,
 	type In,
 	type Middleware,
+	type RequestContext,
 	RpcError,
 	Service,
 } from "./index";
@@ -73,14 +74,14 @@ it("supports class handlers, inherited methods and constructor injection", async
 
 it("wraps every response format in registration order", async () => {
 	const calls: string[] = [];
-	const layer =
-		(name: string): Middleware =>
-		async (ctx, next) => {
+	const layer = (name: string): Middleware => ({
+		async handle(ctx, next) {
 			calls.push(`${ctx.method}:${name}:before`);
 			expect(ctx.request.bodyUsed).toBe(false);
 			await next();
 			calls.push(`${ctx.method}:${name}:after`);
-		};
+		},
+	});
 	const service = new Service(contract, handlers, {
 		middleware: [layer("outer"), layer("inner")],
 	});
@@ -125,10 +126,12 @@ it("auth middleware rejects before input or uploads are consumed", async () => {
 		{
 			cors: "*",
 			middleware: [
-				async (ctx) => {
-					expect(ctx.request.bodyUsed).toBe(false);
-					ctx.headers.set("www-authenticate", "Bearer");
-					throw new RpcError(401, "sign in required");
+				{
+					handle: async (ctx) => {
+						expect(ctx.request.bodyUsed).toBe(false);
+						ctx.headers.set("www-authenticate", "Bearer");
+						throw new RpcError(401, "sign in required");
+					},
 				},
 			],
 		},
@@ -172,16 +175,18 @@ it("applies post-next headers and deletions while preserving codec headers", asy
 		},
 		{
 			middleware: [
-				async (ctx, next) => {
-					ctx.headers.set("x-before", "yes");
-					ctx.headers.append("set-cookie", "session=abc; HttpOnly");
-					await next();
-					ctx.headers.delete("x-remove");
-					ctx.headers.set("x-after", "yes");
-					ctx.headers.append("set-cookie", "csrf=xyz");
-					ctx.headers.set("content-type", "text/html");
-					ctx.headers.set("content-disposition", "attachment");
-					ctx.headers.set("x-webappwiz-rpc", "1:file");
+				{
+					handle: async (ctx, next) => {
+						ctx.headers.set("x-before", "yes");
+						ctx.headers.append("set-cookie", "session=abc; HttpOnly");
+						await next();
+						ctx.headers.delete("x-remove");
+						ctx.headers.set("x-after", "yes");
+						ctx.headers.append("set-cookie", "csrf=xyz");
+						ctx.headers.set("content-type", "text/html");
+						ctx.headers.set("content-disposition", "attachment");
+						ctx.headers.set("x-webappwiz-rpc", "1:file");
+					},
 				},
 			],
 		},
@@ -215,13 +220,15 @@ it("unwinds on input, handler and output failures; excludes routing and prefligh
 		{
 			cors: "*",
 			middleware: [
-				async (ctx, next) => {
-					try {
-						await next();
-					} finally {
-						calls.push(ctx.method);
-						ctx.headers.set("x-finished", "yes");
-					}
+				{
+					handle: async (ctx, next) => {
+						try {
+							await next();
+						} finally {
+							calls.push(ctx.method);
+							ctx.headers.set("x-finished", "yes");
+						}
+					},
 				},
 			],
 		},
@@ -258,11 +265,13 @@ it("sanitizes middleware errors before and after next", async () => {
 	for (const after of [false, true]) {
 		const service = new Service(contract, handlers, {
 			middleware: [
-				async (_ctx, next) => {
-					if (after) {
-						await next();
-					}
-					throw new Error("secret database details");
+				{
+					handle: async (_ctx, next) => {
+						if (after) {
+							await next();
+						}
+						throw new Error("secret database details");
+					},
 				},
 			],
 		});
@@ -278,15 +287,19 @@ it("sanitizes middleware errors before and after next", async () => {
 it("rejects double next, omitted next and response escape attempts", async () => {
 	let executions = 0;
 	const invalid: Middleware[] = [
-		async (_ctx, next) => {
-			await next();
-			await next();
+		{
+			handle: async (_ctx, next) => {
+				await next();
+				await next();
+			},
 		},
-		async () => {},
-		// @ts-expect-error middleware cannot return an arbitrary Response
-		async (_ctx, next) => {
-			await next();
-			return new Response("escape");
+		{ async handle() {} },
+		{
+			// @ts-expect-error middleware cannot return an arbitrary Response
+			handle: async (_ctx, next) => {
+				await next();
+				return new Response("escape");
+			},
 		},
 	];
 	for (const middleware of invalid) {
@@ -306,4 +319,83 @@ it("rejects double next, omitted next and response escape attempts", async () =>
 		expect(response.status).toBe(500);
 		expect(executions - before).toBeLessThanOrEqual(1);
 	}
+});
+
+it("shares RequestContext with handlers and preserves class middleware injection", async () => {
+	const { TimingMiddleware } = await import("./examples/middleware");
+	const entries: { method: string; durationMs: number }[] = [];
+	const seen = new Map<Request, RequestContext>();
+	class CaptureMiddleware implements Middleware {
+		constructor(private readonly contexts: Map<Request, RequestContext>) {}
+		async handle(
+			ctx: RequestContext,
+			next: () => Promise<void>,
+		): Promise<void> {
+			this.contexts.set(ctx.request, ctx);
+			ctx.headers.set("x-before", "yes");
+			await next();
+			ctx.headers.set("x-after", "yes");
+		}
+	}
+	const service = new Service(
+		contract,
+		{
+			...handlers,
+			text: async ({ name }, ctx) => {
+				const shared: RequestContext = ctx;
+				expect(shared.method).toBe("text");
+				const captured = seen.get(ctx.request);
+				if (!captured) {
+					throw new Error("middleware did not capture request");
+				}
+				expect(shared.request).toBe(captured.request);
+				expect(shared.headers).toBe(captured.headers);
+				expect(shared.headers.get("x-before")).toBe("yes");
+				return name;
+			},
+		},
+		{
+			middleware: [
+				new TimingMiddleware({
+					info: (entry) => {
+						entries.push(entry);
+					},
+				}),
+				new CaptureMiddleware(seen),
+			],
+		},
+	);
+	const responses = await Promise.all([
+		service.fetch(request()),
+		service.fetch(request()),
+	]);
+	for (const response of responses) {
+		expect(await response.text()).toBe("hello");
+		expect(response.headers.get("x-after")).toBe("yes");
+	}
+	expect(seen.size).toBe(2);
+	expect(entries).toHaveLength(2);
+	for (const entry of entries) {
+		expect(entry.method).toBe("text");
+		expect(entry.durationMs).toBeGreaterThanOrEqual(0);
+	}
+});
+
+it("requires middleware objects and protects the context stage at compile time", () => {
+	const checks = (
+		ctx: RequestContext,
+		handlerCtx: Context<typeof contract.file>,
+	) => {
+		// @ts-expect-error bare functions are not Middleware implementations
+		const invalid: Middleware = async () => {};
+		// @ts-expect-error request files are unavailable before validation
+		ctx.files;
+		// @ts-expect-error shared references cannot be replaced
+		ctx.headers = new Headers();
+		// @ts-expect-error operation name is readonly
+		handlerCtx.method = "other";
+		const audio: File = handlerCtx.files.audio;
+		return { invalid, audio };
+	};
+	expect(checks).toBeInstanceOf(Function);
 });

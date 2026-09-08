@@ -82,21 +82,51 @@ anything.
 read. No middleware declaration is needed in the contract:
 
 ```ts
-import { Service, type Middleware } from "webappwiz/rpc";
+import { Service, type Middleware, type RequestContext } from "webappwiz/rpc";
 
-const timing: Middleware = async (ctx, next) => {
-  const start = performance.now();
-  try {
-    await next();
-  } finally {
-    console.log(ctx.method, performance.now() - start);
+interface Logger {
+  info(entry: { method: string; durationMs: number }): void;
+}
+
+class TimingMiddleware implements Middleware {
+  constructor(private readonly logger: Logger) {}
+
+  async handle(ctx: RequestContext, next: () => Promise<void>): Promise<void> {
+    const start = performance.now();
+    try {
+      await next();
+    } finally {
+      this.logger.info({ method: ctx.method, durationMs: performance.now() - start });
+    }
   }
-};
+}
 
+const timing = new TimingMiddleware(logger);
 const service = new Service(contract, handlers, {
   middleware: [timing],
 });
 ```
+
+Middleware is an interface with `handle(ctx, next)`, not a function or an abstract
+base class. Both class instances and plain objects with a `handle` method work;
+the service preserves the method's `this` receiver. An instance may handle
+concurrent requests, so keep request-specific state in local variables.
+
+`RequestContext` is the common context shared with handlers:
+
+```ts
+interface RequestContext {
+  readonly method: string;
+  readonly request: Request;
+  readonly headers: Headers;
+}
+
+type Context<M> = RequestContext & { readonly files: Files<M> };
+```
+
+Handlers receive the same request and headers references, plus validated files.
+Middleware cannot access parsed files before body parsing. Readonly fields
+prevent replacing those references; `ctx.headers.set(...)` remains supported.
 
 Middleware receives the operation name as `ctx.method`, the original
 `ctx.request`, and shared `ctx.headers`. It returns `Promise<void>` and must
@@ -105,19 +135,28 @@ outermost first: `[a, b]` executes `a before`, `b before`, operation, `b after`,
 `a after`. `next()` includes input/file validation, handler execution and output
 validation/encoding. Timing does not include the client's download time.
 
-Authentication can be implemented with injected dependencies captured in the
-middleware closure. It runs before JSON or multipart buffering:
+Authentication can use a class with constructor-injected dependencies. It runs before JSON or multipart buffering:
 
 ```ts
-import { RpcError, type Middleware } from "webappwiz/rpc";
+import { RpcError, type Middleware, type RequestContext } from "webappwiz/rpc";
 
-const authenticated: Middleware = async ({ request, headers }, next) => {
-  if (!await sessions.authenticate(request)) {
-    headers.set("www-authenticate", "Bearer");
-    throw new RpcError(401, "Sign in required");
+interface Sessions {
+  authenticate(request: Request): Promise<boolean>;
+}
+
+class AuthenticationMiddleware implements Middleware {
+  constructor(private readonly sessions: Sessions) {}
+
+  async handle({ request, headers }: RequestContext, next: () => Promise<void>) {
+    if (!await this.sessions.authenticate(request)) {
+      headers.set("www-authenticate", "Bearer");
+      throw new RpcError(401, "Sign in required");
+    }
+    await next();
   }
-  await next();
-};
+}
+
+const authenticated = new AuthenticationMiddleware(sessions);
 ```
 
 Explicit RpcErrors from middleware use the existing `handler_error` category.
@@ -245,7 +284,7 @@ implemented.
 ## Runnable end-to-end example
 
 [Shared contract](./examples/contract.ts), [server](./examples/server.ts), and
-[client](./examples/client.ts) provide a complete audio upload/report example.
+[client](./examples/client.ts), and [timing middleware](./examples/middleware.ts) provide a complete audio upload/report example.
 The server reads uploaded bytes and computes a SHA-256 integrity report. It does
 not decode audio, and the MIME preset does not claim that the bytes are valid
 audio. An HTTP round-trip test exercises these exact example modules.

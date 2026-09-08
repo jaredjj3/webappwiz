@@ -1,19 +1,11 @@
-import type { Contract, Handlers } from "./contract";
+import type { Contract, Handlers, RequestContext } from "./contract";
 import { RpcError } from "./error";
 import { checkFiles, encode, protocol, validate } from "./transport";
 
-export type MiddlewareContext = {
-	/** The matched operation name. Middleware runs only for valid routes and verbs. */
-	readonly method: string;
-	readonly request: Request;
-	/** Application response headers, shared with the handler and other middleware. */
-	readonly headers: Headers;
-};
 /** Await next exactly once, or throw to reject. The RPC codec owns the response. */
-export type Middleware = (
-	ctx: MiddlewareContext,
-	next: () => Promise<void>,
-) => Promise<void>;
+export interface Middleware {
+	handle(ctx: RequestContext, next: () => Promise<void>): Promise<void>;
+}
 
 export type ServiceOptions = {
 	/**
@@ -251,6 +243,7 @@ export class Service<C extends Contract> {
 			output = await this.handlers[name as keyof C](
 				input as never,
 				{
+					method: name,
 					request: req,
 					headers,
 					files,
@@ -362,7 +355,7 @@ const reservedHeaders = new Set([
 
 async function runMiddleware(
 	middleware: readonly Middleware[],
-	ctx: MiddlewareContext,
+	ctx: RequestContext,
 	terminal: () => Promise<void>,
 ): Promise<void> {
 	const run = async (index: number): Promise<void> => {
@@ -375,7 +368,7 @@ async function runMiddleware(
 		let repeated = false;
 		let pending: Promise<void> | undefined;
 		try {
-			const result: unknown = await step(ctx, () => {
+			const result: unknown = await step.handle(ctx, () => {
 				if (closed || called) {
 					repeated = true;
 					throw new Error(

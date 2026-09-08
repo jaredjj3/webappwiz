@@ -1,5 +1,6 @@
 import { Service } from "webappwiz/rpc";
 import { contract } from "./contract";
+import { TimingMiddleware } from "./middleware";
 
 /** A complete example: read uploads and return a named integrity report. */
 export const service = new Service(
@@ -29,6 +30,7 @@ export const service = new Service(
 	{
 		// Allows the 100 MB file payload plus multipart metadata/overhead.
 		maxRequestBytes: 101_000_000,
+		middleware: [new TimingMiddleware(console)],
 	},
 );
 
