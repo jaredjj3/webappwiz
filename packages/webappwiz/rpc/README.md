@@ -8,7 +8,7 @@ bound `fetch(Request): Promise<Response>` for an HTTP server or router to mount.
 ## Upload and process audio
 
 ```ts
-import { Binary, Client, type Contract, type Handlers, Service } from "webappwiz/rpc";
+import { Binary, Client, type Context, type Contract, type Handlers, type In, Service } from "webappwiz/rpc";
 import { t } from "webappwiz/t";
 
 export const contract = {
@@ -35,26 +35,43 @@ export const contract = {
   },
 } satisfies Contract;
 
-// Implement these application operations in your own processing/storage layer.
-const handlers: Handlers<typeof contract> = {
-  process: async ({ instrument }, { files }) => {
-    // files.audio is a File, including name, type, size and lastModified.
-    const jobId = await startProcessing(files.audio, instrument);
-    return { jobId };
-  },
-  status: async ({ jobId }) => await readStatus(jobId), // string
-  download: async ({ jobId }) => ({
-    data: new Blob([await readMidiBytes(jobId)]),
-    contentType: "audio/midi",
-    filename: `${jobId}.mid`,
-  }),
-  remove: async ({ jobId }) => {
-    await removeJob(jobId); // resolves undefined; no response body
-  },
-};
+// Implement this dependency in your application's processing/storage layer.
+interface AudioJobs {
+  start(audio: File, instrument: string): Promise<string>;
+  status(jobId: string): Promise<string>;
+  midi(jobId: string): Promise<Blob>;
+  remove(jobId: string): Promise<void>;
+}
+
+class AudioHandlers implements Handlers<typeof contract> {
+  constructor(private readonly jobs: AudioJobs) {}
+
+  async process(
+    { instrument }: In<typeof contract.process>,
+    { files }: Context<typeof contract.process>,
+  ) {
+    return { jobId: await this.jobs.start(files.audio, instrument) };
+  }
+
+  async status({ jobId }: In<typeof contract.status>) {
+    return this.jobs.status(jobId);
+  }
+
+  async download({ jobId }: In<typeof contract.download>) {
+    return new File([await this.jobs.midi(jobId)], `${jobId}.mid`, {
+      type: "audio/midi",
+    });
+  }
+
+  async remove({ jobId }: In<typeof contract.remove>) {
+    await this.jobs.remove(jobId);
+  }
+}
+
+const handlers = new AudioHandlers(jobs);
 
 export const service = new Service(contract, handlers, {
-  maxRequestBytes: 32 * 1024 * 1024,
+  maxRequestBytes: 32_000_000,
 });
 // Mount service.fetch at /rpc using your server.
 
@@ -64,7 +81,7 @@ const { jobId } = await client.call("process", { instrument: "piano" }, {
 });
 const status: string = await client.call("status", { jobId });
 const result = await client.call("download", { jobId });
-// result: { data: Blob; contentType: string; filename?: string }
+// result: { data: Blob; contentType: string; filename: string }
 ```
 
 Missing handlers, wrong arguments, missing attachments and wrong return types
@@ -283,8 +300,9 @@ implemented.
 
 ## Runnable end-to-end example
 
-[Shared contract](./examples/contract.ts), [server](./examples/server.ts), and
-[client](./examples/client.ts), and [timing middleware](./examples/middleware.ts) provide a complete audio upload/report example.
+[Shared contract](./examples/contract.ts), [handler class](./examples/handlers.ts),
+[server](./examples/server.ts), [client](./examples/client.ts), and
+[timing middleware](./examples/middleware.ts) provide a complete audio upload/report example.
 The server reads uploaded bytes and computes a SHA-256 integrity report. It does
 not decode audio, and the MIME preset does not claim that the bytes are valid
 audio. An HTTP round-trip test exercises these exact example modules.
