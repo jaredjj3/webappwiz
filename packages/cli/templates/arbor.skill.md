@@ -131,7 +131,7 @@ One sentence blending what the task set out to do with what it now waits on.
 ```markdown
 ### 🛑 Removed `<task>`
 
-One sentence blending what the task set out to do with why you `arbor rm`ed
+One sentence blending what the task set out to do with why you `arbor remove`d
 it instead.
 ```
 
