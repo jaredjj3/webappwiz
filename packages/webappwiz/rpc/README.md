@@ -8,14 +8,14 @@ bound `fetch(Request): Promise<Response>` for an HTTP server or router to mount.
 ## Upload and process audio
 
 ```ts
-import { Client, type Contract, type Handlers, Service } from "webappwiz/rpc";
+import { Binary, Client, type Contract, type Handlers, Service } from "webappwiz/rpc";
 import { t } from "webappwiz/t";
 
 export const contract = {
   process: {
     type: "mutation",
     input: t.object({ instrument: t.string() }),
-    files: { audio: "file" },
+    files: { audio: Binary.file().audio().maxMB(25) },
     output: t.object({ jobId: t.string() }),
   },
   status: {
@@ -26,7 +26,7 @@ export const contract = {
   download: {
     type: "query",
     input: t.object({ jobId: t.string() }),
-    output: { format: "file" },
+    output: Binary.file().contentTypes("audio/midi").maxMB(10),
   },
   remove: {
     type: "mutation",
@@ -76,6 +76,101 @@ also derive from the operation. Schemas with `unknown` input (including `t`)
 use their output type for typed caller/handler values rather than accepting
 anything.
 
+## Binary declarations
+
+`files` names the operation's multipart attachment fields; `Binary` declares
+what each field accepts. The key remains `files` because its values are File
+objects or arrays of Files. These immutable builders are exported from
+`webappwiz/rpc` and can be reused across contracts:
+
+```ts
+const audio = Binary.file().audio().maxMB(25);
+
+files: {
+  lead: audio,
+  reference: audio.optional(),
+  takes: Binary.files({ minCount: 1, maxCount: 8 })
+    .audio()
+    .maxMB(25)
+    .maxTotalMB(100),
+}
+```
+
+| API | Meaning / default |
+| --- | --- |
+| `Binary.file()` | One required File; zero bytes are accepted |
+| `Binary.files({ minCount?, maxCount? })` | Required File array; defaults to zero or more, preserving order |
+| `.optional()` | Field may be absent; inferred as an optional property |
+| `.minBytes(n)` / `.maxBytes(n)` | Per-file byte bounds, inclusive; no bound when omitted |
+| `.maxKB(n)` / `.maxMB(n)` / `.maxGB(n)` | Per-file bounds in decimal units; 1 MB = 1,000,000 bytes |
+| `.maxTotalBytes(n)` / `.maxTotalKB(n)` / `.maxTotalMB(n)` / `.maxTotalGB(n)` | Collection-only aggregate bounds; excludes multipart overhead |
+| `.contentTypes(...types)` | Accepted MIME types or family wildcards; unrestricted when omitted |
+| `.audio()` / `.video()` | Shorthand for `.contentTypes("audio/*")` / `.contentTypes("video/*")` |
+
+Each constraint call returns a new declaration. Repeating a size bound or
+`contentTypes` replaces that bound or list. For example,
+`.audio().contentTypes("audio/wav", "audio/mpeg")` narrows the broad preset.
+Invalid counts, negative/nonfinite sizes, fractional byte counts, inverted bounds
+and malformed MIME patterns fail when the contract is constructed. Fractional
+KB/MB/GB values are accepted when they resolve to a safe integer byte count.
+
+MIME comparisons are case-insensitive and ignore valid parameters such as
+`charset=utf-8`. Common audio aliases are normalized for comparison only:
+`audio/x-wav`, `audio/wave`, `audio/vnd.wave` map to `audio/wav`;
+`audio/mp3` to `audio/mpeg`; `audio/x-flac` to `audio/flac`; and
+`audio/x-midi` to `audio/midi`. Original metadata remains available to handlers
+and callers. An empty File type is accepted only without a type restriction.
+No type is inferred from a filename or extension. Presets validate declared
+metadata, not file signatures, codecs, duration, dimensions or decodability.
+Applications perform those checks in their processing layer.
+
+Constraints are checked before client upload and independently on the server.
+Failures identify the field and array index, for example
+`files.takes[2]: maxBytes 25000000, received 26000000`. Aggregate/count failures
+name the collection. They use the existing `request_invalid` error category.
+The service-wide `maxRequestBytes` remains an independent deployment limit.
+
+An absent optional collection differs from a present empty array. When every
+attachment field is optional, callers may omit the third argument entirely.
+When a required collection allows zero files, callers still pass its empty array.
+Legacy `"file"` and `"files"` shorthands remain supported; legacy `"files"`
+retains its nonempty-array requirement.
+
+`output: Binary.file()` shares the same per-file constraints, and requires a
+named result. A handler may return a native `File` or
+`{ data: Blob, contentType: string, filename: string }`. Clients receive that
+latter shape (`NamedFileResult`), with all constraints checked. A server output
+violation becomes `output_invalid`; an incompatible download becomes
+`response_invalid`. `Binary.files()` and optional binary declarations cannot be
+response formats; multiple-file and streaming response transports are not
+implemented.
+
+## Runnable end-to-end example
+
+[Shared contract](./examples/contract.ts), [server](./examples/server.ts), and
+[client](./examples/client.ts) provide a complete audio upload/report example.
+The server reads uploaded bytes and computes a SHA-256 integrity report. It does
+not decode audio, and the MIME preset does not claim that the bytes are valid
+audio. An HTTP round-trip test exercises these exact example modules.
+
+Start the server from the repository root:
+
+```sh
+bun packages/webappwiz/rpc/examples/server.ts
+```
+
+The client helper can run in a browser served on the same origin (or configure
+CORS for a separate origin):
+
+```ts
+import { uploadAudio } from "./examples/client";
+
+const selected = Array.from(fileInput.files ?? []);
+const report = await uploadAudio("http://localhost:3000", "Session", selected);
+console.log(report.filename, report.contentType, await report.data.text());
+// Save report.data explicitly using an object URL if the user requests it.
+```
+
 ## Formats
 
 | `output` declaration | Handler value | Client result | HTTP success |
@@ -83,12 +178,14 @@ anything.
 | A Standard Schema | Schema input | Schema output | 200 JSON |
 | `{ format: "json", schema }` | Schema input | Schema output | 200 JSON |
 | `{ format: "text" }` | `string` | `string` | 200 text/plain, UTF-8 |
+| `Binary.file()` | `File` or `NamedFileResult` | `NamedFileResult` | 200 with declared media type |
 | `{ format: "file" }` | `FileResult` | `FileResult` | 200 with declared media type |
 | `{ format: "empty" }` | `undefined` | `undefined` | 204 without a body |
 
 File data must be a `Blob` (a `File` is also a Blob). Wrap bytes with
-`new Blob([bytes])`. `contentType` is required and must be a bare media type
-such as `audio/midi` or `application/octet-stream`, without parameters.
+`new Blob([bytes])`. `contentType` is required and must be a valid media type
+such as `audio/midi` or `application/octet-stream`; valid MIME parameters are
+preserved.
 `filename` is optional; when present it must be nonempty and contain no control
 characters or path separators. The service emits a UTF-8 `filename*` in
 `Content-Disposition: attachment`, and the client decodes it back, including
@@ -134,8 +231,10 @@ It cancels reading and returns 413 when the limit is exceeded. This is a body
 limit, not a total memory limit: chunks, a contiguous buffer, parsed JSON,
 FormData and File wrappers can coexist. Uploads are not streamed to handlers.
 Downloads use a Blob on the server and are fully buffered into a Blob before
-the client resolves. There is no RPC download size limit or streaming result
-API. Set deployment/proxy limits and choose sizes appropriate for memory and
+the client resolves. With a declared `maxBytes` (or KB/MB/GB equivalent), clients stop reading
+and cancel the download when actual bytes exceed the limit, independent of
+Content-Length. Without that constraint there is no RPC download size limit.
+There is no streaming result API. Set deployment/proxy limits and choose sizes appropriate for memory and
 concurrent requests. Large or resumable transfers need a separate design.
 GET input is limited by the URL limits of your server/proxies (often near 8 KiB);
 use mutations for large structured inputs.

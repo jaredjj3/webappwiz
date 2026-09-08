@@ -129,9 +129,21 @@ export class Service<C extends Contract> {
 							throw new Error(`unexpected multipart part: ${key}`);
 						}
 					}
-					for (const [key, kind] of Object.entries(method.files)) {
+					for (const [key, declaration] of Object.entries(method.files)) {
+						const kind =
+							typeof declaration === "string" ? declaration : declaration.kind;
 						const parts = form.getAll(`file:${key}`);
-						const metadata = envelope.metadata?.[key];
+						const metadata = Object.hasOwn(envelope.metadata ?? {}, key)
+							? envelope.metadata[key]
+							: undefined;
+						if (
+							metadata === undefined &&
+							parts.length === 0 &&
+							typeof declaration !== "string" &&
+							declaration.isOptional
+						) {
+							continue;
+						}
 						if (!Array.isArray(metadata) || metadata.length !== parts.length) {
 							throw new Error(`files.${key}: invalid metadata`);
 						}

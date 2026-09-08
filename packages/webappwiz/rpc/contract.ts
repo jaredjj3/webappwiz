@@ -1,12 +1,17 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { Binary } from "./binary";
 
 export type Output =
 	| StandardSchemaV1
 	| { format: "json"; schema: StandardSchemaV1 }
 	| { format: "text" }
-	| { format: "file" }
+	| { format: "file"; kind?: never }
+	| Binary<"file", false>
 	| { format: "empty" };
-export type FileFields = Record<string, "file" | "files">;
+export type FileFields = Record<
+	string,
+	"file" | "files" | Binary<"file" | "files", boolean>
+>;
 /** Plain schemas remain shorthand for JSON. Attachments require a mutation. */
 export type Contract = Record<
 	string,
@@ -34,21 +39,37 @@ type OutputSchema<M> = M extends { output: infer S extends StandardSchemaV1 }
 		: never;
 /** Buffered download. Creating an object URL or saving it is the caller's choice. */
 export type FileResult = { data: Blob; contentType: string; filename?: string };
-type Formatted<M> = M extends { output: { format: "text" } }
-	? string
-	: M extends { output: { format: "file" } }
-		? FileResult
-		: M extends { output: { format: "empty" } }
-			? undefined
-			: never;
+export type NamedFileResult = FileResult & { filename: string };
+type Formatted<M> = M extends { output: Binary<"file", false> }
+	? NamedFileResult
+	: M extends { output: { format: "text" } }
+		? string
+		: M extends { output: { format: "file" } }
+			? FileResult
+			: M extends { output: { format: "empty" } }
+				? undefined
+				: never;
 export type Out<M> = [OutputSchema<M>] extends [never]
 	? Formatted<M>
 	: StandardSchemaV1.InferOutput<OutputSchema<M>>;
-export type HandlerOutput<M> = [OutputSchema<M>] extends [never]
-	? Formatted<M>
-	: SchemaInput<OutputSchema<M>>;
+export type HandlerOutput<M> = M extends { output: Binary<"file", false> }
+	? File | NamedFileResult
+	: [OutputSchema<M>] extends [never]
+		? Formatted<M>
+		: SchemaInput<OutputSchema<M>>;
+type Attachment<F> = F extends "files" | Binary<"files", boolean>
+	? File[]
+	: File;
 export type Files<M> = M extends { files: infer F extends FileFields }
-	? { [K in keyof F]: F[K] extends "files" ? File[] : File }
+	? {
+			[K in keyof F as F[K] extends Binary<"file" | "files", true>
+				? never
+				: K]: Attachment<F[K]>;
+		} & {
+			[K in keyof F as F[K] extends Binary<"file" | "files", true>
+				? K
+				: never]?: Attachment<F[K]>;
+		}
 	: Record<string, never>;
 /** Per-request handles. Attachment fields are inferred from the operation. */
 export type Context<M = unknown> = {

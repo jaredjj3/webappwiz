@@ -1,5 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { SchemaError } from "webappwiz/t";
+import { Binary, checkFile, mediaType } from "./binary";
 import type { FileFields, FileResult, Output } from "./contract";
 
 export const protocol = "x-webappwiz-rpc";
@@ -29,25 +30,67 @@ export function checkFiles(
 	if (!value || typeof value !== "object") {
 		throw new Error("files: expected attachment map");
 	}
-	const files = value as Record<string, File | File[]>;
+	const files = value as Record<string, File | File[] | undefined>;
+	const checked: Record<string, File | File[]> = Object.create(null);
 	for (const key of Object.keys(files)) {
 		if (!Object.hasOwn(fields, key)) {
 			throw new Error(`files.${key}: unexpected attachment`);
 		}
 	}
-	for (const [key, kind] of Object.entries(fields)) {
-		const item = files[key];
-		if (
-			kind === "file"
-				? !(item instanceof File)
-				: !Array.isArray(item) ||
-					item.length === 0 ||
-					!item.every((file) => file instanceof File)
-		) {
-			throw new Error(`files.${key}: expected ${kind}`);
+	for (const [key, declaration] of Object.entries(fields)) {
+		const rule = typeof declaration === "string" ? undefined : declaration;
+		const kind = rule?.kind ?? declaration;
+		const item = Object.hasOwn(files, key) ? files[key] : undefined;
+		if (item === undefined && rule?.isOptional) {
+			continue;
+		}
+		const path = `files.${key}`;
+		if (kind === "file") {
+			if (!(item instanceof File)) {
+				throw new Error(`${path}: expected file`);
+			}
+			if (rule) {
+				checkFile(rule, item, path);
+			}
+			checked[key] = item;
+		} else {
+			if (!Array.isArray(item)) {
+				throw new Error(`${path}: expected files`);
+			}
+			const minCount = rule ? (rule.limits.minCount ?? 0) : 1;
+			const maxCount = rule?.limits.maxCount ?? Infinity;
+			if (item.length < minCount) {
+				throw new Error(
+					`${path}: minCount ${minCount}, received ${item.length}`,
+				);
+			}
+			if (item.length > maxCount) {
+				throw new Error(
+					`${path}: maxCount ${maxCount}, received ${item.length}`,
+				);
+			}
+			let total = 0;
+			for (const [index, file] of item.entries()) {
+				if (!(file instanceof File)) {
+					throw new Error(`${path}[${index}]: expected file`);
+				}
+				if (rule) {
+					checkFile(rule, file, `${path}[${index}]`);
+				}
+				total += file.size;
+			}
+			if (
+				rule?.limits.maxTotalBytes !== undefined &&
+				total > rule.limits.maxTotalBytes
+			) {
+				throw new Error(
+					`${path}: maxTotalBytes ${rule.limits.maxTotalBytes}, received ${total}`,
+				);
+			}
+			checked[key] = item;
 		}
 	}
-	return files;
+	return checked;
 }
 export function json(value: unknown): string {
 	const body = JSON.stringify(value);
@@ -101,14 +144,28 @@ export async function encode(
 		headers.delete("content-type");
 		return new Response(null, { status: 204, headers });
 	}
-	const file = value as FileResult | null;
+	const file = (
+		value instanceof File
+			? { data: value, contentType: value.type, filename: value.name }
+			: value
+	) as FileResult | null;
 	if (
 		!file ||
 		!(file.data instanceof Blob) ||
 		typeof file.contentType !== "string" ||
-		!/^[\w!#$&^.+-]+\/[\w!#$&^.+-]+$/.test(file.contentType)
+		!mediaType(file.contentType)
 	) {
 		throw new Error("expected file output with Blob data and media type");
+	}
+	if (output instanceof Binary) {
+		if (typeof file.filename !== "string" || !file.filename) {
+			throw new Error("output: expected named file");
+		}
+		checkFile(
+			output,
+			{ size: file.data.size, type: file.contentType },
+			"output",
+		);
 	}
 	if (file.filename !== undefined) {
 		if (
@@ -163,7 +220,7 @@ export async function decode(output: Output, res: Response): Promise<unknown> {
 		}
 		return res.text();
 	}
-	if (!/^[\w!#$&^.+-]+\/[\w!#$&^.+-]+$/.test(contentType)) {
+	if (!mediaType(contentType)) {
 		throw new Error("invalid file content-type");
 	}
 	const disposition = res.headers.get("content-disposition");
@@ -180,8 +237,18 @@ export async function decode(output: Output, res: Response): Promise<unknown> {
 			throw new Error("invalid download filename");
 		}
 	}
+	const data =
+		output instanceof Binary && output.limits.maxBytes !== undefined
+			? await limitedBlob(res, output.limits.maxBytes)
+			: await res.blob();
+	if (output instanceof Binary) {
+		if (filename === undefined) {
+			throw new Error("output: expected download filename");
+		}
+		checkFile(output, { size: data.size, type: contentType }, "output");
+	}
 	return {
-		data: await res.blob(),
+		data,
 		contentType,
 		...(filename === undefined ? {} : { filename }),
 	};
@@ -195,4 +262,32 @@ function unsafeFilename(value: string): boolean {
 			char === "/" ||
 			char === "\\",
 	);
+}
+
+/** Count actual download bytes rather than trusting a proxy's Content-Length. */
+async function limitedBlob(res: Response, limit: number): Promise<Blob> {
+	const reader = res.body?.getReader();
+	const chunks: Uint8Array<ArrayBuffer>[] = [];
+	let size = 0;
+	if (reader) {
+		try {
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done) {
+					break;
+				}
+				size += value.byteLength;
+				if (size > limit) {
+					await reader.cancel();
+					throw new Error(
+						`output: maxBytes ${limit}, received at least ${size}`,
+					);
+				}
+				chunks.push(value);
+			}
+		} finally {
+			reader.releaseLock();
+		}
+	}
+	return new Blob(chunks, { type: res.headers.get("content-type") ?? "" });
 }

@@ -33,7 +33,9 @@ export class Client<C extends Contract> {
 		name: K,
 		input: ClientInput<C[NoInfer<K>]>,
 		...options: C[K] extends { files: object }
-			? [opts: ClientOptions & { files: Files<C[K]> }]
+			? Record<never, never> extends Files<C[K]>
+				? [opts?: ClientOptions & { files?: Files<C[K]> }]
+				: [opts: ClientOptions & { files: Files<C[K]> }]
 			: [opts?: ClientOptions]
 	): Promise<Out<C[K]>> {
 		const opts = options[0] ?? {};
@@ -51,7 +53,7 @@ export class Client<C extends Contract> {
 			if (method.files) {
 				const files = checkFiles(
 					method.files,
-					"files" in opts ? opts.files : undefined,
+					("files" in opts ? opts.files : undefined) ?? {},
 				);
 				const form = new FormData();
 				const metadata: Record<

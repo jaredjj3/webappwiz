@@ -1,3 +1,4 @@
+export { Binary, type FileCountOptions } from "./binary";
 export { Client, type ClientOptions } from "./client";
 export type {
 	ClientInput,
@@ -8,6 +9,7 @@ export type {
 	HandlerOutput,
 	Handlers,
 	In,
+	NamedFileResult,
 	Out,
 	Output,
 } from "./contract";
