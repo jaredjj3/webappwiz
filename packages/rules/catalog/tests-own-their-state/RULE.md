@@ -5,7 +5,7 @@ files: "**/{*.test,testing}.ts"
 level: error
 complexity: medium
 recommended: true
-version: 0.0.17
+version: 0.0.18
 ---
 # Tests own their state
 
