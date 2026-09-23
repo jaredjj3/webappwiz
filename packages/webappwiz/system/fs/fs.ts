@@ -6,6 +6,8 @@ export interface Fs {
 	mkdir(path: string, opts?: MkdirOptions): Promise<void>;
 	read(path: string): Promise<string>;
 	write(path: string, data: string): Promise<void>;
+	readBytes(path: string): Promise<Uint8Array>;
+	writeBytes(path: string, data: Uint8Array): Promise<void>;
 	rename(from: string, to: string): Promise<void>;
 	readdir(path: string): Promise<string[]>;
 	stat(path: string): Promise<StatResult>;

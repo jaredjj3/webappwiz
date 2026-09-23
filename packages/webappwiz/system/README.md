@@ -12,6 +12,7 @@ const fs = new NodeFs();
 const ps = new NodePs();
 
 await fs.write("/tmp/x", "hi");
+await fs.writeBytes("/tmp/y", new Uint8Array([1, 2, 3]));
 await ps.spawn(["echo", "hi"]);
 ```
 

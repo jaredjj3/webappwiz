@@ -5,7 +5,7 @@ const DIRECTORY = Symbol("directory");
 
 /** An in-memory {@link Fs} for tests. */
 export class FakeFs implements Fs {
-	readonly store = new Map<string, string | typeof DIRECTORY>();
+	readonly store = new Map<string, string | Uint8Array | typeof DIRECTORY>();
 
 	async exists(path: string): Promise<boolean> {
 		return this.store.has(normalize(path));
@@ -20,15 +20,25 @@ export class FakeFs implements Fs {
 	}
 
 	async read(path: string): Promise<string> {
-		const content = this.store.get(normalize(path));
-		if (content === undefined || content === DIRECTORY) {
-			throw new Error(`File does not exist: ${path}`);
-		}
-		return content;
+		const content = this.file(path);
+		return typeof content === "string"
+			? content
+			: new TextDecoder().decode(content);
 	}
 
 	async write(path: string, data: string): Promise<void> {
 		this.store.set(normalize(path), data);
+	}
+
+	async readBytes(path: string): Promise<Uint8Array> {
+		const content = this.file(path);
+		return typeof content === "string"
+			? new TextEncoder().encode(content)
+			: content.slice();
+	}
+
+	async writeBytes(path: string, data: Uint8Array): Promise<void> {
+		this.store.set(normalize(path), data.slice());
 	}
 
 	async rename(from: string, to: string): Promise<void> {
@@ -72,5 +82,13 @@ export class FakeFs implements Fs {
 				}
 			}
 		}
+	}
+
+	private file(path: string): string | Uint8Array {
+		const content = this.store.get(normalize(path));
+		if (content === undefined || content === DIRECTORY) {
+			throw new Error(`File does not exist: ${path}`);
+		}
+		return content;
 	}
 }
