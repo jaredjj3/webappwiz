@@ -3,7 +3,6 @@ name: tests-own-their-state
 description: Tests set up their own state; shared setup only names steps and never builds the world.
 files: "**/{*.test,testing}.ts"
 level: error
-complexity: medium
 recommended: true
 version: 0.0.19
 ---

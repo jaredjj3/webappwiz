@@ -3,7 +3,6 @@ name: parameters-declare-fields
 description: A constructor parameter copied straight into a field of the same name carries the modifier instead.
 files: "**/*.ts"
 level: error
-complexity: low
 recommended: true
 version: 0.0.19
 ---

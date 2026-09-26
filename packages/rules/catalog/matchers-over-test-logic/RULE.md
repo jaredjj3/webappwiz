@@ -3,7 +3,6 @@ name: matchers-over-test-logic
 description: A test carries no if and no for; a matcher decides what the logic would have.
 files: "**/*.test.ts"
 level: error
-complexity: low
 recommended: true
 version: 0.0.19
 ---

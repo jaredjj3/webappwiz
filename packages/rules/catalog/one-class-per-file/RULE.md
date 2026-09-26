@@ -3,7 +3,6 @@ name: one-class-per-file
 description: A file declares one top-level class.
 files: "**/*.ts"
 level: error
-complexity: low
 recommended: true
 version: 0.0.19
 ---

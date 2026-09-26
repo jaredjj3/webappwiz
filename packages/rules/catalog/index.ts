@@ -10,6 +10,10 @@ import devServersFindAPort from "./dev-servers-find-a-port/RULE.md" with {
 import docCommentsAddressUsers from "./doc-comments-address-users/RULE.md" with {
 	type: "text",
 };
+import exampleScript from "./example-script/RULE.md" with { type: "text" };
+import exampleScriptCheck from "./example-script/scripts/check.sh" with {
+	type: "text",
+};
 import exportLeadsTheFile from "./export-leads-the-file/RULE.md" with {
 	type: "text",
 };
@@ -45,26 +49,31 @@ import testsOwnTheirState from "./tests-own-their-state/RULE.md" with {
 };
 
 /**
- * Every rule this package ships, id to `RULE.md`, the way `@webappwiz/cli`
- * bundles skills. Imported rather than read off a directory so the documents
- * travel inside the build, and so a rule is here or it does not ship.
+ * Every rule this package ships, id to the files in its directory by path:
+ * its `RULE.md`, and any scripts beside it. Imported rather than read off a
+ * directory so the files travel inside the build, and so a rule is here or it
+ * does not ship.
  */
-export const catalog: Record<string, string> = {
-	"classes-over-function-exports": classesOverFunctionExports,
-	"comments-say-why-not-what": commentsSayWhyNotWhat,
-	"dev-servers-find-a-port": devServersFindAPort,
-	"doc-comments-address-users": docCommentsAddressUsers,
-	"export-leads-the-file": exportLeadsTheFile,
-	"fakes-over-mocks": fakesOverMocks,
-	"matchers-over-test-logic": matchersOverTestLogic,
-	"named-options-last": namedOptionsLast,
-	"no-em-dashes": noEmDashes,
-	"objects-over-callbacks": objectsOverCallbacks,
-	"one-class-per-file": oneClassPerFile,
-	"parameters-declare-fields": parametersDeclareFields,
-	"reactive-over-use-state": reactiveOverUseState,
-	"resources-are-disposable": resourcesAreDisposable,
-	"simple-test-setup": simpleTestSetup,
-	"test-setup-names-what-it-makes": testSetupNamesWhatItMakes,
-	"tests-own-their-state": testsOwnTheirState,
+export const catalog: Record<string, Record<string, string>> = {
+	"classes-over-function-exports": { "RULE.md": classesOverFunctionExports },
+	"comments-say-why-not-what": { "RULE.md": commentsSayWhyNotWhat },
+	"dev-servers-find-a-port": { "RULE.md": devServersFindAPort },
+	"doc-comments-address-users": { "RULE.md": docCommentsAddressUsers },
+	"example-script": {
+		"RULE.md": exampleScript,
+		"scripts/check.sh": exampleScriptCheck,
+	},
+	"export-leads-the-file": { "RULE.md": exportLeadsTheFile },
+	"fakes-over-mocks": { "RULE.md": fakesOverMocks },
+	"matchers-over-test-logic": { "RULE.md": matchersOverTestLogic },
+	"named-options-last": { "RULE.md": namedOptionsLast },
+	"no-em-dashes": { "RULE.md": noEmDashes },
+	"objects-over-callbacks": { "RULE.md": objectsOverCallbacks },
+	"one-class-per-file": { "RULE.md": oneClassPerFile },
+	"parameters-declare-fields": { "RULE.md": parametersDeclareFields },
+	"reactive-over-use-state": { "RULE.md": reactiveOverUseState },
+	"resources-are-disposable": { "RULE.md": resourcesAreDisposable },
+	"simple-test-setup": { "RULE.md": simpleTestSetup },
+	"test-setup-names-what-it-makes": { "RULE.md": testSetupNamesWhatItMakes },
+	"tests-own-their-state": { "RULE.md": testsOwnTheirState },
 };

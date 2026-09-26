@@ -3,7 +3,6 @@ name: simple-test-setup
 description: One describe per file, it titles that complete the sentence, shared setup in its beforeEach.
 files: "**/*.test.ts"
 level: error
-complexity: low
 recommended: true
 version: 0.0.19
 ---

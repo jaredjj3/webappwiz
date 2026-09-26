@@ -8,8 +8,8 @@ describe("rules add", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
 	const rules = {
-		"no-foo": ruleDoc("no-foo", { recommended: true }),
-		"no-bar": ruleDoc("no-bar"),
+		"no-foo": { "RULE.md": ruleDoc("no-foo", { recommended: true }) },
+		"no-bar": { "RULE.md": ruleDoc("no-bar") },
 	};
 
 	beforeEach(() => {
@@ -42,7 +42,7 @@ describe("rules add", () => {
 		await add({ dir: "/p", rule: "", recommended: true, log, fs, rules });
 
 		expect(await fs.read("/p/.wiz/rules/no-foo/RULE.md")).toEqual(
-			rules["no-foo"],
+			rules["no-foo"]["RULE.md"],
 		);
 		expect(await fs.exists("/p/.wiz/rules/no-bar/RULE.md")).toBe(false);
 	});
@@ -69,11 +69,29 @@ describe("rules add", () => {
 			recommended: true,
 			log,
 			fs,
-			rules: { "no-bar": ruleDoc("no-bar") },
+			rules: { "no-bar": { "RULE.md": ruleDoc("no-bar") } },
 		});
 
 		expect(log.entries.map((entry) => String(entry.message))).toEqual([
 			"no rules recommend themselves",
 		]);
+	});
+
+	it("copies a rule's scripts beside it, and says to read them", async () => {
+		const scripted = {
+			"no-baz": {
+				"RULE.md": ruleDoc("no-baz"),
+				"scripts/check.sh": "exit 0\n",
+			},
+		};
+
+		await add({ dir: "/p", rule: "no-baz", log, fs, rules: scripted });
+
+		expect(await fs.read("/p/.wiz/rules/no-baz/scripts/check.sh")).toEqual(
+			"exit 0\n",
+		);
+		expect(log.entries.map((entry) => String(entry.message))).toContain(
+			"⚠️ .wiz/rules/no-baz/scripts/check.sh is a script that runs whenever scry reviews against its rule: read it before the next review",
+		);
 	});
 });

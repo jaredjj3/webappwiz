@@ -14,7 +14,7 @@ import type { WorkerMessage } from "./protocol";
  * It acknowledges each request before starting on it, so the page can tell a
  * slow worker from one that never heard the message.
  */
-// rule-ignore objects-over-callbacks: the work itself, run to produce the call's result
+// scry-ignore objects-over-callbacks: the work itself, run to produce the call's result
 export function workerScript<Input, Output>(
 	work: (input: Input) => Promise<Output>,
 ): void {

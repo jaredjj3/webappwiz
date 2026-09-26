@@ -1,5 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import { NodeGlob } from "webappwiz/system";
 import { Rule, RuleError } from "./rule";
 import { ruleDoc } from "./testing";
 
@@ -10,7 +9,6 @@ describe("Rule", () => {
 				description: "No foo.",
 				files: "**/*.tsx",
 				level: "warning",
-				complexity: "high",
 				recommended: true,
 				version: "1.2.3",
 			}),
@@ -21,7 +19,6 @@ describe("Rule", () => {
 			description: "No foo.",
 			files: "**/*.tsx",
 			level: "warning",
-			complexity: "high",
 			recommended: true,
 			version: "1.2.3",
 		});
@@ -41,7 +38,7 @@ describe("Rule", () => {
 		);
 
 		expect(() => Rule.parse(doc)).toThrow(
-			/^RULE\.md:7: recommended: expected one of true, false/,
+			/^RULE\.md:6: recommended: expected one of true, false/,
 		);
 	});
 
@@ -68,20 +65,28 @@ describe("Rule", () => {
 	});
 
 	it("names the missing field and the file it was reading", () => {
-		const doc = ruleDoc("no-foo").replace(/^level:.*\n/m, "");
+		const doc = ruleDoc("no-foo").replace(/^description:.*\n/m, "");
 
 		expect(() =>
 			Rule.parse(doc, { path: ".wiz/rules/no-foo/RULE.md" }),
-		).toThrow(/^\.wiz\/rules\/no-foo\/RULE\.md:1: level: /);
+		).toThrow(/^\.wiz\/rules\/no-foo\/RULE\.md:1: description: /);
 	});
 
 	it("points a bad value at its line", () => {
-		const doc = ruleDoc("no-foo").replace(
-			"complexity: medium",
-			"complexity: hard",
+		const doc = ruleDoc("no-foo").replace("level: error", "level: loud");
+
+		expect(() => Rule.parse(doc)).toThrow(
+			/^RULE\.md:5: level: expected one of error, warning/,
+		);
+	});
+
+	it("reports as an error when the frontmatter names no level", () => {
+		const doc = ruleDoc("no-foo", { level: "warning" }).replace(
+			/^level:.*\n/m,
+			"",
 		);
 
-		expect(() => Rule.parse(doc)).toThrow(/^RULE\.md:6: complexity: /);
+		expect(Rule.parse(doc).level).toEqual("error");
 	});
 
 	it("rejects a name that is not kebab case", () => {
@@ -101,17 +106,8 @@ describe("Rule", () => {
 	});
 
 	it("leaves the body to its author, the way a skill's is", () => {
-		const doc =
-			"---\nname: no-foo\ndescription: x\nlevel: error\ncomplexity: low\n---\n";
+		const doc = "---\nname: no-foo\ndescription: x\n---\n";
 
 		expect(Rule.parse(doc).id).toEqual("no-foo");
-	});
-
-	it("matches a file by its glob", () => {
-		const rule = Rule.parse(ruleDoc("no-foo", { files: "**/*.test.ts" }));
-		const glob = new NodeGlob();
-
-		expect(rule.matches("src/a.test.ts", glob)).toBe(true);
-		expect(rule.matches("src/a.ts", glob)).toBe(false);
 	});
 });

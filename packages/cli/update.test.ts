@@ -19,7 +19,7 @@ describe("update", () => {
 		version: "1.0.0",
 		log,
 		fs,
-		skills: { arbor: skill("1.0.0") },
+		skills: { arbor: { "SKILL.md": skill("1.0.0") } },
 	});
 
 	beforeEach(async () => {

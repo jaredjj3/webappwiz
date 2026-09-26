@@ -1,11 +1,10 @@
-import type { Complexity, Level } from "./rule";
+import type { Level } from "./rule";
 
 /** Whatever a test wants to differ from a plain rule document. */
 export interface RuleDocOptions {
 	description?: string;
 	files?: string;
 	level?: Level;
-	complexity?: Complexity;
 	recommended?: boolean;
 	version?: string;
 }
@@ -18,7 +17,6 @@ export const ruleDoc = (name: string, opts: RuleDocOptions = {}): string =>
 		`description: ${opts.description ?? `Prose about ${name}.`}`,
 		`files: "${opts.files ?? "**/*.ts"}"`,
 		`level: ${opts.level ?? "error"}`,
-		`complexity: ${opts.complexity ?? "medium"}`,
 		...(opts.recommended === undefined
 			? []
 			: [`recommended: ${opts.recommended}`]),

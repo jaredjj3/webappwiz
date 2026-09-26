@@ -3,7 +3,6 @@ name: dev-servers-find-a-port
 description: A dev server tries the next port when its default is taken, and reports the one it got.
 files: "**/*.ts"
 level: error
-complexity: low
 version: 0.0.19
 ---
 # Dev servers find a port

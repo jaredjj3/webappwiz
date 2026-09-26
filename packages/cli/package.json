@@ -1,7 +1,7 @@
 {
 	"name": "@webappwiz/cli",
 	"version": "0.0.19",
-	"description": "The webappwiz CLI: keep rules and agent skills in a project, and divide a review up",
+	"description": "The webappwiz CLI: keep dependencies, agent skills, and rules in a project in step with a release",
 	"license": "MIT",
 	"author": "Jared Johnson",
 	"repository": {

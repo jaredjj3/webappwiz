@@ -43,7 +43,7 @@ ARBOR.md
 .playwright-mcp
 .arbor-shots
 
-# review reports (wiz rules review)
+# review reports (the scry skill)
 .wiz/reviews
 
 # the arbor dev page, compiled by packages/arbor/build.ts

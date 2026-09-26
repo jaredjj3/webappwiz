@@ -8,18 +8,21 @@ describe("rules list", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
 	const rules = {
-		"no-foo": ruleDoc("no-foo", {
-			description: "No foo.",
-			complexity: "low",
-			recommended: true,
-			version: "1.0.0",
-		}),
-		"no-bar": ruleDoc("no-bar", {
-			description: "No bar.",
-			files: "**/*.md",
-			level: "warning",
-			version: "1.0.0",
-		}),
+		"no-foo": {
+			"RULE.md": ruleDoc("no-foo", {
+				description: "No foo.",
+				recommended: true,
+				version: "1.0.0",
+			}),
+		},
+		"no-bar": {
+			"RULE.md": ruleDoc("no-bar", {
+				description: "No bar.",
+				files: "**/*.md",
+				level: "warning",
+				version: "1.0.0",
+			}),
+		},
 	};
 
 	const printed = () =>
@@ -40,9 +43,9 @@ describe("rules list", () => {
 
 		expect(printed()).toEqual(
 			[
-				"rule     level     complexity   recommended   files     ships   installed   description",
-				"no-bar   warning   medium       -             **/*.md   1.0.0   -           No bar.",
-				"no-foo   error     low          yes           **/*.ts   1.0.0   -           No foo.",
+				"rule     level     recommended   files     ships   installed   description",
+				"no-bar   warning   -             **/*.md   1.0.0   -           No bar.",
+				"no-foo   error     yes           **/*.ts   1.0.0   -           No foo.",
 			].join("\n"),
 		);
 	});
@@ -53,7 +56,7 @@ describe("rules list", () => {
 		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain(
-			"no-foo   error     medium       yes           **/*.ts   1.0.0   0.9.0",
+			"no-foo   error     yes           **/*.ts   1.0.0   0.9.0",
 		);
 		expect(printed()).toContain("1 out of date: run `rules update`");
 	});
@@ -64,7 +67,7 @@ describe("rules list", () => {
 		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain(
-			"mine     error     medium       -             **/*.ts   -       local       Mine.",
+			"mine     error     -             **/*.ts   -       local       Mine.",
 		);
 		expect(printed()).not.toContain("out of date");
 	});

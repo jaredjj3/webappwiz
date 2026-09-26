@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, walk } from "webappwiz/system";
+import type { Bundle } from "./documents";
 import { update as updateRules } from "./rules/update";
 import type { Skills } from "./skills/skill";
 import { update as updateSkills } from "./skills/update";
@@ -27,7 +28,7 @@ export interface UpdateOptions {
 	/** The skills to refresh with; the ones this package ships by default. */
 	skills?: Skills;
 	/** The rules to refresh with; the catalog by default. */
-	rules?: Record<string, string>;
+	rules?: Record<string, Bundle>;
 }
 
 /**

@@ -15,7 +15,10 @@ describe("Documents", () => {
 		fs = new FakeFs();
 		log = new MemoryLogger();
 		documents = new Documents(
-			{ other: md("other"), arbor: md("arbor") },
+			{
+				other: { "SKILL.md": md("other") },
+				arbor: { "SKILL.md": md("arbor"), "references/more.md": "more" },
+			},
 			{ root: ".agents/skills", file: "SKILL.md", noun: "skill" },
 			{ log, fs },
 		);
@@ -34,8 +37,12 @@ describe("Documents", () => {
 		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
 			md("arbor"),
 		);
+		expect(await fs.read("/p/.agents/skills/arbor/references/more.md")).toEqual(
+			"more",
+		);
 		expect(log.entries.map((entry) => entry.message)).toEqual([
 			"wrote /p/.agents/skills/arbor/SKILL.md",
+			"wrote /p/.agents/skills/arbor/references/more.md",
 		]);
 	});
 
@@ -73,12 +80,35 @@ describe("Documents", () => {
 		await fs.mkdir("/p/.agents/skills/mine");
 		await fs.write("/p/.agents/skills/mine/SKILL.md", "mine");
 
-		expect(await documents.update("/p")).toEqual(["arbor"]);
+		expect((await documents.update("/p")).names).toEqual(["arbor"]);
 		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
 			md("arbor"),
 		);
 		expect(await fs.read("/p/.agents/skills/mine/SKILL.md")).toEqual("mine");
 		expect(await fs.exists("/p/.agents/skills/other/SKILL.md")).toBe(false);
+	});
+
+	it("reports only the files whose contents changed, under the project root", async () => {
+		await fs.mkdir("/p/.agents/skills/arbor");
+		await fs.mkdir("/p/.agents/skills/arbor/references");
+		await fs.write("/p/.agents/skills/arbor/SKILL.md", md("arbor", "0.9.0"));
+		await fs.write("/p/.agents/skills/arbor/references/more.md", "more");
+
+		expect(await documents.update("/p")).toEqual({
+			names: ["arbor"],
+			changed: [".agents/skills/arbor/SKILL.md"],
+		});
+	});
+
+	it("refuses a bundle without its document", () => {
+		expect(
+			() =>
+				new Documents(
+					{ broken: { "notes.md": "x" } },
+					{ root: ".agents/skills", file: "SKILL.md", noun: "skill" },
+					{ log, fs },
+				),
+		).toThrow("skill broken has no SKILL.md");
 	});
 
 	it("reads a version out of frontmatter alone, never the body", () => {

@@ -10,7 +10,10 @@ const md = (name: string, version = "1.0.0") =>
 describe("skills list", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
-	const skills = { other: md("other"), arbor: md("arbor") };
+	const skills = {
+		other: { "SKILL.md": md("other") },
+		arbor: { "SKILL.md": md("arbor") },
+	};
 
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
@@ -55,7 +58,12 @@ describe("skills list", () => {
 	});
 
 	it("says so when a skill ships without a version in its frontmatter", async () => {
-		await list({ dir: "/p", log, fs, skills: { arbor: "# no frontmatter" } });
+		await list({
+			dir: "/p",
+			log,
+			fs,
+			skills: { arbor: { "SKILL.md": "# no frontmatter" } },
+		});
 
 		expect(printed()).toContain("arbor   ?       -");
 	});

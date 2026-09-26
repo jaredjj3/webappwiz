@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "webappwiz/log";
 import { FakeFs } from "webappwiz/system/testing";
 
+import { retired as defaultRetired } from "./skill";
 import { update } from "./update";
 
 const md = (name: string, version = "1.0.0") =>
@@ -10,9 +11,20 @@ const md = (name: string, version = "1.0.0") =>
 describe("skills update", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
-	const skills = { arbor: md("arbor"), other: md("other") };
+	const skills = {
+		arbor: { "SKILL.md": md("arbor") },
+		other: { "SKILL.md": md("other") },
+	};
 
-	const updating = () => ({ dir: "/p", log, fs, skills });
+	const retired = {
+		old: {
+			now: "other",
+			description: /^Old words/,
+			migrate: "rename the old comments",
+		},
+	};
+
+	const updating = () => ({ dir: "/p", log, fs, skills, retired });
 
 	beforeEach(() => {
 		fs = new FakeFs();
@@ -56,5 +68,49 @@ describe("skills update", () => {
 		expect(String(log.entries.at(-1)?.message)).toContain(
 			"no webappwiz skills in /p",
 		);
+	});
+
+	it("replaces our copy of a renamed skill with what it became", async () => {
+		await fs.mkdir("/p/.agents/skills/old");
+		await fs.write(
+			"/p/.agents/skills/old/SKILL.md",
+			'---\nname: old\ndescription: "Old words, as shipped."\n---\n',
+		);
+
+		await update(updating());
+
+		expect(await fs.exists("/p/.agents/skills/old")).toBe(false);
+		expect(await fs.read("/p/.agents/skills/other/SKILL.md")).toEqual(
+			md("other"),
+		);
+		expect(log.entries.map((entry) => entry.message)).toEqual([
+			"removed /p/.agents/skills/old: old is now other",
+			"wrote /p/.agents/skills/other/SKILL.md",
+			"old is now other: rename the old comments",
+		]);
+	});
+
+	it("leaves a project's own skill alone when it only shares a retired name", async () => {
+		await fs.mkdir("/p/.agents/skills/old");
+		await fs.write(
+			"/p/.agents/skills/old/SKILL.md",
+			"---\nname: old\ndescription: Mine.\n---\n",
+		);
+
+		await update(updating());
+
+		expect(await fs.exists("/p/.agents/skills/old/SKILL.md")).toBe(true);
+		expect(await fs.exists("/p/.agents/skills/other/SKILL.md")).toBe(false);
+	});
+
+	it("retires review in favor of scry", () => {
+		const { review } = defaultRetired;
+
+		expect(review?.now).toEqual("scry");
+		expect(
+			review?.description.test(
+				"Review a change against the RULE.md rules in this project's .wiz/rules directory by handing blocks of rules to separate agents.",
+			),
+		).toBe(true);
 	});
 });

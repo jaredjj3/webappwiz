@@ -1,7 +1,12 @@
 import { Rule } from "@webappwiz/rules";
 import { ConsoleLogger } from "webappwiz/log";
 import { Documents } from "../documents";
-import { offered, RULES, type RulesProjectOptions } from "./rule-set";
+import {
+	offered,
+	RULES,
+	type RulesProjectOptions,
+	warnOfScripts,
+} from "./rule-set";
 
 export interface AddOptions extends RulesProjectOptions {
 	/** The rule to install, as `rules list` names it; empty with `recommended`. */
@@ -26,7 +31,7 @@ export async function add(opts: AddOptions): Promise<void> {
 		if (opts.rule === "") {
 			throw new Error("rules add needs a rule id, or --recommended");
 		}
-		await documents.add(opts.rule, opts.dir);
+		warnOfScripts(opts, await documents.add(opts.rule, opts.dir));
 		return;
 	}
 	if (rules[opts.rule] !== undefined) {
@@ -40,7 +45,7 @@ export async function add(opts: AddOptions): Promise<void> {
 		.filter(([id, doc]) => Rule.parse(doc, { id }).recommended)
 		.map(([id]) => id);
 	for (const id of ids) {
-		await documents.add(id, dir);
+		warnOfScripts(opts, await documents.add(id, dir));
 	}
 	if (ids.length === 0) {
 		(opts.log ?? new ConsoleLogger()).info("no rules recommend themselves");

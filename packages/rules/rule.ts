@@ -1,18 +1,9 @@
 import { Markdown } from "webappwiz/md";
-import type { Glob } from "webappwiz/system";
 import { z } from "zod";
 
 /** How loudly a violation reports. */
 export type Level = "error" | "warning";
 export const LEVELS = ["error", "warning"] as const;
-
-/**
- * How hard the rule is to judge, so the parent agent can pick a model for the
- * subagent: `low` when a grep or a count settles it, `high` when it takes
- * design judgment across a file, `medium` in between.
- */
-export type Complexity = "low" | "medium" | "high";
-export const COMPLEXITIES = ["low", "medium", "high"] as const;
 
 /** A `RULE.md` that does not have the shape a rule needs: `path:line: why`. */
 export class RuleError extends Error {}
@@ -29,10 +20,9 @@ const FRONTMATTER = z.object({
 	name: z.string(),
 	description: z.string(),
 	files: z.optional(z.string()),
-	level: z.enum(LEVELS, { error: `expected one of ${LEVELS.join(", ")}` }),
-	complexity: z.enum(COMPLEXITIES, {
-		error: `expected one of ${COMPLEXITIES.join(", ")}`,
-	}),
+	level: z.optional(
+		z.enum(LEVELS, { error: `expected one of ${LEVELS.join(", ")}` }),
+	),
 	// frontmatter arrives as strings, so the two spellings of a boolean are an
 	// enum here rather than z.boolean()
 	recommended: z.optional(
@@ -44,23 +34,23 @@ const FRONTMATTER = z.object({
 const NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
- * One rule, parsed out of its `RULE.md`: the frontmatter a listing and a plan
- * read, and the document a subagent is told to read for itself.
+ * One rule, parsed out of its `RULE.md`: the frontmatter a listing reads, and
+ * the document an agent reads for itself.
  *
  * Only `parse` makes one, so holding a `Rule` means the frontmatter passed:
- * every field a plan needs is there. The body is the rule author's, the way a
- * skill's is, and nothing here reads it.
+ * it has a name matching its directory and a description. The body is the
+ * rule author's, the way a skill's is, and nothing here reads it.
  */
 export class Rule {
 	private constructor(
-		/** Kebab case; what a report cites and what a block is headed with. */
+		/** Kebab case; what a report cites. */
 		readonly id: string,
-		/** One line for a listing; a subagent reads the document instead. */
+		/** One line for a listing, and for planning who reads the rule. */
 		readonly description: string,
 		/** Glob choosing which files this rule applies to. */
 		readonly files: string,
+		/** How loudly it reports; `error` when the frontmatter does not say. */
 		readonly level: Level,
-		readonly complexity: Complexity,
 		/**
 		 * Whether a catalog offers this rule as one to start with, which is what
 		 * `rules add --recommended` copies in. A project's own rule says nothing
@@ -108,17 +98,11 @@ export class Rule {
 			front.name,
 			front.description,
 			front.files ?? "**/*",
-			front.level,
-			front.complexity,
+			front.level ?? "error",
 			front.recommended === "true",
 			front.version ?? null,
 			text,
 		);
-	}
-
-	/** Whether this rule applies to a file, by the path a glob is written for. */
-	matches(path: string, glob: Glob): boolean {
-		return glob.matches(this.files, path);
 	}
 }
 

@@ -3,7 +3,6 @@ name: fakes-over-mocks
 description: A test hands in a fake of a focused interface rather than mocking or spying.
 files: "**/*.test.ts"
 level: error
-complexity: medium
 recommended: true
 version: 0.0.19
 ---

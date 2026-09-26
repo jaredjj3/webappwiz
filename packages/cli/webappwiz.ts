@@ -1,5 +1,5 @@
 import { type Cli, cli, type Deps } from "webappwiz/cmd";
-import type { Fs, Glob } from "webappwiz/system";
+import type { Fs } from "webappwiz/system";
 import { z } from "zod";
 // Every @webappwiz package is released in lockstep, so this one's version is
 // the version of the packages to pin and of the skills bundled here. Imported
@@ -7,8 +7,6 @@ import { z } from "zod";
 import { version } from "./package.json";
 import { add as addRule } from "./rules/add";
 import { list as listRules } from "./rules/list";
-import { newRule } from "./rules/new";
-import { review } from "./rules/review";
 import { update as updateRules } from "./rules/update";
 import { add } from "./skills/add";
 import { list } from "./skills/list";
@@ -18,7 +16,6 @@ import { update } from "./update";
 /** What webappwiz's commands are run with, on top of what any cli needs. */
 export interface CommandDeps extends Deps {
 	fs: Fs;
-	glob: Glob;
 }
 
 /**
@@ -46,7 +43,9 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 
 	const rules = program
 		.group("rules")
-		.description("keep rules in .wiz/rules, and divide a review of them up");
+		.description(
+			"keep rules in .wiz/rules, for the scry skill to review against",
+		);
 
 	rules
 		.command("list")
@@ -56,16 +55,6 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "project to inspect (default: .)",
 		})
 		.action((opts, { log, fs }) => listRules({ ...opts, log, fs }));
-
-	rules
-		.command("new")
-		.description("scaffold a rule to fill in, under .wiz/rules/<name>")
-		.arg("name", z.string(), { description: "rule id, kebab case" })
-		.arg("dir", z.string(), {
-			default: ".",
-			description: "project to add it to (default: .)",
-		})
-		.action((opts, { log, fs }) => newRule({ ...opts, log, fs }));
 
 	rules
 		.command("add")
@@ -97,26 +86,6 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "project to refresh (default: .)",
 		})
 		.action((opts, { log, fs }) => updateRules({ ...opts, log, fs }));
-
-	rules
-		.command("review")
-		.description("print the blocks of review work the change divides into")
-		.arg("dir", z.string(), {
-			default: ".",
-			description: "project to review (default: .)",
-		})
-		.option("since", z.string(), {
-			default: "HEAD",
-			description: "git ref the change is measured from (default: HEAD)",
-		})
-		.option("budget", z.coerce.number(), {
-			default: undefined,
-			description:
-				"rule-file pairs one block holds, at most; a block is one agent's work, some rules of one complexity over the changed files they match, so 4 rules under 16 is 4 files. Higher means fewer, bigger blocks (default: 40 low, 16 medium, 25 high complexity)",
-		})
-		.action((opts, { log, fs, ps, glob }) =>
-			review({ ...opts, log, fs, ps, glob }),
-		);
 
 	const skills = program
 		.group("skills")

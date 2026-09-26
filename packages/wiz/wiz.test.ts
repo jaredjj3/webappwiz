@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { color, MemoryLogger } from "webappwiz/log";
-import { NodeGlob } from "webappwiz/system";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { type WizDeps, wiz } from "./wiz";
 
@@ -16,7 +15,7 @@ describe("wiz", () => {
 		await fs.mkdir("/w");
 		await fs.write("/w/package.json", JSON.stringify({ workspaces: ["p/*"] }));
 		ps.setCwd("/w");
-		deps = { log, fs, ps, glob: new NodeGlob() };
+		deps = { log, fs, ps };
 	});
 
 	const out = () =>

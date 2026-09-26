@@ -3,7 +3,6 @@ name: objects-over-callbacks
 description: A function called after the call returns is an event or a dependency, and a function type you name is an interface.
 files: "**/*.ts"
 level: warning
-complexity: high
 recommended: true
 version: 0.0.19
 ---
@@ -25,7 +24,7 @@ the function:
 
 An options bag of callbacks such as `{ onStart, onError }` is an events
 interface begging to exist. When a bare function genuinely is the cleanest
-design, keep it and `rule-ignore` the declaration with the reason: one
+design, keep it and `scry-ignore` the declaration with the reason: one
 marker at the declaration covers every call site.
 
 A function type you give a name is the same choice one step out. A named

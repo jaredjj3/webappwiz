@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { readdirSync, statSync } from "node:fs";
 import { Rule } from "../rule";
 import { catalog } from "./index";
 
 describe("catalog", () => {
-	const parsed = Object.entries(catalog).map(([id, doc]) =>
-		Rule.parse(doc, { id }),
+	const parsed = Object.entries(catalog).map(([id, files]) =>
+		Rule.parse(files["RULE.md"] ?? "", { id }),
 	);
 
 	it("holds a rule under every id, each parsing as its own directory's", () => {
@@ -21,10 +22,23 @@ describe("catalog", () => {
 			.map((rule) => rule.id);
 
 		// The rest read on any TypeScript, so a project takes them on faith;
-		// these two are about a stack and a program that a project may not have.
+		// two are about a stack and a program that a project may not have, and
+		// one is an example that asks for nothing.
 		expect(notRecommended).toEqual([
 			"dev-servers-find-a-port",
+			"example-script",
 			"reactive-over-use-state",
 		]);
+	});
+
+	it("bundles every file in each rule's directory, so none is left behind", () => {
+		for (const [id, files] of Object.entries(catalog)) {
+			const dir = `${import.meta.dir}/${id}`;
+			const onDisk = readdirSync(dir, { recursive: true, encoding: "utf8" })
+				.filter((path) => statSync(`${dir}/${path}`).isFile())
+				.toSorted();
+
+			expect(Object.keys(files).toSorted()).toEqual(onDisk);
+		}
 	});
 });

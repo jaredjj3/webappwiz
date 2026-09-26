@@ -12,6 +12,20 @@ export interface Layout {
 	noun: string;
 }
 
+/**
+ * One document and the files that travel with it, by path under its
+ * directory: `SKILL.md` or `RULE.md`, and any `scripts/` or `references/`
+ * beside it.
+ */
+export type Bundle = Record<string, string>;
+
+/** What `update` did: the documents it refreshed, and the files that changed. */
+export interface Refreshed {
+	names: string[];
+	/** Under the project root, only the ones whose contents differ. */
+	changed: string[];
+}
+
 /** What `Documents` reads and writes through; the real ones by default. */
 export interface DocumentsOptions {
 	log?: Logger;
@@ -37,20 +51,25 @@ export class Documents {
 	private fs: Fs;
 
 	constructor(
-		/** Name to document, as bundled. */
-		private docs: Record<string, string>,
+		/** Name to bundle, each holding the layout's file. */
+		private bundles: Record<string, Bundle>,
 		private layout: Layout,
 		opts: DocumentsOptions = {},
 	) {
 		this.log = opts.log ?? new ConsoleLogger();
 		this.fs = opts.fs ?? new NodeFs();
+		// a bundle without its document is a packaging mistake, so it fails
+		// here rather than halfway through installing
+		for (const name of Object.keys(bundles)) {
+			this.document(name);
+		}
 	}
 
 	/** Every document on offer, name and text, in name order. */
 	available(): Array<[string, string]> {
-		return Object.entries(this.docs).toSorted(([left], [right]) =>
-			left.localeCompare(right),
-		);
+		return Object.keys(this.bundles)
+			.toSorted((left, right) => left.localeCompare(right))
+			.map((name) => [name, this.document(name)]);
 	}
 
 	/** Where a project keeps its copy of `name`. */
@@ -80,38 +99,64 @@ export class Documents {
 			.catch((): null => null); // not installed, or not readable: same answer here
 	}
 
-	/** Installs one bundled document, or throws naming what there is. */
-	async add(name: string, dir: string): Promise<void> {
-		const doc = this.docs[name];
-		if (doc === undefined) {
+	/**
+	 * Installs one bundled document and what travels with it, or throws
+	 * naming what there is. Returns the files whose contents changed, under
+	 * the project root.
+	 */
+	async add(name: string, dir: string): Promise<string[]> {
+		if (this.bundles[name] === undefined) {
 			const have = this.available().map(([known]) => known);
 			throw new Error(
 				`no such ${this.layout.noun}: ${name} (have ${have.join(", ")})`,
 			);
 		}
-		await this.copy(name, doc, dir);
+		return this.copy(name, dir);
 	}
 
 	/**
-	 * Refreshes the bundled documents a project already has and returns their
-	 * names. Never adds one: a document someone chose not to install should
-	 * not arrive by way of an update.
+	 * Refreshes the bundled documents a project already has. Never adds one: a
+	 * document someone chose not to install should not arrive by way of an
+	 * update.
 	 */
-	async update(dir: string): Promise<string[]> {
+	async update(dir: string): Promise<Refreshed> {
 		const installed = await this.installed(dir);
-		const ours = this.available().filter(([name]) => installed.includes(name));
-		for (const [name, doc] of ours) {
-			await this.copy(name, doc, dir);
+		const names = this.available()
+			.map(([name]) => name)
+			.filter((name) => installed.includes(name));
+		const changed: string[] = [];
+		for (const name of names) {
+			changed.push(...(await this.copy(name, dir)));
 		}
-		return ours.map(([name]) => name);
+		return { names, changed };
 	}
 
-	private async copy(name: string, doc: string, dir: string): Promise<void> {
+	/** The layout's file out of a bundle, which every bundle has to hold. */
+	private document(name: string): string {
+		const doc = this.bundles[name]?.[this.layout.file];
+		if (doc === undefined) {
+			throw new Error(`${this.layout.noun} ${name} has no ${this.layout.file}`);
+		}
+		return doc;
+	}
+
+	private async copy(name: string, dir: string): Promise<string[]> {
 		// a copy, not a merge: replacing whatever is there is what makes the
 		// version in a document's frontmatter mean anything
-		const target = this.path(dir, name);
-		await this.fs.mkdir(dirname(target));
-		await this.fs.write(target, doc);
-		this.log.info(`wrote ${target}`);
+		const changed: string[] = [];
+		for (const [file, text] of Object.entries(
+			this.bundles[name] ?? {},
+		).toSorted()) {
+			const relative = `${this.layout.root}/${name}/${file}`;
+			const target = `${dir}/${relative}`;
+			const before = await this.fs.read(target).catch((): null => null); // not there yet
+			await this.fs.mkdir(dirname(target));
+			await this.fs.write(target, text);
+			this.log.info(`wrote ${target}`);
+			if (before !== text) {
+				changed.push(relative);
+			}
+		}
+		return changed;
 	}
 }

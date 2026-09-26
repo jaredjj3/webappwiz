@@ -13,7 +13,7 @@ import { fix } from "./fix";
  */
 const SKILLS = [
 	"packages/cli/templates/arbor.skill.md",
-	"packages/cli/templates/review.skill.md",
+	"packages/cli/templates/scry.skill.md",
 	"packages/cli/templates/webappwiz.skill.md",
 ];
 
@@ -30,7 +30,7 @@ export interface ShipOptions {
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
-	// rule-ignore objects-over-callbacks: the platform's own prompt() is the
+	// scry-ignore objects-over-callbacks: the platform's own prompt() is the
 	// dependency here, and it is a bare function
 	prompt?: (message: string) => string | null;
 }

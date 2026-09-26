@@ -10,7 +10,10 @@ const md = (name: string, version = "1.0.0") =>
 describe("skills add", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
-	const skills = { arbor: md("arbor"), other: md("other") };
+	const skills = {
+		arbor: { "SKILL.md": md("arbor") },
+		other: { "SKILL.md": md("other") },
+	};
 
 	const adding = (skill: string) => ({ dir: "/p", skill, log, fs, skills });
 
