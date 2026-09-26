@@ -17,6 +17,19 @@ export class FakeFs implements Fs {
 			throw new Error(`Path already exists: ${path}`);
 		}
 		this.store.set(target, DIRECTORY);
+		if (opts?.recursive !== false) {
+			// every missing ancestor too, as `mkdir -p` makes them
+			for (
+				let dir = dirname(target);
+				!this.store.has(dir);
+				dir = dirname(dir)
+			) {
+				this.store.set(dir, DIRECTORY);
+				if (dir === dirname(dir)) {
+					break;
+				}
+			}
+		}
 	}
 
 	async read(path: string): Promise<string> {
@@ -47,8 +60,14 @@ export class FakeFs implements Fs {
 		if (entry === undefined) {
 			throw new Error(`Path does not exist: ${from}`);
 		}
-		this.store.set(normalize(to), entry);
-		this.store.delete(source);
+		const target = normalize(to);
+		// a directory takes everything under it along, as a real rename does
+		for (const [key, value] of [...this.store]) {
+			if (key === source || key.startsWith(`${source}/`)) {
+				this.store.delete(key);
+				this.store.set(target + key.slice(source.length), value);
+			}
+		}
 	}
 
 	async readdir(path: string): Promise<string[]> {

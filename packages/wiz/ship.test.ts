@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { catalog } from "@webappwiz/rules/catalog";
+import { catalog } from "@webappwiz/scry/catalog";
 import { MemoryLogger } from "webappwiz/log";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { ship } from "./ship";
@@ -16,7 +16,7 @@ describe("ship", () => {
 		"/repo/packages/cli/templates/scry.skill.md",
 		"/repo/packages/cli/templates/webappwiz.skill.md",
 		...Object.keys(catalog).map(
-			(id) => `/repo/packages/rules/catalog/${id}/RULE.md`,
+			(id) => `/repo/packages/scry/catalog/${id}/RULE.md`,
 		),
 	];
 

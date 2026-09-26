@@ -17,11 +17,7 @@ describe("skills update", () => {
 	};
 
 	const retired = {
-		old: {
-			now: "other",
-			description: /^Old words/,
-			migrate: "rename the old comments",
-		},
+		old: { now: "other", description: /^Old words/ },
 	};
 
 	const updating = () => ({ dir: "/p", log, fs, skills, retired });
@@ -86,7 +82,6 @@ describe("skills update", () => {
 		expect(log.entries.map((entry) => entry.message)).toEqual([
 			"removed /p/.agents/skills/old: old is now other",
 			"wrote /p/.agents/skills/other/SKILL.md",
-			"old is now other: rename the old comments",
 		]);
 	});
 

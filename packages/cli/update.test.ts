@@ -34,14 +34,14 @@ describe("update", () => {
 		await fs.mkdir("/p/packages/a");
 		await fs.write(
 			"/p/packages/a/package.json",
-			manifest({ "@webappwiz/rules": "^0.2.0", "left-pad": "1.0.0" }),
+			manifest({ "@webappwiz/scry": "^0.2.0", "left-pad": "1.0.0" }),
 		);
 
 		await update(updating());
 
 		expect(await fs.read("/p/package.json")).toContain('"webappwiz": "1.0.0"');
 		const nested = await fs.read("/p/packages/a/package.json");
-		expect(nested).toContain('"@webappwiz/rules": "1.0.0"');
+		expect(nested).toContain('"@webappwiz/scry": "1.0.0"');
 		expect(nested).toContain('"left-pad": "1.0.0"');
 	});
 
@@ -83,5 +83,42 @@ describe("update", () => {
 		await update(updating());
 
 		expect(await fs.read("/p/node_modules/x/package.json")).toEqual(vendored);
+	});
+
+	it("renames a dependency on @webappwiz/rules to @webappwiz/scry", async () => {
+		await fs.write(
+			"/p/package.json",
+			manifest({ "@webappwiz/rules": "0.0.19", "left-pad": "1.0.0" }),
+		);
+
+		await update(updating());
+
+		expect(await fs.read("/p/package.json")).toEqual(
+			manifest({ "@webappwiz/scry": "1.0.0", "left-pad": "1.0.0" }),
+		);
+	});
+
+	it("moves .wiz/rules to .wiz/scry, rules and all", async () => {
+		await fs.mkdir("/p/.wiz/rules/mine");
+		await fs.write("/p/.wiz/rules/mine/RULE.md", "mine");
+
+		await update(updating());
+
+		expect(await fs.read("/p/.wiz/scry/mine/RULE.md")).toEqual("mine");
+		expect(await fs.exists("/p/.wiz/rules")).toBe(false);
+	});
+
+	it("leaves .wiz/rules alone when .wiz/scry already exists, and says so", async () => {
+		await fs.mkdir("/p/.wiz/rules/old");
+		await fs.write("/p/.wiz/rules/old/RULE.md", "old");
+		await fs.mkdir("/p/.wiz/scry/new");
+		await fs.write("/p/.wiz/scry/new/RULE.md", "new");
+
+		await update(updating());
+
+		expect(await fs.read("/p/.wiz/rules/old/RULE.md")).toEqual("old");
+		expect(log.entries.map((entry) => String(entry.message))).toContain(
+			"/p/.wiz/rules and /p/.wiz/scry both exist: move what you still want from /p/.wiz/rules by hand",
+		);
 	});
 });

@@ -62,4 +62,16 @@ describe("FakeFs", () => {
 
 		expect(fs.readBytes("/nope.mxl")).rejects.toThrow("File does not exist");
 	});
+
+	it("renames a directory with everything under it, and nothing beside it", async () => {
+		await fs.mkdir("/app/old/nested");
+		await fs.write("/app/old/nested/a.txt", "a");
+		await fs.write("/app/older.txt", "kept");
+
+		await fs.rename("/app/old", "/app/new");
+
+		expect(await fs.read("/app/new/nested/a.txt")).toBe("a");
+		expect(await fs.exists("/app/old")).toBe(false);
+		expect(await fs.read("/app/older.txt")).toBe("kept");
+	});
 });

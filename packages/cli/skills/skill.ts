@@ -32,8 +32,6 @@ export interface Retired {
 	 * and leaves alone a project's own skill that happens to share the name.
 	 */
 	description: RegExp;
-	/** What else the project has to change now that the skill is renamed. */
-	migrate?: string;
 }
 
 /** Old skill name to what became of it. */
@@ -41,8 +39,6 @@ export const retired: Record<string, Retired> = {
 	review: {
 		now: "scry",
 		description: /^Review a change against the .*\.wiz\/rules/,
-		migrate:
-			"rename every rule-ignore comment to scry-ignore; scry honors the old spelling until then",
 	},
 };
 

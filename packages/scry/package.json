@@ -1,0 +1,26 @@
+{
+	"name": "@webappwiz/scry",
+	"version": "0.0.19",
+	"description": "Rules written in markdown, the check that runs them against a change, and webappwiz's catalog of them",
+	"license": "MIT",
+	"author": "Jared Johnson",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredjj3/webappwiz.git",
+		"directory": "packages/scry"
+	},
+	"type": "module",
+	"module": "index.ts",
+	"exports": {
+		".": "./index.ts",
+		"./catalog": "./catalog/index.ts",
+		"./testing": "./testing.ts"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"webappwiz": "workspace:*",
+		"zod": "^4.4.3"
+	}
+}

@@ -7,3 +7,4 @@ export { cli } from "./cli";
 export type { Arg, Meta, RestMeta } from "./command";
 export type { Deps } from "./deps";
 export type { Middleware, Next } from "./middleware";
+export { timed } from "./timed";

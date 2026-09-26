@@ -23,7 +23,7 @@ export async function update(opts: ProjectOptions): Promise<void> {
 	// after the refresh, so a skill installed in place of a retired one is
 	// written once
 	let renamed = 0;
-	for (const [old, { now, description, migrate }] of Object.entries(
+	for (const [old, { now, description }] of Object.entries(
 		opts.retired ?? retired,
 	)) {
 		const path = documents.path(opts.dir, old);
@@ -35,9 +35,6 @@ export async function update(opts: ProjectOptions): Promise<void> {
 		await fs.rm(dirname(path), { recursive: true, force: true });
 		log.info(`removed ${dirname(path)}: ${old} is now ${now}`);
 		await documents.add(now, opts.dir);
-		if (migrate !== undefined) {
-			log.info(`${old} is now ${now}: ${migrate}`);
-		}
 		renamed++;
 	}
 	if (names.length + renamed === 0) {

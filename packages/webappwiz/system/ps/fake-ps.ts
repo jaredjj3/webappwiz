@@ -34,11 +34,16 @@ export class FakePs implements Ps {
 		argv: string[],
 		opts?: SpawnOptions,
 	): Promise<SpawnCaptureResult> {
-		return {
-			exitCode: await this.run(argv, opts),
-			stdout: this.captureOutput.stdout,
-			stderr: this.captureOutput.stderr,
-		};
+		const exitCode = await this.run(argv, opts);
+		const { stdout, stderr } = this.captureOutput;
+		// all at once, as if it came in one chunk
+		if (stdout !== "") {
+			opts?.watcher?.stdout(stdout);
+		}
+		if (stderr !== "") {
+			opts?.watcher?.stderr(stderr);
+		}
+		return { exitCode, stdout, stderr };
 	}
 
 	cwd(): string {

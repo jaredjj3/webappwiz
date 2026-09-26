@@ -196,6 +196,42 @@ describe("cli", () => {
 		);
 	});
 
+	it("runs a group's fallback when no argument names a subcommand", () => {
+		const got: unknown[] = [];
+		const wiz = cli("wiz");
+		const scry = wiz.group("scry").fallback("check");
+		scry
+			.command("check")
+			.arg("dir", z.string(), { default: "." })
+			.option("since", z.string(), { default: "HEAD" })
+			.action((opts) => {
+				got.push(opts);
+			});
+		scry.command("add").action(() => {
+			got.push("added");
+		});
+
+		wiz.run(deps, ["scry"]);
+		wiz.run(deps, ["scry", "./app", "--since", "main"]);
+		wiz.run(deps, ["scry", "add"]);
+
+		expect(got).toEqual([
+			{ dir: ".", since: "HEAD" },
+			{ dir: "./app", since: "main" },
+			"added",
+		]);
+	});
+
+	it("marks a group's fallback in its help, which --help still prints", () => {
+		const wiz = cli("wiz");
+		const scry = wiz.group("scry").fallback("check");
+		scry.command("check").description("check a change");
+
+		wiz.run(deps, ["scry", "--help"]);
+
+		expect(help()).toContain("check  check a change (default)");
+	});
+
 	it("prints a group's help for --help", () => {
 		grouped().run(deps, ["skills", "--help"]);
 

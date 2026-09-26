@@ -31,6 +31,7 @@ export type { PortProvider } from "./port-provider/port-provider";
 export type { ProcessLike } from "./process-like/process-like";
 export { NodePs, type NodePsOptions } from "./ps/node-ps";
 export type {
+	OutputWatcher,
 	Ps,
 	SpawnCaptureResult,
 	SpawnOptions,

@@ -6,7 +6,7 @@
 	"module": "index.ts",
 	"dependencies": {
 		"@webappwiz/cli": "workspace:*",
-		"@webappwiz/rules": "workspace:*",
+		"@webappwiz/scry": "workspace:*",
 		"webappwiz": "workspace:*",
 		"zod": "^4.4.3"
 	}

@@ -171,6 +171,22 @@ app skills --help      # lists add and update
 
 A failure anywhere in the tree is reported and exits once, at the root.
 
+`fallback` names the subcommand a group runs when its first argument names
+none of the others, so the group reads as a command of its own:
+
+```ts
+const scry = app.group("scry").fallback("check");
+scry.command("check").arg("dir", z.string(), { default: "." }).action(/* … */);
+scry.command("add").arg("rule", z.string()).action(/* … */);
+```
+
+```bash
+app scry            # runs check
+app scry ./web      # runs check on ./web
+app scry add foo    # still adds
+app scry --help     # lists both, check marked (default)
+```
+
 `mount` hangs one cli on another, which is how one program carries another's
 commands as a subcommand instead of shelling out to it. Help names every
 command by the path it was reached through, so the same cli answers correctly
@@ -232,3 +248,12 @@ app.use<{ user: string }>(async (ctx, next) => next({ ...ctx, user: "ada" }));
 
 With no middleware registered, a synchronous action still returns
 synchronously; only a chain makes `run` return a promise.
+
+`timed()` is one that ships: it says how long the command took, on stderr,
+as the process ends, so a command that exits with its own code through
+`ps.exit` is timed too.
+
+```ts
+app.command("check").use(timed()).action(check);
+// done in 1m 12s
+```

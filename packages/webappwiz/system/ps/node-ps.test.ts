@@ -65,4 +65,52 @@ describe("NodePs", () => {
 
 		expect(exitCode).toBe(137); // 128 + SIGKILL, the way a shell reports it
 	});
+
+	it("writes stdin to the child and closes it", async () => {
+		const { stdout } = await new NodePs({ proc: proc }).spawnCapture(["cat"], {
+			stdin: "fed through",
+		});
+
+		expect(stdout).toBe("fed through");
+	});
+
+	it("kills a child that outlives its timeout", async () => {
+		const { exitCode } = await new NodePs({ proc: proc }).spawnCapture(
+			["sleep", "5"],
+			{ timeoutMs: 50 },
+		);
+
+		expect(exitCode).toBe(128 + 15);
+	});
+
+	it("kills a child when its signal aborts, and rejects", async () => {
+		const abort = new AbortController();
+		const spawned = new NodePs({ proc: proc }).spawnCapture(["sleep", "5"], {
+			signal: abort.signal,
+		});
+
+		abort.abort();
+
+		await expect(spawned).rejects.toThrow();
+	});
+
+	it("shows a watcher the output as it arrives", async () => {
+		const seen = { stdout: "", stderr: "" };
+
+		await new NodePs({ proc: proc }).spawnCapture(
+			["sh", "-c", "echo out; echo err >&2"],
+			{
+				watcher: {
+					stdout: (chunk) => {
+						seen.stdout += chunk;
+					},
+					stderr: (chunk) => {
+						seen.stderr += chunk;
+					},
+				},
+			},
+		);
+
+		expect(seen).toEqual({ stdout: "out\n", stderr: "err\n" });
+	});
 });

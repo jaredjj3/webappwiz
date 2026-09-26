@@ -49,16 +49,25 @@ export class NodePs implements Ps {
 		const [cmd, args] = parse(argv);
 		const child = spawn(cmd, args, {
 			...this.options(opts),
-			stdio: ["inherit", "pipe", "pipe"],
+			stdio: [opts?.stdin === undefined ? "inherit" : "pipe", "pipe", "pipe"],
 		});
+		// a child that exits without reading all of it is not an error here
+		child.stdin?.on("error", () => {});
+		child.stdin?.end(opts?.stdin);
 
+		// piped above, so both are there; the stdin choice widens the type
+		if (child.stdout === null || child.stderr === null) {
+			throw new Error("spawnCapture lost its output pipes");
+		}
 		let stdout = "";
 		let stderr = "";
 		child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
 			stdout += chunk;
+			opts?.watcher?.stdout(chunk);
 		});
 		child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
 			stderr += chunk;
+			opts?.watcher?.stderr(chunk);
 		});
 
 		return { exitCode: await exitCode(child), stdout, stderr };
@@ -75,8 +84,15 @@ export class NodePs implements Ps {
 	private options(opts?: SpawnOptions): {
 		cwd?: string;
 		env: NodeJS.ProcessEnv;
+		timeout?: number;
+		signal?: AbortSignal;
 	} {
-		return { cwd: opts?.cwd, env: { ...this.proc.env, ...opts?.env } };
+		return {
+			cwd: opts?.cwd,
+			env: { ...this.proc.env, ...opts?.env },
+			timeout: opts?.timeoutMs,
+			signal: opts?.signal,
+		};
 	}
 
 	cwd(): string {

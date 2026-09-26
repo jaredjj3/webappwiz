@@ -1,7 +1,7 @@
 {
 	"name": "@webappwiz/cli",
 	"version": "0.0.19",
-	"description": "The webappwiz CLI: keep dependencies, agent skills, and rules in a project in step with a release",
+	"description": "The webappwiz CLI: keep a project in step with a webappwiz release, and check a change against its rules",
 	"license": "MIT",
 	"author": "Jared Johnson",
 	"repository": {
@@ -16,6 +16,7 @@
 	},
 	"exports": {
 		".": "./index.ts",
+		"./config": "./config.ts",
 		"./webappwiz": "./webappwiz.ts"
 	},
 	"engines": {
@@ -25,7 +26,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@webappwiz/rules": "workspace:*",
+		"@webappwiz/scry": "workspace:*",
 		"webappwiz": "workspace:*",
 		"zod": "^4.4.3"
 	},

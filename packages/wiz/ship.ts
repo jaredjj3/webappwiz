@@ -1,4 +1,4 @@
-import { catalog } from "@webappwiz/rules/catalog";
+import { catalog } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
@@ -23,7 +23,7 @@ const SKILLS = [
  * catalog's own, so a rule added there is stamped without a line here.
  */
 const RULES = Object.keys(catalog).map(
-	(id) => `packages/rules/catalog/${id}/RULE.md`,
+	(id) => `packages/scry/catalog/${id}/RULE.md`,
 );
 
 export interface ShipOptions {

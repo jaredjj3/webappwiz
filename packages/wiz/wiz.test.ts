@@ -25,7 +25,9 @@ describe("wiz", () => {
 		wiz.run(deps, []);
 
 		expect(out()).toContain("Usage: wiz <command> [options]");
-		expect(out()).toContain("rules   keep rules in .wiz/rules");
+		expect(out()).toContain(
+			"scry    check a change against the rules in .wiz/scry",
+		);
 		expect(out()).toContain("dev     work on the webappwiz workspace");
 	});
 

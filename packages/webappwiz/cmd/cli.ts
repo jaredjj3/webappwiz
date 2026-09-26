@@ -26,6 +26,7 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 	private cmds = new Map<string, Node<D>>();
 	private middleware: AnyMiddleware[] = [];
 	private _description = "";
+	private _fallback: string | undefined;
 
 	constructor(readonly name: string) {}
 
@@ -66,6 +67,17 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 		const group = new Cli<D, C>(name);
 		this.cmds.set(name, group as Node<D>);
 		return group;
+	}
+
+	/**
+	 * The subcommand that runs when the first argument names none of the
+	 * others, or there is none: `scry` runs `scry check`, and so do
+	 * `scry ./app` and `scry --since main`, while `scry add` still adds. It
+	 * gets the whole argument list. `--help` still prints this cli's help.
+	 */
+	fallback(name: string): this {
+		this._fallback = name;
+		return this;
 	}
 
 	/**
@@ -112,12 +124,18 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 		path = this.name,
 	): unknown {
 		const [name, ...rest] = argv;
-		if (!name || name === "--help" || name === "-h") {
+		if (name === "--help" || name === "-h") {
 			return this.help(deps, path);
 		}
-		const cmd = this.cmds.get(name);
+		const cmd = name === undefined ? undefined : this.cmds.get(name);
 		if (!cmd) {
-			return this.help(deps, path);
+			const fallback =
+				this._fallback === undefined
+					? undefined
+					: this.cmds.get(this._fallback);
+			return fallback
+				? fallback.exec(argv, deps, [...outer, ...this.middleware], path)
+				: this.help(deps, path);
 		}
 		return cmd.exec(
 			rest,
@@ -146,7 +164,10 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 			`${color.bold("Usage:")} ${color.bold(path)} ${color.dim("<command> [options]")}`,
 			"",
 			color.bold("Commands:"),
-			...entries.map(([name, command]) => command.helpLine(name, pad)),
+			...entries.map(
+				([name, command]) =>
+					`${command.helpLine(name, pad)}${name === this._fallback ? color.dim(" (default)") : ""}`,
+			),
 			"",
 			color.dim(`Run \`${path} <command> --help\` for a command's options.`),
 		];

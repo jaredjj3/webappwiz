@@ -31,6 +31,26 @@ export interface SpawnOptions {
 	/** Added to the current environment, not a replacement for it. */
 	env?: Record<string, string>;
 	cwd?: string;
+	/**
+	 * Written to the child's stdin, which is then closed. Without it the child
+	 * shares this process's stdin. Only `spawnCapture` honors it.
+	 */
+	stdin?: string;
+	/** Kills the child with SIGTERM once it has run this long. */
+	timeoutMs?: number;
+	/** Kills the child with SIGTERM when it aborts, and rejects the spawn. */
+	signal?: AbortSignal;
+	/**
+	 * Sees the output as it arrives, for progress on a long command. The
+	 * result still holds all of it. Only `spawnCapture` honors it.
+	 */
+	watcher?: OutputWatcher;
+}
+
+/** What watches a spawned command's output as it comes. */
+export interface OutputWatcher {
+	stdout(chunk: string): void;
+	stderr(chunk: string): void;
 }
 
 export interface SpawnResult {
