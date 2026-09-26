@@ -32,13 +32,24 @@ describe("catalog", () => {
 	});
 
 	it("bundles every file in each rule's directory, so none is left behind", () => {
-		for (const [id, files] of Object.entries(catalog)) {
-			const dir = `${import.meta.dir}/${id}`;
-			const onDisk = readdirSync(dir, { recursive: true, encoding: "utf8" })
-				.filter((path) => statSync(`${dir}/${path}`).isFile())
-				.toSorted();
+		const declared = Object.fromEntries(
+			Object.entries(catalog).map(([id, files]) => [
+				id,
+				Object.keys(files).toSorted(),
+			]),
+		);
+		const onDisk = Object.fromEntries(
+			Object.keys(catalog).map((id) => {
+				const dir = `${import.meta.dir}/${id}`;
+				return [
+					id,
+					readdirSync(dir, { recursive: true, encoding: "utf8" })
+						.filter((path) => statSync(`${dir}/${path}`).isFile())
+						.toSorted(),
+				];
+			}),
+		);
 
-			expect(Object.keys(files).toSorted()).toEqual(onDisk);
-		}
+		expect(declared).toEqual(onDisk);
 	});
 });
