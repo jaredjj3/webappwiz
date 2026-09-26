@@ -31,7 +31,7 @@ export async function add(opts: AddOptions): Promise<void> {
 		if (opts.rule === "") {
 			throw new Error("rules add needs a rule id, or --recommended");
 		}
-		warnOfScripts(opts, await documents.add(opts.rule, opts.dir));
+		warnOfScripts(await documents.add(opts.rule, opts.dir), opts);
 		return;
 	}
 	if (rules[opts.rule] !== undefined) {
@@ -45,7 +45,7 @@ export async function add(opts: AddOptions): Promise<void> {
 		.filter(([id, doc]) => Rule.parse(doc, { id }).recommended)
 		.map(([id]) => id);
 	for (const id of ids) {
-		warnOfScripts(opts, await documents.add(id, dir));
+		warnOfScripts(await documents.add(id, dir), opts);
 	}
 	if (ids.length === 0) {
 		(opts.log ?? new ConsoleLogger()).info("no rules recommend themselves");

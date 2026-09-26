@@ -30,8 +30,8 @@ export const offered = (opts: RulesProjectOptions): Record<string, Bundle> =>
  * agent is about to execute. `changed` is under the project root.
  */
 export function warnOfScripts(
-	opts: RulesProjectOptions,
 	changed: string[],
+	opts: RulesProjectOptions,
 ): void {
 	const log = opts.log ?? new ConsoleLogger();
 	const scripts = changed.filter(

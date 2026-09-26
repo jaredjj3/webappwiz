@@ -16,7 +16,7 @@ export async function update(opts: RulesProjectOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const documents = new Documents(offered(opts), RULES, opts);
 	const { names, changed } = await documents.update(opts.dir);
-	warnOfScripts(opts, changed);
+	warnOfScripts(changed, opts);
 	if (names.length === 0) {
 		log.info(`no webappwiz rules in ${opts.dir}: add one with \`rules add\``);
 	}
