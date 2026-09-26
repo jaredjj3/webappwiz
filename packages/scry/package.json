@@ -1,6 +1,6 @@
 {
 	"name": "@webappwiz/scry",
-	"version": "0.0.19",
+	"version": "0.0.20",
 	"description": "Rules written in markdown, the check that runs them against a change, and webappwiz's catalog of them",
 	"license": "MIT",
 	"author": "Jared Johnson",

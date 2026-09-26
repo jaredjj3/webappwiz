@@ -1,6 +1,6 @@
 {
 	"name": "@webappwiz/cli",
-	"version": "0.0.19",
+	"version": "0.0.20",
 	"description": "The webappwiz CLI: keep a project in step with a webappwiz release, and check a change against its rules",
 	"license": "MIT",
 	"author": "Jared Johnson",

@@ -4,7 +4,7 @@ description: A dev server tries the next port when its default is taken, and rep
 files: "**/*.ts"
 level: error
 effort: low
-version: 0.0.19
+version: 0.0.20
 ---
 # Dev servers find a port
 
