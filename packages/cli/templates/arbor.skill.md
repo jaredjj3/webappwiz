@@ -22,10 +22,9 @@ do not retry, another agent owns the tree.
 ## Before you start
 
 Other agents may already be working. Before creating anything, list the files
-you expect to touch, then `arbor list`, and for each task in flight compare with
-its changed files:
-`git -C "$(arbor path <task>)" diff --name-only main...task/<task>`
-(`arbor show <task>` for its plan; neither takes its lease).
+you expect to touch and compare them with `arbor list --files`, which prints
+what each task in flight has changed and plans to (`arbor show <task>` for its
+whole plan; neither takes its lease).
 
 If nothing overlaps, carry on. If something does, `arbor add` your task if you
 have not already and record the overlap in `ARBOR.md` (which task, which
