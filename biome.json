@@ -43,5 +43,11 @@
 			"correctness": { "noUndeclaredDependencies": "error" }
 		}
 	},
-	"formatter": { "enabled": true }
+	"formatter": { "enabled": true },
+	"overrides": [
+		{
+			"includes": ["packages/arbor/dev/components/ui/**"],
+			"linter": { "enabled": false }
+		}
+	]
 }

@@ -5,14 +5,24 @@ import type { PortProvider } from "./port-provider";
 /** The highest port there is; a range naming one past it cannot be served. */
 export const MAX_PORT = 65535;
 
+/** Where the port will be bound, when that is narrower than every interface. */
+export interface PortHost {
+	/**
+	 * Also probe the port on this address. A server bound to one address, like
+	 * 127.0.0.1, can hold a port that a probe of every interface still gets,
+	 * since the more specific bind is allowed alongside it.
+	 */
+	host?: string;
+}
+
 /** The ports to consider, `to` included; `to` left out means `from` alone. */
-export interface PortRange {
+export interface PortRange extends PortHost {
 	from: number;
 	to?: number;
 }
 
 /** How many ports to consider, counting `from` itself. */
-export interface PortSpan {
+export interface PortSpan extends PortHost {
 	from: number;
 	span: number;
 }
@@ -24,8 +34,9 @@ export interface PortSpan {
 export class OpenPortProvider implements PortProvider {
 	private readonly from: number;
 	private readonly to: number;
+	private readonly host: string | undefined;
 
-	constructor({ from, to = from }: PortRange) {
+	constructor({ from, to = from, host }: PortRange) {
 		assert.integer(from, `port ${from} is not a whole number`);
 		assert.integer(to, `port ${to} is not a whole number`);
 		assert.inRange(
@@ -39,10 +50,11 @@ export class OpenPortProvider implements PortProvider {
 		assert.inRange(to, from, MAX_PORT, `no ports between ${from} and ${to}`);
 		this.from = from;
 		this.to = to;
+		this.host = host;
 	}
 
 	/** `span` ports from `from` on, which is what a dev server wants. */
-	static span({ from, span }: PortSpan): OpenPortProvider {
+	static span({ from, span, host }: PortSpan): OpenPortProvider {
 		assert.integer(span, `a span of ${span} is not a whole number`);
 		assert.inRange(span, 1, MAX_PORT + 1, `a span of ${span} covers no ports`);
 		// clamped: a span is how far to look, so asking to look past the last port
@@ -50,6 +62,7 @@ export class OpenPortProvider implements PortProvider {
 		return new OpenPortProvider({
 			from,
 			to: Math.min(from + span - 1, MAX_PORT),
+			host,
 		});
 	}
 
@@ -62,7 +75,10 @@ export class OpenPortProvider implements PortProvider {
 		for (let port = this.from; port <= this.to; port++) {
 			// sequential on purpose: the first open port is the answer, and probing
 			// the rest in parallel would bind ports nobody asked about
-			if (await this.open(port)) {
+			if (
+				(await this.open(port)) &&
+				(this.host === undefined || (await this.open(port, this.host)))
+			) {
 				return port;
 			}
 		}
@@ -72,14 +88,14 @@ export class OpenPortProvider implements PortProvider {
 	// ponytail: open now, not open when the caller binds. Nothing closes that
 	// window except binding for real, so a caller that cannot afford to lose the
 	// race wants a retry on EADDRINUSE rather than an answer from here.
-	private open(port: number): Promise<boolean> {
+	private open(port: number, host?: string): Promise<boolean> {
 		return new Promise((resolve) => {
 			const socket = createServer();
 			socket.once("error", () => resolve(false));
-			// no host, so this is the same claim on every interface that a server
-			// defaulting to 0.0.0.0 will make: a narrower probe would call a port
-			// open that the real bind then loses
-			socket.listen(port, () => socket.close(() => resolve(true)));
+			// no host by default, so this is the same claim on every interface that
+			// a server defaulting to 0.0.0.0 will make: a narrower probe alone would
+			// call a port open that the real bind then loses
+			socket.listen(port, host, () => socket.close(() => resolve(true)));
 		});
 	}
 }

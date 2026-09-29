@@ -41,6 +41,25 @@ describe("OpenPortProvider", () => {
 		expect(port).toBeGreaterThan(taken);
 	});
 
+	it("looks past a port held on the one host it will be bound to", async () => {
+		const server = createServer();
+		held.push(server);
+		const taken = await new Promise<number>((resolve) =>
+			server.listen(0, "127.0.0.1", () => {
+				const address = server.address();
+				resolve(typeof address === "object" && address ? address.port : 0);
+			}),
+		);
+
+		const port = await OpenPortProvider.span({
+			from: taken,
+			span: 20,
+			host: "127.0.0.1",
+		}).get();
+
+		expect(port).toBeGreaterThan(taken);
+	});
+
 	it("refuses a range it cannot satisfy rather than widening it", async () => {
 		const taken = await hold();
 		const provider = new OpenPortProvider({ from: taken, to: taken });
