@@ -78,24 +78,33 @@ complex enough that correctness needs a reader rather than a test.
    or in chat, whichever comes first. If it cannot, do not run it: end your
    turn.
 
-Number what you did D1, D2, … and what you need Q1, Q2, …. Each Q is one
-command tagged with the domains it touches, so a reviewer can answer one
-slice at a time: `- [ ] Q2. [ui] Open ... Does the header wrap?` Start with a
-verb (Run, Open, Confirm, Decide), end with the shape of the answer, and ask
-for what is wrong rather than a bare yes/no. When the answer is one of a few,
-list them as `- (a) ...` lines under the question; the reply names one
-(`b (Migrate on next login)`), may add words after a colon, or may answer in
-words instead. Numbers never change; new ones continue from the highest.
+Number what you did D1, D2, … and what you need Q1, Q2, …. A Q's line is its
+subject: short enough to scan in an inbox, led by one or two emoji that say
+what it is about (🎨 ui, 🗄️ db, 🔐 auth, 🧪 tests), and ending in the question.
+Everything else goes in lines indented under it, which render as markdown:
+detail, code blocks, and screenshots as `![what](/abs/path.png)`, which the
+inbox shows inline. Ask for what is wrong rather than a bare yes or no. When
+the answer is one of a few, list `- (a) ...` lines last (pick one, or none);
+for "all that apply", `- [a] ...` lines. A reply names its picks spelled out
+(`a (Email), c (Push)`), may add words after a colon, or may answer in words
+alone. Numbers never change; new ones continue from the highest.
 
-```markdown
+````markdown
 ## Blocked
 
-- [x] Q1. [db, testing] Run `bin/wiz dev test --live` against staging. Report any failures. → all green
-- [ ] Q2. [ui] Open `/abs/path/shot.png`. Does the header wrap to two lines? Reply yes, or what's wrong.
-- [ ] Q3. [auth] Decide how existing sessions move to the new tokens.
+- [x] Q1. 🧪 Do the live tests pass against staging? → yes
+- [ ] Q2. 🎨 Does the header wrap to two lines?
+  ![header at 390px](/abs/path/shot.png)
+- [ ] Q3. 🔐 How should existing sessions move to the new tokens?
+  Sessions are keyed by the old cookie:
+
+  ```ts
+  const session = await sessions.find(cookie);
+  ```
+
   - (a) Sign everyone out once
   - (b) Migrate each session on its next request
-```
+````
 
 Replies arrive in chat or from `arbor reply`, which writes them after `→` on
 the question's line. Match chat replies by number (`q1`, `Q1:` and `1.` all
@@ -126,7 +135,7 @@ Done:
 - D1. One line per change.
 
 Needs you:
-- Q1. [domain] One command per item.
+- Q1. One subject line per item.
 ```
 
 ```markdown
