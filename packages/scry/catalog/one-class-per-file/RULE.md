@@ -5,7 +5,7 @@ files: "**/*.ts"
 level: error
 effort: low
 recommended: true
-version: 0.0.20
+version: 0.0.21
 ---
 # One class per file
 
