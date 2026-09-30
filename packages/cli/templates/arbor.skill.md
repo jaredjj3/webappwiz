@@ -76,7 +76,7 @@ complex enough that correctness needs a reader rather than a test.
    wake you when it exits (Claude Code's `run_in_background` can), start
    `arbor wait <task> --answered` that way; the user may answer from the inbox
    or in chat, whichever comes first. If it cannot, do not run it: end your
-   turn.
+   turn, and run `arbor replies <task>` when you are back.
 
 Number what you did D1, D2, … and what you need Q1, Q2, …. A Q's line is its
 subject: short enough to scan in an inbox, led by one emoji for what it is
@@ -107,9 +107,11 @@ alone. Numbers never change; new ones continue from the highest.
   - (b) Migrate each session on its next request
 ````
 
-Replies arrive in chat or from `arbor reply`, which writes them after `→` on
-the question's line. Match chat replies by number (`q1`, `Q1:` and `1.` all
-mean Q1). Check an item off only when the answer is one you can act on, and
+Replies arrive in chat or in the inbox. Read inbox replies only through
+`arbor wait <task> --answered` or `arbor replies <task>`: either claims them,
+writing each after `→` on its question's line, and a claimed reply can no
+longer change under you. Never read them any other way. Write a chat reply
+after `→` yourself, matching it by number (`q1`, `Q1:` and `1.` all mean Q1). Check an item off only when the answer is one you can act on, and
 write it after `→`; anything else stays open and leads your next report. A
 reply to a D item is an instruction. Never merge while `## Blocked` has an
 unchecked item. `arbor claim` resumes an escalated task. `arbor retry` is only
