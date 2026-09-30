@@ -5,7 +5,7 @@ files: "**/*.ts"
 level: error
 effort: medium
 recommended: true
-version: 0.0.21
+version: 0.0.22
 ---
 # Resources are disposable
 

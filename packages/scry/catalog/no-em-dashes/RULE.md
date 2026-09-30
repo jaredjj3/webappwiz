@@ -5,7 +5,7 @@ files: "**/*.{ts,md}"
 level: error
 effort: low
 recommended: true
-version: 0.0.21
+version: 0.0.22
 ---
 <!-- scry-ignore-file no-em-dashes: the Bad examples have to show one -->
 
