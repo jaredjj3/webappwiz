@@ -79,8 +79,9 @@ complex enough that correctness needs a reader rather than a test.
    turn.
 
 Number what you did D1, D2, … and what you need Q1, Q2, …. A Q's line is its
-subject: short enough to scan in an inbox, led by one or two emoji that say
-what it is about (🎨 ui, 🗄️ db, 🔐 auth, 🧪 tests), and ending in the question.
+subject: short enough to scan in an inbox, led by one emoji for what it is
+about (🎨 ui, 🗄️ db, 🔐 auth, 🧪 tests), or ❓ when none fits (repeats are
+fine), and ending in the question.
 Everything else goes in lines indented under it, which render as markdown:
 detail, code blocks, and screenshots as `![what](/abs/path.png)`, which the
 inbox shows inline. Ask for what is wrong rather than a bare yes or no. When
