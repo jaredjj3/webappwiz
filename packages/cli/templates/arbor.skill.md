@@ -80,15 +80,21 @@ complex enough that correctness needs a reader rather than a test.
 
 Number what you did D1, D2, … and what you need Q1, Q2, …. Each Q is one
 command tagged with the domains it touches, so a reviewer can answer one
-slice at a time: `- [ ] Q2. [ui] Open ... Reply pass or fail.` Start with a
-verb (Run, Open, Confirm, Decide), end with the shape of the answer. Numbers
-never change; new ones continue from the highest.
+slice at a time: `- [ ] Q2. [ui] Open ... Does the header wrap?` Start with a
+verb (Run, Open, Confirm, Decide), end with the shape of the answer, and ask
+for what is wrong rather than a bare yes/no. When the answer is one of a few,
+list them as `- (a) ...` lines under the question; the reply names one
+(`b (Migrate on next login)`), may add words after a colon, or may answer in
+words instead. Numbers never change; new ones continue from the highest.
 
 ```markdown
 ## Blocked
 
-- [x] Q1. [db, testing] Run `bin/wiz dev test --live` against staging. Reply pass or fail. → pass
-- [ ] Q2. [ui] Open `/abs/path/shot.png`. Confirm the header wraps to two lines.
+- [x] Q1. [db, testing] Run `bin/wiz dev test --live` against staging. Report any failures. → all green
+- [ ] Q2. [ui] Open `/abs/path/shot.png`. Does the header wrap to two lines? Reply yes, or what's wrong.
+- [ ] Q3. [auth] Decide how existing sessions move to the new tokens.
+  - (a) Sign everyone out once
+  - (b) Migrate each session on its next request
 ```
 
 Replies arrive in chat or from `arbor reply`, which writes them after `→` on
