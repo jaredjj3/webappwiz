@@ -33,8 +33,8 @@ retry, another agent owns the tree.
 3. **Plan.** Fill in the `ARBOR.md` stub before touching code (see below).
 4. **Work.** Commit with git as you go; arbor never commits for you. Defer
    anything outside your Goal with `arbor todo add "<text>"` and move on.
-   Between steps, run `arbor messages`: your human may have written (see
-   Messages).
+   Between steps, run `arbor replies`: your human may have followed up an
+   answer (see Follow-ups).
 5. **Squash** to one commit (see Committing), then **`arbor merge`**. On
    failure, do what stderr says and merge again.
 
@@ -69,7 +69,11 @@ person (external services, destructive migrations, visual changes), when the
 user asked to see the work first, or, absent instructions, when the change is
 complex enough that correctness needs a reader rather than a test.
 
-1. `arbor escalate <reason>`.
+1. `arbor escalate <reason>`. When the only thing left is the user's
+   approval, `arbor escalate --review "<what to look at>"` instead: it asks
+   `✅ Ready to merge?` for you, and the page shows Approve and Request
+   changes. Settle every other question first; it refuses while one is
+   unchecked.
 2. Leave something to look at, by **absolute path** (start from
    `arbor path <task>`): a screenshot for anything visual. Ask first if
    producing it is expensive.
@@ -78,7 +82,7 @@ complex enough that correctness needs a reader rather than a test.
    wake you when it exits (Claude Code's `run_in_background` can), start
    `arbor wait <task> --answered` that way; the user may answer from the inbox
    or in chat, whichever comes first. If it cannot, do not run it: end your
-   turn, and run `arbor messages <task>` when you are back.
+   turn, and run `arbor replies <task>` when you are back.
 
 Number what you did D1, D2, … and what you need Q1, Q2, …. A Q's line is its
 subject: short enough to scan in an inbox, led by one emoji for what it is
@@ -110,25 +114,26 @@ alone. Numbers never change; new ones continue from the highest.
 ````
 
 Replies arrive in chat or in the inbox. Read inbox replies only through
-`arbor wait <task> --answered` or `arbor messages <task>`: either claims them,
+`arbor wait <task> --answered` or `arbor replies <task>`: either claims them,
 writing each after `→` on its question's line, and a claimed reply can no
 longer change under you. Never read them any other way. Write a chat reply
 after `→` yourself, matching it by number (`q1`, `Q1:` and `1.` all mean Q1). Check an item off only when the answer is one you can act on, and
 write it after `→`; anything else stays open and leads your next report. A
-reply to a D item is an instruction. Never merge while `## Blocked` has an
-unchecked item. `arbor claim` resumes an escalated task. `arbor retry` is only
+reply to a D item is an instruction. "Deferred to todo 7" and "Skip this"
+mean leave it out and carry on: check the item off. "Approved: merge it."
+answers a review: check it off and merge. `arbor merge` refuses with exit 16
+`blocked` while `## Blocked` has an unchecked item, and exit 15 `unread`
+while a reply waits unclaimed. `arbor claim` resumes an escalated task. `arbor retry` is only
 for `budget_exhausted`, and is the human's to run, before you claim.
 
-## Messages
+## Follow-ups
 
-Your human can write to you from the arbor page at any time, often to follow
-up an answer you already read. `arbor messages` (and `arbor wait --answered`)
-claims them into `ARBOR.md` under `## Messages` as `- [ ] M1.` items, and
-prints them. Treat each as an instruction from the user: act on it, then
-check it off. `arbor merge` refuses with exit 15 `unread` while one waits
-unclaimed; run `arbor messages`, act on what it says, and merge again. You
-never send messages, to the user or to other agents: say what you need in
-your report or under `## Blocked`.
+Your human can follow up any answer you already read, even one you checked
+off. `arbor replies` (and `arbor wait --answered`) writes a follow-up on a
+`→ ` line of its own under its question and unchecks the question. Treat it
+as an instruction from the user: act on it, then check the question off
+again. You never answer questions, yours or another agent's: say what you
+need in your report or under `## Blocked`.
 
 ## Reporting
 
