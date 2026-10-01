@@ -62,9 +62,12 @@ from your worktree and add it to your Goal. Before merging, read
 hold but only partly did, `arbor todo update <id> "<what is left>"` then
 `arbor todo release <id>`, so it stays on the list.
 
-After a merge, the next todo is one you added in this conversation, from any
-of its tasks, oldest first; only when none is open, the one `merge`
-recommends. Name it in your report (see Reporting).
+After a merge, pick the next todo so the context this conversation built up
+gets used before it is gone. First, one you added in this conversation, from
+any of its tasks, oldest first. Failing that, read `arbor todo list` for the
+open todo closest to the work you just did: the same files, feature, or
+problem. Only when none is related, the one `merge` recommends. Name it in
+your report (see Reporting).
 
 ## Handing out part of your task
 
