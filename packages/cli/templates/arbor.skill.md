@@ -34,8 +34,9 @@ retry, another agent owns the tree.
 3. **Plan.** Fill in the `ARBOR.md` stub before touching code (see below).
 4. **Work.** Commit with git as you go; arbor never commits for you. Defer
    anything outside your Goal with `arbor todo add "<text>"` and move on.
-   Between steps, run `arbor replies`: your human may have followed up an
-   answer (see Follow-ups).
+   Ask about any call the request does not settle as you make it, and keep
+   going (see Asking as you go). Between steps, run `arbor replies`: your
+   human may have answered one or followed up an answer (see Follow-ups).
 5. **Settle todos** (see Deferring work), **squash** to one commit (see
    Committing), then **`arbor merge`**. On failure, do what stderr says and
    merge again.
@@ -77,6 +78,20 @@ tree committed (a part lands by fast-forwarding your checkout), re-read files
 before editing them, and squash only after every part has landed. Hand a
 part out only when describing it is shorter than doing it.
 
+## Asking as you go
+
+Do not save questions for escalation. Whenever you make a decision that does
+not clearly follow from what the user asked (a name, a default, behavior they
+never mentioned, one reading of an ambiguous ask), write a question under
+`## Blocked` in `ARBOR.md` right away, in the format under Escalation, saying
+what you chose and what else you could have done. Then move on to the rest of
+the request without waiting. The inbox shows every unchecked question, whether
+the task is escalated or not, so your human can answer while you work. When
+an answer overturns a choice, redo that part.
+
+`arbor merge` refuses while a question is unchecked: when everything else is
+done and some are still open, escalate and wait for them (see Escalation).
+
 ## Escalation
 
 Merge only work you verified yourself. Escalate when verification needs a
@@ -92,7 +107,8 @@ complex enough that correctness needs a reader rather than a test.
 2. Leave something to look at, by **absolute path** (start from
    `arbor path <task>`): a screenshot for anything visual. Ask first if
    producing it is expensive.
-3. Write each question under `## Blocked` in `ARBOR.md`, then report.
+3. Write each question not already there under `## Blocked` in `ARBOR.md`,
+   then report.
 4. Wait for answers. If your harness can run a command in the background and
    wake you when it exits (Claude Code's `run_in_background` can), start
    `arbor wait <task> --answered` that way; the user may answer from the inbox
@@ -132,7 +148,11 @@ Replies arrive in chat or in the inbox. Read inbox replies only through
 `arbor wait <task> --answered` or `arbor replies <task>`: either claims them,
 writing each after `→` on its question's line, and a claimed reply can no
 longer change under you. Never read them any other way. Write a chat reply
-after `→` yourself, matching it by number (`q1`, `Q1:` and `1.` all mean Q1). Check an item off only when the answer is one you can act on, and
+after `→` yourself, matching it by number (`q1`, `Q1:` and `1.` all mean Q1).
+A conversation can answer a question without naming it: whenever anything
+your human says settles an open question, write that answer after `→` and
+check it off, so it leaves the inbox instead of being asked again. Check an
+item off only when the answer is one you can act on, and
 write it after `→`; anything else stays open and leads your next report. A
 reply to a D item is an instruction. "Deferred to todo 7" and "Skip this"
 mean leave it out and carry on: check the item off. "Approved: merge it."
