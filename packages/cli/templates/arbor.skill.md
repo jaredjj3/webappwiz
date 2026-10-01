@@ -26,17 +26,19 @@ retry, another agent owns the tree.
    rebase, noting it in `ARBOR.md`. Only when conflicts would be hard to
    resolve, `arbor wait <task>` for the other task to land first. If it is
    doing the opposite of what you were asked, escalate instead.
-2. **Start.** `arbor add <task>`, `arbor add <task> --todo <id>` to take up a
-   todo, or `arbor claim <task>` to resume one. Pass `--base <branch>` only
-   when invoked with a branch (`/arbor feature/auth`) or the user names one;
-   never guess a base from the checked-out branch.
+2. **Start.** `arbor add <task>`, or `arbor claim <task>` to resume one.
+   Read `arbor todo list` first and take up every open todo your work will
+   settle: `arbor add <task> --todo 3,5`. Pass `--base <branch>` only when
+   invoked with a branch (`/arbor feature/auth`) or the user names one; never
+   guess a base from the checked-out branch.
 3. **Plan.** Fill in the `ARBOR.md` stub before touching code (see below).
 4. **Work.** Commit with git as you go; arbor never commits for you. Defer
    anything outside your Goal with `arbor todo add "<text>"` and move on.
    Between steps, run `arbor replies`: your human may have followed up an
    answer (see Follow-ups).
-5. **Squash** to one commit (see Committing), then **`arbor merge`**. On
-   failure, do what stderr says and merge again.
+5. **Settle todos** (see Deferring work), **squash** to one commit (see
+   Committing), then **`arbor merge`**. On failure, do what stderr says and
+   merge again.
 
 A successful merge deletes the worktree and your working directory with it:
 `cd` to the main tree it prints before running anything else.
@@ -51,8 +53,18 @@ status, never the lease.
 
 When something comes up that is not your Goal (a bug next door, a follow-up,
 a reply that widens the task), `arbor todo add "<one line>"` from your
-worktree and keep going. Do not grow the task. `merge` recommends the next
-todo when you land; mention it in your report (see Reporting).
+worktree and keep going. Do not grow the task.
+
+A task can hold any number of todos, and merging removes every one it holds.
+When an open todo turns out to be part of your work, `arbor todo take <id>`
+from your worktree and add it to your Goal. Before merging, read
+`arbor todo list` again: take any your change also settles, and for one you
+hold but only partly did, `arbor todo update <id> "<what is left>"` then
+`arbor todo release <id>`, so it stays on the list.
+
+After a merge, the next todo is one you added in this conversation, from any
+of its tasks, oldest first; only when none is open, the one `merge`
+recommends. Name it in your report (see Reporting).
 
 ## Handing out part of your task
 
@@ -147,7 +159,7 @@ One sentence blending what the task set out to do with where it ended up.
 Next: todo <id>, <its text>. Stale: todo <id> (remove?).
 ```
 
-Leave out the `Next` line when merge recommended nothing.
+Leave out the `Next` line when no todo is open.
 
 ```markdown
 ### ⚠️ Escalated `<task>`: <what it waits on, in a few words>
