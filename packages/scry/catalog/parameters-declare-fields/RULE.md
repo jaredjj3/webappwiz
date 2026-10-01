@@ -5,7 +5,7 @@ files: "**/*.ts"
 level: error
 effort: low
 recommended: true
-version: 0.0.23
+version: 0.0.24
 ---
 # Parameters declare fields
 
