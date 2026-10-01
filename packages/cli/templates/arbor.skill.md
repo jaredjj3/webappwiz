@@ -35,8 +35,8 @@ retry, another agent owns the tree.
 4. **Work.** Commit with git as you go; arbor never commits for you. Defer
    anything outside your Goal with `arbor todo add "<text>"` and move on.
    Ask about any call the request does not settle as you make it, and keep
-   going (see Asking as you go). Between steps, run `arbor replies`: your
-   human may have answered one or followed up an answer (see Follow-ups).
+   going (see Asking as you go). Between steps, run `arbor replies`: the
+   user may have answered one or followed up an answer (see Follow-ups).
 5. **Settle todos** (see Deferring work), **squash** to one commit (see
    Committing), then **`arbor merge`**. On failure, do what stderr says and
    merge again.
@@ -45,7 +45,7 @@ A successful merge deletes the worktree and your working directory with it:
 `cd` to the main tree it prints before running anything else.
 
 `wait` ends on `removed` (landed or dropped: redo the overlap check),
-`escalated` (the other task needs a person: tell the user you are blocked on
+`escalated` (the other task needs the user: tell them you are blocked on
 it), a broken status (`wait` once more, then ask), or exit 14 `timeout` (wait
 again or work alongside). A `stale` lease on a `working` task is normal: watch
 status, never the lease.
@@ -86,7 +86,7 @@ never mentioned, one reading of an ambiguous ask), write a question under
 `## Blocked` in `ARBOR.md` right away, in the format under Escalation, saying
 what you chose and what else you could have done. Then move on to the rest of
 the request without waiting. The inbox shows every unchecked question, whether
-the task is escalated or not, so your human can answer while you work. When
+the task is escalated or not, so the user can answer while you work. When
 an answer overturns a choice, redo that part.
 
 `arbor merge` refuses while a question is unchecked: when everything else is
@@ -94,8 +94,8 @@ done and some are still open, escalate and wait for them (see Escalation).
 
 ## Escalation
 
-Merge only work you verified yourself. Escalate when verification needs a
-person (external services, destructive migrations, visual changes), when the
+Merge only work you verified yourself. Escalate when verification needs the
+user (external services, destructive migrations, visual changes), when the
 user asked to see the work first, or, absent instructions, when the change is
 complex enough that correctness needs a reader rather than a test.
 
@@ -150,7 +150,7 @@ writing each after `→` on its question's line, and a claimed reply can no
 longer change under you. Never read them any other way. Write a chat reply
 after `→` yourself, matching it by number (`q1`, `Q1:` and `1.` all mean Q1).
 A conversation can answer a question without naming it: whenever anything
-your human says settles an open question, write that answer after `→` and
+the user says settles an open question, write that answer after `→` and
 check it off, so it leaves the inbox instead of being asked again. Check an
 item off only when the answer is one you can act on, and
 write it after `→`; anything else stays open and leads your next report. A
@@ -159,11 +159,11 @@ mean leave it out and carry on: check the item off. "Approved: merge it."
 answers a review: check it off and merge. `arbor merge` refuses with exit 16
 `blocked` while `## Blocked` has an unchecked item, and exit 15 `unread`
 while a reply waits unclaimed. `arbor claim` resumes an escalated task. `arbor retry` is only
-for `budget_exhausted`, and is the human's to run, before you claim.
+for `budget_exhausted`, and is the user's to run, before you claim.
 
 ## Follow-ups
 
-Your human can follow up any answer you already read, even one you checked
+The user can follow up any answer you already read, even one you checked
 off. `arbor replies` (and `arbor wait --answered`) writes a follow-up on a
 `→ ` line of its own under its question and unchecks the question. Treat it
 as an instruction from the user: act on it, then check the question off
