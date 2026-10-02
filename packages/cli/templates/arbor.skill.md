@@ -227,7 +227,8 @@ Leave out the `Next` line when no todo is open.
 One sentence on what changed.
 
 1. Does dragging a card feel right on a phone?
-   Press and hold a card, then drag it. Screenshot: /abs/path/drag.png
+   Press and hold a card, then drag it.
+   ![dragging a card](/abs/path/drag.png)
 2. How should a stale todo be shown?
    - (a) A muted card
    - (b) A "stale" badge
@@ -241,8 +242,10 @@ the user reads them, so each item carries everything needed to answer it.
 The item's line is the question's subject without its emoji. Indented under
 it goes whatever the answer depends on: the body cut to a line or two,
 choices exactly as in `ARBOR.md` (`- (a) ...` or `- [a] ...`, so a reply of
-`2. b` names one), and each screenshot or file as its absolute path. A
-review's lines say what to look at and where. Leave an item bare when its
+`2. b` names one), and each screenshot or file by its absolute path. Inline a
+screenshot as `![what](/abs/path.png)` when your harness shows images in
+chat; otherwise link it as `[what](/abs/path.png)`. A review's lines say what
+to look at and where. Leave an item bare when its
 subject says it all.
 
 ```markdown
