@@ -227,14 +227,23 @@ Leave out the `Next` line when no todo is open.
 One sentence on what changed.
 
 1. Does dragging a card feel right on a phone?
-2. Ready to merge?
+   Press and hold a card, then drag it. Screenshot: /abs/path/drag.png
+2. How should a stale todo be shown?
+   - (a) A muted card
+   - (b) A "stale" badge
+3. Ready to merge?
+   Drag a todo at http://localhost:4269
 ```
 
 An escalation lists every open question as a markdown list numbered from 1,
-the questions left open from earlier reports first. Each item is the
-question's subject without its emoji; the body, choices and screenshots stay
-in `ARBOR.md`. For a review, put what to look at on its line:
-`2. Ready to merge? Drag a todo at http://localhost:4269`.
+the questions left open from earlier reports first. Chat is the only place
+the user reads them, so each item carries everything needed to answer it.
+The item's line is the question's subject without its emoji. Indented under
+it goes whatever the answer depends on: the body cut to a line or two,
+choices exactly as in `ARBOR.md` (`- (a) ...` or `- [a] ...`, so a reply of
+`2. b` names one), and each screenshot or file as its absolute path. A
+review's lines say what to look at and where. Leave an item bare when its
+subject says it all.
 
 ```markdown
 ## 🛑 Removed <task>: superseded by a fix on main
