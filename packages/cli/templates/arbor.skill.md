@@ -56,11 +56,9 @@ Todos are work deferred for later, shared by every task. Each has an id that
 never changes, a one-line subject, optional detail, and a position: its
 priority, 1 at the top of the list.
 
-Write a subject the way you write a question's: short enough to scan, led by
-one emoji for what it is about (🎨 ui, 🗄️ db, 🔐 auth, 🧪 tests, 🐛 bug,
-📝 docs, 🧹 cleanup), or 📌 when none fits, so the list reads at a glance:
-`arbor todo add "🐛 Upload retries forever on a 413"`. Put the why, the
-where, and anything else in the detail.
+Write a subject the way you write a question's, short enough to scan:
+`arbor todo add "Upload retries forever on a 413"`. Put the why, the where,
+and anything else in the detail.
 
 - `arbor todo list` shows them in position order; `arbor todo show <id>`
   prints one whole, detail and attached files included.
@@ -72,6 +70,10 @@ where, and anything else in the detail.
   `--position <n>` moves it, `--file` and `--remove-file` change its files.
 - `arbor todo take <id>` makes it part of your task; `arbor todo release <id>`
   puts it back; `arbor todo remove <id>` drops one that is done or moot.
+
+`[ARBOR TODO #N]` in a message means todo N, copied from the `arbor dev`
+page: run `arbor todo show N` and treat it as the request. When your task
+covers it, take it with `arbor add <task> --todo N` or `arbor todo take N`.
 
 When something comes up that is not your Goal (a bug next door, a follow-up,
 a reply that widens the task), `arbor todo add` it from your worktree and keep
@@ -137,7 +139,7 @@ complex enough that correctness needs a reader rather than a test.
 
 1. `arbor escalate <reason>`. When the only thing left is the user's
    approval, `arbor escalate --review "<what to look at>"` instead: it asks
-   `✅ Ready to merge?` for you. Settle every other question first; it
+   `Ready to merge?` for you. Settle every other question first; it
    refuses while one is unchecked.
 2. Leave something to look at, by **absolute path** (start from
    `arbor path <task>`): a screenshot for anything visual. Ask first if
@@ -150,9 +152,8 @@ complex enough that correctness needs a reader rather than a test.
 Number questions 1, 2, … in the order you ask them; numbers never change,
 and new ones continue from the highest. They are `ARBOR.md`'s, not the
 user's: reports number questions afresh (see Reporting). A question's
-line is its subject: short enough to scan in a list, led by one emoji for
-what it is about (🎨 ui, 🗄️ db, 🔐 auth, 🧪 tests), or ❓ when none fits
-(repeats are fine), and ending in the question.
+line is its subject: short enough to scan in a list, and ending in the
+question.
 Everything else goes in lines indented under it, which render as markdown:
 detail, code blocks, and screenshots as `![what](/abs/path.png)`. Ask for what is wrong rather than a bare yes or no. When
 the answer is one of a few, list `- (a) ...` lines last (pick one, or none);
@@ -163,10 +164,10 @@ alone.
 ````markdown
 ## Blocked
 
-- [x] 1. 🧪 Do the live tests pass against staging? → yes
-- [ ] 2. 🎨 Does the header wrap to two lines?
+- [x] 1. Do the live tests pass against staging? → yes
+- [ ] 2. Does the header wrap to two lines?
   ![header at 390px](/abs/path/shot.png)
-- [ ] 3. 🔐 How should existing sessions move to the new tokens?
+- [ ] 3. How should existing sessions move to the new tokens?
   Sessions are keyed by the old cookie:
 
   ```ts
@@ -239,7 +240,7 @@ One sentence on what changed.
 An escalation lists every open question as a markdown list numbered from 1,
 the questions left open from earlier reports first. Chat is the only place
 the user reads them, so each item carries everything needed to answer it.
-The item's line is the question's subject without its emoji. Indented under
+The item's line is the question's subject. Indented under
 it goes whatever the answer depends on: the body cut to a line or two,
 choices exactly as in `ARBOR.md` (`- (a) ...` or `- [a] ...`, so a reply of
 `2. b` names one), and each screenshot or file by its absolute path. Inline a
