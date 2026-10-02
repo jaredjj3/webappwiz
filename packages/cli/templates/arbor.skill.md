@@ -154,9 +154,11 @@ complex enough that correctness needs a reader rather than a test.
    not run it: end your turn, and read `ARBOR.md` when you are back.
 
 Number questions 1, 2, … in the order you ask them; numbers never change,
-and new ones continue from the highest. A question's line is its subject:
-short enough to scan in a list, led by one emoji for what it is about (🎨 ui, 🗄️ db, 🔐 auth, 🧪 tests), or ❓ when none fits (repeats are
-fine), and ending in the question.
+and new ones continue from the highest. They are the page's and arbor's, not
+the user's: reports number questions afresh (see Reporting). A question's
+line is its subject: short enough to scan in a list, led by one emoji for
+what it is about (🎨 ui, 🗄️ db, 🔐 auth, 🧪 tests), or ❓ when none fits
+(repeats are fine), and ending in the question.
 Everything else goes in lines indented under it, which render as markdown:
 detail, code blocks, and screenshots as `![what](/abs/path.png)`, which the
 page shows inline. Ask for what is wrong rather than a bare yes or no. When
@@ -183,11 +185,13 @@ alone.
 ````
 
 Answers arrive in chat or from the page. The page writes its answers into
-`ARBOR.md` after `→` for you; write a chat answer there yourself, matching it
-by number (`1`, `1.` and `1:` all mean question 1). A conversation can answer a
-question without naming it: whenever anything the user says settles an open
-question, write that answer after `→` and check it off, so it is not asked
-again. Check an item off only when the answer is one you can act on;
+`ARBOR.md` after `→` for you; write a chat answer there yourself. The user
+answers a report with a markdown list matching its numbers: `2.` means the
+second question in your latest report, whatever number it has in `ARBOR.md`.
+Items left out stay open. When a reply does not fit your latest report, ask
+rather than guess. A conversation can answer a question without naming it:
+whenever anything the user says settles an open question, write that answer
+after `→` and check it off, so it is not asked again. Check an item off only when the answer is one you can act on;
 anything else stays open and leads your next report. A reply about something
 you did is an instruction. "Deferred to todo 7" and "Skip this" mean leave it out and
 carry on: check the item off. "Approved: merge it." answers a review: check
@@ -206,32 +210,44 @@ another agent's: say what you need in your report or under `## Blocked`.
 
 ## Reporting
 
-However a task ends, say so in one block; only a merge names a base:
+However a task ends, say so in one block: a `##` title, a blank line, and one
+plain sentence on what changed. The title is the emoji, the outcome, and the
+bare task name, then what matters most about the ending: the base for a
+merge, otherwise what it waits on or why it went, after a colon. That part
+leads with what it needs from the user (a review, a decision, access, a test
+only they can run), not the work done, which is the sentence's job. Keep the
+title to about eight words, lowercase after the colon, with no ending
+punctuation.
 
 ```markdown
-### ✅ Merged `<task>` onto `<base>`
+## ✅ Merged <task> onto <base>
 
-One sentence blending what the task set out to do with where it ended up.
+One sentence on what changed.
 
-Next: todo <id>, <its text>. Stale: todo <id> (remove?).
+Next: todo <id>, <its subject>. Stale: todo <id> (remove?).
 ```
 
 Leave out the `Next` line when no todo is open.
 
 ```markdown
-### ⚠️ Escalated `<task>`: <what it waits on, in a few words>
+## ⚠️ Escalated <task>: waiting on your review of the todo board
 
-Done:
-1. One line per change.
+One sentence on what changed.
 
-Needs you:
-3. One subject line per open question, by its number in `ARBOR.md`.
+1. Does dragging a card feel right on a phone?
+2. Ready to merge?
 ```
 
-```markdown
-### 🛑 Removed `<task>`
+An escalation lists every open question as a markdown list numbered from 1,
+the questions left open from earlier reports first. Each item is the
+question's subject without its emoji; the body, choices and screenshots stay
+in `ARBOR.md` and on the page. For a review, put what to look at on its line:
+`2. Ready to merge? Drag a todo at http://localhost:4269`.
 
-One sentence on what the task set out to do and why you removed it.
+```markdown
+## 🛑 Removed <task>: superseded by a fix on main
+
+One sentence on what the task set out to do.
 ```
 
 Anything else worth saying goes after the block, not instead of it.
