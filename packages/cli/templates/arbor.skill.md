@@ -58,7 +58,17 @@ priority, 1 at the top of the list.
 
 Write a subject the way you write a question's, short enough to scan:
 `arbor todo add "Upload retries forever on a 413"`. Put the why, the where,
-and anything else in the detail.
+and anything else in the detail, written as markdown: the `arbor dev` page
+renders it. Use paragraphs, lists, `- [ ]` steps, inline code for paths and
+commands, and fenced blocks for snippets. Single quotes keep the shell off
+the backticks:
+
+```sh
+arbor todo add "Upload retries forever on a 413" 'The client retries on any 4xx in `src/upload.ts`.
+
+- [ ] stop retrying on 413
+- [ ] tell the user the file is too big'
+```
 
 - `arbor todo list` shows them in position order; `arbor todo show <id>`
   prints one whole, detail and attached files included.
