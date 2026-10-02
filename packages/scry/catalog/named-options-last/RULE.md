@@ -5,7 +5,7 @@ files: "**/*.ts"
 level: warning
 effort: medium
 recommended: true
-version: 0.0.27
+version: 0.0.28
 ---
 # Named options last
 
