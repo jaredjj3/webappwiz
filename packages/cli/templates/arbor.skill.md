@@ -108,7 +108,7 @@ never mentioned, one reading of an ambiguous ask), write a question under
 `## Blocked` in `ARBOR.md` right away, in the format under Escalation, saying
 what you chose and what else you could have done. Then move on to the rest of
 the request without waiting. The user can answer in chat while you work, and
-sees every unchecked question on the page once you escalate. When an answer
+sees every open question in your report once you escalate. When an answer
 overturns a choice, redo that part.
 
 `arbor merge` refuses while a question is unchecked: when everything else is
@@ -117,9 +117,8 @@ done and some are still open, escalate and wait for them (see Escalation).
 ## Keeping Blocked current
 
 `## Blocked` is what the user sees and answers, so it must say what you need
-right now. Before you continue with any work (after an answer in chat or on
-the page, after `arbor wait` or `arbor claim` returns, and between steps),
-bring it up to date:
+right now. Before you continue with any work (after the user replies, after
+`arbor claim` returns, and between steps), bring it up to date:
 
 - write every answer the user gave after `→` on its question's line;
 - check off each question you have acted on;
@@ -138,30 +137,24 @@ complex enough that correctness needs a reader rather than a test.
 
 1. `arbor escalate <reason>`. When the only thing left is the user's
    approval, `arbor escalate --review "<what to look at>"` instead: it asks
-   `✅ Ready to merge?` for you, and the page shows Approve and Request
-   changes. Settle every other question first; it refuses while one is
-   unchecked.
+   `✅ Ready to merge?` for you. Settle every other question first; it
+   refuses while one is unchecked.
 2. Leave something to look at, by **absolute path** (start from
    `arbor path <task>`): a screenshot for anything visual. Ask first if
    producing it is expensive.
 3. Write each question not already there under `## Blocked` in `ARBOR.md`,
    then report.
-4. Wait for answers. If your harness can run a command in the background and
-   wake you when it exits (Claude Code's `run_in_background` can), start
-   `arbor wait <task> --answered` that way: it ends once every unchecked
-   question has an answer in `ARBOR.md`, and prints them. The user may answer
-   on the page or in chat, whichever comes first. If your harness cannot, do
-   not run it: end your turn, and read `ARBOR.md` when you are back.
+4. End your turn and wait for the user to answer in chat. Do not run
+   `arbor wait` or poll `ARBOR.md` for answers: they only come in chat.
 
 Number questions 1, 2, … in the order you ask them; numbers never change,
-and new ones continue from the highest. They are the page's and arbor's, not
-the user's: reports number questions afresh (see Reporting). A question's
+and new ones continue from the highest. They are `ARBOR.md`'s, not the
+user's: reports number questions afresh (see Reporting). A question's
 line is its subject: short enough to scan in a list, led by one emoji for
 what it is about (🎨 ui, 🗄️ db, 🔐 auth, 🧪 tests), or ❓ when none fits
 (repeats are fine), and ending in the question.
 Everything else goes in lines indented under it, which render as markdown:
-detail, code blocks, and screenshots as `![what](/abs/path.png)`, which the
-page shows inline. Ask for what is wrong rather than a bare yes or no. When
+detail, code blocks, and screenshots as `![what](/abs/path.png)`. Ask for what is wrong rather than a bare yes or no. When
 the answer is one of a few, list `- (a) ...` lines last (pick one, or none);
 for "all that apply", `- [a] ...` lines. A reply names its picks spelled out
 (`a (Email), c (Push)`), may add words after a colon, or may answer in words
@@ -184,26 +177,25 @@ alone.
   - (b) Migrate each session on its next request
 ````
 
-Answers arrive in chat or from the page. The page writes its answers into
-`ARBOR.md` after `→` for you; write a chat answer there yourself. The user
-answers a report with a markdown list matching its numbers: `2.` means the
+Answers arrive in chat; write each one into `ARBOR.md` after `→` yourself.
+The user answers a report with a markdown list matching its numbers: `2.` means the
 second question in your latest report, whatever number it has in `ARBOR.md`.
 Items left out stay open. When a reply does not fit your latest report, ask
 rather than guess. A conversation can answer a question without naming it:
 whenever anything the user says settles an open question, write that answer
 after `→` and check it off, so it is not asked again. Check an item off only when the answer is one you can act on;
 anything else stays open and leads your next report. A reply about something
-you did is an instruction. "Deferred to todo 7" and "Skip this" mean leave it out and
-carry on: check the item off. "Approved: merge it." answers a review: check
-it off and merge. `arbor merge` refuses with exit 16 `blocked` while
+you did is an instruction. A reply to defer or skip a question means leave it
+out and carry on (for a defer, `arbor todo add` it first): check the item
+off. An approval answers a review: check it off and merge. `arbor merge` refuses with exit 16 `blocked` while
 `## Blocked` has an unchecked item. `arbor claim` resumes an escalated task.
 `arbor retry` is only for `budget_exhausted`, and is the user's to run,
 before you claim.
 
 ## Follow-ups
 
-Once a question is answered it leaves the page, so the user follows an answer
-up in chat. Write the follow-up on a `→ ` line of its own under its question
+The user can follow up any answer in chat, even one you checked off. Write
+the follow-up on a `→ ` line of its own under its question
 and uncheck it. Treat it as an instruction from the user: act on it, then
 check the question off again. You never answer questions, yours or
 another agent's: say what you need in your report or under `## Blocked`.
@@ -241,7 +233,7 @@ One sentence on what changed.
 An escalation lists every open question as a markdown list numbered from 1,
 the questions left open from earlier reports first. Each item is the
 question's subject without its emoji; the body, choices and screenshots stay
-in `ARBOR.md` and on the page. For a review, put what to look at on its line:
+in `ARBOR.md`. For a review, put what to look at on its line:
 `2. Ready to merge? Drag a todo at http://localhost:4269`.
 
 ```markdown
