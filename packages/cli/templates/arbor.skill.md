@@ -85,17 +85,34 @@ arbor todo add "Upload retries forever on a 413" 'The client retries on any 4xx 
 - [ ] tell the user the file is too big'
 ```
 
-- `arbor todo list` shows them in position order, and `--open` only those
-  no task has taken; `arbor todo show <id>` prints one whole, detail and
-  attached files included.
+- `arbor todo list` shows them in position order, `--open` only those no
+  task has taken, and `--tag <tag>` only those with a tag; `arbor todo show
+  <id>` prints one whole, detail and attached files included.
 - `arbor todo add "<subject>" ["<detail>"]` from your worktree records the
   task it came up in. It goes to the bottom unless you pass `--position <n>`,
   which only the user's priorities should decide. `--file a.png,b.log`
-  attaches files.
+  attaches files, `--tag uploads,merge` tags it.
 - `arbor todo update <id> ["<detail>"] --subject "<subject>"` rewords one,
-  `--position <n>` moves it, `--file` and `--remove-file` change its files.
+  `--position <n>` moves it, `--file` and `--remove-file` change its files,
+  `--tag` and `--remove-tag` its tags.
+- `arbor todo tags` lists every tag in use, with how many todos have it.
 - `arbor todo take <id>` makes it part of your task; `arbor todo release <id>`
   puts it back; `arbor todo remove <id>` drops one that is done or moot.
+
+A tag names the area or goal a todo belongs to, so related todos group
+together and the `arbor dev` page can filter by it. A todo can
+have several tags, and a tag many todos:
+
+- Reuse before inventing: read `arbor todo tags` and take a tag from it
+  whenever one fits.
+- One lowercase word, like `uploads` or `merge`; when one word cannot say
+  it, join a few with hyphens, like `dark-mode`. arbor refuses anything else.
+- Name the part of the product or the goal the todos add up to, never the
+  kind of work (`bug`, `refactor`), a task, a person, a priority, or a status:
+  the subject, position, and taken-by already say those.
+- One or two tags a todo, or none when nothing groups it.
+- A todo that comes up in your task usually belongs with the todos your task
+  holds: give it their tags when it does.
 
 `[ARBOR TODO #N]` in a message means todo N, copied from the `arbor dev`
 page: run `arbor todo show N` and treat it as the request. Take it before
@@ -119,10 +136,12 @@ context this conversation built up gets used before it is gone. Read
 `arbor todo list --open`, never picking one another task has taken, and take
 the todo most relevant to the work you just did (the same files, feature, or
 problem; `arbor todo show` one to be sure), preferring one that came up in
-the task that just ended. Among equally relevant ones, and when none is
-related, take the lowest position, the top of the list. `merge` recommends
-the landed task's own todos first, then the lowest position; `remove`
-recommends nothing, so do this yourself. Name it in your report (see
+the task that just ended, then one sharing a tag with the todos it held
+(`arbor todo list --open --tag <tag>`). Among equally relevant ones, and when
+none is related, take the lowest position, the top of the list. `merge`
+recommends the landed task's own todos first, then those sharing a tag with
+the todos it settled, then the lowest position; `remove` recommends nothing,
+so do this yourself. Name it in your report (see
 Reporting).
 
 ## Handing out part of your task
