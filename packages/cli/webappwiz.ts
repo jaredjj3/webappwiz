@@ -91,14 +91,10 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: ".",
 			description: "project to add it to (default: .)",
 		})
-		.option(
-			"recommended",
-			z.string().transform((raw) => raw !== "false"),
-			{
-				default: false,
-				description: "copy every rule that recommends itself, instead of one",
-			},
-		)
+		.option("recommended", z.boolean(), {
+			default: false,
+			description: "copy every rule that recommends itself, instead of one",
+		})
 		.action((opts, { log, fs }) => addRule({ ...opts, log, fs }));
 
 	scry

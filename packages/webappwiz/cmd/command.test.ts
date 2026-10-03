@@ -33,25 +33,71 @@ describe("Command", () => {
 		expect(parsed).toBe(42);
 	});
 
-	it("parses a bare boolean flag as true and --flag=false as false", () => {
+	it("reads a z.boolean() option as a switch: bare is true, --x=false is false", () => {
 		let got: { loud: boolean; name: string } | undefined;
 		const cmd = new Command("f")
-			.option(
-				"loud",
-				z.string().transform((raw) => raw !== "false"),
-			)
+			.option("loud", z.boolean(), { default: false })
 			.option("name", z.string())
 			.action((opts) => {
 				got = opts;
 			});
+		cmd.exec(["--name", "ada"], { log });
+		expect(got).toEqual({ loud: false, name: "ada" });
 		cmd.exec(["--loud", "--name", "ada"], { log });
+		expect(got).toEqual({ loud: true, name: "ada" });
+		cmd.exec(["--loud=true", "--name", "ada"], { log });
 		expect(got).toEqual({ loud: true, name: "ada" });
 		cmd.exec(["--loud=false", "--name", "ada"], { log });
 		expect(got).toEqual({ loud: false, name: "ada" });
 		for (const raw of ["", "0", "no", "FALSE"]) {
-			cmd.exec([`--loud=${raw}`, "--name", "ada"], { log });
-			expect(got).toEqual({ loud: true, name: "ada" });
+			expect(() =>
+				cmd.exec([`--loud=${raw}`, "--name", "ada"], { log }),
+			).toThrow("expected true or false");
 		}
+	});
+
+	it("leaves a switch with no default off, and other options taking a value", () => {
+		let got: { loud: boolean; name: string } | undefined;
+		let port = 0;
+		new Command("g")
+			.arg("name", z.string(), { default: "anon" })
+			.option("loud", z.boolean())
+			.option("as", z.stringbool(), { default: false })
+			.option("port", z.coerce.number(), { default: 0 })
+			.action((opts) => {
+				got = { loud: opts.loud, name: opts.name };
+				port = opts.port;
+			})
+			.exec(["--as", "true", "--port", "80", "ada"], { log });
+		expect(got).toEqual({ loud: false, name: "ada" });
+		expect(port).toBe(80);
+	});
+
+	it("never takes the token after a switch as its value", () => {
+		let got: { review: boolean; reason: string } | undefined;
+		const cmd = new Command("escalate")
+			.arg("reason", z.string())
+			.option("review", z.boolean(), { default: false })
+			.action((opts) => {
+				got = opts;
+			});
+		cmd.exec(["--review", "look at the header"], { log });
+		expect(got).toEqual({ review: true, reason: "look at the header" });
+		cmd.exec(["look at the header", "--review"], { log });
+		expect(got).toEqual({ review: true, reason: "look at the header" });
+	});
+
+	it("stops a pass-through command at the argument after a switch", () => {
+		let got: { watch: boolean; args: string[] } | undefined;
+		const cmd = new Command("run")
+			.passThroughOptions()
+			.option("watch", z.boolean(), { default: false })
+			.rest("args", z.string())
+			.action((opts) => {
+				got = opts;
+			});
+		cmd.exec(["--watch", "build", "--help"], { log });
+		expect(got).toEqual({ watch: true, args: ["build", "--help"] });
 	});
 
 	it("throws on a flag it was never given", () => {
@@ -73,11 +119,7 @@ describe("Command", () => {
 	it("names the unknown flag before an argument it could blame instead", () => {
 		const cmd = new Command("p")
 			.arg("task", z.string())
-			.option(
-				"force",
-				z.string().transform((raw) => raw !== "false"),
-				{ default: false },
-			)
+			.option("force", z.boolean(), { default: false })
 			.action(() => {});
 
 		expect(() => cmd.exec(["--frce"], { log })).toThrow(
@@ -88,11 +130,7 @@ describe("Command", () => {
 	it("uses defaults for absent flags and the given value when present", () => {
 		let got: { add: boolean; name: string } | undefined;
 		const cmd = new Command("d")
-			.option(
-				"add",
-				z.string().transform((raw) => raw !== "false"),
-				{ default: false },
-			)
+			.option("add", z.boolean(), { default: false })
 			.option("name", z.string(), { default: "anon" })
 			.action((opts) => {
 				got = opts;
@@ -238,11 +276,7 @@ describe("Command", () => {
 		let got: { task: string; force: boolean } | undefined;
 		new Command("prune")
 			.arg("task", z.string())
-			.option(
-				"force",
-				z.string().transform((raw) => raw !== "false"),
-				{ default: false },
-			)
+			.option("force", z.boolean(), { default: false })
 			.action((opts) => {
 				got = opts;
 			})
@@ -312,17 +346,11 @@ describe("Command", () => {
 		let got: { check: boolean; args: string[] } | undefined;
 		new Command("test")
 			.allowUnknownOption()
-			.option(
-				"check",
-				z.string().transform((raw) => raw !== "false"),
-				{ default: false },
-			)
+			.option("check", z.boolean(), { default: false })
 			.rest("args", z.string())
 			.action((opts) => {
 				got = opts;
 			})
-			// `--check` before `web` would read it as its value, the way any bare
-			// flag ahead of a positional does; that rule has not changed here
 			.exec(["web", "--check", "--watch", "--grep", "midi"], { log });
 		expect(got).toEqual({
 			check: true,

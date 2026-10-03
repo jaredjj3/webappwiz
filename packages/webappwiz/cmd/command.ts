@@ -34,6 +34,8 @@ type OptionMeta = {
 	description?: string;
 	hasDefault: boolean;
 	default?: unknown;
+	/** A switch: present or not, it never takes the next token as its value. */
+	isSwitch: boolean;
 };
 
 export class Command<O, C extends object = object> {
@@ -73,6 +75,7 @@ export class Command<O, C extends object = object> {
 			// only a present `default` key makes the option optional (vs. a lone description)
 			hasDefault: meta !== undefined && "default" in meta,
 			default: meta?.default,
+			isSwitch: takesBooleans(schema as Arg<unknown>),
 		});
 		return this as unknown as Command<O & { [P in K]: T }, C>;
 	}
@@ -93,6 +96,7 @@ export class Command<O, C extends object = object> {
 			description: meta?.description,
 			hasDefault: meta !== undefined && "default" in meta,
 			default: meta?.default,
+			isSwitch: false,
 		});
 		return this as unknown as Command<O & { [P in K]: T }, C>;
 	}
@@ -118,6 +122,7 @@ export class Command<O, C extends object = object> {
 			schema: schema as Arg<unknown>,
 			description: meta?.description,
 			hasDefault: false,
+			isSwitch: false,
 		};
 		return this as unknown as Command<O & { [P in K]: T[] }, C>;
 	}
@@ -217,8 +222,9 @@ export class Command<O, C extends object = object> {
 		return false;
 	}
 
-	// The token after a bare `--flag` is that flag's value, which is what makes
-	// it not the first argument a pass-through command stops reading options at.
+	// The token after a bare `--option` is that option's value, which is what
+	// makes it not the first argument a pass-through command stops reading
+	// options at. A switch takes no value, so what follows it stands alone.
 	private isValue(argv: string[], i: number): boolean {
 		const token = argv[i];
 		if (token?.startsWith("-")) {
@@ -228,7 +234,13 @@ export class Command<O, C extends object = object> {
 		if (previous === undefined || !previous.startsWith("--")) {
 			return false;
 		}
-		return !previous.includes("=");
+		return !previous.includes("=") && !this.isSwitch(previous.slice(2));
+	}
+
+	private isSwitch(name: string): boolean {
+		return this.options.some(
+			(option) => option.name === name && option.isSwitch,
+		);
 	}
 
 	private parse(argv: string[]): O {
@@ -256,7 +268,8 @@ export class Command<O, C extends object = object> {
 			// `cmd --grep x` reports the flag it does not know rather than the
 			// argument it thinks you left out. A command that forwards its arguments
 			// says so, and then an unknown flag is one of them.
-			if (!this.options.some((option) => option.name === name)) {
+			const option = this.options.find((option) => option.name === name);
+			if (option === undefined) {
 				if (!this.unknownOptions) {
 					throw new Error(`unknown option --${name}`);
 				}
@@ -269,11 +282,11 @@ export class Command<O, C extends object = object> {
 				raw.set(name, token.slice(eq + 1));
 			} else {
 				const next = argv[i + 1];
-				if (next !== undefined && !next.startsWith("--")) {
+				if (!option.isSwitch && next !== undefined && !next.startsWith("--")) {
 					raw.set(name, next);
 					i++;
 				} else {
-					raw.set(name, "true"); // bare flag
+					raw.set(name, "true"); // bare switch
 				}
 			}
 		}
@@ -282,8 +295,8 @@ export class Command<O, C extends object = object> {
 			throw new Error(`unexpected argument "${extra}"`);
 		}
 		const out: Record<string, unknown> = {};
-		// positionals bind by order, so a bare flag before them steals one
-		// (`cmd --force task`). Put flags last, or add arity to option().
+		// positionals bind by order, so a bare option before them steals one
+		// (`cmd --port task`); a switch never does
 		this.args.forEach((arg, i) => {
 			const value = positional[i];
 			if (value === undefined) {
@@ -320,9 +333,17 @@ export class Command<O, C extends object = object> {
 					out[opt.name] = missing.value;
 					continue;
 				}
+				// a switch left off is off, not missing
+				if (opt.isSwitch) {
+					out[opt.name] = false;
+					continue;
+				}
 				throw new Error(`missing required option --${opt.name}`);
 			}
-			out[opt.name] = read(opt.schema, value);
+			out[opt.name] = read(
+				opt.schema,
+				opt.isSwitch ? onOff(opt.name, value) : value,
+			);
 		}
 		return out as O;
 	}
@@ -379,8 +400,8 @@ export class Command<O, C extends object = object> {
 	}
 }
 
-/** Validates a command-line string and reports the first issue with its path. */
-function read<T>(schema: Arg<T>, raw: string): T {
+/** Validates a command-line value and reports the first issue with its path. */
+function read<T>(schema: Arg<T>, raw: unknown): T {
 	const result = schema["~standard"].validate(raw);
 	if (result instanceof Promise) {
 		throw new Error(
@@ -398,6 +419,32 @@ function read<T>(schema: Arg<T>, raw: string): T {
 		.join(".");
 	const message = issue?.message ?? "invalid";
 	throw new Error(path ? `${path}: ${message}` : message);
+}
+
+/**
+ * Whether an option is a switch: its schema keeps the booleans true and false
+ * as they are and refuses a string, as `z.boolean()` does and
+ * `z.coerce.number()` (true is 1) does not. Asked of the schema rather than
+ * of its library, so it holds for any Standard Schema.
+ */
+function takesBooleans(schema: Arg<unknown>): boolean {
+	const keeps = (value: unknown) => {
+		const result = schema["~standard"].validate(value);
+		if (result instanceof Promise) {
+			result.catch(() => {}); // async is refused when it is used instead
+			return false;
+		}
+		return result.issues === undefined && result.value === value;
+	};
+	return keeps(true) && keeps(false) && !keeps("true");
+}
+
+/** A switch's value: a bare `--name` is `"true"`; `--name=` says it outright. */
+function onOff(name: string, raw: string): boolean {
+	if (raw !== "true" && raw !== "false") {
+		throw new Error(`--${name}: expected true or false, got "${raw}"`);
+	}
+	return raw === "true";
 }
 
 /** A schema accepting undefined can allow absence or supply its own default. */

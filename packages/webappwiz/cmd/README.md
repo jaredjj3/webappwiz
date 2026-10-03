@@ -14,7 +14,7 @@ app
 	.command("greet")
 	.description("say hello")
 	.arg("name", z.string(), { description: "who to greet" })
-	.option("loud", z.string().transform((raw) => raw !== "false"), { default: false })
+	.option("loud", z.boolean(), { default: false })
 	.action((opts, { log }) => log.info(opts.loud ? "HI" : "hi", opts.name));
 
 await app.run({});
@@ -22,11 +22,21 @@ await app.run({});
 
 ```bash
 app greet ada --loud
+app greet --loud ada
 ```
 
 An arg or option without a `default` is required. Their types accumulate, so
-`opts` is fully typed in `action`. Args bind by declaration order, so put
-flags after them: `app greet --loud ada` reads `ada` as the value of `--loud`.
+`opts` is fully typed in `action`. Args bind by declaration order, and an
+option takes the next argument as its value, so put options after them:
+with `.option("port", z.coerce.number())`, `app serve --port 80` reads `80`
+as the port.
+
+An option whose schema is a boolean, like `z.boolean()`, is a switch instead:
+false when left off, true for a bare `--loud`, and `--loud=false` or
+`--loud=true` to say so outright. It never takes the next argument as its
+value, so it can come before the args as well as after. The parser asks the
+schema whether it keeps `true` and `false` and refuses a string, so this
+works the same in any schema library.
 
 A flag the command never declared is an error, and so is a positional past
 the ones it does, since the alternative is a typo running the command anyway
@@ -106,10 +116,9 @@ app
 
 **Reach for the coercing form.** A command line arrives as strings, so
 `z.coerce.number()` works where `z.number()` refuses "3000".
-For flags, a bare `--flag` arrives as `"true"`. Use `z.stringbool()` for
-recognized boolean spellings, or `z.string().transform((raw) => raw !== "false")`
-to treat only the literal `"false"` as false. Do not use `z.coerce.boolean()`:
-the string `"false"` becomes true.
+For an on/off switch, use `z.boolean()`. Not `z.coerce.boolean()` or
+`z.stringbool()`: they take strings, so the option takes the next argument
+as its value, and `z.coerce.boolean()` turns the string `"false"` into true.
 
 Validation is synchronous. Async schemas are unsupported. Validation errors
 are ordinary errors naming the first issue and its dotted path.

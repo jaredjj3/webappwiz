@@ -22,35 +22,23 @@ const dev = wiz.group("dev").description("work on the webappwiz workspace");
 dev
 	.command("fix")
 	.description("format, check, and typecheck the workspace")
-	.option(
-		"check",
-		z.string().transform((raw) => raw !== "false"),
-		{
-			default: false,
-			description: "report problems without writing fixes (for CI)",
-		},
-	)
+	.option("check", z.boolean(), {
+		default: false,
+		description: "report problems without writing fixes (for CI)",
+	})
 	.action((opts, { log, ps }) => fix({ ...opts, log, ps }));
 
 dev
 	.command("path")
 	.description("manage bin/ on your shell PATH")
-	.option(
-		"add",
-		z.string().transform((raw) => raw !== "false"),
-		{
-			default: false,
-			description: "add bin/ to your PATH",
-		},
-	)
-	.option(
-		"remove",
-		z.string().transform((raw) => raw !== "false"),
-		{
-			default: false,
-			description: "remove bin/ from your PATH",
-		},
-	)
+	.option("add", z.boolean(), {
+		default: false,
+		description: "add bin/ to your PATH",
+	})
+	.option("remove", z.boolean(), {
+		default: false,
+		description: "remove bin/ from your PATH",
+	})
 	.action((opts, { log, fs, ps }) => path({ ...opts, log, fs, ps }));
 
 dev

@@ -96,11 +96,11 @@ Check behavior at each input boundary:
   `z.coerce.number().parse(raw)` for numeric strings. Decode JSON strings
   before validating object or array schemas, handling malformed JSON too.
 - `webappwiz/cmd` still accepts Standard Schema. It passes strings to the
-  schema, so numeric args and options need `z.coerce.number()`. A bare flag
-  arrives as `"true"`. To preserve the old boolean behavior exactly, use
-  `z.string().transform((raw) => raw !== "false")`. `z.stringbool()` is
-  suitable when you want recognized boolean spellings instead.
-  `z.coerce.boolean()` converts `"false"` to true and is not a replacement.
+  schema, so numeric args and options need `z.coerce.number()`. Declare an
+  on/off switch as `.option("name", z.boolean(), { default: false })`: it is
+  false unless given, `--name=false` turns it off, and a bare `--name` never
+  takes the next argument as its value. `z.coerce.boolean()` converts
+  `"false"` to true and is not a replacement.
   Command validation remains synchronous and reports an ordinary `Error`
   with the first issue's dotted path and message.
 - Zod numbers reject infinity. Object schemas still strip extra keys, but
