@@ -27,8 +27,8 @@ retry, another agent owns the tree.
    resolve, `arbor wait <task>` for the other task to land first. If it is
    doing the opposite of what you were asked, escalate instead.
 2. **Start.** `arbor add <task>`, or `arbor claim <task>` to resume one.
-   Read `arbor todo list` first and take up every open todo your work will
-   settle: `arbor add <task> --todo 3,5` (see Todos). Pass `--base <branch>` only when
+   Read `arbor todo list --open` first and take up every todo there your
+   work will settle: `arbor add <task> --todo 3,5` (see Todos). Pass `--base <branch>` only when
    invoked with a branch (`/arbor feature/auth`) or the user names one; never
    guess a base from the checked-out branch.
 3. **Plan.** Fill in the `ARBOR.md` stub before touching code (see below).
@@ -70,8 +70,9 @@ arbor todo add "Upload retries forever on a 413" 'The client retries on any 4xx 
 - [ ] tell the user the file is too big'
 ```
 
-- `arbor todo list` shows them in position order; `arbor todo show <id>`
-  prints one whole, detail and attached files included.
+- `arbor todo list` shows them in position order, and `--open` only those
+  no task has taken; `arbor todo show <id>` prints one whole, detail and
+  attached files included.
 - `arbor todo add "<subject>" ["<detail>"]` from your worktree records the
   task it came up in. It goes to the bottom unless you pass `--position <n>`,
   which only the user's priorities should decide. `--file a.png,b.log`
@@ -92,13 +93,14 @@ going. Do not grow the task.
 A task can hold any number of todos, and merging removes every one it holds.
 When an open todo turns out to be part of your work, `arbor todo take <id>`
 from your worktree and add it to your Goal. Before merging, read
-`arbor todo list` again: take any your change also settles, and for one you
-hold but only partly did, `arbor todo update <id>` with what is left, then
-`arbor todo release <id>`, so it stays on the list.
+`arbor todo list --open` again and take any your change also settles.
+For one you hold but only partly did, `arbor todo update <id>` with what is
+left, then `arbor todo release <id>`, so it stays on the list.
 
 After a merge, pick the next todo so the context this conversation built up
-gets used before it is gone: the open todo most relevant to the work you just
-did (the same files, feature, or problem; `arbor todo show` one to be sure),
+gets used before it is gone: from `arbor todo list --open`, never one
+another task has taken, the todo most relevant to the work you just did (the
+same files, feature, or problem; `arbor todo show` one to be sure),
 preferring one that came up in the task that just landed. Among equally
 relevant ones, and when none is related, take the lowest position. `merge`
 recommends the landed task's own todos first, then the lowest position. Name
