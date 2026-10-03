@@ -157,6 +157,8 @@ right now. Before you continue with any work (after the user replies, after
 - check off each question you have acted on;
 - check off any that no longer applies, with why after `→`
   (`→ moot: the header was removed`), rather than deleting it;
+- retake each screenshot an open question shows once your work has changed
+  what it shows;
 - add each question you now need, numbered after the highest.
 
 Only then go on.
@@ -270,14 +272,19 @@ One sentence on what changed.
 ```
 
 An escalation lists every open question as a markdown list numbered from 1,
-the questions left open from earlier reports first. Chat is the only place
+the questions left open from earlier reports first, and that list ends the
+report: anything else worth saying goes between the sentence and the list.
+Every question you need answered is an item in it, never a question asked in
+prose, so the user can answer each one by its number. Chat is the only place
 the user reads them, so each item carries everything needed to answer it.
 The item's line is the question's subject. Indented under
 it goes whatever the answer depends on: the body cut to a line or two,
 choices exactly as in `ARBOR.md` (`- (a) ...` or `- [a] ...`, so a reply of
 `2. b` names one), and each screenshot or file by its absolute path. Inline a
 screenshot as `![what](/abs/path.png)` when your harness shows images in
-chat; otherwise link it as `[what](/abs/path.png)`. A review's lines say what
+chat; otherwise link it as `[what](/abs/path.png)`. A screenshot shows the
+work as it is now: whenever you change what one shows, take it again before
+the next report, and point the question in `ARBOR.md` at it. A review's lines say what
 to look at and where. Leave an item bare when its
 subject says it all.
 
@@ -289,7 +296,8 @@ One sentence on what the task set out to do.
 Next: todo <id>, <its subject>.
 ```
 
-Anything else worth saying goes after the block, not instead of it.
+For a merge or a remove, anything else worth saying goes after the block, not
+instead of it. An escalation's questions always come last.
 
 ## ARBOR.md
 
