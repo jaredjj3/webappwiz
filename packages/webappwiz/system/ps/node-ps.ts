@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { constants, hostname } from "node:os";
 import type { ProcessLike } from "../process-like/process-like";
 import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
+import { decode, reap } from "./reap";
 
 /** What a `NodePs` speaks to; the running process by default. */
 export interface NodePsOptions {
@@ -128,15 +129,61 @@ function parse(argv: string[]): [string, string[]] {
 	return [cmd, args];
 }
 
+/** How often to check on a child the runtime may have lost track of. */
+const REAP_POLL_MS = 500;
+/**
+ * How long output may take to drain once the child is gone. The runtime can
+ * lose the end of a pipe as well as the exit, and output still unread by then
+ * is not coming.
+ */
+const DRAIN_MS = 2_000;
+
 function exitCode(child: ChildProcess): Promise<number> {
 	return new Promise((resolve, reject) => {
+		let exited: number | null = null;
+		let drained: ReturnType<typeof setTimeout> | undefined;
+		const stop = (): void => {
+			clearInterval(watch);
+			clearTimeout(drained);
+		};
+		const exit = (code: number): void => {
+			if (exited === null) {
+				exited = code;
+				drained = setTimeout(() => {
+					stop();
+					resolve(code);
+				}, DRAIN_MS);
+			}
+		};
+		// Only while the runtime has not seen the exit itself: once it has, the
+		// pid is free for the kernel to hand to the next child.
+		const watch = setInterval(() => {
+			if (!reap || !child.pid || exited !== null || child.exitCode !== null) {
+				return;
+			}
+			const status = reap(child.pid);
+			if (status !== null) {
+				exit(decode(status));
+			}
+		}, REAP_POLL_MS);
+		child.on("exit", (code, signal) => exit(shellCode(code, signal)));
 		// close, not exit: also waits for piped stdio to drain.
-		child.on("close", (code, signal) =>
-			// A child killed by a signal has no exit code, and reading that as 0
-			// would let an OOM-killed test command pass for a green test run.
-			// 128 + signal is what a shell reports for the same death.
-			resolve(code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0)),
-		);
-		child.on("error", reject);
+		child.on("close", (code, signal) => {
+			stop();
+			resolve(exited ?? shellCode(code, signal));
+		});
+		child.on("error", (error) => {
+			stop();
+			reject(error);
+		});
 	});
+}
+
+/**
+ * A child killed by a signal has no exit code, and reading that as 0 would let
+ * an OOM-killed test command pass for a green test run. 128 + signal is what a
+ * shell reports for the same death.
+ */
+function shellCode(code: number | null, signal: NodeJS.Signals | null): number {
+	return code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0);
 }
