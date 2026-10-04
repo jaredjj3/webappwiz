@@ -5,7 +5,7 @@ files: "**/*.ts"
 level: error
 effort: high
 recommended: true
-version: 0.0.30
+version: 0.0.31
 ---
 # Classes over function exports
 

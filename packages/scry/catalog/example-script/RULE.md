@@ -4,7 +4,7 @@ description: Shows how a rule ships a script. It asks for nothing, so it never f
 files: "**/*"
 level: warning
 effort: none
-version: 0.0.30
+version: 0.0.31
 ---
 
 # Example script
