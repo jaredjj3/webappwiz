@@ -89,9 +89,9 @@ arbor todo add "Upload retries forever on a 413" 'The client retries on any 4xx 
   task has taken, and `--tag <tag>` only those with a tag; `arbor todo show
   <id>` prints one whole, detail and attached files included.
 - `arbor todo add "<subject>" ["<detail>"]` from your worktree records the
-  task it came up in. It goes to the bottom unless you pass `--position <n>`,
-  which only the user's priorities should decide. `--file a.png,b.log`
-  attaches files, `--tag uploads,merge` tags it.
+  task it came up in. It goes to the bottom unless you pass `--position <n>`
+  (see Positions). `--file a.png,b.log` attaches files, `--tag uploads,merge`
+  tags it.
 - `arbor todo update <id> ["<detail>"] --subject "<subject>"` rewords one,
   `--position <n>` moves it, `--file` and `--remove-file` change its files,
   `--tag` and `--remove-tag` its tags.
@@ -113,6 +113,25 @@ have several tags, and a tag many todos:
 - One or two tags a todo, or none when nothing groups it.
 - A todo that comes up in your task usually belongs with the todos your task
   holds: give it their tags when it does.
+
+### Positions
+
+Only the user's priorities decide a position, so the bottom of the list is
+right unless the user says otherwise. Listen for how they say it when they
+ask for a todo:
+
+- "urgent", "next", "before anything else": `--position 1`.
+- "fast follow", "right after this", "soon": near the top, just below the
+  todos already there that are urgent. Read `arbor todo list` to find the
+  spot.
+- "deferred", "someday", "later", "nice to have", or nothing at all: the
+  bottom, the default.
+
+When the user asks to move a todo that already exists ("bump 12", "push the
+upload one down", "do 7 before 4"), `arbor todo update <id> --position <n>`.
+It moves the rest around it, and a position past the bottom puts it last.
+Read `arbor todo list` first to turn "before 4" or "to the top" into a
+number, and again after to check the order is the one asked for.
 
 `[ARBOR TODO #N]` in a message means todo N, copied from the `arbor dev`
 page: run `arbor todo show N` and treat it as the request. Take it before
@@ -141,8 +160,29 @@ the task that just ended, then one sharing a tag with the todos it held
 none is related, take the lowest position, the top of the list. `merge`
 recommends the landed task's own todos first, then those sharing a tag with
 the todos it settled, then the lowest position; `remove` recommends nothing,
-so do this yourself. Name it in your report (see
-Reporting).
+so do this yourself. Propose it in your report (see Reporting), and after a
+merge, also propose the next one or two in the same order when they are as
+relevant, so the user can choose. One is enough when nothing else is
+related.
+
+### Proposing a todo
+
+Whenever you put a todo in front of the user in chat, whether one you suggest
+working on next or one you just added, write it the same way: a heading with
+its subject and id, then two sentences. The first says what the todo is; the
+second says why it matters now, such as what it shares with the work just
+done.
+
+```markdown
+### Upload retries forever on a 413 [#12]
+
+The client retries every 4xx in `src/upload.ts`, so an oversized file never
+fails. It touches the retry loop this task just rewrote.
+```
+
+Use the subject exactly as `arbor todo show` prints it, so the user can find
+it on the `arbor dev` page. The heading sits one level below the report's
+title.
 
 ## Handing out part of your task
 
@@ -269,11 +309,19 @@ punctuation.
 
 One sentence on what changed.
 
-Next: todo <id>, <its subject>. Stale: todo <id> (remove?).
+Stale: todo <id> (remove?).
+
+### <subject> [#<id>]
+
+What the todo is. Why it is a good next step.
+
+### <subject> [#<id>]
+
+What the todo is. Why it is a good next step.
 ```
 
-Leave out the `Next` line, here or after a remove, only when no todo is
-open.
+The proposed todos end a merge or remove report, the best one first, each in
+the format under Proposing a todo. Leave them out only when no todo is open.
 
 ```markdown
 ## ⚠️ Escalated <task>: waiting on your review of the todo board
@@ -312,11 +360,14 @@ subject says it all.
 
 One sentence on what the task set out to do.
 
-Next: todo <id>, <its subject>.
+### <subject> [#<id>]
+
+What the todo is. Why it is a good next step.
 ```
 
-For a merge or a remove, anything else worth saying goes after the block, not
-instead of it. An escalation's questions always come last.
+For a merge or a remove, anything else worth saying goes between the sentence
+and the proposed todos, not instead of them. An escalation's questions always
+come last.
 
 ## ARBOR.md
 
