@@ -2,6 +2,7 @@ import type { Judge, Judgment, Verdict } from "./judge";
 
 export { FakeDecider } from "./fake-decider";
 export { type RuleDocOptions, ruleDoc } from "./rule-doc";
+export { type RuleSourceOptions, ruleSource } from "./rule-source";
 
 /** What a `FakeJudge` says beside its answers. */
 export interface FakeJudgeOptions {

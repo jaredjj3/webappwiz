@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FakeJudge, ruleDoc } from "@webappwiz/scry/testing";
+import { FakeJudge, ruleSource } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
@@ -18,24 +18,29 @@ describe("wiz scry measure", () => {
 
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
-	/** Installs a rule whose check is `rule`, the source of its `rule.ts`. */
-	const install = async (id: string, rule?: string) => {
+	/**
+	 * Installs a rule whose `rule.ts` is `source`, with a good case of one
+	 * class and a bad one of two, `Foo` and `Bar`.
+	 */
+	const install = async (id: string, source: string) => {
 		await fs.mkdir(`${root}/.wiz/scry/${id}/evals`);
-		await fs.write(`${root}/.wiz/scry/${id}/RULE.md`, ruleDoc(id));
-		if (rule !== undefined) {
-			await fs.write(`${root}/.wiz/scry/${id}/rule.ts`, rule);
-		}
+		await fs.write(`${root}/.wiz/scry/${id}/rule.ts`, source);
+		await fs.write(
+			`${root}/.wiz/scry/${id}/evals/foo.good.ts`,
+			"class Foo {}\n",
+		);
+		await fs.write(
+			`${root}/.wiz/scry/${id}/evals/foo.bad.ts`,
+			"class Foo {}\nclass Bar {}\n",
+		);
 	};
 	/** Flags each line holding `word`, decided by code. */
-	const flagging = (word: string) => `
-		export default class {
-			async check(file) {
-				return file.lines.flatMap((line, index) =>
-					line.includes("${word}") ? [{ line: index + 1, message: "no ${word}", confidence: 1 }] : [],
-				);
-			}
-		}
-	`;
+	const flagging = (word: string) =>
+		ruleSource(`async check(file) {
+			return file.lines.flatMap((line, index) =>
+				line.includes("${word}") ? [{ line: index + 1, message: "no ${word}", confidence: 1 }] : [],
+			);
+		}`);
 
 	beforeEach(async () => {
 		root = await mkdtemp(join(tmpdir(), "scry-measure-"));
@@ -58,7 +63,8 @@ describe("wiz scry measure", () => {
 		await install("no-bar", flagging("Bar"));
 		await fs.write(`${root}/.wiz/scry/no-bar/evals/a.good.ts`, "Bar\n");
 		await install("no-baz", flagging("Baz"));
-		await install("unwritten");
+		await fs.mkdir(`${root}/.wiz/scry/uncased`);
+		await fs.write(`${root}/.wiz/scry/uncased/rule.ts`, ruleSource());
 
 		await run();
 
@@ -69,11 +75,11 @@ describe("wiz scry measure", () => {
 				"no-baz   1/2     1        -",
 				"",
 				"wrong",
-				"  no-bar   evals/a.good.ts   line 1: no Bar (100%)",
-				"  no-baz   RULE.md bad 1     missed: reported nothing",
+				"  no-bar   evals/a.good.ts    line 1: no Bar (100%)",
+				"  no-baz   evals/foo.bad.ts   missed: reported nothing",
 				"",
 				"✖ 3 of 5 cases right (60.0%) across 2 rules",
-				"  1 rule with no rule.ts yet: unwritten",
+				"  1 rule with no cases in evals/: uncased",
 			].join("\n"),
 		);
 	});
@@ -81,13 +87,11 @@ describe("wiz scry measure", () => {
 	it("says what asking the model cost", async () => {
 		await install(
 			"asks",
-			`export default class {
-				constructor(tools) { this.decider = tools.decider; }
+			ruleSource(`constructor(tools) { this.decider = tools.decider; }
 				async check(file) {
 					const [first] = file.ts.topLevelClasses();
 					return [first.flag("no", await this.decider.decide("Is it?", first))];
-				}
-			}`,
+				}`),
 		);
 
 		await run(["asks"]);
@@ -107,8 +111,8 @@ describe("wiz scry measure", () => {
 				{
 					rule: "no-bar",
 					cases: [
-						{ name: "RULE.md good 1", findings: [] },
-						{ name: "RULE.md bad 1" },
+						{ name: "evals/foo.bad.ts" },
+						{ name: "evals/foo.good.ts", findings: [] },
 					],
 				},
 			],

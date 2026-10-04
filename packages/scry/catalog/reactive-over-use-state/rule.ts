@@ -22,6 +22,11 @@ const IN_STEP =
  * `useReactive`. One `useState` is a self contained value, and fine.
  */
 export default class ReactiveOverUseState implements Rule {
+	static readonly description =
+		"Logic with several moving parts lives in a class a component reads through useReactive, not in useState.";
+	static readonly files = "**/*.{ts,tsx}";
+	static readonly level = "warning";
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

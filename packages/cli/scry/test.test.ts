@@ -89,7 +89,7 @@ describe("wiz scry test", () => {
 	});
 
 	it("says so when there are no tests", async () => {
-		await write(".wiz/scry/untested/RULE.md", "---\n---\n");
+		await write(".wiz/scry/untested/rule.ts", "export default class {}\n");
 
 		await testRules({ ids: [], log, fs, ps });
 

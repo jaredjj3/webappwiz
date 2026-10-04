@@ -20,6 +20,7 @@ export {
 	type DecisionsOptions,
 } from "./decisions";
 export { Declaration } from "./declaration";
+export { DeclaredRule, type DeclareOptions } from "./declared-rule";
 export { type ChangedFile, type Changeset, Git, type GitOptions } from "./git";
 export { Jev, type JevOptions } from "./jev";
 export type {
@@ -36,13 +37,15 @@ export {
 	RULE_FILE,
 	RULES_ROOT,
 } from "./layout";
-export type { Finding, Rule, RuleClass, Tools } from "./rule";
 export {
+	type Finding,
 	LEVELS,
 	type Level,
-	type ParseOptions,
-	RuleDocument,
-} from "./rule-document";
+	type Rule,
+	type RuleClass,
+	type RuleSettings,
+	type Tools,
+} from "./rule";
 export { RuleError } from "./rule-error";
 export {
 	type CheckOptions,

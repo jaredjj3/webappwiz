@@ -1,9 +1,9 @@
 import { basename } from "node:path";
+import type { ShippedRule } from "@webappwiz/scry/catalog";
 import type { SecretStore } from "webappwiz/credentials";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps, walk } from "webappwiz/system";
 import { ProjectCredentials } from "./credentials/project-credentials";
-import type { Bundle } from "./documents";
 import { update as updateRules } from "./scry/update";
 import type { Skills } from "./skills/skill";
 import { update as updateSkills } from "./skills/update";
@@ -41,7 +41,7 @@ export interface UpdateOptions {
 	/** The skills to refresh with; the ones this package ships by default. */
 	skills?: Skills;
 	/** The rules to refresh with; the catalog by default. */
-	rules?: Record<string, Bundle>;
+	rules?: Record<string, ShippedRule>;
 }
 
 /**

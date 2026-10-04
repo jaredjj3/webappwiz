@@ -4,35 +4,36 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeFs } from "webappwiz/system";
 import { Rules } from "./rules";
-import { FakeDecider, ruleDoc } from "./testing";
+import { FakeDecider, type RuleSourceOptions, ruleSource } from "./testing";
 
 describe("Rules.check", () => {
 	const fs = new NodeFs();
 	let root: string;
 
-	/** Installs a rule, with a check when one is given. */
-	const install = async (id: string, check?: string, doc = ruleDoc(id)) => {
+	/** Installs a rule whose `rule.ts` is `source`. */
+	const install = async (id: string, source: string) => {
 		await fs.mkdir(`${root}/.wiz/scry/${id}`);
-		await fs.write(`${root}/.wiz/scry/${id}/RULE.md`, doc);
-		if (check !== undefined) {
-			await fs.write(`${root}/.wiz/scry/${id}/rule.ts`, check);
-		}
+		await fs.write(`${root}/.wiz/scry/${id}/rule.ts`, source);
 	};
 	const write = (path: string, text: string) =>
 		fs.write(`${root}/${path}`, text);
 	const run = async (paths: string[], decider = new FakeDecider()) =>
 		(await Rules.load(root, { fs })).check({ paths, tools: { decider } });
 
-	/** A check flagging each line holding `word`, as sure as it is told. */
-	const flagging = (word: string, confidence = 1) => `
-		export default class {
-			async check(file) {
+	/** A rule flagging each line holding `word`, as sure as it is told. */
+	const flagging = (
+		word: string,
+		confidence = 1,
+		opts: RuleSourceOptions = {},
+	) =>
+		ruleSource(
+			`async check(file) {
 				return file.lines.flatMap((line, index) =>
 					line.includes("${word}") ? [{ line: index + 1, message: "no ${word}", confidence: ${confidence} }] : [],
 				);
-			}
-		}
-	`;
+			}`,
+			opts,
+		);
 
 	beforeEach(async () => {
 		root = await mkdtemp(join(tmpdir(), "scry-rules-"));
@@ -45,11 +46,7 @@ describe("Rules.check", () => {
 
 	it("reports what each rule's check finds, by path then line, with the rule's level", async () => {
 		await install("no-foo", flagging("foo"));
-		await install(
-			"no-bar",
-			flagging("bar"),
-			ruleDoc("no-bar", { level: "warning" }),
-		);
+		await install("no-bar", flagging("bar", 1, { level: "warning" }));
 		await write("src/b.ts", "foo\n");
 		await write("src/a.ts", "bar\nfoo\n");
 
@@ -68,11 +65,7 @@ describe("Rules.check", () => {
 	});
 
 	it("checks a file only against the rules whose files it matches", async () => {
-		await install(
-			"no-foo",
-			flagging("foo"),
-			ruleDoc("no-foo", { files: "**/*.md" }),
-		);
+		await install("no-foo", flagging("foo", 1, { files: "**/*.md" }));
 		await write("src/a.ts", "foo\n");
 
 		const report = await run(["src/a.ts"]);
@@ -81,11 +74,7 @@ describe("Rules.check", () => {
 	});
 
 	it("drops what falls under the rule's threshold, and what a scry-ignore excuses", async () => {
-		await install(
-			"unsure",
-			flagging("foo", 0.4),
-			ruleDoc("unsure", { threshold: 0.5 }),
-		);
+		await install("unsure", flagging("foo", 0.4, { threshold: 0.5 }));
 		await install("loud", flagging("bar"));
 		await write("src/a.ts", "foo\n// scry-ignore loud: a reason\nbar\n");
 
@@ -101,13 +90,13 @@ describe("Rules.check", () => {
 	it("builds each rule with the tools, so its check can ask the decider", async () => {
 		await install(
 			"asks",
-			`export default class {
-				constructor(tools) { this.decider = tools.decider; }
+			ruleSource(
+				`constructor(tools) { this.decider = tools.decider; }
 				async check(file) {
 					const [comment] = file.ts.comments();
 					return [comment.flag("restates", await this.decider.decide("Does it restate?", comment), "Does it restate?")];
-				}
-			}`,
+				}`,
+			),
 		);
 		await write("src/a.ts", "// add one\nn += 1;\n");
 		const decider = new FakeDecider({ "add one": 0.9 });
@@ -122,17 +111,12 @@ describe("Rules.check", () => {
 		]);
 	});
 
-	it("lists the rules that have no check yet", async () => {
-		await install("no-foo");
-		await write("src/a.ts", "foo\n");
-
-		expect((await run(["src/a.ts"])).withoutCheck).toEqual(["no-foo"]);
-	});
-
 	it("reports a rule unchecked on a file its check threw on, and checks the rest", async () => {
 		await install(
 			"fragile",
-			`export default class { async check(file) { if (file.path.endsWith("a.ts")) throw new Error("boom"); return []; } }`,
+			ruleSource(
+				`async check(file) { if (file.path.endsWith("a.ts")) throw new Error("boom"); return []; }`,
+			),
 		);
 		await install("no-foo", flagging("foo"));
 		await write("src/a.ts", "foo\n");
@@ -145,16 +129,15 @@ describe("Rules.check", () => {
 		expect(report.problems.map((problem) => problem.rule)).toEqual(["no-foo"]);
 	});
 
-	it("reports a rule unchecked whose rule.ts exports no class", async () => {
-		await install("empty", "export const nothing = 1;\n");
+	it("reports a rule unchecked whose class throws on being built", async () => {
+		await install(
+			"broken",
+			ruleSource('constructor() { throw new Error("no tools"); }'),
+		);
 		await write("src/a.ts", "x\n");
 
 		expect((await run(["src/a.ts"])).unchecked).toEqual([
-			{
-				subject: "empty",
-				reason:
-					".wiz/scry/empty/rule.ts does not default-export the rule's class",
-			},
+			{ subject: "broken", reason: "no tools" },
 		]);
 	});
 
@@ -172,7 +155,7 @@ describe("Rules.check", () => {
 		await fs.mkdir(`${root}/.wiz/scry/no-foo/evals`);
 		await write(".wiz/scry/no-foo/evals/a.bad.ts", "foo\n");
 		await fs.mkdir(`${root}/catalog/no-bar/evals`);
-		await write("catalog/no-bar/RULE.md", ruleDoc("no-bar"));
+		await write("catalog/no-bar/rule.ts", flagging("foo"));
 		await write("catalog/no-bar/evals/b.bad.ts", "foo\n");
 		await fs.mkdir(`${root}/src/evals`);
 		await write("src/evals/c.ts", "foo\n");
@@ -204,7 +187,6 @@ describe("Rules.check", () => {
 			"// scry-ignore no-bar: on purpose\nBar\n",
 		);
 		await write(".wiz/scry/no-bar/evals/b.good.ts", "Bar\n");
-		await install("unwritten");
 
 		const measured = await (await Rules.load(root, { fs })).measure({
 			tools: { decider: new FakeDecider() },
@@ -223,21 +205,21 @@ describe("Rules.check", () => {
 			[
 				"no-bar",
 				[
-					["RULE.md good 1", "good", []],
-					["RULE.md bad 1", "bad", [2]],
 					["evals/a.good.ts", "good", []],
 					["evals/b.good.ts", "good", [1]],
 				],
 			],
-			["unwritten", []],
 		]);
 	});
 
 	it("records a case the rule threw on, and refuses a rule that is not there", async () => {
 		await install(
 			"fragile",
-			"export default class { async check() { throw new Error('boom'); } }",
+			ruleSource("async check() { throw new Error('boom'); }"),
 		);
+		await fs.mkdir(`${root}/.wiz/scry/fragile/evals`);
+		await write(".wiz/scry/fragile/evals/a.good.ts", "a\n");
+		await write(".wiz/scry/fragile/evals/b.bad.ts", "b\n");
 		const rules = await Rules.load(root, { fs });
 
 		const [measured] = await rules.measure({

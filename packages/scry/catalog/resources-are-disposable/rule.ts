@@ -14,6 +14,12 @@ import type {
  * looping over its own lists of things to release.
  */
 export default class ResourcesAreDisposable implements Rule {
+	static readonly description =
+		"Whatever holds a timer, listener, socket or handle implements Resource and releases it in dispose.";
+	static readonly files = "**/*.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

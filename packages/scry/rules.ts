@@ -1,30 +1,32 @@
 import { basename, dirname, resolve } from "node:path";
 import { type Fs, type Glob, NodeFs, NodeGlob } from "webappwiz/system";
 import { type Case, Cases } from "./cases";
+import { DeclaredRule } from "./declared-rule";
 import { ignored } from "./ignores";
-import { CASES_DIR, CHECK_FILE, RULE_FILE, RULES_ROOT } from "./layout";
-import type { Finding, Rule, RuleClass, Tools } from "./rule";
-import { type Level, RuleDocument } from "./rule-document";
+import { CASES_DIR, CHECK_FILE, RULES_ROOT } from "./layout";
+import type { Finding, Level, Rule, Tools } from "./rule";
 import { RuleError } from "./rule-error";
 import { SourceFile } from "./source-file";
 
 /**
- * The rules in a project's `.wiz/scry`. A rule is a directory: its `RULE.md`
- * says what it expects and which files it reads, and its `rule.ts`
- * default-exports the class that checks them.
+ * The rules in a project's `.wiz/scry`. A rule is a directory: its `rule.ts`
+ * default-exports the class that checks files, whose static members say what
+ * the rule expects and which files it reads. Its `RULE.md` is prose for
+ * whoever fixes a finding, and nothing here reads it.
  */
 export class Rules {
 	private constructor(
 		/** The project root. */
 		private dir: string,
-		readonly all: readonly RuleDocument[],
+		readonly all: readonly DeclaredRule[],
 		private fs: Fs,
 	) {}
 
 	/**
-	 * Every rule under `<dir>/.wiz/scry`, as its `RULE.md` reads. A directory
-	 * there without a `RULE.md`, or one whose document fails to parse, is an
-	 * error, and every such problem is reported at once rather than the first.
+	 * Every rule under `<dir>/.wiz/scry`, as its class declares it. A
+	 * directory there without a `rule.ts`, one that fails to import, or one
+	 * whose class lacks a setting or gives a bad one, is an error, and every
+	 * such problem is reported at once rather than the first.
 	 */
 	static async load(dir: string, opts: LoadOptions = {}): Promise<Rules> {
 		const fs = opts.fs ?? new NodeFs();
@@ -33,22 +35,28 @@ export class Rules {
 		const ids = await fs
 			.readdir(`${dir}/${RULES_ROOT}`)
 			.catch((): string[] => []);
-		const rules: RuleDocument[] = [];
+		const rules: DeclaredRule[] = [];
 		const problems: string[] = [];
 		for (const id of ids.toSorted()) {
 			if (id.startsWith(".")) {
 				continue;
 			}
-			const path = `${RULES_ROOT}/${id}/${RULE_FILE}`;
-			const text = await fs.read(`${dir}/${path}`).catch((): null => null);
-			if (text === null) {
+			const path = `${RULES_ROOT}/${id}/${CHECK_FILE}`;
+			if (!(await fs.exists(`${dir}/${path}`))) {
 				problems.push(`${path}: missing`);
 				continue;
 			}
 			try {
-				rules.push(RuleDocument.parse(text, { path, id }));
+				const module = (await import(resolve(dir, path))) as {
+					default?: unknown;
+				};
+				rules.push(DeclaredRule.of(id, module.default, { path }));
 			} catch (error) {
-				problems.push(error instanceof RuleError ? error.message : `${error}`);
+				problems.push(
+					error instanceof RuleError
+						? error.message
+						: `${path}: ${reason(error)}`,
+				);
 			}
 		}
 		if (problems.length > 0) {
@@ -57,7 +65,7 @@ export class Rules {
 		return new Rules(dir, rules, fs);
 	}
 
-	get(id: string): RuleDocument | undefined {
+	get(id: string): DeclaredRule | undefined {
 		return this.all.find((rule) => rule.id === id);
 	}
 
@@ -65,15 +73,14 @@ export class Rules {
 	 * Checks each file against every rule whose `files` it matches. Every rule
 	 * runs on every file at once, so the questions they ask a decider arrive
 	 * together, and each file is read and parsed once however many rules read
-	 * it. A rule that throws, on one file or on loading, is reported unchecked
-	 * rather than ending the check.
+	 * it. A rule that throws, on one file or on being built, is reported
+	 * unchecked rather than ending the check.
 	 */
 	async check(opts: CheckOptions): Promise<Report> {
 		const glob = opts.glob ?? new NodeGlob();
 		const report: Report = {
 			problems: [],
 			unchecked: [],
-			withoutCheck: [],
 			files: 0,
 			rules: 0,
 			dropped: 0,
@@ -91,9 +98,9 @@ export class Rules {
 		// a rule's cases break it, or follow it, on purpose
 		const checked = opts.paths.filter((path) => !homes.get(path)?.isCase);
 		const matched = this.all
-			.map((document) => ({
-				document,
-				paths: checked.filter((path) => glob.matches(document.files, path)),
+			.map((declared) => ({
+				declared,
+				paths: checked.filter((path) => glob.matches(declared.files, path)),
 			}))
 			.filter(({ paths }) => paths.length > 0);
 		report.rules = matched.length;
@@ -111,42 +118,33 @@ export class Rules {
 			return file;
 		};
 
-		const checks = matched.map(async ({ document, paths }) => {
-			const rule = await this.build(document, opts.tools).catch(
-				(error: unknown) => {
-					report.unchecked.push({
-						subject: document.id,
-						reason: reason(error),
-					});
-					return null;
-				},
-			);
-			if (rule === null) {
-				return;
-			}
-			if (rule === undefined) {
-				report.withoutCheck.push(document.id);
+		const checks = matched.map(async ({ declared, paths }) => {
+			let rule: Rule;
+			try {
+				rule = declared.build(opts.tools);
+			} catch (error) {
+				report.unchecked.push({ subject: declared.id, reason: reason(error) });
 				return;
 			}
 			await Promise.all(
 				paths
 					// a rule's own code and tests show what it forbids, on purpose
-					.filter((path) => homes.get(path)?.id !== document.id)
+					.filter((path) => homes.get(path)?.id !== declared.id)
 					.map(async (path) => {
 						const file = await open(path);
 						const findings = await rule.check(file).catch((error: unknown) => {
 							report.unchecked.push({
-								subject: `${document.id} on ${path}`,
+								subject: `${declared.id} on ${path}`,
 								reason: reason(error),
 							});
 							return [];
 						});
 						report.problems.push(
-							...this.sift(document, file, findings, report).map((finding) => ({
+							...this.sift(declared, file, findings, report).map((finding) => ({
 								...finding,
 								path,
-								rule: document.id,
-								level: document.level,
+								rule: declared.id,
+								level: declared.level,
 							})),
 						);
 					}),
@@ -167,7 +165,6 @@ export class Rules {
 		report.unchecked.sort((left, right) =>
 			left.subject.localeCompare(right.subject),
 		);
-		report.withoutCheck.sort();
 		report.legacy.sort();
 		return report;
 	}
@@ -185,17 +182,14 @@ export class Rules {
 				throw new RuleError(`no rule "${id}" in ${RULES_ROOT}`);
 			}
 		}
-		const documents = this.all.filter(
-			(document) => ids.length === 0 || ids.includes(document.id),
+		const measured = this.all.filter(
+			(declared) => ids.length === 0 || ids.includes(declared.id),
 		);
 		return Promise.all(
-			documents.map(async (document): Promise<Measurement> => {
-				const rule = await this.build(document, opts.tools);
-				if (rule === undefined) {
-					return { rule: document.id, cases: [] };
-				}
+			measured.map(async (declared): Promise<Measurement> => {
+				const rule = declared.build(opts.tools);
 				const cases = await Cases.load(
-					`${this.dir}/${RULES_ROOT}/${document.id}`,
+					`${this.dir}/${RULES_ROOT}/${declared.id}`,
 					{ fs: this.fs },
 				);
 				const scored = await Promise.all(
@@ -205,14 +199,14 @@ export class Rules {
 							const findings = await rule.check(each.file);
 							return {
 								...scoring,
-								findings: this.sift(document, each.file, findings),
+								findings: this.sift(declared, each.file, findings),
 							};
 						} catch (error) {
 							return { ...scoring, findings: [], error: reason(error) };
 						}
 					}),
 				);
-				return { rule: document.id, cases: scored };
+				return { rule: declared.id, cases: scored };
 			}),
 		);
 	}
@@ -222,17 +216,17 @@ export class Rules {
 	 * or over the rule's threshold. Counts the rest on the report, when given.
 	 */
 	private sift(
-		document: RuleDocument,
+		declared: DeclaredRule,
 		file: SourceFile,
 		findings: Finding[],
 		report: Pick<Report, "ignored" | "dropped"> = { ignored: 0, dropped: 0 },
 	): Finding[] {
 		return findings.filter((finding) => {
-			if (ignored(file.text, document.id, finding.line)) {
+			if (ignored(file.text, declared.id, finding.line)) {
 				report.ignored++;
 				return false;
 			}
-			if (finding.confidence < document.threshold) {
+			if (finding.confidence < declared.threshold) {
 				report.dropped++;
 				return false;
 			}
@@ -241,7 +235,7 @@ export class Rules {
 	}
 
 	/**
-	 * The rule whose directory a file is in, by the `RULE.md` beside it or
+	 * The rule whose directory a file is in, by the `rule.ts` beside it or
 	 * above its `evals/`, wherever the rule lives: in `.wiz/scry`, or in a
 	 * catalog it ships from.
 	 */
@@ -249,35 +243,17 @@ export class Rules {
 		path: string,
 	): Promise<{ id: string; isCase: boolean } | undefined> {
 		const dir = dirname(path);
-		if (await this.fs.exists(`${this.dir}/${dir}/${RULE_FILE}`)) {
+		if (await this.fs.exists(`${this.dir}/${dir}/${CHECK_FILE}`)) {
 			return { id: basename(dir), isCase: false };
 		}
 		const above = dirname(dir);
 		if (
 			basename(dir) === CASES_DIR &&
-			(await this.fs.exists(`${this.dir}/${above}/${RULE_FILE}`))
+			(await this.fs.exists(`${this.dir}/${above}/${CHECK_FILE}`))
 		) {
 			return { id: basename(above), isCase: true };
 		}
 		return undefined;
-	}
-
-	/** The rule's check, built with the tools; undefined when it has no `rule.ts` yet. */
-	private async build(
-		document: RuleDocument,
-		tools: Tools,
-	): Promise<Rule | undefined> {
-		const path = `${this.dir}/${RULES_ROOT}/${document.id}/${CHECK_FILE}`;
-		if (!(await this.fs.exists(path))) {
-			return undefined;
-		}
-		const module = (await import(resolve(path))) as { default?: RuleClass };
-		if (typeof module.default !== "function") {
-			throw new Error(
-				`${RULES_ROOT}/${document.id}/${CHECK_FILE} does not default-export the rule's class`,
-			);
-		}
-		return new module.default(tools);
 	}
 }
 
@@ -306,8 +282,6 @@ export interface Report {
 	/** By path, then line. */
 	problems: Problem[];
 	unchecked: Unchecked[];
-	/** Rules with a `RULE.md` and no `rule.ts` yet, which checked nothing. */
-	withoutCheck: string[];
 	/** How many of the files matched at least one rule. */
 	files: number;
 	/** How many rules matched at least one of the files. */
@@ -339,7 +313,6 @@ export interface Scored {
 /** A rule's score on its cases. */
 export interface Measurement {
 	rule: string;
-	/** Empty when the rule has no `rule.ts` yet. */
 	cases: Scored[];
 }
 

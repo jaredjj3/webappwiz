@@ -17,6 +17,12 @@ const MOCKING = new Set([
 
 /** Finds each line of a test that mocks or spies. */
 export default class FakesOverMocks implements Rule {
+	static readonly description =
+		"A test hands in a fake of a focused interface rather than mocking or spying.";
+	static readonly files = "**/*.test.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	async check(file: SourceFile): Promise<Finding[]> {
 		return this.oncePerLine(this.mockingCalls(file)).map((call) =>
 			call.flag(

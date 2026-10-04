@@ -27,6 +27,12 @@ const FOR_MAINTAINERS =
  * doc comment is about how the code is built.
  */
 export default class DocCommentsAddressUsers implements Rule {
+	static readonly description =
+		"A doc comment on an export tells users what it is for, not maintainers how it is built.";
+	static readonly files = "**/*.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

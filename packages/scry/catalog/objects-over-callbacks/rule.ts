@@ -31,6 +31,12 @@ const PARAMETERS = ["required_parameter", "optional_parameter"];
  * `scry-ignore` covers it.
  */
 export default class ObjectsOverCallbacks implements Rule {
+	static readonly description =
+		"A function called after the call returns is an event or a dependency, and a function type you name is an interface.";
+	static readonly files = "**/*.ts";
+	static readonly level = "warning";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

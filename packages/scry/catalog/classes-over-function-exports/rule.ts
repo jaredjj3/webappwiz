@@ -30,6 +30,12 @@ const FUNCTION_VALUES = ["arrow_function", "function_expression"];
  * one implementation of a dependency that has several.
  */
 export default class ClassesOverFunctionExports implements Rule {
+	static readonly description =
+		"A file's dependency-taking functions become one class that takes them once.";
+	static readonly files = "**/*.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

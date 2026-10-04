@@ -1,23 +1,30 @@
 import { describe, expect, it } from "bun:test";
 import { readdirSync, statSync } from "node:fs";
-import { RuleDocument } from "../rule-document";
+import { DeclaredRule } from "../declared-rule";
 import { catalog } from "./index";
 
 describe("catalog", () => {
-	const parsed = Object.entries(catalog).map(([id, files]) =>
-		RuleDocument.parse(files["RULE.md"] ?? "", { id }),
+	const declared = Object.entries(catalog).map(([id, { rule }]) =>
+		DeclaredRule.of(id, rule),
 	);
 
-	it("holds a rule under every id, each parsing as its own directory's", () => {
-		expect(parsed.map((rule) => rule.id)).toEqual(Object.keys(catalog));
+	it("holds a rule under every id, each declaring its settings", () => {
+		expect(declared.map((rule) => rule.id)).toEqual(Object.keys(catalog));
 	});
 
-	it("stamps every rule with the release it shipped in", () => {
-		expect(parsed.map((rule) => rule.version)).not.toContain(null);
+	it("stamps every rule's RULE.md with the release it shipped in", () => {
+		const unstamped = Object.entries(catalog)
+			.filter(
+				([, { files }]) =>
+					!/^---\nversion: .+\n---\n/.test(files["RULE.md"] ?? ""),
+			)
+			.map(([id]) => id);
+
+		expect(unstamped).toEqual([]);
 	});
 
 	it("recommends every rule a project cannot tell it does not want", () => {
-		const notRecommended = parsed
+		const notRecommended = declared
 			.filter((rule) => !rule.recommended)
 			.map((rule) => rule.id);
 
@@ -28,7 +35,7 @@ describe("catalog", () => {
 
 	it("bundles every file in each rule's directory, so none is left behind", () => {
 		const declared = Object.fromEntries(
-			Object.entries(catalog).map(([id, files]) => [
+			Object.entries(catalog).map(([id, { files }]) => [
 				id,
 				Object.keys(files).toSorted(),
 			]),

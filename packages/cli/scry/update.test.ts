@@ -7,8 +7,17 @@ import { update } from "./update";
 describe("scry update", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
+	const rule = class {
+		static description = "No foo.";
+		async check() {
+			return [];
+		}
+	};
 	const rules = {
-		"no-foo": { "RULE.md": ruleDoc("no-foo", { version: "1.0.0" }) },
+		"no-foo": {
+			rule,
+			files: { "RULE.md": ruleDoc("no-foo", { version: "1.0.0" }) },
+		},
 	};
 
 	const install = async (id: string, doc: string) => {
@@ -46,10 +55,13 @@ describe("scry update", () => {
 	it("says to read code the refresh changed, and not code it left as it was, nor tests", async () => {
 		const coded = {
 			"no-foo": {
-				"RULE.md": ruleDoc("no-foo", { version: "1.0.0" }),
-				"rule.ts": "export default class {}\n",
-				"words.ts": "export const WORDS = [];\n",
-				"rule.test.ts": "test();\n",
+				rule,
+				files: {
+					"RULE.md": ruleDoc("no-foo", { version: "1.0.0" }),
+					"rule.ts": "export default class {}\n",
+					"words.ts": "export const WORDS = [];\n",
+					"rule.test.ts": "test();\n",
+				},
 			},
 		};
 		await install("no-foo", ruleDoc("no-foo", { version: "0.9.0" }));

@@ -7,9 +7,22 @@ import { add } from "./add";
 describe("scry add", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
+	const recommended = class {
+		static description = "Recommended.";
+		static recommended = true;
+		async check() {
+			return [];
+		}
+	};
+	const optional = class {
+		static description = "Optional.";
+		async check() {
+			return [];
+		}
+	};
 	const rules = {
-		"no-foo": { "RULE.md": ruleDoc("no-foo", { recommended: true }) },
-		"no-bar": { "RULE.md": ruleDoc("no-bar") },
+		"no-foo": { rule: recommended, files: { "RULE.md": ruleDoc("no-foo") } },
+		"no-bar": { rule: optional, files: { "RULE.md": ruleDoc("no-bar") } },
 	};
 
 	beforeEach(() => {
@@ -42,7 +55,7 @@ describe("scry add", () => {
 		await add({ dir: "/p", rule: "", recommended: true, log, fs, rules });
 
 		expect(await fs.read("/p/.wiz/scry/no-foo/RULE.md")).toEqual(
-			rules["no-foo"]["RULE.md"],
+			rules["no-foo"].files["RULE.md"],
 		);
 		expect(await fs.exists("/p/.wiz/scry/no-bar/RULE.md")).toBe(false);
 	});
@@ -69,7 +82,7 @@ describe("scry add", () => {
 			recommended: true,
 			log,
 			fs,
-			rules: { "no-bar": { "RULE.md": ruleDoc("no-bar") } },
+			rules: { "no-bar": rules["no-bar"] },
 		});
 
 		expect(log.entries.map((entry) => String(entry.message))).toEqual([
@@ -80,8 +93,11 @@ describe("scry add", () => {
 	it("copies a rule's code beside it, and says to read it", async () => {
 		const coded = {
 			"no-baz": {
-				"RULE.md": ruleDoc("no-baz"),
-				"rule.ts": "export default class {}\n",
+				rule: optional,
+				files: {
+					"RULE.md": ruleDoc("no-baz"),
+					"rule.ts": "export default class {}\n",
+				},
 			},
 		};
 

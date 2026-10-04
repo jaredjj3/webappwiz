@@ -11,19 +11,16 @@ directory under `.wiz/scry`, tracked with the code it governs:
 
 ```
 .wiz/scry/<id>/
-├── RULE.md        # required: what the rule wants, and why
-├── rule.ts        # the check: code, asking a decision model only what code cannot
+├── rule.ts        # required: the check and its settings, asking a decision model only what code cannot
+├── RULE.md        # what the rule wants, and why, in prose
 ├── rule.test.ts   # its tests, on its labeled cases
 ├── evals/         # labeled cases: files that follow the rule, and files that break it
 └── references/    # optional: anything longer the rule points to
 ```
 
-A rule with a `RULE.md` and no `rule.ts` yet checks nothing; `wiz scry` and
-`wiz scry list` say so.
+The directory's name, in kebab case, is the rule's id. Its settings are
+static members of the class `rule.ts` default-exports (see The check):
 
-`RULE.md` opens with frontmatter:
-
-- `name`: its directory, in kebab case. Required.
 - `description`: one line. Required.
 - `files`: a glob of the files it applies to. Every file when absent.
 - `level`: `error` or `warning`. `error` when absent.
@@ -32,10 +29,15 @@ A rule with a `RULE.md` and no `rule.ts` yet checks nothing; `wiz scry` and
   decided is ever under it; raise it for a rule that reports too much, lower
   it for one that misses.
 
-The body is for whoever fixes a finding, person or agent: what counts, what
-does not, and why, plainly. Its `## Good` and `## Bad` code blocks are
-labeled cases the check is tested and measured on, so each one has to be
-code the rule is right about.
+A directory without a `rule.ts`, or whose class lacks a `description` or
+gives a bad setting, is an error: `wiz scry` and `wiz scry list` refuse to
+run and name every broken rule at once.
+
+`RULE.md` is for whoever fixes a finding, person or agent: what counts, what
+does not, and why, plainly, with a short example when one helps. Nothing
+reads it but people and agents; the cases the check is tested and measured
+on are in `evals/`. A rule copied from the catalog keeps a `version:` in its
+frontmatter, which says which release it came from.
 
 Code excuses itself from a rule with a comment holding
 `scry-ignore <id>: <reason>`, which covers the statement under it, or
@@ -129,18 +131,18 @@ and adding the rule are two pieces of work; say which you are doing.
    of the rule, or as well. When nothing the project runs fits, say so, and
    do not propose adopting a new tool unless asked.
 3. When a shipped rule covers it, `wiz scry add <id>` copies it in, and it can
-   be edited from there. Otherwise write `.wiz/scry/<id>/RULE.md`, with an
-   id that says what the rule wants.
+   be edited from there. Otherwise make `.wiz/scry/<id>`, with an id that
+   says what the rule wants, and write its `RULE.md`.
 4. Write its labeled cases (see Cases).
 5. Write its `rule.ts` (see The check) and its `rule.test.ts` (see Tests).
-6. Run `wiz scry list`, which validates every rule's frontmatter and names the
-   line that is wrong, then `wiz scry test <id>`, then `wiz scry measure
+6. Run `wiz scry list`, which loads every rule's class and names what is
+   wrong with its settings, then `wiz scry test <id>`, then `wiz scry measure
    <id>`, and fix what they report.
 
 ## Updating a rule
 
 Edit it, and check the project's tooling again when what it asks changes.
-Keep its examples, cases, check and tests in step with its prose, and run
+Keep its settings, cases, check and tests in step with its prose, and run
 `wiz scry test <id>` and `wiz scry measure <id>` after. A rule copied from
 the catalog takes local edits, but `wiz scry update` overwrites them; say so
 before editing one that carries a `version`, and offer to drop that line so
@@ -161,7 +163,7 @@ Write a few of each for every rule:
 
 - Name a case for what the code is (`invoice-parser.ts`,
   `cart-totals.test.ts`), never for the verdict or the rule.
-- Make them different from the rule's own Good and Bad examples.
+- Make them different from any example in its `RULE.md`.
 - Bad cases break the rule plainly, by its own wording, one way each. Good
   cases include a near miss the rule's wording excuses, and one the rule
   does not apply to.
@@ -174,8 +176,8 @@ wrong by the rule's own wording.
 ## The check
 
 `rule.ts` default-exports a class implementing `Rule`, built with `Tools`.
-Its `check(file)` reads one `SourceFile` and returns a finding for each
-place the file breaks the rule:
+Its static members are the rule's settings, and its `check(file)` reads one
+`SourceFile` and returns a finding for each place the file breaks the rule:
 
 ```ts
 import type {
@@ -191,6 +193,11 @@ const RESTATES =
 
 /** Finds comments that say what the code does instead of why. */
 export default class CommentsSayWhy implements Rule {
+	static readonly description =
+		"A comment explains why the code is as it is, never what it plainly does.";
+	static readonly files = "**/*.ts";
+	static readonly level = "warning";
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {
@@ -281,8 +288,7 @@ describe("comments-say-why", () => {
 });
 ```
 
-`Cases.load(import.meta.dir)` reads the rule's `evals/` and its RULE.md
-Good and Bad blocks. `FakeDecider(answers, otherwise)` answers with the
+`Cases.load(import.meta.dir)` reads the rule's `evals/`. `FakeDecider(answers, otherwise)` answers with the
 probability under the first key the span's text contains, else
 `otherwise`, and keeps what it was `asked`. A fake tests the rule's code;
 `wiz scry measure` tests its questions against the real model.

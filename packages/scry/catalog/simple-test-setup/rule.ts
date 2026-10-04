@@ -38,6 +38,12 @@ const DROWNED =
  * tests drowned in setup.
  */
 export default class SimpleTestSetup implements Rule {
+	static readonly description =
+		"One describe per file, it titles that complete the sentence, shared setup in its beforeEach.";
+	static readonly files = "**/*.test.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

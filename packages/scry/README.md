@@ -1,16 +1,16 @@
 # @webappwiz/scry
 
-Rules written in markdown and checked by code, the engine that runs them
-against a change, and webappwiz's catalog of them. A rule is English a
-person reads and a class that checks it: code decides what it can, and asks
-a decision model only what code cannot. This package parses rules, runs
-them, and ships the rules webappwiz maintains. `@webappwiz/cli scry` is its
+Rules checked by code, the engine that runs them against a change, and
+webappwiz's catalog of them. A rule is English a person reads and a class
+that checks it: code decides what it can, and asks a decision model only
+what code cannot. This package loads rules, runs them, and ships the rules
+webappwiz maintains. `@webappwiz/cli scry` is its
 command line. It was published as `@webappwiz/rules` until it took scry's
 name; `@webappwiz/cli update` renames the dependency.
 
 The catalog is one directory per rule under [`catalog/`](./catalog),
-exported from `@webappwiz/scry/catalog` as id to the files in that
-directory. A project copies the ones it wants into `.wiz/scry` with
+exported from `@webappwiz/scry/catalog` as id to the rule's class and the
+files in its directory. A project copies the ones it wants into `.wiz/scry` with
 `@webappwiz/cli scry add`, or the ones the catalog recommends with
 `scry add --recommended`, and writes its own beside them.
 
@@ -18,57 +18,60 @@ directory. A project copies the ones it wants into `.wiz/scry` with
 
 ```
 comments-say-why/
-├── RULE.md          # what the rule wants, and why
-├── rule.ts          # the check
+├── RULE.md          # prose: what the rule wants, and why
+├── rule.ts          # the check, and the rule's settings
 ├── rule.test.ts     # its tests
 └── evals/           # labeled cases
     ├── rate-limiter.good.ts
     └── order-summary.bad.ts
 ```
 
+`rule.ts` default-exports the rule's class, and its static members are the
+rule's settings:
+
+```ts
+export default class CommentsSayWhy implements Rule {
+	static readonly description =
+		"A comment says why the code is so, not what it does.";
+	static readonly files = "**/*.{ts,tsx}";
+	static readonly level = "warning";
+	static readonly threshold = 0.7;
+	static readonly recommended = true;
+
+	// the check, below
+}
+```
+
+`description` is one line for a listing, and the only one required. `files`
+is a glob of the files the rule applies to, every file when absent. `level`
+is `error` or `warning`, `error` when absent. `threshold` is how sure a
+check has to be, from 0 to 1, before a finding is reported, 0.7 when absent;
+code is sure, so only a decider's findings ever fall under it.
+`recommended: true` puts a rule in the set `scry add --recommended`
+installs, which is for a rule that reads on any project rather than one
+about a stack it may not have. `RuleClass` types them, and `DeclaredRule.of`
+is how the engine reads them: holding a `DeclaredRule` means the class
+passed, with the defaults filled in. Anything else fails with `path: why`.
+
+`RULE.md` is prose for whoever fixes a finding, the way a skill's body is:
+what the rule expects, and why. The engine never reads it. A rule that
+shipped carries the release it came from in its frontmatter, `version:`,
+which `scry list` and `scry update` compare; one a project wrote has none.
+
 ```markdown
 ---
-name: comments-say-why
-description: A comment says why the code is so, not what it does.
-files: "**/*.{ts,tsx}"
-level: warning
-threshold: 0.7
-recommended: true
+version: 0.1.0
 ---
-
 # Comments say why
 
 Why, and what counts.
-
-## Good
-
-## Bad
 ```
-
-`RuleDocument.parse` is the only way to read one, so holding a
-`RuleDocument` means the frontmatter passed: it has a `name` matching its
-directory and a `description`. Anything else fails with `path:line: why`.
-The body is the author's, the way a skill's is: it says what counts for
-whoever fixes a finding, and its Good and Bad code blocks are cases the
-check is tested on.
-
-`files` is a glob of the files the rule applies to, every file when absent.
-`level` is `error` or `warning`, `error` when absent. `threshold` is how
-sure a check has to be, from 0 to 1, before a finding is reported, 0.7 when
-absent; code is sure, so only a decider's findings ever fall under it.
-`recommended: true` puts a rule in the set `scry add --recommended`
-installs, which is for a rule that reads on any project rather than one
-about a stack it may not have. A rule that shipped carries `version`; one a
-project wrote does not.
-
-A rule with a `RULE.md` and no `rule.ts` yet checks nothing, and a check
-names it so it is not mistaken for a pass.
 
 ## A rule's check
 
 `rule.ts` default-exports a class implementing `Rule`: `check(file)` reads
-one file and returns a `Finding` for each place it breaks the rule. Which
-files it reads, the threshold, `scry-ignore` comments and the report are not
+one file and returns a `Finding` for each place it breaks the rule. Matching
+its `files`, the threshold, `scry-ignore` comments and the report are not
 its concern; the engine handles those.
 
 ```ts
@@ -212,12 +215,10 @@ it("asks about line comments, and not doc comments", async () => {
 });
 ```
 
-`Cases.load(dir)` reads the rule in `dir`: each file in its `evals/`, and
-each code block under its `RULE.md`'s `## Good` and `## Bad`. A case file is
-`<name>.good.<ext>` or `<name>.bad.<ext>`, and the rule reads it as
-`<name>.<ext>`, so `cart.test.bad.ts` is a `cart.test.ts` that breaks the
-rule. A code block is named for a file the rule's `files` glob matches, so a
-rule about tests reads its examples as tests. A check never checks a rule's
+`Cases.load(dir)` reads the cases of the rule in `dir`, each file in its
+`evals/`. A case file is `<name>.good.<ext>` or `<name>.bad.<ext>`, and the
+rule reads it as `<name>.<ext>`, so `cart.test.bad.ts` is a `cart.test.ts`
+that breaks the rule. A check never checks a rule's
 own directory or its cases, and the repository's biome and tsc leave cases
 out, since a bad one breaks the rule on purpose.
 
@@ -260,8 +261,9 @@ const report = await rules.check({
 });
 ```
 
-`Rules.load(dir)` reads every rule under `<dir>/.wiz/scry` and reports every
-broken one at once. `Git.changes` is what changed since a ref, or with none,
+`Rules.load(dir)` imports every rule's `rule.ts` under `<dir>/.wiz/scry`
+and reports every broken one at once: a directory with no `rule.ts`, one
+that fails to import, or a class missing a setting or giving a bad one. `Git.changes` is what changed since a ref, or with none,
 the uncommitted work when there is any and otherwise the branch since
 trunk, kept to the paths it is given. `Git.locate` finds the repository root
 and turns paths from a working directory into paths from it.
@@ -270,8 +272,8 @@ and turns paths from a working directory into paths from it.
 runs every rule on every file at once, reading and parsing each file once
 however many rules read it. A `Report` holds the `problems`, each a finding
 with its `path`, `rule` and `level`; what went `unchecked`, a rule that threw
-on loading or on a file, never guessed at; the rules `withoutCheck`; and how
-many findings were `dropped` under a threshold or `ignored` by a comment.
+on being built or on a file, never guessed at; and how many findings were
+`dropped` under a threshold or `ignored` by a comment.
 
 A `Decider` answers `decide(question, span)` with the probability of yes.
 `BatchedDecider` holds questions until everything running has asked, then

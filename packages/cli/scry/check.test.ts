@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Judge } from "@webappwiz/scry";
-import { FakeJudge, ruleDoc } from "@webappwiz/scry/testing";
+import { FakeJudge, ruleSource } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
@@ -40,39 +40,33 @@ describe("wiz scry", () => {
 	const git = async (...args: string[]) => {
 		await ps.spawnCapture(["git", "-C", root, ...args]);
 	};
-	/** Installs and commits a rule whose check is `rule`, the source of its `rule.ts`. */
-	const install = async (
-		id: string,
-		rule: string,
-		doc = ruleDoc(id, { description: `No ${id}.` }),
-	) => {
+	/** Installs and commits a rule whose class has `members`, the source of its methods. */
+	const install = async (id: string, members: string) => {
 		await fs.mkdir(`${root}/.wiz/scry/${id}`);
-		await fs.write(`${root}/.wiz/scry/${id}/RULE.md`, doc);
-		await fs.write(`${root}/.wiz/scry/${id}/rule.ts`, rule);
+		await fs.write(
+			`${root}/.wiz/scry/${id}/rule.ts`,
+			ruleSource(members, { description: `No ${id}.` }),
+		);
 		await git("add", ".wiz");
 		await git("commit", "-qm", `add ${id}`);
 	};
 	/** Flags each line holding `word`, decided by code. */
 	const flagging = (word: string) => `
-		export default class {
-			async check(file) {
-				return file.lines.flatMap((line, index) =>
-					line.includes("${word}") ? [{ line: index + 1, message: "no ${word}", confidence: 1 }] : [],
-				);
-			}
+		async check(file) {
+			return file.lines.flatMap((line, index) =>
+				line.includes("${word}") ? [{ line: index + 1, message: "no ${word}", confidence: 1 }] : [],
+			);
 		}
 	`;
 	/** Asks the decider about each comment. */
 	const asking = `
-		export default class {
-			constructor(tools) { this.decider = tools.decider; }
-			async check(file) {
-				return Promise.all(
-					file.ts.comments().map(async (comment) =>
-						comment.flag("restates the code", await this.decider.decide("Does it restate?", comment), "Does it restate?"),
-					),
-				);
-			}
+		constructor(tools) { this.decider = tools.decider; }
+		async check(file) {
+			return Promise.all(
+				file.ts.comments().map(async (comment) =>
+					comment.flag("restates the code", await this.decider.decide("Does it restate?", comment), "Does it restate?"),
+				),
+			);
 		}
 	`;
 
@@ -185,10 +179,7 @@ describe("wiz scry", () => {
 	});
 
 	it("reports a rule whose check threw as not checked, and exits 2", async () => {
-		await install(
-			"fragile",
-			"export default class { async check() { throw new Error('boom'); } }",
-		);
+		await install("fragile", "async check() { throw new Error('boom'); }");
 
 		await run();
 
@@ -199,26 +190,12 @@ describe("wiz scry", () => {
 	});
 
 	it("exits 2 when something went unchecked and nothing is an error", async () => {
-		await install(
-			"fragile",
-			"export default class { async check() { throw new Error('boom'); } }",
-		);
+		await install("fragile", "async check() { throw new Error('boom'); }");
 		await fs.write(`${root}/a.ts`, "const a = 2;\n");
 
 		await run();
 
 		expect(proc.exits).toEqual([2]);
-	});
-
-	it("names the rules with no rule.ts yet, which checked nothing", async () => {
-		await fs.mkdir(`${root}/.wiz/scry/unwritten`);
-		await fs.write(`${root}/.wiz/scry/unwritten/RULE.md`, ruleDoc("unwritten"));
-
-		await run();
-
-		expect(printed()).toContain(
-			"1 rule with no rule.ts yet checked nothing: unwritten",
-		);
 	});
 
 	it("says so when nothing changed", async () => {

@@ -1,10 +1,13 @@
-import { RuleDocument } from "@webappwiz/scry";
-import { catalog } from "@webappwiz/scry/catalog";
+import { DeclaredRule } from "@webappwiz/scry";
+import { catalog, type ShippedRule } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs } from "webappwiz/system";
 import type { Bundle, Layout } from "../documents";
 
-/** Where a project keeps its rules: one directory per rule, holding `RULE.md`. */
+/**
+ * Where a project keeps its rules: one directory per rule, holding `RULE.md`,
+ * whose frontmatter carries the version a copy came from, beside `rule.ts`.
+ */
 export const RULES: Layout = {
 	root: ".wiz/scry",
 	file: "RULE.md",
@@ -17,23 +20,22 @@ export interface RulesProjectOptions {
 	dir: string;
 	log?: Logger;
 	fs?: Fs;
-	/** The rules on offer, id to bundle; the catalog by default. */
-	rules?: Record<string, Bundle>;
+	/** The rules on offer, id to class and files; the catalog by default. */
+	rules?: Record<string, ShippedRule>;
 }
 
-/** The rules a command offers: what it was handed, else the catalog. */
+/** The files of every rule on offer, id to bundle: what a command copies. */
 export const offered = (opts: RulesProjectOptions): Record<string, Bundle> =>
-	opts.rules ?? catalog;
+	Object.fromEntries(
+		Object.entries(opts.rules ?? catalog).map(([id, { files }]) => [id, files]),
+	);
 
-/** Every rule on offer, its `RULE.md` parsed, in id order. */
-export const shipped = (opts: RulesProjectOptions): Map<string, RuleDocument> =>
+/** Every rule on offer, as its class declares it, in id order. */
+export const shipped = (opts: RulesProjectOptions): Map<string, DeclaredRule> =>
 	new Map(
-		Object.entries(offered(opts))
+		Object.entries(opts.rules ?? catalog)
 			.toSorted(([left], [right]) => left.localeCompare(right))
-			.map(([id, bundle]) => [
-				id,
-				RuleDocument.parse(bundle[RULES.file] ?? "", { id }),
-			]),
+			.map(([id, { rule }]) => [id, DeclaredRule.of(id, rule)]),
 	);
 
 /**

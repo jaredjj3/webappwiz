@@ -27,6 +27,12 @@ const OWNS_THE_SUBJECT =
  * of the tests rather than their dependencies.
  */
 export default class TestSetupNamesWhatItMakes implements Rule {
+	static readonly description =
+		"Test setup is named for the thing it makes, never a harness.";
+	static readonly files = "**/{*.test,testing}.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

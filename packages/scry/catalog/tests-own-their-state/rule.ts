@@ -32,6 +32,12 @@ const HARNESS =
  * test uses, and a harness class holding the world.
  */
 export default class TestsOwnTheirState implements Rule {
+	static readonly description =
+		"Tests set up their own state; shared setup only names steps and never builds the world.";
+	static readonly files = "**/{*.test,testing}.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

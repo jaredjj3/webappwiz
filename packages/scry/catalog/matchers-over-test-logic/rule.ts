@@ -10,6 +10,12 @@ const LOOPS = [
 
 /** Finds an `if` or a loop in the body of a test. */
 export default class MatchersOverTestLogic implements Rule {
+	static readonly description =
+		"A test carries no if and no for; a matcher decides what the logic would have.";
+	static readonly files = "**/*.test.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	async check(file: SourceFile): Promise<Finding[]> {
 		return file.ts
 			.tests()

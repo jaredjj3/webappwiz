@@ -29,6 +29,12 @@ const SETTINGS =
  * object or a deps object is something else.
  */
 export default class NamedOptionsLast implements Rule {
+	static readonly description =
+		"Settings go in one named opts object, after the parameters a caller cannot leave out.";
+	static readonly files = "**/*.ts";
+	static readonly level = "warning";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

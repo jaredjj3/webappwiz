@@ -21,6 +21,12 @@ const RESTATES =
  * only restates its code.
  */
 export default class CommentsSayWhyNotWhat implements Rule {
+	static readonly description =
+		"A comment explains why the code is as it is, never what it plainly does.";
+	static readonly files = "**/*.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	private decider: Decider;
 
 	constructor(tools: Tools) {

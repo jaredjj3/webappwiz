@@ -106,13 +106,13 @@ function text(measured: Measurement[]): string[] {
 			`${wrong.length === 0 ? "✔" : "✖"} ${correct} of ${total} ${plural(total, "case")} right (${accuracy.toFixed(1)}%) across ${checked.length} ${plural(checked.length, "rule")}`,
 		),
 	);
-	const unwritten = measured.filter(
+	const uncased = measured.filter(
 		(measurement) => measurement.cases.length === 0,
 	);
-	if (unwritten.length > 0) {
+	if (uncased.length > 0) {
 		lines.push(
 			color.dim(
-				`  ${unwritten.length} ${plural(unwritten.length, "rule")} with no rule.ts yet: ${unwritten.map((measurement) => measurement.rule).join(", ")}`,
+				`  ${uncased.length} ${plural(uncased.length, "rule")} with no cases in evals/: ${uncased.map((measurement) => measurement.rule).join(", ")}`,
 			),
 		);
 	}

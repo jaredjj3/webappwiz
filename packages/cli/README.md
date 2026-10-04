@@ -25,8 +25,9 @@ bunx @webappwiz/cli creds remove <NAME>
 ## scry
 
 A project's rules live in `.wiz/scry`, tracked with its code, one directory
-per rule holding a `RULE.md` that says what the rule wants, a `rule.ts` that
-checks it, a `rule.test.ts`, and `evals/`, its labeled cases. The ones that
+per rule holding a `rule.ts` whose class checks it and declares its
+settings, a `RULE.md` that says in prose what the rule wants and why, a
+`rule.test.ts`, and `evals/`, its labeled cases. The ones that
 ship come from [`@webappwiz/scry`](../scry)'s catalog, and a project's own
 sit beside them in the same shape. The `scry` skill teaches an agent to
 write them, and the [package README](../scry/README.md) says how a check is
@@ -130,24 +131,24 @@ a fake model. They import `@webappwiz/scry`, so a project adds it as a
 devDependency, and `add` says so when the project's `package.json` lacks
 it. `scry measure [ids]` runs each rule on its labeled cases with
 the real one: the files in its `evals/`, named `<name>.good.<ext>` and
-`<name>.bad.<ext>`, and the code blocks under its `RULE.md`'s `## Good` and
-`## Bad`. A bad case is right when the rule reports something in it, a good
+`<name>.bad.<ext>`. A bad case is right when the rule reports something in it, a good
 one when it reports nothing. Run it after changing a rule's question or
 `threshold` to see what moved, or once per `--model` to compare models.
 
 ### list, add, update, remove
 
 ```
-rule                 level   recommended   check          files          ships    installed   description
-no-em-dashes         error   yes           yes            **/*.{ts,md}   0.1.0    0.1.0       No em dashes, and no en dashes between words.
-one-class-per-file   error   yes           yes            **/*.ts        0.1.0    -           A file declares one top-level class.
-mine                 error   -             no check yet   **/*.ts        -        local       What this project wants.
+rule                 level   recommended   files          ships    installed   description
+no-em-dashes         error   yes           **/*.{ts,md}   0.1.0    0.1.0       No em dashes, and no en dashes between words.
+one-class-per-file   error   yes           **/*.ts        0.1.0    -           A file declares one top-level class.
+mine                 error   -             **/*.ts        -        local       What this project wants.
 ```
 
-`list` validates the frontmatter of every rule the project has and refuses to
-list a broken one, naming the file and line instead. The body is the author's,
-as a skill's is. `check` says whether the rule has a `rule.ts`: the project's
-copy when it has one, else the one that ships. `add` copies a shipped rule
+`list` loads every rule the project has, describing each by its class, and
+refuses to list a broken one, naming the file and what is wrong instead: a
+missing `rule.ts`, or a class missing a setting or giving a bad one. A
+shipped rule's `RULE.md` carries the version it came from, which `list`
+shows beside the one that ships. `add` copies a shipped rule
 in, check and all, where it runs and can be edited; `update` refreshes those
 copies and leaves the project's own alone. Both replace what is there, as
 `skills` does.

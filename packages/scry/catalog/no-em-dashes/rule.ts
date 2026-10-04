@@ -8,6 +8,12 @@ const EN_DASH_BETWEEN_WORDS = /(?<!\d\s?)\u2013|\u2013(?!\s?\d)/g;
 
 /** Finds em dashes, and en dashes between words, on any line of a file. */
 export default class NoEmDashes implements Rule {
+	static readonly description =
+		"No em dashes, and no en dashes between words, in code, comments or prose.";
+	static readonly files = "**/*.{ts,md}";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	async check(file: SourceFile): Promise<Finding[]> {
 		return this.oncePerLine([
 			...file.matches(EM_DASH),

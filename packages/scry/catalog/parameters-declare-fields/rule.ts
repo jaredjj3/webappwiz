@@ -11,6 +11,12 @@ const COPY = /^this\.(?<field>[\w$]+)\s*=\s*(?<value>[\w$]+);?$/;
  * same name, at the top of its body.
  */
 export default class ParametersDeclareFields implements Rule {
+	static readonly description =
+		"A constructor parameter copied straight into a field of the same name carries the modifier instead.";
+	static readonly files = "**/*.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	async check(file: SourceFile): Promise<Finding[]> {
 		return this.constructors(file).flatMap((maker) =>
 			this.copiesAtTheTop(maker).map((copy) =>

@@ -21,6 +21,12 @@ const HELPER_VALUES = ["arrow_function", "function_expression", "class"];
  * that export starting below the first screen.
  */
 export default class ExportLeadsTheFile implements Rule {
+	static readonly description =
+		"The export a file is named for sits on its first screen, with helpers below it.";
+	static readonly files = "**/*.ts";
+	static readonly level = "error";
+	static readonly recommended = true;
+
 	async check(file: SourceFile): Promise<Finding[]> {
 		const statements = file.ts.topLevel();
 		const lead = this.leadingExport(file, statements);

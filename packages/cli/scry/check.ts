@@ -153,13 +153,6 @@ function text(report: Report, since: string, spent: Spent): string[] {
 		);
 	}
 	lines.push(...(lines.length === 0 ? [] : [""]), tally(report, since));
-	if (report.withoutCheck.length > 0) {
-		lines.push(
-			color.dim(
-				`  ${report.withoutCheck.length} ${plural(report.withoutCheck.length, "rule")} with no rule.ts yet checked nothing: ${report.withoutCheck.join(", ")}`,
-			),
-		);
-	}
 	if (spent.questions + spent.cached > 0) {
 		lines.push(color.dim(asked(spent)));
 	}
