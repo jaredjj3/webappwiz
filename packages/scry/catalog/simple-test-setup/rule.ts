@@ -112,28 +112,34 @@ export default class SimpleTestSetup implements Rule {
 	}
 
 	/**
-	 * Titles that may not complete "it ...": ones that open on a gerund like
-	 * "calling", on a name from the code like `isEnabled`, or on a condition.
-	 * A decider reads each one.
+	 * Titles that cannot complete "it ...", because they open on a gerund like
+	 * "calling" or on a condition like "when", and titles that may not,
+	 * because they open on a name from the code like `isEnabled`. A decider
+	 * reads only the names, since "URL-encodes" is one and still a verb.
 	 */
 	private async titlesLeadingWithTheAction(
 		file: SourceFile,
 	): Promise<Finding[]> {
 		const candidates = this.calls(file, TESTS).flatMap((test) => {
 			const title = test.field("arguments")?.children()[0];
-			return title?.is("string", "template_string") &&
-				leadsWithTheAction(title.text.slice(1, -1))
-				? [title]
-				: [];
+			const opening = title?.is("string", "template_string")
+				? opensOn(title.text.slice(1, -1))
+				: undefined;
+			return title === undefined || opening === undefined
+				? []
+				: [{ title, opening }];
 		});
 		return Promise.all(
-			candidates.map(async (title) =>
-				title.flag(
-					`Lead with the behavior, so the title completes "it ...": ${title.text}.`,
-					await this.decider.decide(ACTION_FIRST, title),
-					ACTION_FIRST,
-				),
-			),
+			candidates.map(async ({ title, opening }) => {
+				const message = `Lead with the behavior, so the title completes "it ...": ${title.text}.`;
+				return opening === "name"
+					? title.flag(
+							message,
+							await this.decider.decide(ACTION_FIRST, title),
+							ACTION_FIRST,
+						)
+					: title.flag(message);
+			}),
 		);
 	}
 
@@ -169,14 +175,17 @@ export default class SimpleTestSetup implements Rule {
 	}
 }
 
-/** Whether a title's first word is a gerund, a name from the code, or a condition. */
-function leadsWithTheAction(title: string): boolean {
+/**
+ * What a title opens on, when it is not plainly a verb: an action, a gerund
+ * or a condition, which "it" cannot precede, or a name from the code, which
+ * may still be a verb like "URL-encodes".
+ */
+function opensOn(title: string): "action" | "name" | undefined {
 	const first = title.trim().split(/\s+/)[0] ?? "";
-	return (
-		/ing$/i.test(first) ||
-		/[A-Z_.()]/.test(first.slice(1)) ||
-		CONDITIONS.has(first.toLowerCase())
-	);
+	if (/ing$/i.test(first) || CONDITIONS.has(first.toLowerCase())) {
+		return "action";
+	}
+	return /[A-Z_.()]/.test(first.slice(1)) ? "name" : undefined;
 }
 
 /**

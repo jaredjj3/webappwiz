@@ -59,7 +59,7 @@ describe("simple-test-setup", () => {
 		expect(findings.map((finding) => finding.line)).toEqual([1, 6]);
 	});
 
-	it("asks about titles that open on a gerund, a name from the code, or a condition", async () => {
+	it("flags titles that open on a gerund or a condition, and asks about ones that open on a name from the code", async () => {
 		const decider = new FakeDecider({}, 0.8);
 		const file = new SourceFile(
 			"a.test.ts",
@@ -77,11 +77,11 @@ describe("simple-test-setup", () => {
 			decider.asked.map(({ about }) => about.line),
 			findings.map(({ line, confidence }) => [line, confidence]),
 		]).toEqual([
-			[1, 2, 3],
+			[2],
 			[
-				[1, 0.8],
+				[1, 1],
 				[2, 0.8],
-				[3, 0.8],
+				[3, 1],
 			],
 		]);
 	});
