@@ -77,6 +77,76 @@ describe("BatchedDecider", () => {
 		).toEqual([2, 2, 1]);
 	});
 
+	it("never asks two questions about the same line in one request", async () => {
+		const judge = measuring();
+		const decider = new BatchedDecider(judge);
+
+		await Promise.all([
+			decider.decide("Is it short?", at(cart, 1)),
+			decider.decide("Is it long?", at(cart, 1)),
+			decider.decide("Is it short?", at(cart, 3)),
+		]);
+
+		expect(
+			judge.judgments.map((judgment) =>
+				Object.values(judgment.questions).map(
+					(question) => question.instructions,
+				),
+			),
+		).toEqual([
+			[
+				"About line 1 of `file`: Is it long?",
+				"About line 3 of `file`: Is it short?",
+			],
+			["About line 1 of `file`: Is it short?"],
+		]);
+	});
+
+	it("never asks about overlapping lines in one request", async () => {
+		const judge = measuring();
+		const decider = new BatchedDecider(judge);
+
+		await Promise.all([
+			decider.decide("Is it?", new Span(cart, 1, "a\nb\nc")),
+			decider.decide("Is it?", at(cart, 3)),
+			decider.decide("Is it?", at(cart, 4)),
+		]);
+
+		expect(
+			judge.judgments.map((judgment) =>
+				Object.values(judgment.questions).map(
+					(question) => question.instructions,
+				),
+			),
+		).toEqual([
+			[
+				"About lines 1 to 3 of `file`: Is it?",
+				"About line 4 of `file`: Is it?",
+			],
+			["About line 3 of `file`: Is it?"],
+		]);
+	});
+
+	it("makes the same requests from the same questions, in whatever order they were asked", async () => {
+		const asked = [
+			{ question: "Is it?", about: at(tax, 1) },
+			{ question: "Is it short?", about: at(cart, 2) },
+			{ question: "Is it long?", about: at(cart, 2) },
+			{ question: "Is it?", about: at(cart, 1) },
+			{ question: "Is it?", about: at(cart, 4) },
+		];
+		const requests = async (order: typeof asked) => {
+			const judge = measuring();
+			const decider = new BatchedDecider(judge);
+			await Promise.all(
+				order.map(({ question, about }) => decider.decide(question, about)),
+			);
+			return judge.judgments;
+		};
+
+		expect(await requests(asked.toReversed())).toEqual(await requests(asked));
+	});
+
 	it("asks a question asked after an answer came back in a request of its own", async () => {
 		const judge = measuring();
 		const decider = new BatchedDecider(judge);

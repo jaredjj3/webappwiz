@@ -42,6 +42,8 @@ export interface BatchedDeciderOptions {
  * Only questions about one file share a request. Packing unrelated code into
  * one state blurred a model's answers toward their average (correlation 0.3
  * with asking alone, on Jev); questions about one file kept them (0.98).
+ * Questions about the same lines never share one: their answers interfered,
+ * and flipped from run to run.
  */
 export class BatchedDecider implements Decider {
 	readonly usage: DeciderUsage = { requests: 0, questions: 0, input: 0 };
@@ -96,7 +98,13 @@ export class BatchedDecider implements Decider {
 		}
 	}
 
-	/** The waiting questions by file, in requests of at most `size` questions. */
+	/**
+	 * The waiting questions by file, in requests of at most `size` questions,
+	 * none of which asks about a line another in it does. Each file's
+	 * questions go in order of their place and wording, each into the first
+	 * request it fits, so the same questions make the same requests however
+	 * the rules raced to ask them.
+	 */
 	private batches(waiting: Pending[]): Pending[][] {
 		const byFile = new Map<SourceFile, Pending[]>();
 		for (const item of waiting) {
@@ -105,11 +113,24 @@ export class BatchedDecider implements Decider {
 				item,
 			]);
 		}
-		return [...byFile.values()].flatMap((items) =>
-			Array.from({ length: Math.ceil(items.length / this.size) }, (_, index) =>
-				items.slice(index * this.size, (index + 1) * this.size),
-			),
-		);
+		return [...byFile]
+			.toSorted(([left], [right]) => compare(left.path, right.path))
+			.flatMap(([, items]) => {
+				const requests: Pending[][] = [];
+				for (const item of items.toSorted(byPlace)) {
+					const request = requests.find(
+						(each) =>
+							each.length < this.size &&
+							each.every((other) => !overlaps(other.about, item.about)),
+					);
+					if (request === undefined) {
+						requests.push([item]);
+					} else {
+						request.push(item);
+					}
+				}
+				return requests;
+			});
 	}
 
 	private async ask(batch: Pending[]): Promise<void> {
@@ -156,6 +177,29 @@ export class BatchedDecider implements Decider {
 			}
 		}
 	}
+}
+
+/** By first line, then last, then wording. */
+function byPlace(left: Pending, right: Pending): number {
+	return (
+		left.about.line - right.about.line ||
+		last(left.about) - last(right.about) ||
+		compare(left.question, right.question)
+	);
+}
+
+/** Whether two spans share a line. */
+function overlaps(left: Span, right: Span): boolean {
+	return left.line <= last(right) && right.line <= last(left);
+}
+
+/** The line a span ends on. */
+function last(span: Span): number {
+	return span.line + span.text.split("\n").length - 1;
+}
+
+function compare(left: string, right: string): number {
+	return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function cancelled(): Error {

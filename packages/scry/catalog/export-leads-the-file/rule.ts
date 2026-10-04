@@ -23,7 +23,7 @@ const HELPER_VALUES = ["arrow_function", "function_expression", "class"];
 export default class ExportLeadsTheFile implements Rule {
 	static readonly description =
 		"The export a file is named for sits on its first screen, with helpers below it.";
-	static readonly files = "**/*.ts";
+	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

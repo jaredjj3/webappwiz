@@ -31,7 +31,7 @@ const SETTINGS =
 export default class NamedOptionsLast implements Rule {
 	static readonly description =
 		"Settings go in one named opts object, after the parameters a caller cannot leave out.";
-	static readonly files = "**/*.ts";
+	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "warning";
 	static readonly recommended = true;
 

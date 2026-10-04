@@ -32,7 +32,7 @@ const FUNCTION_VALUES = ["arrow_function", "function_expression"];
 export default class ClassesOverFunctionExports implements Rule {
 	static readonly description =
 		"A file's dependency-taking functions become one class that takes them once.";
-	static readonly files = "**/*.ts";
+	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

@@ -10,6 +10,9 @@ import type {
 /** The functions that declare a test, as bun, vitest and jest name them. */
 const TESTS = new Set(["it", "test"]);
 
+/** What a test file opens on, when it opens on what is being tested. */
+const OPENINGS = new Set(["describe", ...TESTS]);
+
 const LOOPS = [
 	"for_statement",
 	"for_in_statement",
@@ -26,6 +29,13 @@ const CONDITIONS = new Set(["when", "if", "given", "after", "with", "on"]);
 /** How many declarations a test makes before it reads as mostly setup. */
 const SETUP_DECLARATIONS = 3;
 
+/**
+ * How many lines of setup may sit between a test file's imports and its first
+ * `describe` or `it`: a few constants or a short fake leave the tests on the
+ * first screen, and a run of fake classes and helpers longer than this does not.
+ */
+const OPENING_SETUP_LINES = 20;
+
 const ACTION_FIRST =
 	'Does this test title lead with the action or method under test instead of the behavior, so that "it" followed by the title does not read as a sentence?';
 
@@ -33,14 +43,14 @@ const DROWNED =
 	"Does the setup in this test bury the one behavior it checks, so a reader has to wade through construction details to find what is under test?";
 
 /**
- * Finds a test file that is hard to read top to bottom: more than one
- * describe, tests a loop makes, titles that lead with the action, and
- * tests drowned in setup.
+ * Finds a test file that is hard to read top to bottom: one that opens on
+ * setup rather than its tests, more than one describe, tests a loop makes,
+ * titles that lead with the action, and tests drowned in setup.
  */
 export default class SimpleTestSetup implements Rule {
 	static readonly description =
-		"One describe per file, it titles that complete the sentence, shared setup in its beforeEach.";
-	static readonly files = "**/*.test.ts";
+		"A test file opens on its one describe, its it titles complete the sentence, and shared setup sits in its beforeEach.";
+	static readonly files = "**/*.test.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 
@@ -52,11 +62,43 @@ export default class SimpleTestSetup implements Rule {
 
 	async check(file: SourceFile): Promise<Finding[]> {
 		return [
+			...this.setupBeforeTheTests(file),
 			...this.extraDescribes(file),
 			...this.testsALoopMakes(file),
 			...(await this.titlesLeadingWithTheAction(file)),
 			...(await this.setupDrowningTheBehavior(file)),
 		].toSorted((left, right) => left.line - right.line);
+	}
+
+	/**
+	 * More than `OPENING_SETUP_LINES` lines of statements between the imports
+	 * and the first `describe` or `it`, so the file opens on the machinery
+	 * rather than on what it tests.
+	 */
+	private setupBeforeTheTests(file: SourceFile): Finding[] {
+		const [opening] = this.calls(file, OPENINGS);
+		if (opening === undefined) {
+			return [];
+		}
+		const setup = file.ts
+			.topLevel()
+			.filter(
+				(statement) =>
+					statement.end < opening.line &&
+					!statement.is("import_statement", "comment"),
+			);
+		const lines = setup.reduce(
+			(sum, statement) => sum + statement.end - statement.line + 1,
+			0,
+		);
+		const [start] = setup;
+		return start === undefined || lines <= OPENING_SETUP_LINES
+			? []
+			: [
+					start.flag(
+						`Open the file on what it tests: ${lines} lines of setup come before the first ${callee(opening)}. Move them into the beforeEach that needs them, or below the describe.`,
+					),
+				];
 	}
 
 	/** Every `describe` after the first, nested or side by side. */
@@ -156,7 +198,7 @@ export default class SimpleTestSetup implements Rule {
 		return Promise.all(
 			candidates.map(async (test) =>
 				test.flag(
-					"Move the setup this test shares into its describe's beforeEach, or into a helper named for what it makes, so the behavior under test leads.",
+					"Move the setup this test shares with others into its describe's beforeEach, so the behavior under test leads.",
 					await this.decider.decide(DROWNED, test),
 					DROWNED,
 				),

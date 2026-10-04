@@ -18,6 +18,27 @@ describe("simple-test-setup", () => {
 		expect(await rule.check(file)).toEqual([]);
 	});
 
+	it("flags a file whose tests come after more than 20 lines of setup, counting neither imports nor comments", async () => {
+		const opening = (setup: number) =>
+			new SourceFile(
+				"a.test.ts",
+				[
+					'import { describe, it } from "bun:test";',
+					"// a fake for the tests below",
+					"class Fake {",
+					...Array.from({ length: setup - 2 }, () => "\tfield = 1;"),
+					"}",
+					'describe("a", () => {});',
+				].join("\n"),
+			);
+		const rule = new SimpleTestSetup({ decider: new FakeDecider() });
+
+		expect([
+			(await rule.check(opening(20))).map((finding) => finding.line),
+			(await rule.check(opening(21))).map((finding) => finding.line),
+		]).toEqual([[], [3]]);
+	});
+
 	it("flags every describe after the first, nested or side by side", async () => {
 		const file = new SourceFile(
 			"a.test.ts",

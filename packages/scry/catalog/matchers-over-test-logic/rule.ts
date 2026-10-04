@@ -12,7 +12,7 @@ const LOOPS = [
 export default class MatchersOverTestLogic implements Rule {
 	static readonly description =
 		"A test carries no if and no for; a matcher decides what the logic would have.";
-	static readonly files = "**/*.test.ts";
+	static readonly files = "**/*.test.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

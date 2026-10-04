@@ -19,7 +19,7 @@ const MOCKING = new Set([
 export default class FakesOverMocks implements Rule {
 	static readonly description =
 		"A test hands in a fake of a focused interface rather than mocking or spying.";
-	static readonly files = "**/*.test.ts";
+	static readonly files = "**/*.test.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

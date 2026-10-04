@@ -29,7 +29,7 @@ const FOR_MAINTAINERS =
 export default class DocCommentsAddressUsers implements Rule {
 	static readonly description =
 		"A doc comment on an export tells users what it is for, not maintainers how it is built.";
-	static readonly files = "**/*.ts";
+	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

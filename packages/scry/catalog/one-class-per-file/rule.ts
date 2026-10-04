@@ -3,7 +3,7 @@ import type { Declaration, Finding, Rule, SourceFile } from "@webappwiz/scry";
 /** Finds every top-level class but the one a file is named for. */
 export default class OneClassPerFile implements Rule {
 	static readonly description = "A file declares one top-level class.";
-	static readonly files = "**/*.ts";
+	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

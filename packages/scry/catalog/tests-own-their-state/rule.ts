@@ -34,7 +34,7 @@ const HARNESS =
 export default class TestsOwnTheirState implements Rule {
 	static readonly description =
 		"Tests set up their own state; shared setup only names steps and never builds the world.";
-	static readonly files = "**/{*.test,testing}.ts";
+	static readonly files = "**/{*.test,testing}.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

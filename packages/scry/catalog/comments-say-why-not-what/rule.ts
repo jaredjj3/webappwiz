@@ -23,7 +23,7 @@ const RESTATES =
 export default class CommentsSayWhyNotWhat implements Rule {
 	static readonly description =
 		"A comment explains why the code is as it is, never what it plainly does.";
-	static readonly files = "**/*.ts";
+	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

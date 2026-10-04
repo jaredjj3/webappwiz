@@ -10,7 +10,7 @@ const EN_DASH_BETWEEN_WORDS = /(?<!\d\s?)\u2013|\u2013(?!\s?\d)/g;
 export default class NoEmDashes implements Rule {
 	static readonly description =
 		"No em dashes, and no en dashes between words, in code, comments or prose.";
-	static readonly files = "**/*.{ts,md}";
+	static readonly files = "**/*.{ts,tsx,md}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

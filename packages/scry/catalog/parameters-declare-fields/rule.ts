@@ -13,7 +13,7 @@ const COPY = /^this\.(?<field>[\w$]+)\s*=\s*(?<value>[\w$]+);?$/;
 export default class ParametersDeclareFields implements Rule {
 	static readonly description =
 		"A constructor parameter copied straight into a field of the same name carries the modifier instead.";
-	static readonly files = "**/*.ts";
+	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "error";
 	static readonly recommended = true;
 

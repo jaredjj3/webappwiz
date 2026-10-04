@@ -271,7 +271,11 @@ const EVALS: Record<string, string[]> = {
 		"password-strength.test.bad.ts",
 		"rate-limiter.test.good.ts",
 		"slugify.test.good.ts",
+		"toggle-button.test.bad.tsx",
+		"toggle-button.test.good.tsx",
 		"token-store.test.bad.ts",
+		"upload-queue.test.bad.ts",
+		"upload-queue.test.good.ts",
 	],
 	"test-setup-names-what-it-makes": [
 		"cart-builder.test.bad.ts",
