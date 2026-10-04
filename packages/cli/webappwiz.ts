@@ -11,6 +11,7 @@ import { version } from "./package.json";
 import { add as addRule } from "./scry/add";
 import { check } from "./scry/check";
 import { list as listRules } from "./scry/list";
+import { measure } from "./scry/measure";
 import { remove as removeRule } from "./scry/remove";
 import { test as testRules } from "./scry/test";
 import { update as updateRules } from "./scry/update";
@@ -87,6 +88,30 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "rule ids, as `scry list` names them (default: every rule)",
 		})
 		.action((opts, { log, fs, ps }) => testRules({ ...opts, log, fs, ps }));
+
+	scry
+		.command("measure")
+		.description(
+			"score each rule on its labeled cases: its evals and its RULE.md examples",
+		)
+		.rest("ids", z.string(), {
+			description: "rule ids, as `scry list` names them (default: every rule)",
+		})
+		.option("jobs", z.coerce.number(), {
+			default: undefined,
+			description: "requests to the model at once (default: scry.jobs, else 8)",
+		})
+		.option("model", z.string(), {
+			default: undefined,
+			description:
+				"the model rules' deciders ask (default: scry.model, else clef)",
+		})
+		.option("format", z.enum(["text", "json"]), {
+			default: "text",
+			description: "text or json (default: text)",
+		})
+		.use(timed())
+		.action((opts, { log, fs, ps }) => measure({ ...opts, log, fs, ps }));
 
 	scry
 		.command("why")

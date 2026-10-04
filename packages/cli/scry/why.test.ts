@@ -6,7 +6,7 @@ import { Decisions } from "@webappwiz/scry";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
-import { DECISIONS } from "./check";
+import { DECISIONS } from "./project-decider";
 import { why } from "./why";
 
 describe("wiz scry why", () => {

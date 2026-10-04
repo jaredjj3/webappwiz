@@ -46,6 +46,20 @@ import testsOwnTheirState from "./tests-own-their-state/RULE.md" with {
 };
 
 /**
+ * The code each rule ships beside its `RULE.md`: its check and the tests that
+ * run it on its cases. Read off disk like the cases below.
+ */
+const CODE: Record<string, string[]> = {
+	"export-leads-the-file": ["rule.test.ts", "rule.ts"],
+	"fakes-over-mocks": ["rule.test.ts", "rule.ts"],
+	"matchers-over-test-logic": ["rule.test.ts", "rule.ts"],
+	"no-em-dashes": ["rule.test.ts", "rule.ts"],
+	"one-class-per-file": ["rule.test.ts", "rule.ts"],
+	"parameters-declare-fields": ["rule.test.ts", "rule.ts"],
+	"tests-own-their-state": ["rule.test.ts", "rule.ts"],
+};
+
+/**
  * Each rule's eval cases, by name in its `evals/`. Listed like the imports
  * above, but read off disk rather than imported: tsc type checks a `.ts`
  * file even imported as text, and an eval case is a fragment that breaks a
@@ -196,7 +210,7 @@ const EVALS: Record<string, string[]> = {
  * than read off a directory so the files travel inside the build, and so a
  * rule is here or it does not ship.
  */
-export const catalog: Record<string, Record<string, string>> = withEvals({
+export const catalog: Record<string, Record<string, string>> = withFiles({
 	"classes-over-function-exports": { "RULE.md": classesOverFunctionExports },
 	"comments-say-why-not-what": { "RULE.md": commentsSayWhyNotWhat },
 	"dev-servers-find-a-port": { "RULE.md": devServersFindAPort },
@@ -216,17 +230,24 @@ export const catalog: Record<string, Record<string, string>> = withEvals({
 	"tests-own-their-state": { "RULE.md": testsOwnTheirState },
 });
 
-function withEvals(
+function withFiles(
 	rules: Record<string, Record<string, string>>,
 ): Record<string, Record<string, string>> {
-	for (const [id, names] of Object.entries(EVALS)) {
+	const rosters = [
+		...Object.entries(CODE),
+		...Object.entries(EVALS).map(([id, names]): [string, string[]] => [
+			id,
+			names.map((name) => `evals/${name}`),
+		]),
+	];
+	for (const [id, paths] of rosters) {
 		const files = rules[id];
 		if (files === undefined) {
-			throw new Error(`evals for ${id}, which is not in the catalog`);
+			throw new Error(`files for ${id}, which is not in the catalog`);
 		}
-		for (const name of names) {
-			files[`evals/${name}`] = readFileSync(
-				new URL(`./${id}/evals/${name}`, import.meta.url),
+		for (const path of paths) {
+			files[path] = readFileSync(
+				new URL(`./${id}/${path}`, import.meta.url),
 				"utf8",
 			);
 		}

@@ -3,6 +3,8 @@ export {
 	type BatchedDeciderOptions,
 	type DeciderUsage,
 } from "./batched-decider";
+export { CachedDecider } from "./cached-decider";
+export { type Case, Cases, type CasesOptions } from "./cases";
 export {
 	CLEF_MODELS,
 	Clef,
@@ -10,13 +12,14 @@ export {
 	type ClefOptions,
 	type CloudflareAccount,
 } from "./clef";
+export { Comment } from "./comment";
 export type { Decider } from "./decider";
 export {
-	CachedDecider,
 	type Decision,
 	Decisions,
 	type DecisionsOptions,
 } from "./decisions";
+export { Declaration } from "./declaration";
 export { type ChangedFile, type Changeset, Git, type GitOptions } from "./git";
 export { Jev, type JevOptions } from "./jev";
 export type {
@@ -26,7 +29,13 @@ export type {
 	Noul,
 	Verdict,
 } from "./judge";
-export { CHECK_FILE, RULE_FILE, RULES_ROOT } from "./layout";
+export {
+	CASE_FILE,
+	CASES_DIR,
+	CHECK_FILE,
+	RULE_FILE,
+	RULES_ROOT,
+} from "./layout";
 export type { Finding, Rule, RuleClass, Tools } from "./rule";
 export {
 	LEVELS,
@@ -38,15 +47,15 @@ export {
 export {
 	type CheckOptions,
 	type LoadOptions,
+	type Measurement,
+	type MeasureOptions,
 	type Problem,
 	type Report,
 	Rules,
+	type Scored,
 	type Unchecked,
 } from "./rules";
-export {
-	Comment,
-	Declaration,
-	SourceFile,
-	Span,
-	TypeScriptSyntax,
-} from "./source-file";
+export { SourceFile } from "./source-file";
+export { Span } from "./span";
+export { type Matcher, SyntaxNode } from "./syntax-node";
+export { TypeScriptSyntax } from "./typescript-syntax";

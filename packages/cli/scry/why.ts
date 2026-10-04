@@ -1,7 +1,7 @@
 import { Decisions, Git } from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import { DECISIONS } from "./check";
+import { DECISIONS } from "./project-decider";
 
 export interface WhyOptions {
 	/** `path:line`, the path from the working directory, as a report prints it. */

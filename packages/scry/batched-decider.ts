@@ -1,6 +1,7 @@
 import { type Decider, pointing, state } from "./decider";
 import type { Judge, Noul } from "./judge";
-import type { SourceFile, Span } from "./source-file";
+import type { SourceFile } from "./source-file";
+import type { Span } from "./span";
 
 /** The most questions one request asks; Clef's limit. */
 const QUESTIONS = 64;

@@ -1,4 +1,4 @@
-import type { Span } from "./source-file";
+import type { Span } from "./span";
 
 /**
  * Answers a yes-or-no question about a place in a file with the probability

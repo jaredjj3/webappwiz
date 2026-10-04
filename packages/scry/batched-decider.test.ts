@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { BatchedDecider } from "./batched-decider";
 import type { Judge, Judgment } from "./judge";
-import { SourceFile, Span } from "./source-file";
+import { SourceFile } from "./source-file";
+import { Span } from "./span";
 import { FakeJudge } from "./testing";
 
 describe("BatchedDecider", () => {

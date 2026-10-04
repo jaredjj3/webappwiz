@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { FakeFs } from "webappwiz/system/testing";
 import { FakeWallClock } from "webappwiz/time/testing";
-import { CachedDecider, Decisions } from "./decisions";
-import { SourceFile, Span } from "./source-file";
+import { CachedDecider } from "./cached-decider";
+import { Decisions } from "./decisions";
+import { SourceFile } from "./source-file";
+import { Span } from "./span";
 import { FakeDecider } from "./testing";
 
 describe("CachedDecider", () => {

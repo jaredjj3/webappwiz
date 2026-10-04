@@ -1,21 +1,10 @@
-import {
-	BatchedDecider,
-	CachedDecider,
-	type DeciderUsage,
-	Decisions,
-	Git,
-	type Report,
-	Rules,
-} from "@webappwiz/scry";
+import { Git, type Report, Rules } from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, type Glob, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import { ProjectCredentials } from "../credentials/project-credentials";
 import { loadConfig } from "../load-config";
 import { table } from "../table";
-import { HostedProviders, OnDemandJudge, type Providers } from "./providers";
-
-/** Where a project keeps the answers its decider was given, between runs. */
-export const DECISIONS = "node_modules/.cache/webappwiz/scry/decisions.json";
+import { asked, ProjectDecider, plural, type Spent } from "./project-decider";
+import type { Providers } from "./providers";
 
 export interface CheckOptions {
 	/**
@@ -38,12 +27,6 @@ export interface CheckOptions {
 	glob?: Glob;
 	/** What makes the judge for a model; Workers AI and TypeSafe by default. */
 	providers?: Providers;
-}
-
-/** What the decider spent, beside the report. */
-interface Spent extends DeciderUsage {
-	/** Questions answered from what was kept from an earlier run. */
-	cached: number;
 }
 
 /**
@@ -87,18 +70,14 @@ export async function check(opts: CheckOptions): Promise<void> {
 		}
 	});
 
-	const model = opts.model ?? settings.model;
-	const providers =
-		opts.providers ??
-		new HostedProviders(
-			(await ProjectCredentials.open(dir, { fs, ps })).credentials,
-		);
-	const batched = new BatchedDecider(new OnDemandJudge(providers, model), {
+	const decider = await ProjectDecider.open(dir, {
+		model: opts.model ?? settings.model,
 		jobs: opts.jobs ?? settings.jobs,
 		signal: cancel.signal,
+		providers: opts.providers,
+		fs,
+		ps,
 	});
-	const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
-	const decider = new CachedDecider(batched, decisions, model);
 	const report = await rules
 		.check({
 			paths: changes.files.map((file) => file.path),
@@ -109,8 +88,8 @@ export async function check(opts: CheckOptions): Promise<void> {
 		.finally(() => {
 			running = false;
 		});
-	await decisions.save();
-	const spent: Spent = { ...batched.usage, cached: decider.hits };
+	await decider.save();
+	const spent = decider.spent;
 
 	if (report.legacy.length > 0) {
 		log.error(
@@ -192,27 +171,4 @@ function tally(report: Report, since: string): string {
 	return missed === 0 && !report.cancelled
 		? color.green(`✔ no problems in ${scope}`)
 		: color.yellow(`⚠ ${stopped}no problems found in ${scope}${but}`);
-}
-
-/** What the decider asked, and what it cost. */
-function asked(spent: Spent): string {
-	const cached =
-		spent.cached === 0 ? "" : `, ${spent.cached} answered from earlier runs`;
-	const tokens =
-		spent.input === 0 ? "" : `, ${thousands(spent.input)} input tokens`;
-	return `  asked ${spent.questions} ${plural(spent.questions, "question")} in ${spent.requests} ${plural(spent.requests, "request")}${cached}${tokens}`;
-}
-
-function plural(count: number, noun: string): string {
-	return count === 1 ? noun : `${noun}s`;
-}
-
-function thousands(tokens: number): string {
-	if (tokens < 1000) {
-		return String(tokens);
-	}
-	// a decimal while it still tells two numbers apart: 6.5k cached of 7k
-	return tokens < 10_000
-		? `${Number((tokens / 1000).toFixed(1))}k`
-		: `${Math.round(tokens / 1000)}k`;
 }

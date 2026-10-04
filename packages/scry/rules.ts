@@ -1,7 +1,8 @@
-import { resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { type Fs, type Glob, NodeFs, NodeGlob } from "webappwiz/system";
+import { type Case, Cases } from "./cases";
 import { ignored } from "./ignores";
-import { CHECK_FILE, RULE_FILE, RULES_ROOT } from "./layout";
+import { CASES_DIR, CHECK_FILE, RULE_FILE, RULES_ROOT } from "./layout";
 import type { Finding, Rule, RuleClass, Tools } from "./rule";
 import { type Level, RuleDocument, RuleError } from "./rule-document";
 import { SourceFile } from "./source-file";
@@ -48,6 +49,32 @@ export interface Report {
 	legacy: string[];
 	/** Whether it was stopped before every rule came back. */
 	cancelled: boolean;
+}
+
+/** How a rule did on one of its labeled cases. */
+export interface Scored {
+	/** Where the case came from, as `Case.name`. */
+	name: string;
+	kind: Case["kind"];
+	/** What the rule found in it, over its threshold and not ignored. */
+	findings: Finding[];
+	/** Why the rule could not check it, when it threw. */
+	error?: string;
+}
+
+/** A rule's score on its cases. */
+export interface Measurement {
+	rule: string;
+	/** Empty when the rule has no `rule.ts` yet. */
+	cases: Scored[];
+}
+
+/** Which rules to measure, and what to build them with. */
+export interface MeasureOptions {
+	/** Rule ids; every rule when empty. */
+	ids?: readonly string[];
+	tools: Tools;
+	signal?: AbortSignal;
 }
 
 /** What a check looks at, and what it builds the rules with. */
@@ -134,8 +161,15 @@ export class Rules {
 			legacy: [],
 			cancelled: false,
 		};
-		// a rule's own cases break it, or follow it, on purpose
-		const checked = opts.paths.filter((path) => !OWN_CASES.test(path));
+		const homes = new Map(
+			await Promise.all(
+				opts.paths.map(
+					async (path) => [path, await this.ruleHome(path)] as const,
+				),
+			),
+		);
+		// a rule's cases break it, or follow it, on purpose
+		const checked = opts.paths.filter((path) => !homes.get(path)?.isCase);
 		const matched = this.all
 			.map((document) => ({
 				document,
@@ -175,30 +209,27 @@ export class Rules {
 				return;
 			}
 			await Promise.all(
-				paths.map(async (path) => {
-					const file = await open(path);
-					const findings = await rule.check(file).catch((error: unknown) => {
-						report.unchecked.push({
-							subject: `${document.id} on ${path}`,
-							reason: reason(error),
+				paths
+					// a rule's own code and tests show what it forbids, on purpose
+					.filter((path) => homes.get(path)?.id !== document.id)
+					.map(async (path) => {
+						const file = await open(path);
+						const findings = await rule.check(file).catch((error: unknown) => {
+							report.unchecked.push({
+								subject: `${document.id} on ${path}`,
+								reason: reason(error),
+							});
+							return [];
 						});
-						return [];
-					});
-					for (const finding of findings) {
-						if (ignored(file.text, document.id, finding.line)) {
-							report.ignored++;
-						} else if (finding.confidence < document.threshold) {
-							report.dropped++;
-						} else {
-							report.problems.push({
+						report.problems.push(
+							...this.sift(document, file, findings, report).map((finding) => ({
 								...finding,
 								path,
 								rule: document.id,
 								level: document.level,
-							});
-						}
-					}
-				}),
+							})),
+						);
+					}),
 			);
 		});
 		await Promise.all(checks);
@@ -221,6 +252,96 @@ export class Rules {
 		return report;
 	}
 
+	/**
+	 * Runs each rule on its labeled cases, the way a check would run it on a
+	 * project's files: what a `scry-ignore` comment excuses and what falls
+	 * under the threshold are not findings. Every case of every rule at once,
+	 * so a decider batches them as it would a check.
+	 */
+	async measure(opts: MeasureOptions): Promise<Measurement[]> {
+		const ids = opts.ids ?? [];
+		for (const id of ids) {
+			if (this.get(id) === undefined) {
+				throw new RuleError(`no rule "${id}" in ${RULES_ROOT}`);
+			}
+		}
+		const documents = this.all.filter(
+			(document) => ids.length === 0 || ids.includes(document.id),
+		);
+		return Promise.all(
+			documents.map(async (document): Promise<Measurement> => {
+				const rule = await this.build(document, opts.tools);
+				if (rule === undefined) {
+					return { rule: document.id, cases: [] };
+				}
+				const cases = await Cases.load(
+					`${this.dir}/${RULES_ROOT}/${document.id}`,
+					{ fs: this.fs },
+				);
+				const scored = await Promise.all(
+					cases.all.map(async (each): Promise<Scored> => {
+						const scoring = { name: each.name, kind: each.kind };
+						try {
+							const findings = await rule.check(each.file);
+							return {
+								...scoring,
+								findings: this.sift(document, each.file, findings),
+							};
+						} catch (error) {
+							return { ...scoring, findings: [], error: reason(error) };
+						}
+					}),
+				);
+				return { rule: document.id, cases: scored };
+			}),
+		);
+	}
+
+	/**
+	 * The findings that stand: not excused by a `scry-ignore` comment, and at
+	 * or over the rule's threshold. Counts the rest on the report, when given.
+	 */
+	private sift(
+		document: RuleDocument,
+		file: SourceFile,
+		findings: Finding[],
+		report: Pick<Report, "ignored" | "dropped"> = { ignored: 0, dropped: 0 },
+	): Finding[] {
+		return findings.filter((finding) => {
+			if (ignored(file.text, document.id, finding.line)) {
+				report.ignored++;
+				return false;
+			}
+			if (finding.confidence < document.threshold) {
+				report.dropped++;
+				return false;
+			}
+			return true;
+		});
+	}
+
+	/**
+	 * The rule whose directory a file is in, by the `RULE.md` beside it or
+	 * above its `evals/`, wherever the rule lives: in `.wiz/scry`, or in a
+	 * catalog it ships from.
+	 */
+	private async ruleHome(
+		path: string,
+	): Promise<{ id: string; isCase: boolean } | undefined> {
+		const dir = dirname(path);
+		if (await this.fs.exists(`${this.dir}/${dir}/${RULE_FILE}`)) {
+			return { id: basename(dir), isCase: false };
+		}
+		const above = dirname(dir);
+		if (
+			basename(dir) === CASES_DIR &&
+			(await this.fs.exists(`${this.dir}/${above}/${RULE_FILE}`))
+		) {
+			return { id: basename(above), isCase: true };
+		}
+		return undefined;
+	}
+
 	/** The rule's check, built with the tools; undefined when it has no `rule.ts` yet. */
 	private async build(
 		document: RuleDocument,
@@ -239,11 +360,6 @@ export class Rules {
 		return new module.default(tools);
 	}
 }
-
-/** A file in a rule's own `evals/` or `fixtures/`. */
-const OWN_CASES = new RegExp(
-	`^${RULES_ROOT.replaceAll(".", "\\.")}/[^/]+/(evals|fixtures)/`,
-);
 
 function reason(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);

@@ -228,4 +228,88 @@ describe("Rules.check", () => {
 
 		expect([report.legacy, report.ignored]).toEqual([["src/a.ts"], 1]);
 	});
+
+	it("checks no rule's cases, wherever the rule lives, since they break it on purpose", async () => {
+		await install("no-foo", flagging("foo"));
+		await fs.mkdir(`${root}/.wiz/scry/no-foo/evals`);
+		await write(".wiz/scry/no-foo/evals/a.bad.ts", "foo\n");
+		await fs.mkdir(`${root}/catalog/no-bar/evals`);
+		await write("catalog/no-bar/RULE.md", ruleDoc("no-bar"));
+		await write("catalog/no-bar/evals/b.bad.ts", "foo\n");
+		await fs.mkdir(`${root}/src/evals`);
+		await write("src/evals/c.ts", "foo\n");
+
+		const report = await run([
+			".wiz/scry/no-foo/evals/a.bad.ts",
+			"catalog/no-bar/evals/b.bad.ts",
+			"src/evals/c.ts",
+		]);
+
+		expect(report.problems.map(({ path }) => path)).toEqual(["src/evals/c.ts"]);
+	});
+
+	it("checks a rule's own code with every rule but itself", async () => {
+		await install("no-foo", flagging("foo"));
+		await install("loud", flagging("foo"));
+		await write(".wiz/scry/no-foo/rule.test.ts", "foo\n");
+
+		const report = await run([".wiz/scry/no-foo/rule.test.ts"]);
+
+		expect(report.problems.map(({ rule }) => rule)).toEqual(["loud"]);
+	});
+
+	it("scores each rule on its cases, with what stands of what it found", async () => {
+		await install("no-bar", flagging("Bar"));
+		await fs.mkdir(`${root}/.wiz/scry/no-bar/evals`);
+		await write(
+			".wiz/scry/no-bar/evals/a.good.ts",
+			"// scry-ignore no-bar: on purpose\nBar\n",
+		);
+		await write(".wiz/scry/no-bar/evals/b.good.ts", "Bar\n");
+		await install("unwritten");
+
+		const measured = await (await Rules.load(root, { fs })).measure({
+			tools: { decider: new FakeDecider() },
+		});
+
+		expect(
+			measured.map(({ rule, cases }) => [
+				rule,
+				cases.map(({ name, kind, findings }) => [
+					name,
+					kind,
+					findings.map(({ line }) => line),
+				]),
+			]),
+		).toEqual([
+			[
+				"no-bar",
+				[
+					["RULE.md good 1", "good", []],
+					["RULE.md bad 1", "bad", [2]],
+					["evals/a.good.ts", "good", []],
+					["evals/b.good.ts", "good", [1]],
+				],
+			],
+			["unwritten", []],
+		]);
+	});
+
+	it("records a case the rule threw on, and refuses a rule that is not there", async () => {
+		await install(
+			"fragile",
+			"export default class { async check() { throw new Error('boom'); } }",
+		);
+		const rules = await Rules.load(root, { fs });
+
+		const [measured] = await rules.measure({
+			ids: ["fragile"],
+			tools: { decider: new FakeDecider() },
+		});
+
+		expect(measured?.cases.map(({ error }) => error)).toEqual(["boom", "boom"]);
+		await expect(
+			rules.measure({ ids: ["nope"], tools: { decider: new FakeDecider() } }),
+		).rejects.toThrow('no rule "nope" in .wiz/scry');
+	});
 });
