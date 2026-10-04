@@ -169,20 +169,21 @@ related.
 
 Whenever you put a todo in front of the user in chat, whether one you suggest
 working on next or one you just added, write it the same way: a heading with
-its subject and id, then two sentences. The first says what the todo is; the
-second says why it matters now, such as what it shares with the work just
-done.
+📝, its subject, and its id, then two sentences. The first says what the todo
+is; the second says why it matters now, such as what it shares with the work
+just done.
 
 ```markdown
-### Upload retries forever on a 413 [#12]
+### 📝 Upload retries forever on a 413 [#12]
 
 The client retries every 4xx in `src/upload.ts`, so an oversized file never
 fails. It touches the retry loop this task just rewrote.
 ```
 
 Use the subject exactly as `arbor todo show` prints it, so the user can find
-it on the `arbor dev` page. The heading sits one level below the report's
-title.
+it on the `arbor dev` page. The 📝 belongs to the heading, never to the
+subject: leave it out of `arbor todo add` and `--subject`. The heading sits
+one level below the report's title.
 
 ## Handing out part of your task
 
@@ -311,11 +312,11 @@ One sentence on what changed.
 
 Stale: todo <id> (remove?).
 
-### <subject> [#<id>]
+### 📝 <subject> [#<id>]
 
 What the todo is. Why it is a good next step.
 
-### <subject> [#<id>]
+### 📝 <subject> [#<id>]
 
 What the todo is. Why it is a good next step.
 ```
@@ -360,7 +361,7 @@ subject says it all.
 
 One sentence on what the task set out to do.
 
-### <subject> [#<id>]
+### 📝 <subject> [#<id>]
 
 What the todo is. Why it is a good next step.
 ```
