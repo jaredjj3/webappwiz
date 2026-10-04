@@ -1,37 +1,48 @@
-/** The agent commands a check sends its prompts to, by effort. */
-export interface Agents {
-	low?: string;
-	medium?: string;
-	high?: string;
+/**
+ * A decision model, by the name its provider gives it: `clef` or
+ * `clef-flash` on Cloudflare Workers AI, which read `CLOUDFLARE_ACCOUNT_ID`
+ * and `CLOUDFLARE_API_TOKEN`, or a Jev on TypeSafe, like `jev-latest`, which
+ * reads `TYPESAFE_API_KEY`.
+ */
+export type Model = "clef" | "clef-flash" | `jev-${string}`;
+
+/** The models a check asks, by the effort of the rules they judge. */
+export interface Models {
+	low?: Model;
+	medium?: Model;
+	high?: Model;
 }
 
 /** How `wiz scry` runs. */
 export interface ScryConfig {
 	/**
-	 * A shell command for each effort, run with `sh -c` in the project root.
-	 * It gets a whole prompt on stdin and answers on stdout, so any agent CLI
-	 * or model runner fits. Only `medium` is required: an effort with no
-	 * command of its own uses `medium`'s.
+	 * The model for each effort. `clef` for all three when not set.
 	 */
-	agents?: Agents;
-	/**
-	 * The estimated input tokens a check spends without asking first; more
-	 * than this and it asks `Proceed? [y/N]`. 100,000 when not set.
-	 */
-	budget?: number;
-	/**
-	 * The estimated input tokens one agent call holds. Files that match the
-	 * same rules share a call, so the rules are sent once for all of them,
-	 * until the next file would take it past this. 32,000 when not set.
-	 */
-	batch?: number;
-	/** How many agent calls run at once. 4 when not set. */
+	models?: Models;
+	/** How many calls run at once. 8 when not set. */
 	jobs?: number;
+}
+
+/** Which credentials a project keeps, and where. */
+export interface CredentialsConfig {
+	/**
+	 * What the operating system's store keeps them under, as
+	 * `webappwiz:<project>`. The repository's directory name when not set,
+	 * which every git worktree of it shares.
+	 */
+	project?: string;
+	/**
+	 * Every credential the project's own code uses, by environment variable
+	 * name, with what it is for, so `creds list` shows it and
+	 * `creds add` takes it. The ones wiz uses itself are always there.
+	 */
+	names?: Record<string, string>;
 }
 
 /** What `.wiz/config.ts` and the user's own config file hold. */
 export interface Config {
 	scry?: ScryConfig;
+	credentials?: CredentialsConfig;
 }
 
 /**

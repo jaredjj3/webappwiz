@@ -27,7 +27,7 @@ export const offered = (opts: RulesProjectOptions): Record<string, Bundle> =>
 
 /**
  * Every rule on offer, parsed, in id order. Each is parsed with the scripts
- * its bundle holds, since a rule that leans on its scripts is only valid
+ * and eval cases its bundle holds, since a rule that leans on its scripts is only valid
  * with them.
  */
 export const shipped = (opts: RulesProjectOptions): Map<string, Rule> =>
@@ -40,6 +40,9 @@ export const shipped = (opts: RulesProjectOptions): Map<string, Rule> =>
 					id,
 					scripts: Object.keys(bundle).filter((path) =>
 						path.startsWith("scripts/"),
+					),
+					evals: Object.keys(bundle).filter((path) =>
+						path.startsWith("evals/"),
 					),
 				}),
 			]),

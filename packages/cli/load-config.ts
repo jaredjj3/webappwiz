@@ -1,11 +1,15 @@
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import type { Agents, Config, ScryConfig } from "./config";
+import type {
+	Config,
+	CredentialsConfig,
+	Model,
+	Models,
+	ScryConfig,
+} from "./config";
 
 /** `scry` with every default filled in. */
 export interface Settings {
-	agents: Agents;
-	budget: number;
-	batch: number;
+	models: Required<Models>;
 	jobs: number;
 }
 
@@ -22,9 +26,9 @@ const EFFORTS = ["low", "medium", "high"] as const;
  * The settings `wiz scry` runs with, each layer over the last: the
  * defaults, the project's `.wiz/config.ts`, the user's
  * `$XDG_CONFIG_HOME/wiz/config.ts` (`~/.config/wiz/config.ts`), then
- * `WIZ_SCRY_AGENT_LOW`, `_MEDIUM`, `_HIGH`, `WIZ_SCRY_BUDGET`,
- * `WIZ_SCRY_BATCH` and `WIZ_SCRY_JOBS`. The agents merge one effort at a time, so a user can
- * swap the project's `medium` and keep its `low`.
+ * `WIZ_SCRY_MODEL_LOW`, `_MEDIUM`, `_HIGH` and `WIZ_SCRY_JOBS`. The models
+ * merge one effort at a time, so a user can swap the project's `high` and
+ * keep its `low`.
  */
 export async function loadConfig(
 	dir: string,
@@ -32,53 +36,86 @@ export async function loadConfig(
 ): Promise<Settings> {
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
-	const home = ps.env("XDG_CONFIG_HOME") ?? `${ps.env("HOME") ?? "~"}/.config`;
 	const layers = [
-		await file(fs, `${dir}/.wiz/config.ts`),
-		await file(fs, `${home}/wiz/config.ts`),
+		...(await files(dir, fs, ps)).map((config) => scry(config)),
 		environment(ps),
 	];
 	const settings: Settings = {
-		agents: {},
-		budget: 100_000,
-		batch: 32_000,
-		jobs: 4,
+		models: { low: "clef", medium: "clef", high: "clef" },
+		jobs: 8,
 	};
 	for (const layer of layers) {
-		settings.agents = { ...settings.agents, ...layer.agents };
-		settings.budget = layer.budget ?? settings.budget;
-		settings.batch = layer.batch ?? settings.batch;
+		settings.models = { ...settings.models, ...layer.models };
 		settings.jobs = layer.jobs ?? settings.jobs;
 	}
 	return settings;
 }
 
-async function file(fs: Fs, path: string): Promise<ScryConfig> {
-	if (!(await fs.exists(path))) {
-		return {};
+/**
+ * The credentials settings `wiz creds` and scry run with: the
+ * project's `.wiz/config.ts`, then the user's own over it, their names
+ * merged.
+ */
+export async function loadCredentialsConfig(
+	dir: string,
+	opts: LoadConfigOptions = {},
+): Promise<CredentialsConfig & { names: Record<string, string> }> {
+	const fs = opts.fs ?? new NodeFs();
+	const ps = opts.ps ?? new NodePs();
+	const settings: CredentialsConfig & { names: Record<string, string> } = {
+		names: {},
+	};
+	for (const { config } of await files(dir, fs, ps)) {
+		const layer = config.credentials ?? {};
+		settings.project = layer.project ?? settings.project;
+		settings.names = { ...settings.names, ...layer.names };
 	}
-	// failing beats falling back: a config silently ignored is a check run
-	// against agents nobody chose
-	const mod = (await import(path).catch((cause: unknown) => {
-		throw new Error(`could not load ${path}: ${cause}`, { cause });
-	})) as { default?: Config };
-	return mod.default?.scry ?? {};
+	return settings;
+}
+
+/** The project's config, then the user's, each with where it came from. */
+async function files(
+	dir: string,
+	fs: Fs,
+	ps: Ps,
+): Promise<{ path: string; config: Config }[]> {
+	const home = ps.env("XDG_CONFIG_HOME") ?? `${ps.env("HOME") ?? "~"}/.config`;
+	const found: { path: string; config: Config }[] = [];
+	for (const path of [`${dir}/.wiz/config.ts`, `${home}/wiz/config.ts`]) {
+		if (await fs.exists(path)) {
+			// failing beats falling back: a config silently ignored is a run
+			// against settings nobody chose
+			const mod = (await import(path).catch((cause: unknown) => {
+				throw new Error(`could not load ${path}: ${cause}`, { cause });
+			})) as { default?: Config };
+			found.push({ path, config: mod.default ?? {} });
+		}
+	}
+	return found;
+}
+
+function scry({ path, config }: { path: string; config: Config }): ScryConfig {
+	const scry = (config.scry ?? {}) as ScryConfig & Record<string, unknown>;
+	// a setting that does nothing now is a check run unlike its author meant
+	const gone = ["agents", "budget", "batch"].filter((key) => key in scry);
+	if (gone.length > 0) {
+		throw new Error(
+			`${path}: scry.${gone.join(", scry.")} ${gone.length === 1 ? "is" : "are"} gone: scry asks decision models now, chosen by scry.models`,
+		);
+	}
+	return scry;
 }
 
 function environment(ps: Ps): ScryConfig {
-	const agents: Agents = {};
+	const models: Models = {};
 	for (const effort of EFFORTS) {
-		const command = ps.env(`WIZ_SCRY_AGENT_${effort.toUpperCase()}`);
-		if (command) {
-			agents[effort] = command;
+		const model = ps.env(`WIZ_SCRY_MODEL_${effort.toUpperCase()}`);
+		if (model) {
+			// checked where the model is used, which knows every provider
+			models[effort] = model as Model;
 		}
 	}
-	return {
-		agents,
-		budget: number(ps, "WIZ_SCRY_BUDGET"),
-		batch: number(ps, "WIZ_SCRY_BATCH"),
-		jobs: number(ps, "WIZ_SCRY_JOBS"),
-	};
+	return { models, jobs: number(ps, "WIZ_SCRY_JOBS") };
 }
 
 function number(ps: Ps, name: string): number | undefined {

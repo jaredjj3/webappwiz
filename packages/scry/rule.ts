@@ -1,13 +1,14 @@
 import { Markdown } from "webappwiz/md";
 import { z } from "zod";
+import { EVAL_FILE } from "./layout";
 
 /** How loudly a violation reports. */
 export type Level = "error" | "warning";
 export const LEVELS = ["error", "warning"] as const;
 
 /**
- * How much judgment the rule takes, which picks the agent that checks it:
- * `none` when its scripts decide it alone and no agent runs, `low` for a grep
+ * How much judgment the rule takes, which picks the model that checks it:
+ * `none` when its scripts decide it alone and no model runs, `low` for a grep
  * or a count, `high` for design judgment across a file, `medium` between.
  */
 export type Effort = "none" | "low" | "medium" | "high";
@@ -24,6 +25,8 @@ export interface ParseOptions {
 	id?: string;
 	/** Its scripts, by path from the project root. */
 	scripts?: string[];
+	/** Its eval cases, by path from the project root. */
+	evals?: string[];
 }
 
 const FRONTMATTER = z.object({
@@ -41,6 +44,14 @@ const FRONTMATTER = z.object({
 	recommended: z.optional(
 		z.enum(["true", "false"], { error: "expected one of true, false" }),
 	),
+	threshold: z.optional(
+		z
+			.string()
+			.transform(Number)
+			.refine((value) => value >= 0 && value <= 1, {
+				error: "expected a number from 0 to 1",
+			}),
+	),
 	version: z.optional(z.string()),
 });
 
@@ -48,7 +59,7 @@ const NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
  * One rule, parsed out of its `RULE.md`: the frontmatter a listing reads, and
- * the document an agent reads for itself.
+ * the document a model judges by.
  *
  * Only `parse` makes one, so holding a `Rule` means the frontmatter passed:
  * it has a name matching its directory and a description. The body is the
@@ -64,10 +75,21 @@ export class Rule {
 		readonly files: string,
 		/** How loudly it reports; `error` when the frontmatter does not say. */
 		readonly level: Level,
-		/** Which agent checks it; `medium` when the frontmatter does not say. */
+		/** Which model checks it; `medium` when the frontmatter does not say. */
 		readonly effort: Effort,
+		/**
+		 * How sure a model has to be that a change breaks the rule before it is
+		 * reported, from 0 to 1; 0.7 when the frontmatter does not say.
+		 */
+		readonly threshold: number,
 		/** Its scripts, by path from the project root, in name order. */
 		readonly scripts: readonly string[],
+		/**
+		 * Its eval cases, by path from the project root, in name order: each a
+		 * file named `<name>.good.<ext>` that should not be found to break it,
+		 * or `<name>.bad.<ext>` that should.
+		 */
+		readonly evals: readonly string[],
 		/**
 		 * Whether a catalog offers this rule as one to start with, which is what
 		 * `scry add --recommended` copies in. A project's own rule says nothing
@@ -113,6 +135,15 @@ export class Rule {
 				"effort: none means its scripts decide it, and it has no scripts/",
 			);
 		}
+		const evals = (opts.evals ?? []).toSorted();
+		const misnamed = evals.find(
+			(path) => !EVAL_FILE.test(path.split("/").at(-1) ?? ""),
+		);
+		if (misnamed !== undefined) {
+			throw new RuleError(
+				`${misnamed}: an eval case is named <name>.good.<ext> or <name>.bad.<ext>`,
+			);
+		}
 		if (opts.id !== undefined && opts.id !== front.name) {
 			throw fail(
 				lineOf(text, "name"),
@@ -125,7 +156,9 @@ export class Rule {
 			front.files ?? "**/*",
 			front.level ?? "error",
 			effort,
+			front.threshold ?? 0.7,
 			scripts,
+			evals,
 			front.recommended === "true",
 			front.version ?? null,
 			text,

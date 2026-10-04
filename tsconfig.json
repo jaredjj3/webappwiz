@@ -30,5 +30,8 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false
-	}
+	},
+	// a rule's eval cases are code that breaks the rule on purpose, and only
+	// fragments of a program
+	"exclude": ["**/node_modules", "**/catalog/*/evals", ".wiz/scry/*/evals"]
 }

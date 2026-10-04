@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { type Agent, Check, Rules } from "@webappwiz/scry";
-import { FakeAgent, ruleDoc } from "@webappwiz/scry/testing";
+import { Check, type Judge, Rules } from "@webappwiz/scry";
+import { FakeJudge, ruleDoc } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { FakeFs } from "webappwiz/system/testing";
 import { Duration } from "webappwiz/time";
@@ -21,11 +21,10 @@ describe("Progress", () => {
 			changes: {
 				since: "main",
 				files: [
-					{ path: "a.ts", diff: "+a" },
-					{ path: "b.ts", diff: "+b" },
+					{ path: "a.ts", diff: "@@ -0,0 +1 @@\n+a" },
+					{ path: "b.ts", diff: "@@ -0,0 +1 @@\n+b" },
 				],
 			},
-			batch: 1,
 			fs,
 		});
 
@@ -57,10 +56,12 @@ describe("Progress", () => {
 			clock,
 			timer,
 		});
-		const agent = {
-			ask: async () => {
+		const judge: Judge = {
+			judge: async (judgment) => {
 				clock.advance(Duration.secs(3));
-				return '[{"file": "a.ts", "rule": "no-foo", "line": 1, "message": "x"}]';
+				return {
+					answers: new Map([["q0", judgment.state.path === "a.ts" ? 1 : 0]]),
+				};
 			},
 		};
 
@@ -69,7 +70,7 @@ describe("Progress", () => {
 			"  · medium       a.ts",
 			"  · medium       b.ts",
 		]);
-		await check.run({ agents: new Map([["medium", agent]]), jobs: 1 });
+		await check.run({ judges: new Map([["medium", judge]]), jobs: 1 });
 		progress.dispose();
 
 		expect(progress.lines().map(color.strip)).toEqual([
@@ -90,7 +91,7 @@ describe("Progress", () => {
 
 		progress.start("sending 2 calls");
 		await check.run({
-			agents: new Map([["medium", new FakeAgent("[]")]]),
+			judges: new Map([["medium", new FakeJudge(0)]]),
 			jobs: 1,
 		});
 		progress.dispose();
@@ -113,19 +114,19 @@ describe("Progress", () => {
 			timer,
 		});
 		let seen: string[] = [];
-		const agent = {
-			ask: async () => {
+		const judge: Judge = {
+			judge: async () => {
 				clock.advance(Duration.secs(12));
 				timer.intervals[0]?.callback();
 				if (seen.length === 0) {
 					seen = progress.lines().map(color.strip);
 				}
-				return "[]";
+				return { answers: new Map([["q0", 0]]) };
 			},
 		};
 
 		progress.start("sending 2 calls");
-		await check.run({ agents: new Map([["medium", agent]]), jobs: 1 });
+		await check.run({ judges: new Map([["medium", judge]]), jobs: 1 });
 		progress.dispose();
 
 		expect(seen).toEqual(["  ⠙ medium  12s  a.ts", "  · medium       b.ts"]);
@@ -142,7 +143,7 @@ describe("Progress", () => {
 
 		progress.start("sending 2 calls");
 		await check.run({
-			agents: new Map([["medium", new FakeAgent(new Error("down"))]]),
+			judges: new Map([["medium", new FakeJudge(new Error("down"))]]),
 			jobs: 1,
 		});
 		progress.dispose();
@@ -167,17 +168,17 @@ describe("Progress", () => {
 			timer,
 		});
 		const cancel = new AbortController();
-		const agent = {
-			ask: () => {
+		const judge: Judge = {
+			judge: () => {
 				clock.advance(Duration.secs(4));
 				cancel.abort();
-				return new Promise<string>(() => undefined);
+				return new Promise(() => undefined);
 			},
 		};
 
 		progress.start("sending 2 calls");
 		await check.run({
-			agents: new Map([["medium", agent]]),
+			judges: new Map([["medium", judge]]),
 			jobs: 1,
 			signal: cancel.signal,
 		});
@@ -189,41 +190,17 @@ describe("Progress", () => {
 		]);
 	});
 
-	it("shows what a running call's agent says it is doing", async () => {
-		const check = await prepare();
-		const progress = new Progress(check, {
-			screen: screen(true),
-			log,
-			clock,
-			timer,
-		});
-		let seen: string[] = [];
-		const agent: Agent = {
-			ask: async (_prompt, opts) => {
-				opts?.observer?.status("thinking ~40 tokens");
-				if (seen.length === 0) {
-					seen = progress.lines().map(color.strip);
-				}
-				return "[]";
-			},
-		};
-
-		progress.start("sending 2 calls");
-		await check.run({ agents: new Map([["medium", agent]]), jobs: 1 });
-		progress.dispose();
-
-		expect(seen[0]).toEqual("  ⠋ medium   0s  a.ts  thinking ~40 tokens");
-		expect(progress.lines().map(color.strip)[0]).toEqual(
-			"  ✔ medium   0s  a.ts",
-		);
-	});
-
 	it("colors errors red and warnings yellow in what a call found", async () => {
 		await fs.mkdir("/p/.wiz/scry/soft");
 		await fs.write(
 			"/p/.wiz/scry/soft/RULE.md",
 			ruleDoc("soft", { level: "warning" }),
 		);
+		await fs.mkdir("/p/.wiz/scry/softer");
+		await fs.write(
+			"/p/.wiz/scry/softer/RULE.md",
+			ruleDoc("softer", { level: "warning" }),
+		);
 		const check = await prepare();
 		const progress = new Progress(check, {
 			screen: screen(true),
@@ -231,16 +208,11 @@ describe("Progress", () => {
 			clock,
 			timer,
 		});
-		const agent = new FakeAgent(
-			JSON.stringify([
-				{ file: "a.ts", rule: "no-foo", line: 1, message: "x" },
-				{ file: "a.ts", rule: "soft", line: 1, message: "y" },
-				{ file: "a.ts", rule: "soft", line: 1, message: "z" },
-			]),
-		);
-
 		progress.start("sending 2 calls");
-		await check.run({ agents: new Map([["medium", agent]]), jobs: 1 });
+		await check.run({
+			judges: new Map([["medium", new FakeJudge(1)]]),
+			jobs: 1,
+		});
 		progress.dispose();
 
 		const [row] = progress.lines();

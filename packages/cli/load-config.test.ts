@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeFs } from "webappwiz/system";
 import { FakePs } from "webappwiz/system/testing";
-import { loadConfig } from "./load-config";
+import { loadConfig, loadCredentialsConfig } from "./load-config";
 
 describe("loadConfig", () => {
 	const fs = new NodeFs();
@@ -24,57 +24,75 @@ describe("loadConfig", () => {
 		await rm(root, { recursive: true, force: true });
 	});
 
-	it("defaults to no agents, a budget of 100k, batches of 32k and 4 jobs", async () => {
+	it("defaults to clef-flash, clef for high effort, and 8 jobs", async () => {
 		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
-			agents: {},
-			budget: 100_000,
-			batch: 32_000,
-			jobs: 4,
+			models: { low: "clef", medium: "clef", high: "clef" },
+			jobs: 8,
 		});
 	});
 
-	it("lays the user's config over the project's, one agent at a time, and the environment over both", async () => {
+	it("lays the user's config over the project's, one model at a time, and the environment over both", async () => {
 		await fs.mkdir(`${root}/p/.wiz`);
 		await fs.write(
 			`${root}/p/.wiz/config.ts`,
-			config({
-				agents: { low: "project-low", medium: "project-medium" },
-				batch: 9,
-				jobs: 2,
-			}),
+			config({ models: { low: "clef", medium: "clef" }, jobs: 2 }),
 		);
 		await fs.mkdir(`${root}/home/.config/wiz`);
 		await fs.write(
 			`${root}/home/.config/wiz/config.ts`,
-			config({ agents: { medium: "user-medium" }, budget: 5 }),
+			config({ models: { medium: "jev-latest" } }),
 		);
-		ps.setEnv({
-			WIZ_SCRY_AGENT_HIGH: "env-high",
-			WIZ_SCRY_JOBS: "8",
-			WIZ_SCRY_BATCH: "3",
-		});
+		ps.setEnv({ WIZ_SCRY_MODEL_HIGH: "jev-preview", WIZ_SCRY_JOBS: "16" });
 
 		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
-			agents: { low: "project-low", medium: "user-medium", high: "env-high" },
-			budget: 5,
-			batch: 3,
-			jobs: 8,
+			models: { low: "clef", medium: "jev-latest", high: "jev-preview" },
+			jobs: 16,
 		});
 	});
 
 	it("reads the user's config from XDG_CONFIG_HOME when it is set", async () => {
 		await fs.mkdir(`${root}/xdg/wiz`);
-		await fs.write(`${root}/xdg/wiz/config.ts`, config({ budget: 7 }));
+		await fs.write(`${root}/xdg/wiz/config.ts`, config({ jobs: 7 }));
 		ps.setEnv({ XDG_CONFIG_HOME: `${root}/xdg` });
 
-		expect((await loadConfig(`${root}/p`, { fs, ps })).budget).toEqual(7);
+		expect((await loadConfig(`${root}/p`, { fs, ps })).jobs).toEqual(7);
+	});
+
+	it("refuses the settings agents used to need, rather than ignore them", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			config({ agents: { medium: "claude -p" }, budget: 5 }),
+		);
+
+		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
+			"scry.agents, scry.budget are gone: scry asks decision models now, chosen by scry.models",
+		);
 	});
 
 	it("refuses a number in the environment that is not one", async () => {
-		ps.setEnv({ WIZ_SCRY_BUDGET: "lots" });
+		ps.setEnv({ WIZ_SCRY_JOBS: "lots" });
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
-			'WIZ_SCRY_BUDGET: expected a number, got "lots"',
+			'WIZ_SCRY_JOBS: expected a number, got "lots"',
 		);
+	});
+
+	it("merges the credentials both configs name, the user's project name over the project's", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			'export default { credentials: { project: "shop", names: { STRIPE_SECRET_KEY: "Stripe" } } };\n',
+		);
+		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.write(
+			`${root}/home/.config/wiz/config.ts`,
+			'export default { credentials: { names: { SENTRY_TOKEN: "Sentry" } } };\n',
+		);
+
+		expect(await loadCredentialsConfig(`${root}/p`, { fs, ps })).toEqual({
+			project: "shop",
+			names: { STRIPE_SECRET_KEY: "Stripe", SENTRY_TOKEN: "Sentry" },
+		});
 	});
 });

@@ -8,6 +8,7 @@ describe("catalog", () => {
 		Rule.parse(files["RULE.md"] ?? "", {
 			id,
 			scripts: Object.keys(files).filter((path) => path.startsWith("scripts/")),
+			evals: Object.keys(files).filter((path) => path.startsWith("evals/")),
 		}),
 	);
 

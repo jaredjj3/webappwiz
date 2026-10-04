@@ -1,5 +1,5 @@
 import { type Fs, NodeFs } from "webappwiz/system";
-import { RULE_FILE, RULES_ROOT } from "./layout";
+import { EVALS_DIR, RULE_FILE, RULES_ROOT } from "./layout";
 import { Rule, RuleError } from "./rule";
 
 /** What `load` reads through; the real filesystem by default. */
@@ -41,6 +41,9 @@ export class Rules {
 			const scripts = await fs
 				.readdir(`${dir}/${RULES_ROOT}/${id}/scripts`)
 				.catch((): string[] => []); // no scripts/ is the usual case
+			const evals = await fs
+				.readdir(`${dir}/${RULES_ROOT}/${id}/${EVALS_DIR}`)
+				.catch((): string[] => []);
 			try {
 				rules.push(
 					Rule.parse(text, {
@@ -49,6 +52,9 @@ export class Rules {
 						scripts: scripts
 							.filter((name) => !name.startsWith("."))
 							.map((name) => `${RULES_ROOT}/${id}/scripts/${name}`),
+						evals: evals
+							.filter((name) => !name.startsWith("."))
+							.map((name) => `${RULES_ROOT}/${id}/${EVALS_DIR}/${name}`),
 					}),
 				);
 			} catch (error) {

@@ -1,6 +1,6 @@
 ---
 name: webappwiz
-description: "Check whether the webappwiz package already covers a piece of infrastructure before writing it by hand or adding a dependency for it. Read this before writing any of: time, clocks, durations or timers; logging; id generation; CLI argument parsing; background tasks or queues; web workers; markdown parsing; typed event emitters; 2D geometry or spatial indexes; filesystem, env or process access; AbortSignal plumbing; disposable resources; browser scroll, animation frames or visibility. Also use when asked to update or upgrade webappwiz in a project, and whenever the user says webappwiz."
+description: "Check whether the webappwiz package already covers a piece of infrastructure before writing it by hand or adding a dependency for it. Read this before writing any of: time, clocks, durations or timers; logging; id generation; CLI argument parsing; background tasks or queues; web workers; markdown parsing; typed event emitters; 2D geometry or spatial indexes; filesystem, env or process access; API keys, tokens, secrets or credentials; AbortSignal plumbing; disposable resources; browser scroll, animation frames or visibility. Also use when asked to update or upgrade webappwiz in a project, and whenever the user says webappwiz."
 version: 0.0.31
 ---
 
@@ -50,6 +50,47 @@ style guide and a review, and neither of them is here.
 
 One line naming the subpath you read and why it is not the one, then write it
 here. A wrong module taken up is worse than one written twice.
+
+## Credentials
+
+An API key, token or other secret a project's code needs comes from
+`webappwiz/credentials`: the environment first, then the operating system's
+secret store (the Keychain, Credential Manager, or a Linux secret service).
+Never put one in a `.env` file, a config file, source, a test, or a command
+line, and never ask for one in chat.
+
+1. Name it in `.wiz/config.ts`, by its environment variable name, with what
+   it is for:
+
+   ```ts
+   export default {
+   	credentials: { names: { STRIPE_SECRET_KEY: "Stripe, for checkout" } },
+   };
+   ```
+
+2. Read it in code with `Credentials` over a `SystemSecretStore` named for
+   the project, which `bunx @webappwiz/cli creds list` prints on its
+   first line (`project <project>, saved in ...`). Take the `Credentials` as a
+   dependency, so a test hands in one over `FakeSecretStore`:
+
+   ```ts
+   import { Credentials, SystemSecretStore } from "webappwiz/credentials";
+
+   const credentials = new Credentials(new SystemSecretStore("<project>"));
+   const key = await credentials.require("STRIPE_SECRET_KEY");
+   ```
+
+3. Run `bunx @webappwiz/cli creds list` to see which are missing. It
+   never prints a value. For each missing one, ask the user to run
+   `bunx @webappwiz/cli creds add <NAME>` themselves: it asks for the
+   value at a prompt that shows nothing, and refuses when there is no
+   terminal, so you cannot and should not run it for them. `credentials
+   remove <NAME>` deletes one.
+
+Nothing reads a value back out for you to see, and nothing should: do not
+print one, log one, or look one up with the system's own tools
+(`security`, `secret-tool`, `cmdkey`). Code that needs a value reads it
+itself.
 
 ## Updating
 

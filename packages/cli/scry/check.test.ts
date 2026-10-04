@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ruleDoc } from "@webappwiz/scry/testing";
+import type { Judge } from "@webappwiz/scry";
+import { FakeJudge, ruleDoc } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
@@ -19,11 +20,14 @@ describe("wiz scry", () => {
 	// plain lines, as on a pipe, whatever runs the tests
 	const screen = { live: false, columns: 80, write: () => undefined };
 
-	const answering = (reply: string) =>
-		`cat > /dev/null; printf '%s' '${reply}'`;
-	const FOUND = answering(
-		'[{"rule": "no-foo", "line": 1, "message": "foo is here"}]',
-	);
+	let judge: Judge;
+	let asked: string[];
+	const providers = {
+		judge: async (model: string) => {
+			asked.push(model);
+			return judge;
+		},
+	};
 
 	const printed = () =>
 		color.strip(
@@ -49,11 +53,16 @@ describe("wiz scry", () => {
 		ps = new NodePs({ proc });
 		proc.chdir(root);
 		log = new MemoryLogger();
+		judge = new FakeJudge(0.9);
+		asked = [];
 		await git("init", "-q", "-b", "main");
 		await git("config", "user.email", "t@example.com");
 		await git("config", "user.name", "T");
 		await fs.mkdir(`${root}/.wiz/scry/no-foo`);
-		await fs.write(`${root}/.wiz/scry/no-foo/RULE.md`, ruleDoc("no-foo"));
+		await fs.write(
+			`${root}/.wiz/scry/no-foo/RULE.md`,
+			ruleDoc("no-foo", { description: "No foo." }),
+		);
 		await fs.write(`${root}/a.ts`, "const a = 1;\n");
 		await git("add", ".");
 		await git("commit", "-qm", "base");
@@ -64,21 +73,16 @@ describe("wiz scry", () => {
 		await rm(root, { recursive: true, force: true });
 	});
 
-	const run = (
-		prompt: string | null = null,
-		format = "text",
-		paths: string[] = [],
-	) => check({ paths, format, log, fs, ps, screen, prompt: () => prompt });
+	const run = (format = "text", paths: string[] = [], model?: string) =>
+		check({ paths, format, model, log, fs, ps, screen, providers });
 
-	it("prints the findings under their file and exits 1 on an error", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = FOUND;
-
+	it("prints the findings under their file, how sure the model is, and exits 1 on an error", async () => {
 		await run();
 
 		expect(printed()).toEqual(
 			[
 				"a.ts",
-				"  1   error   foo is here   no-foo",
+				"  1   error   90%   No foo.   no-foo",
 				"",
 				"✖ 1 problem (1 error, 0 warnings) in 1 file since HEAD",
 			].join("\n"),
@@ -86,8 +90,8 @@ describe("wiz scry", () => {
 		expect(proc.exits).toEqual([1]);
 	});
 
-	it("says so when nothing breaks a rule, and exits 0", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = answering("[]");
+	it("says so when the model is not sure enough of anything, and exits 0", async () => {
+		judge = new FakeJudge(0.2);
 
 		await run();
 
@@ -95,95 +99,60 @@ describe("wiz scry", () => {
 		expect(proc.exits).toEqual([]);
 	});
 
-	it("prints the report as JSON when asked", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = FOUND;
-
-		await run(null, "json");
+	it("prints the report as JSON when asked, probabilities and all", async () => {
+		await run("json");
 
 		expect(JSON.parse(printed())).toMatchObject({
 			since: "HEAD",
-			findings: [{ file: "a.ts", line: 1, rule: "no-foo", level: "error" }],
+			findings: [
+				{
+					file: "a.ts",
+					line: 1,
+					rule: "no-foo",
+					level: "error",
+					probability: 0.9,
+				},
+			],
 		});
 	});
 
-	it("reports a file whose agent failed as not checked, and exits 2", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = "echo broke >&2; exit 3";
+	it("reports a file whose judge failed as not checked, and exits 2", async () => {
+		judge = new FakeJudge(new Error("Workers AI answered 401"));
 
 		await run();
 
 		expect(printed()).toContain("not checked");
+		expect(printed()).toContain("a.ts   Workers AI answered 401");
 		expect(printed()).toEndWith(
 			"⚠ no problems found in 1 file since HEAD, but 1 not checked",
 		);
-		expect(printed()).toContain(
-			"a.ts   `echo broke >&2; exit 3` exited 3: broke",
-		);
 		expect(proc.exits).toEqual([2]);
 	});
 
-	it("uses medium's agent for an effort with none of its own, and says so", async () => {
+	it("judges each effort by its model: clef, unless the config says", async () => {
+		await fs.mkdir(`${root}/.wiz/scry/deep`);
 		await fs.write(
-			`${root}/.wiz/scry/no-foo/RULE.md`,
-			ruleDoc("no-foo", { effort: "low" }),
+			`${root}/.wiz/scry/deep/RULE.md`,
+			ruleDoc("deep", { effort: "high" }),
 		);
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = FOUND;
 
 		await run();
+		proc.env.WIZ_SCRY_MODEL_HIGH = "jev-latest";
+		await run();
 
-		expect(warned()).toContain("no agent for effort low: using medium's");
-		expect(printed()).toContain("foo is here");
+		expect(asked).toEqual(["clef", "clef", "clef", "jev-latest"]);
 	});
 
-	it("refuses to run without a medium agent, and shows a config that would do", async () => {
-		await expect(run()).rejects.toThrow(
-			/no agent for effort medium: put one in \.wiz\/config\.ts/,
+	it("judges every effort by the one model it is given", async () => {
+		await fs.mkdir(`${root}/.wiz/scry/deep`);
+		await fs.write(
+			`${root}/.wiz/scry/deep/RULE.md`,
+			ruleDoc("deep", { effort: "high" }),
 		);
-	});
 
-	it("asks before spending more than its budget, and runs on a yes", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = FOUND;
-		proc.env.WIZ_SCRY_BUDGET = "10";
-		let asked = "";
+		await run("text", [], "jev-preview");
 
-		await check({
-			paths: [],
-			format: "text",
-			log,
-			fs,
-			ps,
-			screen,
-			prompt: (question) => {
-				asked = question;
-				return "y";
-			},
-		});
-
-		expect(asked).toMatch(
-			/^~\d+ input tokens across 1 calls \(budget 10\)\. Proceed\? \[y\/N\]$/,
-		);
-		expect(printed()).toContain("foo is here");
-	});
-
-	it("does not run past its budget on anything but a yes", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = FOUND;
-		proc.env.WIZ_SCRY_BUDGET = "10";
-
-		await run("n");
-
-		expect(warned()).toEqual(["not run"]);
-		expect(proc.exits).toEqual([2]);
-	});
-
-	it("says how to answer when no one can, and exits 2", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = FOUND;
-		proc.env.WIZ_SCRY_BUDGET = "10";
-
-		await run(null);
-
-		expect(warned().join("\n")).toContain(
-			"no answer on stdin: ask, then rerun with the answer piped in, as in `echo y | wiz scry`",
-		);
-		expect(proc.exits).toEqual([2]);
+		expect(asked).toEqual(["jev-preview", "jev-preview"]);
 	});
 
 	it("says so when nothing changed", async () => {
@@ -195,12 +164,11 @@ describe("wiz scry", () => {
 	});
 
 	it("checks only the changed files under the paths it is given, from the working directory", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = FOUND;
 		await fs.mkdir(`${root}/src`);
 		await fs.write(`${root}/src/b.ts`, "const foo = 2;\n");
 		proc.chdir(`${root}/src`);
 
-		await run(null, "json", ["."]);
+		await run("json", ["."]);
 
 		expect(JSON.parse(printed()).findings).toMatchObject([
 			{ file: "src/b.ts", line: 1, rule: "no-foo" },
@@ -210,13 +178,13 @@ describe("wiz scry", () => {
 	it("says where it looked when nothing changed under the paths", async () => {
 		await fs.mkdir(`${root}/src`);
 
-		await run(null, "text", ["src"]);
+		await run("text", ["src"]);
 
 		expect(warned()).toEqual(["nothing changed since main in src"]);
 	});
 
 	it("says what it is sending, and each call as it comes back, on stderr", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = answering("[]");
+		judge = new FakeJudge(0);
 
 		await check({
 			paths: [],
@@ -225,8 +193,8 @@ describe("wiz scry", () => {
 			fs,
 			ps,
 			screen,
+			providers,
 			clock: new FakeClock(),
-			prompt: () => null,
 		});
 
 		expect(warned().map((line) => color.strip(line))).toEqual([
@@ -239,7 +207,7 @@ describe("wiz scry", () => {
 	});
 
 	it("stops on the first ctrl-c, reports what came back, and quits on the next", async () => {
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = "cat > /dev/null; sleep 5";
+		judge = { judge: () => new Promise(() => undefined) };
 		setTimeout(() => proc.dispatch("SIGINT"), 200);
 
 		await run();
@@ -257,27 +225,15 @@ describe("wiz scry", () => {
 		expect(proc.exits).toEqual([2, 130]);
 	});
 
-	it("says what the agents really spent when they report it", async () => {
-		const result = JSON.stringify({
-			type: "result",
-			subtype: "success",
-			is_error: false,
-			result: "[]",
-			total_cost_usd: 0.0412,
-			usage: {
-				input_tokens: 500,
-				cache_read_input_tokens: 6500,
-				output_tokens: 1200,
-			},
-		});
-		proc.env.WIZ_SCRY_AGENT_MEDIUM = `cat > /dev/null; echo '${result}'`;
+	it("says what the judges really spent when they report it", async () => {
+		judge = new FakeJudge(0, { input: 7000 });
 
 		await run();
 
 		expect(printed()).toEqual(
 			[
 				"✔ no problems in 1 file since HEAD",
-				"  spent 7k input tokens (6.5k cached) and 1.2k output, $0.04, across 1 call",
+				"  spent 7k input tokens across 1 call",
 			].join("\n"),
 		);
 	});

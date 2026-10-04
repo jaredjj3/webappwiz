@@ -11,8 +11,9 @@ directory under `.wiz/scry`, tracked with the code it governs:
 
 ```
 .wiz/scry/<id>/
-├── RULE.md        # required: what the rule wants, in prose an agent judges by
+├── RULE.md        # required: what the rule wants, in prose a model judges by
 ├── scripts/       # optional: programs that do the mechanical part
+├── evals/         # optional: cases whose answer is known, like tests
 └── references/    # optional: anything longer the rule points to
 ```
 
@@ -22,13 +23,19 @@ directory under `.wiz/scry`, tracked with the code it governs:
 - `description`: one line. Required.
 - `files`: a glob of the files it applies to. Every file when absent.
 - `level`: `error` or `warning`. `error` when absent.
-- `effort`: how much judgment it takes, which picks the agent that checks
-  it. `none` when its scripts decide it alone and no agent runs, `low` for a
+- `effort`: how much judgment it takes, which picks the model that checks
+  it. `none` when its scripts decide it alone and no model runs, `low` for a
   grep or a count, `medium` (the default) for most rules, `high` for design
   judgment across a whole file.
+- `threshold`: how sure the model has to be that a change breaks the rule
+  before it is reported, from 0 to 1. 0.7 when absent; raise it for a rule
+  that reports too much, lower it for one that misses.
 
-The body only has to say enough that an agent who reads nothing else knows
-what counts and what does not. Good and bad examples do that best.
+The body is what a decision model judges by: it reads the rule, the file and
+the change, and answers how likely the changed lines are to break the rule,
+without writing anything. So the body has to say what counts and what does
+not plainly enough that no reasoning is needed. One condition a rule judges
+best; good and bad examples do the rest.
 
 Code excuses itself from a rule with a comment holding
 `scry-ignore <id>: <reason>`, which covers the statement under it, or
@@ -44,54 +51,65 @@ scry, with rules in `.wiz/rules`, moves them with `bunx @webappwiz/cli update`.
 
 ## Checking a change
 
-`wiz scry` is a linter: it finds the change with git, sends the changed
-files to the agent their rules' effort names, and prints one block of
-findings. When the user names directories or files, pass them, as in
-`bunx @webappwiz/cli scry packages/api`, and it checks only the changed
-files under them.
+`wiz scry` is a linter: it finds the change with git, asks a decision model
+how likely each changed file is to break each of its rules, and prints one
+block of findings, each with that probability. When the user names
+directories or files, pass them, as in `bunx @webappwiz/cli scry
+packages/api`, and it checks only the changed files under them.
 Show its report as it printed it, in one code block, and add nothing to it.
 The progress lines it prints to stderr while the calls run are not part of
 the report; leave them out.
 Fixing what it found is a separate request; do not start unless asked.
 
-When the prompts would cost more input tokens than the project's budget, it
-asks `Proceed? [y/N]` on stdin. Run where nobody can answer, it prints the
-question with `no answer on stdin` and exits 2. Then show the user that
-question as printed, and ask exactly: "Proceed? yes or no". On a yes, rerun
-with the answer piped in, `echo y | bunx @webappwiz/cli scry`, and on
-anything else, stop. When they answer with paths instead, rerun with those
-paths and without the piped answer: it asks again if that still costs too
-much.
+## Fixing what it found
 
-When it says there is no agent for effort `medium`, show the user the
-message and ask which command should answer. Never pick a model or vendor
-for them. Agents are shell commands that read a prompt on stdin and answer
-on stdout. The prompt holds everything they need, so suggest turning their
-tools off where the command allows it (`--tools ""` for `claude -p`): an
-agent free to read the repository can spend minutes on it. For `claude -p`,
-also suggest `--output-format stream-json --verbose
---include-partial-messages`: `wiz scry` recognizes that output and shows
-what the model is doing and what the check really cost. They are set per
-effort in `.wiz/config.ts` (the project's),
+The model decides what is reported; fixing it is yours. For each finding,
+read the rule it names, `.wiz/scry/<rule>/RULE.md`, and change the lines it
+points at to follow it. A finding about a run of added lines points at the
+first of them, so read the run. Then run `wiz scry` again on the same paths.
+A finding is a probability, not a proof: when the code already follows the
+rule, leave it, say which finding you left and why, and offer a
+`scry-ignore` comment or a higher `threshold` for the rule rather than
+working around it.
+
+## Models
+
+Each effort has a model, `clef` for all three when nothing says
+otherwise. `clef` and `clef-flash` run on
+Cloudflare Workers AI and need `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN`; a Jev like `jev-latest` runs on TypeSafe and needs
+`TYPESAFE_API_KEY`. They come from the environment, or else the system's
+secret store. When `wiz scry` says one is missing, ask the user to run
+`bunx @webappwiz/cli creds add <NAME>` themselves, which asks for the
+value at a hidden prompt. Never ask for a value, set one, or look one up;
+`bunx @webappwiz/cli creds list` shows what is there without showing
+any. Models are
+set per effort in `.wiz/config.ts` (the project's),
 `~/.config/wiz/config.ts` (the user's own, over the project's), or
-`WIZ_SCRY_AGENT_LOW`, `_MEDIUM`, `_HIGH` (over both):
+`WIZ_SCRY_MODEL_LOW`, `_MEDIUM`, `_HIGH` (over both), and `--model <name>`
+judges every rule with one, to compare two:
 
 ```ts
 import { defineConfig } from "@webappwiz/cli/config";
 
 export default defineConfig({
 	scry: {
-		agents: {
-			low: "<fast command>",
-			medium: "<command>",
-			high: "<strong command>",
-		},
-		budget: 100_000, // estimated input tokens a check spends without asking
-		batch: 32_000, // estimated input tokens one agent call holds
-		jobs: 4, // agent calls at once
+		models: { low: "clef", medium: "clef", high: "clef" },
+		jobs: 8, // calls at once
 	},
 });
 ```
+
+To compare models, or to see whether a rule's wording or `threshold` works,
+run `bunx @webappwiz/cli scry eval`, once per model with `--model`. It
+judges each rule against its eval cases and its Good and Bad examples and
+says which it got wrong. A rule that gets its own cases wrong needs plainer
+prose, clearer examples, or another threshold before it can be trusted on
+real code.
+
+When it refuses a config holding `agents`, `budget` or `batch`, those are
+from before decision models: show the user the message, and with their
+yes, replace `agents` with `models` and drop the other two.
 
 ## When a style change could be a rule
 
@@ -111,7 +129,7 @@ and adding the rule are two pieces of work; say which you are doing.
    consider only those tools. When one of them can express the rule, say so,
    show the configuration you would add, and ask whether to do that instead
    of the rule, or as well: a linter checks every file for nothing, and a
-   rule costs an agent call. When nothing the project runs fits, say so, and
+   rule costs a model call. When nothing the project runs fits, say so, and
    do not propose adopting a new tool unless asked.
 3. When a shipped rule covers it, `wiz scry add <id>` copies it in, and it can
    be edited from there. Otherwise write `.wiz/scry/<id>/RULE.md`, with an
@@ -119,8 +137,9 @@ and adding the rule are two pieces of work; say which you are doing.
 4. Pick the lowest effort that can judge it. When part of it is mechanical,
    offer a script (see Scripts); when a script can decide all of it, the
    rule takes `effort: none` and costs nothing to check.
-5. Run `wiz scry list`, which validates every rule's frontmatter and names the
-   line that is wrong.
+5. Write its evals (see Evals).
+6. Run `wiz scry list`, which validates every rule's frontmatter and names the
+   line that is wrong, then `wiz scry eval <id>`.
 
 ## Updating a rule
 
@@ -135,6 +154,27 @@ becomes the project's own.
 Confirm with the user, then run `wiz scry remove <id>`, which deletes its
 directory, scripts and all.
 
+## Evals
+
+A rule's `evals/` holds cases whose answer is known, the way tests sit
+beside code. `<name>.good.<ext>` is a file that should not be found to
+break the rule; `<name>.bad.<ext>` is one that should. Write a few of each
+for every rule a model judges:
+
+- Name a case for what the code is (`invoice-parser.ts`,
+  `cart-totals.test.ts`), never for the verdict or the rule: the model is
+  shown `<name>.<ext>`.
+- Make them different from the rule's own Good and Bad examples, which the
+  model reads with the rule: an eval case is the only code it has not seen.
+- Bad cases break the rule plainly, by its own wording, one way each. Good
+  cases include a near miss the rule's wording excuses, and one the rule
+  does not apply to.
+- No comment says which a case is.
+
+A check never checks them. When `wiz scry eval` gets one wrong, change the
+rule's prose, examples or `threshold`, not the case, unless the case was
+wrong by the rule's own wording.
+
 ## Scripts
 
 A script does the part of a rule a program can settle. `wiz scry` runs
@@ -148,8 +188,9 @@ every file in the rule's `scripts/`, so each one follows this contract:
 - It reads and never writes.
 
 With `effort: none`, every line it prints is a finding. With any other
-effort, its lines are candidates the agent judges, so a script that only
-narrows the search is still worth having. Write it in whatever the project
+effort, the model judges each line it prints against the rule, and a
+finding there carries the script's message, so a script that only narrows
+the search is still worth having. Write it in whatever the project
 already runs, so it needs nothing new installed.
 
 **Every new or changed script needs the user's approval before it is

@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import { FakeSecretStore } from "webappwiz/credentials/testing";
 import { MemoryLogger } from "webappwiz/log";
-import { FakeFs } from "webappwiz/system/testing";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
 
 import { update } from "./update";
 
 describe("update", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
+	let ps: FakePs;
+	let store: FakeSecretStore;
 
 	const manifest = (deps: Record<string, string>) =>
 		JSON.stringify({ name: "app", dependencies: deps }, null, "\t");
@@ -19,12 +22,21 @@ describe("update", () => {
 		version: "1.0.0",
 		log,
 		fs,
+		ps,
+		store,
 		skills: { arbor: { "SKILL.md": skill("1.0.0") } },
 	});
 
 	beforeEach(async () => {
 		fs = new FakeFs();
 		log = new MemoryLogger();
+		ps = new FakePs();
+		ps.setCaptureOutput("/p\n/p/.git\n", "");
+		store = new FakeSecretStore({
+			CLOUDFLARE_ACCOUNT_ID: "account",
+			CLOUDFLARE_API_TOKEN: "token",
+			TYPESAFE_API_KEY: "key",
+		});
 		await fs.mkdir("/p");
 	});
 
@@ -120,5 +132,26 @@ describe("update", () => {
 		expect(log.entries.map((entry) => String(entry.message))).toContain(
 			"/p/.wiz/rules and /p/.wiz/scry both exist: move what you still want from /p/.wiz/rules by hand",
 		);
+	});
+
+	it("names the credentials nothing has yet, and how a person adds each", async () => {
+		store.values.delete("CLOUDFLARE_API_TOKEN");
+		store.values.delete("TYPESAFE_API_KEY");
+
+		await update(updating());
+
+		expect(log.entries.at(-1)?.message).toEqual(
+			[
+				"2 credentials missing; a person runs:",
+				"  bunx @webappwiz/cli creds add CLOUDFLARE_API_TOKEN",
+				"  bunx @webappwiz/cli creds add TYPESAFE_API_KEY",
+			].join("\n"),
+		);
+	});
+
+	it("says nothing about credentials when every one is there", async () => {
+		await update(updating());
+
+		expect(String(log.entries.at(-1)?.message)).not.toContain("missing");
 	});
 });

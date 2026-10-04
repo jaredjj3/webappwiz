@@ -42,6 +42,26 @@ describe("Rule", () => {
 		);
 	});
 
+	it("reports at a probability of 0.7 unless the frontmatter sets a threshold", () => {
+		expect(Rule.parse(ruleDoc("no-foo")).threshold).toEqual(0.7);
+		expect(Rule.parse(ruleDoc("no-foo", { threshold: 0.8 })).threshold).toEqual(
+			0.8,
+		);
+	});
+
+	it("rejects a threshold outside 0 to 1", () => {
+		for (const threshold of ["1.5", "high"]) {
+			const doc = ruleDoc("no-foo", { threshold: 0.8 }).replace(
+				"threshold: 0.8",
+				`threshold: ${threshold}`,
+			);
+
+			expect(() => Rule.parse(doc)).toThrow(
+				/^RULE\.md:6: threshold: expected a number from 0 to 1/,
+			);
+		}
+	});
+
 	it("keeps the whole document verbatim", () => {
 		const doc = ruleDoc("no-foo");
 

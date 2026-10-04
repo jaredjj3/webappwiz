@@ -1,95 +1,214 @@
 import { describe, expect, it } from "bun:test";
-import { Call } from "./call";
+import { Call, type CallFile } from "./call";
 import { Rule } from "./rule";
 import { ruleDoc } from "./testing";
 
 describe("Call", () => {
-	const rules = [
-		Rule.parse(ruleDoc("no-foo")),
-		Rule.parse(ruleDoc("no-bar", { level: "warning" })),
-	];
-	const first = {
-		file: { path: "src/a.ts", diff: "+const a = 1;" },
-		text: "const a = 1;\nconst b = 2;",
-		candidates: new Map([
-			["no-foo", [{ file: "src/a.ts", line: 2, message: "looks like foo" }]],
-		]),
-	};
-	const second = {
-		file: { path: "src/b.ts", diff: "+const c = 3;" },
-		text: "const c = 3;",
+	const noFoo = Rule.parse(ruleDoc("no-foo", { description: "No foo." }));
+	const noBar = Rule.parse(
+		ruleDoc("no-bar", { level: "warning", threshold: 0.8 }),
+	);
+	// lines 2, 3 and 5 are new
+	const diff = [
+		"--- a/src/a.ts",
+		"+++ b/src/a.ts",
+		"@@ -1,3 +1,5 @@",
+		" const a = 1;",
+		"+const b = 2;",
+		"+const c = 3;",
+		" const d = 4;",
+		"-const gone = 0;",
+		"+const e = 5;",
+	].join("\n");
+	const text = [
+		"const a = 1;",
+		"const b = 2;",
+		"const c = 3;",
+		"const d = 4;",
+		"const e = 5;",
+	].join("\n");
+	const file = (
+		opts: Partial<CallFile> & { text?: string } = {},
+	): CallFile => ({
+		file: { path: "src/a.ts", diff },
+		text,
 		candidates: new Map(),
-	};
-	const call = new Call({ effort: "low", rules, files: [first] });
-	const batch = new Call({ effort: "low", rules, files: [first, second] });
-
-	it("puts every rule, the numbered file, the diff and the candidates in its prompt", () => {
-		expect(call.prompt).toContain('<rule id="no-foo" level="error">');
-		expect(call.prompt).toContain('<rule id="no-bar" level="warning">');
-		expect(call.prompt).toContain("    2| const b = 2;");
-		expect(call.prompt).toContain("+const a = 1;");
-		expect(call.prompt).toContain("- no-foo, src/a.ts line 2: looks like foo");
-		expect(call.prompt).toContain("scry-ignore <rule>: <reason>");
+		...opts,
+	});
+	const verdict = (...answers: number[]) => ({
+		answers: new Map(answers.map((answer, index) => [`q${index}`, answer])),
 	});
 
-	it("holds each file of a batch and its diff once, under the rules once", () => {
-		expect(batch.files).toEqual(["src/a.ts", "src/b.ts"]);
-		expect(batch.prompt.split('<rule id="no-foo"').length).toEqual(2);
-		expect(batch.prompt).toContain('<file path="src/b.ts">');
-		expect(batch.prompt).toContain('<diff path="src/b.ts">');
-		expect(batch.prompt).toContain("+const c = 3;");
+	it("asks about each run of added lines, once a rule", () => {
+		const [call] = Call.plan({
+			effort: "low",
+			rules: [noFoo, noBar],
+			file: file(),
+		});
+
+		expect(
+			Object.values(call?.judgment.questions ?? {}).map(
+				(question) => question.instructions,
+			),
+		).toEqual([
+			expect.stringContaining('`rules["no-foo"]` at lines 2 to 3 of `file`'),
+			expect.stringContaining('`rules["no-foo"]` at line 5 of `file`'),
+			expect.stringContaining('`rules["no-bar"]` at lines 2 to 3 of `file`'),
+			expect.stringContaining('`rules["no-bar"]` at line 5 of `file`'),
+		]);
 	});
 
-	it("reads each finding of a batch against the file it names", () => {
-		const reply =
-			'[{"file": "src/b.ts", "rule": "no-foo", "line": 1, "message": "foo"}, {"file": "src/else.ts", "rule": "no-foo", "line": 1, "message": "x"}, {"rule": "no-foo", "line": 1, "message": "which?"}]';
+	it("puts the numbered file, the diff and each rule once in the state", () => {
+		const [call] = Call.plan({
+			effort: "low",
+			rules: [noFoo, noBar],
+			file: file(),
+		});
 
-		expect(batch.findings(reply)).toEqual([
+		expect(call?.judgment.state).toEqual({
+			path: "src/a.ts",
+			file: expect.stringContaining("    2| const b = 2;"),
+			diff,
+			rules: {
+				"no-foo": noFoo.document.trim(),
+				"no-bar": noBar.document.trim(),
+			},
+		});
+	});
+
+	it("asks about each line a script flagged", () => {
+		const [call] = Call.plan({
+			effort: "low",
+			rules: [noFoo],
+			file: file({
+				candidates: new Map([
+					[
+						"no-foo",
+						[{ file: "src/a.ts", line: 4, message: "looks like foo" }],
+					],
+				]),
+			}),
+		});
+
+		expect(call?.judgment.questions.q2?.instructions).toEqual(
+			'A script flagged line 4 of `file`: "looks like foo". Does that line break the rule in `rules["no-foo"]`?',
+		);
+		expect(call?.findings(verdict(0, 0, 0.9))).toEqual([
 			{
-				file: "src/b.ts",
-				line: 1,
+				file: "src/a.ts",
+				line: 4,
 				level: "error",
 				rule: "no-foo",
-				message: "foo",
+				message: "looks like foo",
+				probability: 0.9,
 			},
 		]);
+	});
+
+	it("reports each answer at or above its rule's threshold, under the rule's description", () => {
+		const [call] = Call.plan({
+			effort: "low",
+			rules: [noFoo, noBar],
+			file: file(),
+		});
+
+		expect(call?.findings(verdict(0.7, 0.69, 0.79, 0.8))).toEqual([
+			{
+				file: "src/a.ts",
+				line: 2,
+				level: "error",
+				rule: "no-foo",
+				message: "No foo.",
+				probability: 0.7,
+			},
+			{
+				file: "src/a.ts",
+				line: 5,
+				level: "warning",
+				rule: "no-bar",
+				message: "Prose about no-bar.",
+				probability: 0.8,
+			},
+		]);
+	});
+
+	it("keeps the likelier of two findings on one line", () => {
+		const [call] = Call.plan({
+			effort: "low",
+			rules: [noFoo],
+			file: file({
+				candidates: new Map([
+					["no-foo", [{ file: "src/a.ts", line: 2, message: "flagged" }]],
+				]),
+			}),
+		});
+
+		expect(
+			call?.findings(verdict(0.6, 0, 0.9)).map((found) => found.message),
+		).toEqual(["flagged"]);
+	});
+
+	it("refuses a verdict that leaves a question unanswered", () => {
+		const [call] = Call.plan({ effort: "low", rules: [noFoo], file: file() });
+
+		expect(() => call?.findings(verdict(0.1))).toThrow(
+			"the verdict answered 1 of 2 questions",
+		);
+	});
+
+	it("never asks about lines or files a scry-ignore excuses", () => {
+		const excused = file({
+			text: text.replace(
+				"const e",
+				"// scry-ignore no-foo: on purpose\nconst e",
+			),
+			file: {
+				path: "src/a.ts",
+				diff: "@@ -0,0 +1,6 @@\n+1\n+2\n+3\n+4\n+5\n+6",
+			},
+		});
+		const [call] = Call.plan({ effort: "low", rules: [noFoo], file: excused });
+		const none = Call.plan({
+			effort: "low",
+			rules: [noFoo],
+			file: file({ text: `// scry-ignore-file no-foo: all of it\n${text}` }),
+		});
+
+		expect(
+			Object.values(call?.judgment.questions ?? {}).map(
+				(question) => question.instructions,
+			),
+		).toEqual([expect.stringContaining("at lines 1 to 5 of")]);
+		expect(none).toEqual([]);
+	});
+
+	it("splits a file with more than 64 questions across calls", () => {
+		const long = Array.from({ length: 140 }, (_, index) => `+${index}`);
+		// every other line, so each is a run of its own
+		const sparse = long.map((line, index) =>
+			index % 2 === 0 ? line : ` ${index}`,
+		);
+		const calls = Call.plan({
+			effort: "low",
+			rules: [noFoo],
+			file: file({
+				file: {
+					path: "src/a.ts",
+					diff: `@@ -1,70 +1,140 @@\n${sparse.join("\n")}`,
+				},
+			}),
+		});
+
+		expect(
+			calls.map((call) => Object.keys(call.judgment.questions).length),
+		).toEqual([64, 6]);
 	});
 
 	it("estimates its tokens at four characters each", () => {
-		expect(call.tokens).toEqual(Math.ceil(call.prompt.length / 4));
-	});
+		const [call] = Call.plan({ effort: "low", rules: [noFoo], file: file() });
 
-	it("reads the last JSON array in a reply, past any talk around it", () => {
-		const reply =
-			'Looked at [the file].\n[{"rule": "no-bar", "line": 1, "message": "bar"}]\nDone.';
-
-		expect(call.findings(reply)).toEqual([
-			{
-				file: "src/a.ts",
-				line: 1,
-				level: "warning",
-				rule: "no-bar",
-				message: "bar",
-			},
-		]);
-	});
-
-	it("reads an empty array as nothing found", () => {
-		expect(call.findings("[]")).toEqual([]);
-	});
-
-	it("drops findings for rules it did not ask about", () => {
-		expect(
-			call.findings('[{"rule": "other", "line": 1, "message": "x"}]'),
-		).toEqual([]);
-	});
-
-	it("refuses a reply with no array of findings in it", () => {
-		expect(() => call.findings("all good!")).toThrow(
-			"the reply held no JSON array of findings",
-		);
-		expect(() => call.findings('[{"rule": "no-foo"}]')).toThrow(
-			"the reply held no JSON array of findings",
+		expect(call?.tokens).toEqual(
+			Math.ceil(JSON.stringify(call?.judgment).length / 4),
 		);
 	});
 });

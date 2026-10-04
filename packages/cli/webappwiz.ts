@@ -4,9 +4,13 @@ import { z } from "zod";
 // Every @webappwiz package is released in lockstep, so this one's version is
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
+import { add as addCredential } from "./credentials/add";
+import { list as listCredentials } from "./credentials/list";
+import { remove as removeCredential } from "./credentials/remove";
 import { version } from "./package.json";
 import { add as addRule } from "./scry/add";
 import { check } from "./scry/check";
+import { evaluate } from "./scry/evaluate";
 import { list as listRules } from "./scry/list";
 import { remove as removeRule } from "./scry/remove";
 import { update as updateRules } from "./scry/update";
@@ -41,7 +45,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: version,
 			description: "version to pin to",
 		})
-		.action((opts, { log, fs }) => update({ ...opts, log, fs }));
+		.action((opts, { log, fs, ps }) => update({ ...opts, log, fs, ps }));
 
 	const scry = program
 		.group("scry")
@@ -61,7 +65,12 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		})
 		.option("jobs", z.coerce.number(), {
 			default: undefined,
-			description: "agent calls at once (default: scry.jobs, else 4)",
+			description: "calls at once (default: scry.jobs, else 8)",
+		})
+		.option("model", z.string(), {
+			default: undefined,
+			description:
+				"judge every rule with this model: clef, clef-flash, or a jev like jev-latest (default: scry.models)",
 		})
 		.option("format", z.enum(["text", "json"]), {
 			default: "text",
@@ -69,6 +78,30 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		})
 		.use(timed())
 		.action((opts, { log, fs, ps }) => check({ ...opts, log, fs, ps }));
+
+	scry
+		.command("eval")
+		.description(
+			"judge the rules against their own Good and Bad examples, to compare models",
+		)
+		.rest("ids", z.string(), {
+			description: "rule ids, as `scry list` names them (default: every rule)",
+		})
+		.option("model", z.string(), {
+			default: undefined,
+			description:
+				"judge every rule with this model: clef, clef-flash, or a jev like jev-latest (default: scry.models)",
+		})
+		.option("jobs", z.coerce.number(), {
+			default: undefined,
+			description: "calls at once (default: scry.jobs, else 8)",
+		})
+		.option("format", z.enum(["text", "json"]), {
+			default: "text",
+			description: "text or json (default: text)",
+		})
+		.use(timed())
+		.action((opts, { log, fs, ps }) => evaluate({ ...opts, log, fs, ps }));
 
 	scry
 		.command("list")
@@ -117,6 +150,42 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "project to remove it from (default: .)",
 		})
 		.action((opts, { log, fs }) => removeRule({ ...opts, log, fs }));
+
+	const credentials = program
+		.group("creds")
+		.description(
+			"keep API keys in the system's secret store, out of files and agents' sight",
+		)
+		.fallback("list");
+
+	credentials
+		.command("list")
+		.description(
+			"list the credentials the project uses and where each comes from, never a value",
+		)
+		.action((_opts, { log, ps }) => listCredentials({ log, ps }));
+
+	credentials
+		.command("add")
+		.description(
+			"keep a credential's value, typed at a prompt that shows nothing",
+		)
+		.arg("name", z.string(), {
+			description: "its environment variable name, as `creds list` shows it",
+		})
+		.option("stdin", z.boolean(), {
+			default: false,
+			description: "read the value piped in on stdin instead of asking",
+		})
+		.action((opts, { log, ps }) => addCredential({ ...opts, log, ps }));
+
+	credentials
+		.command("remove")
+		.description("delete a credential's value from the store")
+		.arg("name", z.string(), {
+			description: "its environment variable name, as `creds list` shows it",
+		})
+		.action((opts, { log, ps }) => removeCredential({ ...opts, log, ps }));
 
 	const skills = program
 		.group("skills")

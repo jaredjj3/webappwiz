@@ -7,42 +7,17 @@ import {
 	NodePs,
 	type Ps,
 } from "webappwiz/system";
-import { Call, type CallFile, type Finding } from "./call";
+import { Call, type Finding } from "./call";
 import type { Changeset } from "./git";
+import { ignored } from "./ignores";
+import type { Judge } from "./judge";
 import type { Effort, Rule } from "./rule";
 import type { Rules } from "./rules";
 import { type Candidate, Scripts } from "./scripts";
 
-/** Whatever answers a prompt: a model behind a command, or a fake in a test. */
-export interface Agent {
-	ask(prompt: string, opts?: AskOptions): Promise<string>;
-}
-
-/** How one question to an agent runs. */
-export interface AskOptions {
-	/** Gives up on the question when it aborts. */
-	signal?: AbortSignal;
-	/** Told what the agent is doing as it answers, when it can say. */
-	observer?: AskObserver;
-}
-
-/** What hears about one question to an agent while it is answered. */
-export interface AskObserver {
-	/** What the agent is doing now, in a few words: `thinking`, `writing ~120 tokens`. */
-	status(status: string): void;
-	/** What the question really cost, when the agent reports it. */
-	usage(usage: Usage): void;
-}
-
-/** Tokens an agent really spent, as it reported them. */
+/** Input tokens a judge really spent, as it reported them. */
 export interface Usage {
-	/** Every input token, cached or not. */
 	input: number;
-	/** Of `input`, what came from the provider's cache, which costs less. */
-	cached: number;
-	output: number;
-	/** In US dollars, when the agent says. */
-	cost?: number;
 }
 
 /** Something the check could not look at, and why. */
@@ -65,7 +40,7 @@ export interface Report {
 	/** Whether the check was stopped before every call came back. */
 	cancelled: boolean;
 	/**
-	 * What the calls whose agents report usage really spent, summed, and how
+	 * What the calls whose judges report usage really spent, summed, and how
 	 * many calls that was. Absent when none of them did.
 	 */
 	usage?: Usage & { calls: number };
@@ -78,10 +53,8 @@ export interface Report {
 
 /** What a check raises while it runs. */
 export interface CheckEvents extends Record<string, unknown> {
-	/** A call went to its agent. */
+	/** A call went to its judge. */
 	asked: { call: Call };
-	/** The agent working on a call said what it is doing. */
-	status: { call: Call; status: string };
 	/**
 	 * A call is settled: it came back with what it found, or with why it
 	 * could not be read, or the check was cancelled before it did, whether it
@@ -103,21 +76,15 @@ export interface PrepareOptions {
 	dir: string;
 	rules: Rules;
 	changes: Changeset;
-	/**
-	 * The estimated input tokens one call holds before the next file goes in
-	 * a call of its own. A file too big for it alone still gets one call.
-	 * 32,000 when not set.
-	 */
-	batch?: number;
 	fs?: Fs;
 	ps?: Ps;
 	glob?: Glob;
 }
 
-/** How a prepared check runs its agent calls. */
+/** How a prepared check runs its calls. */
 export interface RunOptions {
-	/** The agent for each effort the check needs; see `efforts`. */
-	agents: ReadonlyMap<Effort, Agent>;
+	/** The judge for each effort the check needs; see `efforts`. */
+	judges: ReadonlyMap<Effort, Judge>;
 	/** How many calls run at once. */
 	jobs: number;
 	/**
@@ -131,7 +98,7 @@ export interface RunOptions {
  * A change checked against a project's rules. `prepare` does everything that
  * costs nothing, matching rules to files and running their scripts, so the
  * cost of the rest is known before any of it is spent; `run` sends the
- * agent calls.
+ * calls to the judges.
  */
 export class Check implements Eventful<CheckEvents> {
 	private readonly dispatcher = new Dispatcher<CheckEvents>();
@@ -139,7 +106,7 @@ export class Check implements Eventful<CheckEvents> {
 
 	private constructor(
 		private since: string,
-		/** The agent calls still to make, each some files and one effort. */
+		/** The calls still to make, each one file and one effort. */
 		readonly calls: readonly Call[],
 		/** Findings the scripts of `effort: none` rules settled on their own. */
 		private settled: Finding[],
@@ -153,9 +120,21 @@ export class Check implements Eventful<CheckEvents> {
 		const fs = opts.fs ?? new NodeFs();
 		const glob = opts.glob ?? new NodeGlob();
 		const scripts = new Scripts(opts.dir, { fs, ps: opts.ps ?? new NodePs() });
+		// a rule's eval cases break or follow it on purpose; checking them
+		// would report every bad one
+		const changed: Changeset["files"] = [];
+		for (const file of opts.changes.files) {
+			const evals = /^(.*)\/evals\/[^/]+$/.exec(file.path);
+			if (
+				evals === null ||
+				!(await fs.exists(`${opts.dir}/${evals[1]}/RULE.md`))
+			) {
+				changed.push(file);
+			}
+		}
 		const matched = new Map<Rule, string[]>();
 		for (const rule of opts.rules.all) {
-			const files = opts.changes.files
+			const files = changed
 				.map((file) => file.path)
 				.filter((path) => glob.matches(rule.files, path));
 			if (files.length > 0) {
@@ -188,13 +167,8 @@ export class Check implements Eventful<CheckEvents> {
 
 		const settled: Finding[] = [];
 		const legacy: string[] = [];
-		// effort and rule ids to the files that share exactly those rules, so
-		// every file in a call is judged against every rule in it
-		const groups = new Map<
-			string,
-			{ effort: Exclude<Effort, "none">; rules: Rule[]; files: CallFile[] }
-		>();
-		for (const file of opts.changes.files) {
+		const calls: Call[] = [];
+		for (const file of changed) {
 			const here = [...matched]
 				.filter(([, files]) => files.includes(file.path))
 				.map(([rule]) => rule);
@@ -217,6 +191,7 @@ export class Check implements Eventful<CheckEvents> {
 							level: rule.level,
 							rule: rule.id,
 							message: candidate.message,
+							probability: 1,
 						});
 					}
 				}
@@ -232,27 +207,10 @@ export class Check implements Eventful<CheckEvents> {
 						flagged.get(rule.id)?.get(file.path) ?? [],
 					]),
 				);
-				const key = [effort, ...rules.map((rule) => rule.id)].join(" ");
-				const group = groups.get(key) ?? { effort, rules, files: [] };
-				group.files.push({ file, text, candidates });
-				groups.set(key, group);
+				calls.push(
+					...Call.plan({ effort, rules, file: { file, text, candidates } }),
+				);
 			}
-		}
-
-		const cap = opts.batch ?? 32_000;
-		const calls: Call[] = [];
-		for (const { effort, rules, files } of groups.values()) {
-			let batch: CallFile[] = [];
-			for (const file of files) {
-				const grown = new Call({ effort, rules, files: [...batch, file] });
-				if (batch.length > 0 && grown.tokens > cap) {
-					calls.push(new Call({ effort, rules, files: batch }));
-					batch = [file];
-				} else {
-					batch.push(file);
-				}
-			}
-			calls.push(new Call({ effort, rules, files: batch }));
 		}
 		const files = new Set([...matched.values()].flat()).size;
 		return new Check(
@@ -271,20 +229,20 @@ export class Check implements Eventful<CheckEvents> {
 		return this.calls.reduce((sum, call) => sum + call.tokens, 0);
 	}
 
-	/** The efforts the calls need an agent for. */
+	/** The efforts the calls need a judge for. */
 	get efforts(): Set<Effort> {
 		return new Set(this.calls.map((call) => call.effort));
 	}
 
 	/**
 	 * Sends every call, `jobs` at a time, and reports what they and the
-	 * scripts found. A call whose agent fails or answers in a way that cannot
-	 * be read is reported as unchecked, never guessed at.
+	 * scripts found. A call whose judge fails or leaves a question unanswered
+	 * is reported as unchecked, never guessed at.
 	 */
 	async run(opts: RunOptions): Promise<Report> {
 		for (const effort of this.efforts) {
-			if (!opts.agents.has(effort)) {
-				throw new Error(`no agent for effort ${effort}`);
+			if (!opts.judges.has(effort)) {
+				throw new Error(`no judge for effort ${effort}`);
 			}
 		}
 		const findings = [...this.settled];
@@ -294,9 +252,7 @@ export class Check implements Eventful<CheckEvents> {
 		let done = 0;
 		const used: Usage[] = [];
 		const cancel = (call: Call): void => {
-			for (const file of call.files) {
-				unchecked.push({ subject: file, reason: "cancelled" });
-			}
+			unchecked.push({ subject: call.file, reason: "cancelled" });
 			this.dispatcher.dispatch("answered", {
 				call,
 				done: ++done,
@@ -311,22 +267,19 @@ export class Check implements Eventful<CheckEvents> {
 					return;
 				}
 				this.dispatcher.dispatch("asked", { call });
-				const observer: AskObserver = {
-					status: (status) => {
-						this.dispatcher.dispatch("status", { call, status });
-					},
-					usage: (usage) => {
-						used.push(usage);
-					},
-				};
+				const judge = opts.judges.get(call.effort);
 				try {
-					const reply = await abandonable(
-						opts.agents
-							.get(call.effort)
-							?.ask(call.prompt, { signal, observer }) ?? Promise.resolve(""),
+					if (judge === undefined) {
+						throw new Error(`no judge for effort ${call.effort}`);
+					}
+					const verdict = await abandonable(
+						judge.judge(call.judgment, { signal }),
 						signal,
 					);
-					const found = call.findings(reply);
+					if (verdict.input !== undefined) {
+						used.push({ input: verdict.input });
+					}
+					const found = call.findings(verdict);
 					findings.push(...found);
 					this.dispatcher.dispatch("answered", {
 						call,
@@ -338,9 +291,7 @@ export class Check implements Eventful<CheckEvents> {
 						cancel(call);
 						return;
 					}
-					for (const file of call.files) {
-						unchecked.push({ subject: file, reason: message(error) });
-					}
+					unchecked.push({ subject: call.file, reason: message(error) });
 					this.dispatcher.dispatch("answered", {
 						call,
 						done: ++done,
@@ -363,7 +314,7 @@ export class Check implements Eventful<CheckEvents> {
 				(left, right) =>
 					left.file.localeCompare(right.file) || left.line - right.line,
 			),
-			// a file whose calls at two efforts failed the same way is named once
+			// a file whose calls failed the same way is named once
 			unchecked: [
 				...new Map(
 					unchecked.map((item) => [`${item.subject}\0${item.reason}`, item]),
@@ -379,7 +330,7 @@ export class Check implements Eventful<CheckEvents> {
 }
 
 /**
- * `answer`, or a rejection the moment `signal` aborts, so an agent that
+ * `answer`, or a rejection the moment `signal` aborts, so a judge that
  * ignores its signal cannot hold a cancelled check open.
  */
 function abandonable<T>(answer: Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -399,43 +350,12 @@ function abandonable<T>(answer: Promise<T>, signal?: AbortSignal): Promise<T> {
 }
 
 function total(used: Usage[]): Usage & { calls: number } {
-	const costs = used.flatMap((usage) =>
-		usage.cost === undefined ? [] : [usage.cost],
-	);
 	return {
 		calls: used.length,
 		input: used.reduce((sum, usage) => sum + usage.input, 0),
-		cached: used.reduce((sum, usage) => sum + usage.cached, 0),
-		output: used.reduce((sum, usage) => sum + usage.output, 0),
-		...(costs.length === 0
-			? {}
-			: { cost: costs.reduce((sum, cost) => sum + cost, 0) }),
 	};
 }
 
 function message(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
-}
-
-/**
- * Whether a comment excuses `line` of `text` from `rule`: `scry-ignore-file`
- * anywhere, or `scry-ignore` in the comment lines right above it, or the
- * same under the older `rule-ignore`. Agents read the same comments from the
- * prompt; this is for findings no agent sees.
- */
-function ignored(text: string, rule: string, line: number): boolean {
-	if (new RegExp(`(scry|rule)-ignore-file ${rule}\\b`).test(text)) {
-		return true;
-	}
-	const lines = text.split("\n");
-	for (let at = line - 2; at >= 0; at--) {
-		const above = lines[at]?.trim() ?? "";
-		if (!/^(\/\/|#|\*|\/\*|<!--)/.test(above)) {
-			return false;
-		}
-		if (new RegExp(`(scry|rule)-ignore ${rule}\\b`).test(above)) {
-			return true;
-		}
-	}
-	return false;
 }

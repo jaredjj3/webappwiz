@@ -1,8 +1,8 @@
 import {
-	type Agent,
 	Check,
 	type Effort,
 	Git,
+	type Judge,
 	type Report,
 	Rules,
 } from "@webappwiz/scry";
@@ -14,10 +14,11 @@ import {
 	SystemTimer,
 	type Timer,
 } from "webappwiz/time";
+import { ProjectCredentials } from "../credentials/project-credentials";
 import { loadConfig } from "../load-config";
 import { table } from "../table";
-import { CommandAgent } from "./agent";
 import { Progress } from "./progress";
+import { HostedProviders, type Providers } from "./providers";
 import { type Screen, StderrScreen } from "./screen";
 
 export interface CheckOptions {
@@ -29,8 +30,13 @@ export interface CheckOptions {
 	paths: string[];
 	/** The ref the change is measured from; see `Git.changes` for the default. */
 	since?: string;
-	/** How many agent calls run at once, over the config's `jobs`. */
+	/** How many calls run at once, over the config's `jobs`. */
 	jobs?: number;
+	/**
+	 * The model every rule is judged by, over the config's `models`, so two
+	 * models can be compared on one change.
+	 */
+	model?: string;
 	/** `json` for the report as JSON; anything else is text. */
 	format: string;
 	log?: Logger;
@@ -43,29 +49,18 @@ export interface CheckOptions {
 	clock?: Clock;
 	/** What ticks progress over. */
 	timer?: Timer;
-	// scry-ignore objects-over-callbacks: the platform's own prompt() is the
-	// dependency here, and it is a bare function
-	prompt?: (message: string) => string | null;
+	/** What makes the judge for a model; Workers AI and TypeSafe by default. */
+	providers?: Providers;
 }
-
-const SAMPLE = `export default {
-	scry: {
-		agents: {
-			medium: 'claude -p --model sonnet --tools ""',
-		},
-	},
-};`;
 
 /**
  * Checks a change against the project's rules, the way a linter checks code:
  * one block of findings, and a nonzero exit when any is an error. It exits 1
- * on an error finding, 2 when a file or script went unchecked or the check
- * did not run, 0 otherwise.
+ * on an error finding, 2 when a file or script went unchecked, 0 otherwise.
  *
- * Everything that costs nothing happens first: finding the change, matching
- * rules, running their scripts. When the prompts left to send come to more
- * input tokens than the budget, it asks before sending any. The answer is
- * read from stdin, so an agent relays a person's answer by piping it in.
+ * A decision model judges each rule, saying how likely the change is to
+ * break it, and no model writes anything: the report is for whoever fixes
+ * the code, person or agent, to act on.
  */
 export async function check(opts: CheckOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -89,45 +84,23 @@ export async function check(opts: CheckOptions): Promise<void> {
 		dir,
 		rules,
 		changes,
-		batch: settings.batch,
 		fs,
 		ps,
 		glob: opts.glob,
 	});
 
-	const agents = new Map<Effort, Agent>();
+	const providers =
+		opts.providers ??
+		new HostedProviders(
+			(await ProjectCredentials.open(dir, { fs, ps })).credentials,
+		);
+	const judges = new Map<Effort, Judge>();
 	for (const effort of prepared.efforts) {
-		if (effort === "none") {
-			continue;
-		}
-		const own = settings.agents[effort];
-		const agent = own ?? settings.agents.medium;
-		if (agent === undefined) {
-			throw new Error(
-				`no agent for effort medium: put one in .wiz/config.ts, ~/.config/wiz/config.ts, or WIZ_SCRY_AGENT_MEDIUM, as in\n\n${SAMPLE}`,
+		if (effort !== "none") {
+			judges.set(
+				effort,
+				await providers.judge(opts.model ?? settings.models[effort]),
 			);
-		}
-		if (own === undefined) {
-			log.error(`no agent for effort ${effort}: using medium's`);
-		}
-		agents.set(effort, new CommandAgent(agent, { dir, ps }));
-	}
-
-	if (prepared.tokens > settings.budget) {
-		const question = `~${thousands(prepared.tokens)} input tokens across ${prepared.calls.length} calls (budget ${thousands(settings.budget)}). Proceed? [y/N]`;
-		const answer = (opts.prompt ?? prompt)(question);
-		if (answer === null) {
-			// prompt() has already printed the question
-			log.error(
-				"no answer on stdin: ask, then rerun with the answer piped in, as in `echo y | wiz scry`",
-			);
-			ps.exit(2);
-			return;
-		}
-		if (!/^y(es)?$/i.test(answer.trim())) {
-			log.error("not run");
-			ps.exit(2);
-			return;
 		}
 	}
 
@@ -157,7 +130,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 		}
 	});
 	const report = await prepared
-		.run({ agents, jobs, signal: cancel.signal })
+		.run({ judges, jobs, signal: cancel.signal })
 		.finally(() => {
 			running = false;
 			progress.dispose();
@@ -186,6 +159,7 @@ function text(report: Report): string[] {
 		finding.level === "error"
 			? color.red(finding.level)
 			: color.yellow(finding.level),
+		color.dim(`${Math.round(finding.probability * 100)}%`),
 		finding.message,
 		color.dim(finding.rule),
 	]);
@@ -237,10 +211,9 @@ function tally(report: Report): string {
 		: color.yellow(`⚠ ${stopped}no problems found in ${scope}${but}`);
 }
 
-/** What the agents that report usage really spent. */
+/** What the judges that report usage really spent. */
 function spent(usage: NonNullable<Report["usage"]>): string {
-	const cost = usage.cost === undefined ? "" : `, $${usage.cost.toFixed(2)}`;
-	return `  spent ${thousands(usage.input)} input tokens (${thousands(usage.cached)} cached) and ${thousands(usage.output)} output${cost}, across ${usage.calls} ${plural(usage.calls, "call")}`;
+	return `  spent ${thousands(usage.input)} input tokens across ${usage.calls} ${plural(usage.calls, "call")}`;
 }
 
 function plural(count: number, noun: string): string {

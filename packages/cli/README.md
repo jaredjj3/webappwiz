@@ -9,17 +9,21 @@ bunx @webappwiz/cli skills list            # what there is, and what you have
 bunx @webappwiz/cli skills add scry        # install an agent skill
 bunx @webappwiz/cli skills update          # refresh the ones already installed
 bunx @webappwiz/cli scry                   # check a change against the rules
+bunx @webappwiz/cli scry eval              # judge the rules on their own examples
 bunx @webappwiz/cli scry list              # every rule there is, and what you have
 bunx @webappwiz/cli scry add <id>          # copy a shipped rule in
 bunx @webappwiz/cli scry add --recommended # copy the recommended ones
 bunx @webappwiz/cli scry update            # refresh the copies
 bunx @webappwiz/cli scry remove <id>       # delete a rule
+bunx @webappwiz/cli creds                   # the API keys the project uses, never their values
+bunx @webappwiz/cli creds add <NAME>          # keep one, typed at a hidden prompt
+bunx @webappwiz/cli creds remove <NAME>
 ```
 
 ## scry
 
 A project's rules live in `.wiz/scry`, tracked with its code, one directory
-per rule holding a `RULE.md` and, when it helps, `scripts/` and
+per rule holding a `RULE.md` and, when it helps, `scripts/`, `evals/` and
 `references/` beside it. The ones that ship come from
 [`@webappwiz/scry`](../rules)'s catalog, and a project's own sit beside them
 in the same shape. The `scry` skill teaches an agent to write them.
@@ -29,10 +33,10 @@ in the same shape. The `scry` skill teaches an agent to write them.
 ```
 $ bunx @webappwiz/cli scry
 src/list.ts
-  32   warning   opts comes before the required changed parameter   named-options-last
+  32   warning   91%   Settings go in one named opts object, after the parameters a caller cannot leave out.   named-options-last
 
 src/catalog.test.ts
-  35   error     the test asserts inside a for loop                  matchers-over-test-logic
+  35   error     78%   A test carries no if and no for; a matcher decides what the logic would have.           matchers-over-test-logic
 
 ✖ 2 problems (1 error, 1 warning) in 14 files since main
 ```
@@ -41,28 +45,32 @@ src/catalog.test.ts
 otherwise the branch since it left trunk, or whatever `--since <ref>` names.
 Paths narrow it, `scry packages/api packages/web`, to the changed files at
 or under them, from wherever it runs; the project is the git repository
-around it. It matches each rule's `files` glob against the changed files,
-runs the matching rules' scripts, and sends prompts by `effort`: the files
-that match the same rules share one, holding those rules in full once, then
-each file, its diff and what the scripts flagged, up to `batch` estimated
-input tokens a prompt. A rule with `effort: none` sends nothing: its scripts'
-lines are its findings.
+around it. It matches each rule's `files` glob against the changed files and
+runs the matching rules' scripts. A rule with `effort: none` stops there:
+its scripts' lines are its findings.
 
-An agent is any shell command that reads a prompt on stdin and answers on
-stdout, set for each effort. The prompt holds everything it needs, so give
-it no tools where its CLI allows: an agent free to read the repository can
-spend minutes doing so before it answers.
+Every other rule is judged by a decision model, which reads the file and
+answers yes-or-no questions with the probability of yes, and writes
+nothing. Each changed file is one call: its numbered text, its diff and its
+rules go in once, with a question for each rule and each run of lines the
+change added, and one for each line a script flagged. A finding is a
+question answered at or above its rule's `threshold`, 0.7 by default, and
+names the rule's description, or the script's message. The report is for
+whoever fixes the code, person or agent, to act on: no model decides more
+than whether a rule looks broken, and how sure it is.
 
-While an agent works, the live view shows the last line it wrote to
-stderr, if any. An agent printing Claude Code's JSON is recognized by its
-output, with nothing to configure: with `--output-format stream-json
---verbose --include-partial-messages` the view shows the model waiting,
-thinking and writing, and with that or `--output-format json` the report
-ends with what the calls really spent in tokens and dollars. Anything else
-is read as text.
+Every effort is judged by `clef` unless the config says otherwise. It got
+98% of the shipped rules' examples right, where `clef-flash` got 83% at
+about the same speed.
 
-An effort with no command of its own uses `medium`'s, and there is no
-default: a project says what it runs.
+The credentials come from the environment, or else from the operating
+system's secret store, where `creds add` keeps them (see
+[creds](#creds)).
+
+| Model | Provider | Credentials |
+| --- | --- | --- |
+| `clef`, `clef-flash` | Cloudflare Workers AI | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` |
+| `jev-latest`, `jev-preview`, `jev-1.13.0`, ... | TypeSafe | `TYPESAFE_API_KEY` |
 
 ```ts
 // .wiz/config.ts
@@ -70,30 +78,23 @@ import { defineConfig } from "@webappwiz/cli/config";
 
 export default defineConfig({
 	scry: {
-		agents: {
-			low: 'claude -p --model haiku --tools ""',
-			medium:
-				'claude -p --model sonnet --tools "" --output-format stream-json --verbose --include-partial-messages',
-			high: "codex exec",
-		},
-		budget: 100_000,
-		batch: 32_000,
-		jobs: 4,
+		models: { low: "clef", medium: "clef", high: "clef" },
+		jobs: 8,
 	},
 });
 ```
 
 Each layer overrides the last: `.wiz/config.ts`, then the user's own
 `~/.config/wiz/config.ts` (under `$XDG_CONFIG_HOME` when set), then
-`WIZ_SCRY_AGENT_LOW`, `_MEDIUM`, `_HIGH`, `WIZ_SCRY_BUDGET`,
-`WIZ_SCRY_BATCH` and `WIZ_SCRY_JOBS`. The agents merge an effort at a time. A config where
-`@webappwiz/cli` is not installed exports the same object without
-`defineConfig`.
+`WIZ_SCRY_MODEL_LOW`, `_MEDIUM`, `_HIGH` and `WIZ_SCRY_JOBS`. The models
+merge an effort at a time. A config where `@webappwiz/cli` is not installed
+exports the same object without `defineConfig`. A config still holding
+`agents`, `budget` or `batch`, from when agents judged the rules, is refused
+rather than half read.
 
-`budget` is the estimated input tokens, four characters a token, that a
-check spends without asking. Past it, `scry` asks `Proceed? [y/N]` on stdin
-before sending anything, so an agent relays a person's answer with
-`echo y | bunx @webappwiz/cli scry`, and no answer means no.
+`--model` judges every rule with one model, over the config, so two models
+can be compared on the same change: `scry --model clef` then
+`scry --model jev-latest`.
 
 While the calls run, it draws each one on stderr, queued, running with its
 time, then answered or failed, redrawn in place on a terminal and a plain
@@ -103,8 +104,32 @@ abandoned, and the report holds what came back, with the rest named as not
 checked. A second ctrl-c quits outright.
 
 It exits 1 when a finding is an error, 2 when a file or script went
-unchecked or the check did not run, and 0 otherwise. `--format json` prints
-the same report as JSON, and `--jobs` overrides how many calls run at once.
+unchecked, and 0 otherwise. `--format json` prints the same report as JSON,
+each finding with its `probability`, and `--jobs` overrides how many calls
+run at once.
+
+### Comparing models
+
+```
+$ bunx @webappwiz/cli scry eval --model clef-flash
+no-em-dashes         low      clef-flash   6 of 6 right
+named-options-last   medium   clef-flash   3 of 4 right
+  ✖ evals/request-options.good.ts: 61%, at or over its 70% threshold
+
+✖ 9 of 10 examples judged right across 2 rules
+```
+
+`scry eval` judges each rule against cases whose answer is known: the files
+in its `evals/`, named `<name>.good.<ext>` and `<name>.bad.<ext>` and kept
+beside its `RULE.md` the way tests sit beside code, and the code blocks
+under its `## Good` and `## Bad`. It asks each the same question a check
+asks of a new file. A good case is right under the rule's threshold and a
+bad one at or over it. Run it once per model with `--model` to compare them,
+or after changing a rule's wording or `threshold` to see what moved. Name
+rule ids to judge only those. The code blocks are also in the rule the model
+reads, so they are a floor; the eval cases are code it has not seen. It
+exits 2 when a case went unchecked and 0 otherwise, however many it got
+wrong.
 
 ### list, add, update, remove
 
@@ -151,11 +176,57 @@ combination nobody tested.
 The default version is this package's own, which is the point of `bunx`: the
 release you invoke is the release you get. `--version` pins something else.
 `workspace:` ranges are left alone; inside a monorepo they already track each
-other. Installed skills and copied rules are refreshed too.
+other. Installed skills and copied rules are refreshed too. Last, it names
+any credential the project uses that neither the environment nor the secret
+store has, with the `creds add` command a person runs for each.
 
 ```bash
 bunx @webappwiz/cli update ./apps --version 1.4.0
 ```
+
+## creds
+
+```
+$ bunx @webappwiz/cli creds
+project shop, saved in the macOS Keychain as "webappwiz:shop"
+CLOUDFLARE_ACCOUNT_ID   store         Workers AI, for scry's clef and clef-flash
+CLOUDFLARE_API_TOKEN    store         Workers AI, for scry's clef and clef-flash
+STRIPE_SECRET_KEY       missing       Stripe, for checkout
+TYPESAFE_API_KEY        environment   TypeSafe, for scry's jev models
+```
+
+API keys and tokens, kept in the operating system's secret store through
+`Bun.secrets`: the Keychain on macOS, Credential Manager on Windows, and a
+running secret service such as GNOME Keyring or KWallet on Linux. Code reads
+them with [`webappwiz/credentials`](../webappwiz/credentials), the
+environment first and then the store, so CI and one-off overrides work as
+they always have.
+
+`list` shows every credential the project uses, where each would come
+from, and what it is for, and never a value, so an agent can run it to see
+what is missing. `add <NAME>` asks for the value at a prompt that shows
+nothing, so it is in no shell history, file or transcript, and refuses with
+no terminal: a person runs it. `--stdin` takes the value piped in instead,
+as in `op read op://vault/stripe | bunx @webappwiz/cli creds add
+STRIPE_SECRET_KEY --stdin`. `remove <NAME>` deletes one. There is no `get`:
+code that needs a value reads it itself, and nothing hands one to whoever
+runs a command.
+
+The credentials wiz uses itself are always listed. A project names its own
+in `.wiz/config.ts`, and `add` refuses any name not there, so a typo fails
+rather than keeping a value nothing reads:
+
+```ts
+export default defineConfig({
+	credentials: {
+		names: { STRIPE_SECRET_KEY: "Stripe, for checkout" },
+		project: "shop", // what the store keeps them under; the repository's directory name by default
+	},
+});
+```
+
+The project name defaults to the directory of the repository's main
+worktree, so a value added from one git worktree is there in all of them.
 
 ## skills
 

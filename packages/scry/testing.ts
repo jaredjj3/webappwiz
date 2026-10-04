@@ -1,3 +1,4 @@
+import type { Judge, Judgment, Verdict } from "./judge";
 import type { Effort, Level } from "./rule";
 
 /** Whatever a test wants to differ from a plain rule document. */
@@ -7,6 +8,7 @@ export interface RuleDocOptions {
 	level?: Level;
 	effort?: Effort;
 	recommended?: boolean;
+	threshold?: number;
 	version?: string;
 }
 
@@ -22,6 +24,7 @@ export const ruleDoc = (name: string, opts: RuleDocOptions = {}): string =>
 		...(opts.recommended === undefined
 			? []
 			: [`recommended: ${opts.recommended}`]),
+		...(opts.threshold === undefined ? [] : [`threshold: ${opts.threshold}`]),
 		...(opts.version === undefined ? [] : [`version: ${opts.version}`]),
 		"---",
 		"",
@@ -44,20 +47,35 @@ export const ruleDoc = (name: string, opts: RuleDocOptions = {}): string =>
 		"",
 	].join("\n");
 
+/** What a `FakeJudge` says beside its answers. */
+export interface FakeJudgeOptions {
+	/** The input tokens it says each judgment spent; none when not given. */
+	input?: number;
+}
+
 /**
- * An agent that answers every prompt the same way, or fails with the error
- * it was given, and keeps the prompts it was asked.
+ * A judge that answers every question with the same probability of yes, or
+ * fails with the error it was given, and keeps the judgments it was asked.
  */
-export class FakeAgent {
-	readonly prompts: string[] = [];
+export class FakeJudge implements Judge {
+	readonly judgments: Judgment[] = [];
 
-	constructor(private answer: string | Error) {}
+	constructor(
+		private answer: number | Error,
+		private opts: FakeJudgeOptions = {},
+	) {}
 
-	async ask(prompt: string): Promise<string> {
-		this.prompts.push(prompt);
+	async judge(judgment: Judgment): Promise<Verdict> {
+		this.judgments.push(judgment);
 		if (this.answer instanceof Error) {
 			throw this.answer;
 		}
-		return this.answer;
+		const answer = this.answer;
+		return {
+			answers: new Map(
+				Object.keys(judgment.questions).map((id) => [id, answer]),
+			),
+			...(this.opts.input === undefined ? {} : { input: this.opts.input }),
+		};
 	}
 }

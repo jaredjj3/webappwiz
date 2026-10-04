@@ -1,6 +1,8 @@
 import { basename } from "node:path";
+import type { SecretStore } from "webappwiz/credentials";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
-import { type Fs, NodeFs, walk } from "webappwiz/system";
+import { type Fs, NodeFs, NodePs, type Ps, walk } from "webappwiz/system";
+import { ProjectCredentials } from "./credentials/project-credentials";
 import type { Bundle } from "./documents";
 import { update as updateRules } from "./scry/update";
 import type { Skills } from "./skills/skill";
@@ -33,6 +35,9 @@ export interface UpdateOptions {
 	version: string;
 	log?: Logger;
 	fs?: Fs;
+	ps?: Ps;
+	/** Where credentials are saved; the system's store by default. */
+	store?: SecretStore;
 	/** The skills to refresh with; the ones this package ships by default. */
 	skills?: Skills;
 	/** The rules to refresh with; the catalog by default. */
@@ -46,7 +51,9 @@ export interface UpdateOptions {
  * Installed skills are copies of files those packages ship, so they are
  * refreshed too, and so are the rules copied in from the catalog. What a
  * rename left behind moves along: `@webappwiz/rules` becomes
- * `@webappwiz/scry`, and `.wiz/rules` becomes `.wiz/scry`.
+ * `@webappwiz/scry`, and `.wiz/rules` becomes `.wiz/scry`. Last, it names
+ * any credential the project uses that nothing has yet, and the command a
+ * person runs to add it, since an upgrade is when a new one starts to matter.
  */
 export async function update(opts: UpdateOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -86,4 +93,18 @@ export async function update(opts: UpdateOptions): Promise<void> {
 	}
 	await updateSkills({ dir: opts.dir, log: log, fs: fs, skills: opts.skills });
 	await updateRules({ dir: opts.dir, log, fs, rules: opts.rules });
+	const credentials = await ProjectCredentials.open(opts.dir, {
+		fs,
+		ps: opts.ps ?? new NodePs(),
+		store: opts.store,
+	});
+	const missing = await credentials.missing();
+	if (missing.length > 0) {
+		log.info(
+			[
+				`${missing.length} ${missing.length === 1 ? "credential" : "credentials"} missing; a person runs:`,
+				...missing.map((name) => `  bunx @webappwiz/cli creds add ${name}`),
+			].join("\n"),
+		);
+	}
 }

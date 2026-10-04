@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import classesOverFunctionExports from "./classes-over-function-exports/RULE.md" with {
 	type: "text",
 };
@@ -49,12 +50,157 @@ import testsOwnTheirState from "./tests-own-their-state/RULE.md" with {
 };
 
 /**
- * Every rule this package ships, id to the files in its directory by path:
- * its `RULE.md`, and any scripts beside it. Imported rather than read off a
- * directory so the files travel inside the build, and so a rule is here or it
- * does not ship.
+ * Each rule's eval cases, by name in its `evals/`. Listed like the imports
+ * above, but read off disk rather than imported: tsc type checks a `.ts`
+ * file even imported as text, and an eval case is a fragment that breaks a
+ * rule on purpose. The package ships its source, so they sit beside this file.
  */
-export const catalog: Record<string, Record<string, string>> = {
+const EVALS: Record<string, string[]> = {
+	"classes-over-function-exports": [
+		"deploy.good.ts",
+		"feature-flags.bad.ts",
+		"invoice-mailer.good.ts",
+		"prune.bad.ts",
+		"slugify.good.ts",
+		"user-repository.bad.ts",
+	],
+	"comments-say-why-not-what": [
+		"avatar-url.bad.ts",
+		"csv-export.good.ts",
+		"order-summary.bad.ts",
+		"rate-limiter.good.ts",
+		"session-store.good.ts",
+		"webhook-handler.bad.ts",
+	],
+	"dev-servers-find-a-port": [
+		"admin-dashboard.test.bad.ts",
+		"docs-server.good.ts",
+		"mock-api-server.bad.ts",
+		"preview-server.test.good.ts",
+		"price-formatter.good.ts",
+		"storybook-server.bad.ts",
+	],
+	"doc-comments-address-users": [
+		"currency-code.bad.ts",
+		"image-resizer.bad.ts",
+		"rate-limiter.good.ts",
+		"retry-backoff.good.ts",
+		"session-store.bad.ts",
+		"slugify.good.ts",
+	],
+	"export-leads-the-file": [
+		"index.good.ts",
+		"job-scheduler.bad.ts",
+		"markdown-table.bad.ts",
+		"retry-policy.good.ts",
+		"token-bucket.good.ts",
+		"webhook-signer.bad.ts",
+	],
+	"fakes-over-mocks": [
+		"date-range.test.good.ts",
+		"invoice-mailer.test.good.ts",
+		"mock-data-generator.test.good.ts",
+		"report-exporter.test.bad.ts",
+		"theme-preference.test.bad.ts",
+		"user-signup.test.bad.ts",
+	],
+	"matchers-over-test-logic": [
+		"http-status.test.bad.ts",
+		"invoice-parser.test.good.ts",
+		"leaderboard.test.bad.ts",
+		"path-normalize.test.bad.ts",
+		"session-timeout.test.good.ts",
+		"slug-matchers.test.good.ts",
+	],
+	"named-options-last": [
+		"currency-format.bad.ts",
+		"geometry.good.ts",
+		"image-resize.good.ts",
+		"job-queue.good.ts",
+		"paginate.bad.ts",
+		"send-email.bad.ts",
+	],
+	"no-em-dashes": [
+		"business-hours.good.ts",
+		"cli-flags.good.ts",
+		"deploy-guide.bad.md",
+		"release-notes.good.md",
+		"upload-errors.bad.ts",
+		"webhook-verifier.bad.ts",
+	],
+	"objects-over-callbacks": [
+		"alert-service.bad.ts",
+		"file-uploader.bad.ts",
+		"group-by.good.ts",
+		"price-label.good.ts",
+		"profile-cache.bad.ts",
+		"search-box.good.ts",
+	],
+	"one-class-per-file": [
+		"date-ranges.good.ts",
+		"lru-cache.bad.ts",
+		"payment-client.bad.ts",
+		"rate-limiter.good.ts",
+		"shipping-rates.bad.ts",
+		"timestamped-entity.good.ts",
+	],
+	"parameters-declare-fields": [
+		"api-client.good.ts",
+		"audit-trail.bad.ts",
+		"event-counter.good.ts",
+		"order-service.good.ts",
+		"product.bad.ts",
+		"redis-lock.bad.ts",
+	],
+	"reactive-over-use-state": [
+		"comment-composer.good.tsx",
+		"countdown-timer.bad.tsx",
+		"currency-format.good.ts",
+		"order-history.bad.tsx",
+		"signup-wizard.bad.tsx",
+		"upload-queue.good.tsx",
+	],
+	"resources-are-disposable": [
+		"job-scheduler.bad.ts",
+		"log-tailer.bad.ts",
+		"presence-tracker.good.ts",
+		"session-heartbeat.bad.ts",
+		"shipping-rates.good.ts",
+		"window-resize.good.ts",
+	],
+	"simple-test-setup": [
+		"feature-flags.test.bad.ts",
+		"invoice-parser.test.good.ts",
+		"password-strength.test.bad.ts",
+		"rate-limiter.test.good.ts",
+		"slugify.test.good.ts",
+		"token-store.test.bad.ts",
+	],
+	"test-setup-names-what-it-makes": [
+		"csv-import.test.good.ts",
+		"mailbox.test.good.ts",
+		"search-index.test.bad.ts",
+		"testing.bad.ts",
+		"testing.good.ts",
+		"webhook-delivery.test.bad.ts",
+	],
+	"tests-own-their-state": [
+		"chat-room.test.bad.ts",
+		"inventory.test.good.ts",
+		"report-export.test.bad.ts",
+		"route-matcher.test.good.ts",
+		"subscription-renewal.test.good.ts",
+		"testing.bad.ts",
+	],
+};
+
+/**
+ * Every rule this package ships, id to the files in its directory by path:
+ * its `RULE.md`, any scripts beside it, and its eval cases. Imported rather
+ * than read off a directory so the files travel inside the build, and so a
+ * rule is here or it does not ship.
+ */
+export const catalog: Record<string, Record<string, string>> = withEvals({
 	"classes-over-function-exports": { "RULE.md": classesOverFunctionExports },
 	"comments-say-why-not-what": { "RULE.md": commentsSayWhyNotWhat },
 	"dev-servers-find-a-port": { "RULE.md": devServersFindAPort },
@@ -76,4 +222,22 @@ export const catalog: Record<string, Record<string, string>> = {
 	"simple-test-setup": { "RULE.md": simpleTestSetup },
 	"test-setup-names-what-it-makes": { "RULE.md": testSetupNamesWhatItMakes },
 	"tests-own-their-state": { "RULE.md": testsOwnTheirState },
-};
+});
+
+function withEvals(
+	rules: Record<string, Record<string, string>>,
+): Record<string, Record<string, string>> {
+	for (const [id, names] of Object.entries(EVALS)) {
+		const files = rules[id];
+		if (files === undefined) {
+			throw new Error(`evals for ${id}, which is not in the catalog`);
+		}
+		for (const name of names) {
+			files[`evals/${name}`] = readFileSync(
+				new URL(`./${id}/evals/${name}`, import.meta.url),
+				"utf8",
+			);
+		}
+	}
+	return rules;
+}

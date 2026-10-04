@@ -74,4 +74,28 @@ describe("Rules", () => {
 			".wiz/scry/alpha/scripts/check.sh",
 		]);
 	});
+
+	it("finds each rule's eval cases, by path from the project root", async () => {
+		await install("alpha");
+		await fs.mkdir("/p/.wiz/scry/alpha/evals");
+		await fs.write("/p/.wiz/scry/alpha/evals/two-classes.bad.ts", "x\n");
+		await fs.write("/p/.wiz/scry/alpha/evals/one-class.good.ts", "x\n");
+
+		const rules = await Rules.load("/p", { fs });
+
+		expect(rules.get("alpha")?.evals).toEqual([
+			".wiz/scry/alpha/evals/one-class.good.ts",
+			".wiz/scry/alpha/evals/two-classes.bad.ts",
+		]);
+	});
+
+	it("reports an eval case that does not say whether it is good or bad", async () => {
+		await install("alpha");
+		await fs.mkdir("/p/.wiz/scry/alpha/evals");
+		await fs.write("/p/.wiz/scry/alpha/evals/one-class.ts", "x\n");
+
+		await expect(Rules.load("/p", { fs })).rejects.toThrow(
+			".wiz/scry/alpha/evals/one-class.ts: an eval case is named <name>.good.<ext> or <name>.bad.<ext>",
+		);
+	});
 });

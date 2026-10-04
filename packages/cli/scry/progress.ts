@@ -28,8 +28,6 @@ interface State {
 	found?: { errors: number; warnings: number };
 	error?: string;
 	cancelled?: boolean;
-	/** What its agent last said it was doing. */
-	status?: string;
 }
 
 /**
@@ -57,10 +55,6 @@ export class Progress implements Resource {
 				this.state(call).started = opts.clock.now();
 				this.draw();
 			}),
-			// the ticker redraws; a status can come many times a second
-			check.events.on("status", ({ call, status }) => {
-				this.state(call).status = status;
-			}),
 			check.events.on(
 				"answered",
 				({ call, done, findings, error, cancelled }) => {
@@ -84,7 +78,7 @@ export class Progress implements Resource {
 						];
 						opts.log.error(
 							color.dim(
-								`  [${done}/${this.states.size}] ${call.effort}: ${files(call)} (${how.join(", ")})`,
+								`  [${done}/${this.states.size}] ${call.effort}: ${call.file} (${how.join(", ")})`,
 							),
 						);
 					}
@@ -162,7 +156,7 @@ export class Progress implements Resource {
 		const elapsed =
 			state.took ??
 			(state.started === undefined ? undefined : now.subtract(state.started));
-		const text = `${call.effort.padEnd(6)} ${(elapsed === undefined ? "" : seconds(elapsed)).padStart(4)}  ${files(call)}`;
+		const text = `${call.effort.padEnd(6)} ${(elapsed === undefined ? "" : seconds(elapsed)).padStart(4)}  ${call.file}`;
 		// a line that wraps takes two rows, and the next frame would move back over one
 		let room = Math.max(0, this.opts.screen.columns - 5);
 		const fitted = text.slice(0, room);
@@ -177,7 +171,7 @@ export class Progress implements Resource {
 		return `  ${icon} ${state.started === undefined ? color.dim(fitted) : fitted}${noted}`;
 	}
 
-	/** A call's icon, and the note after its files in colored parts. */
+	/** A call's icon, and the note after its file in colored parts. */
 	private mark(state: State): [string, Segment[]] {
 		if (state.cancelled) {
 			return [color.yellow("■"), [["cancelled", plain]]];
@@ -197,10 +191,7 @@ export class Progress implements Resource {
 			];
 		}
 		if (state.started !== undefined) {
-			return [
-				color.blue(SPINNER[this.frame % SPINNER.length]),
-				state.status === undefined ? [] : [[state.status, plain]],
-			];
+			return [color.blue(SPINNER[this.frame % SPINNER.length]), []];
 		}
 		return [color.dim("·"), []];
 	}
@@ -222,11 +213,6 @@ export class Progress implements Resource {
 		this.states.set(call, state);
 		return state;
 	}
-}
-
-function files(call: Call): string {
-	const [first, ...rest] = call.files;
-	return rest.length === 0 ? (first ?? "") : `${first} and ${rest.length} more`;
 }
 
 /** Some text, and what colors it. */
