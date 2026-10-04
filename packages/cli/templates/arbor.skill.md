@@ -31,8 +31,9 @@ retry, another agent owns the tree.
    (`/arbor feature/auth`) or the user names one; never guess a base from
    the checked-out branch.
 2. **Plan.** Once you know what done means, fill in the `ARBOR.md` stub
-   before touching code (see below). Read `arbor todo list --open` and
-   `arbor todo take` every todo there your work will settle (see Todos).
+   before touching code (see below). Then groom the todos your work
+   touches: find them by tag and claim every one you can (see Grooming
+   related todos).
 3. **Check for overlap.** Compare your `## Files` with `arbor list --files`.
    Some overlap is normal: work alongside and accept the rebase, noting it
    in `ARBOR.md`. Only when conflicts would be hard to resolve,
@@ -43,7 +44,7 @@ retry, another agent owns the tree.
    Ask about any call the request does not settle as you make it, and keep
    going (see Asking as you go). Before each step, bring `## Blocked` up to
    date (see Keeping Blocked current).
-5. **Settle todos** (see Todos), **squash** to one commit (see
+5. **Groom again and settle todos** (see Grooming related todos), **squash** to one commit (see
    Committing), then **`arbor merge`**. On failure, do what stderr says and
    merge again.
 
@@ -86,7 +87,8 @@ arbor todo add "Upload retries forever on a 413" 'The client retries on any 4xx 
 ```
 
 - `arbor todo list` shows them in position order, `--open` only those no
-  task has taken, and `--tag <tag>` only those with a tag; `arbor todo show
+  task has taken, and `--tag uploads,merge` only those with any of those
+  tags; `arbor todo show
   <id>` prints one whole, detail and attached files included.
 - `arbor todo add "<subject>" ["<detail>"]` from your worktree records the
   task it came up in. It goes to the bottom unless you pass `--position <n>`
@@ -141,14 +143,50 @@ user rather than start on it.
 
 When something comes up that is not your Goal (a bug next door, a follow-up,
 a reply that widens the task), `arbor todo add` it from your worktree and keep
-going. Do not grow the task.
+going. Do not grow the task past one coherent change; claiming related todos
+that fit inside it is grooming, not growth (see Grooming related todos).
 
 A task can hold any number of todos, and merging removes every one it holds.
 When an open todo turns out to be part of your work, `arbor todo take <id>`
-from your worktree and add it to your Goal. Before merging, read
-`arbor todo list --open` again and take any your change also settles.
-For one you hold but only partly did, `arbor todo update <id>` with what is
-left, then `arbor todo release <id>`, so it stays on the list.
+from your worktree and add it to your Goal. For one you hold but only partly
+did, `arbor todo update <id>` with what is left, then `arbor todo release
+<id>`, so it stays on the list.
+
+### Grooming related todos
+
+Your work reaches past the todos you hold. Todos sharing their tags are
+about the same area, and your change can settle them, shrink them, move what
+they point at, or make them wrong. You hold the context that makes each one
+cheap right now, so groom them while you have it, and claim every one you
+can. Do it once you have planned, and again just before merging, since your
+change has grown since.
+
+1. **Gather the tags.** Collect the tags of every todo your task holds
+   (`arbor todo show <id>`). When it holds none, take the ones from
+   `arbor todo tags` that name the area of your Goal.
+2. **List the related todos.** `arbor todo list --tag <tag>,<tag>` with all
+   of them at once. Leave off `--open`: one another task has taken can
+   still be affected by yours. `arbor todo show` each one your work might
+   touch.
+3. **Act on each one**, in this order of preference:
+   - **Claim it** when it is open and your change settles it, makes it
+     moot, or would settle it with a little more work in the same files:
+     `arbor todo take <id>` and add it to your Goal. Claiming beats leaving
+     it, because the next agent would rebuild the context you have now. The
+     limit is the task staying one coherent change (see Committing); past
+     that, leave it.
+   - **Update it** when your change alters it but does not settle it (a
+     path moved, a step is done, the approach no longer fits):
+     `arbor todo update <id>` with what changed, ticking off the `- [ ]`
+     steps you did.
+   - **Retag it** when it turns out to belong to another area:
+     `--tag` and `--remove-tag`.
+   - **Coordinate** when another task has taken it and your change affects
+     it: never take it, compare files with `arbor list --files` (see
+     Workflow), and note it in `ARBOR.md`.
+4. **Tag what you add.** A todo that comes up in your task gets the tags
+   of the todos your task holds when it belongs with them, so the next
+   grooming finds it.
 
 Whenever a task ends, merged or removed, always find the next todo, so the
 context this conversation built up gets used before it is gone. Read
@@ -156,7 +194,7 @@ context this conversation built up gets used before it is gone. Read
 the todo most relevant to the work you just did (the same files, feature, or
 problem; `arbor todo show` one to be sure), preferring one that came up in
 the task that just ended, then one sharing a tag with the todos it held
-(`arbor todo list --open --tag <tag>`). Among equally relevant ones, and when
+(`arbor todo list --open --tag <tag>,<tag>` with all their tags at once). Among equally relevant ones, and when
 none is related, take the lowest position, the top of the list. `merge`
 recommends the landed task's own todos first, then those sharing a tag with
 the todos it settled, then the lowest position; `remove` recommends nothing,
