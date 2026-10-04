@@ -29,6 +29,11 @@ const REPLY = z.object({
  */
 export class SystemOneEndpoint {
 	constructor(
+		/**
+		 * What its errors call it. Never the URL, which can hold an account
+		 * id kept with the credentials.
+		 */
+		private readonly name: string,
 		private readonly url: string,
 		/** Sent as a bearer token. */
 		private readonly token: string,
@@ -49,7 +54,7 @@ export class SystemOneEndpoint {
 		const body = parse(text);
 		if (!response.ok) {
 			throw new Error(
-				`${this.url} answered ${response.status}: ${complaint(body) ?? (text.trim().slice(0, 200) || response.statusText)}`,
+				`${this.name} answered ${response.status}: ${complaint(body) ?? (text.trim().slice(0, 200) || response.statusText)}`,
 			);
 		}
 		// Cloudflare's REST API wraps every reply in {result, success, errors}
@@ -57,7 +62,7 @@ export class SystemOneEndpoint {
 			isRecord(body) && isRecord(body.result) ? body.result : body,
 		);
 		if (!reply.success) {
-			throw new Error(`${this.url} answered with no answers in it`);
+			throw new Error(`${this.name} answered with no answers in it`);
 		}
 		const { answers, usage } = reply.data;
 		const input = usage?.input_tokens ?? usage?.prompt_tokens;

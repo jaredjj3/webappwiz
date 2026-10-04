@@ -3,7 +3,6 @@ name: objects-over-callbacks
 description: A function called after the call returns is an event or a dependency, and a function type you name is an interface.
 files: "**/*.ts"
 level: warning
-effort: high
 recommended: true
 version: 0.0.31
 ---

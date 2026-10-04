@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { NodeFs } from "webappwiz/system";
 import { FakeFs } from "webappwiz/system/testing";
 import { Rules } from "./rules";
-import { ruleDoc } from "./testing";
+import { FakeDecider, ruleDoc } from "./testing";
 
 describe("Rules", () => {
 	let fs: FakeFs;
@@ -62,40 +66,166 @@ describe("Rules", () => {
 		expect(rules.get("alpha")?.id).toEqual("alpha");
 		expect(rules.get("beta")).toBeUndefined();
 	});
+});
 
-	it("finds each rule's scripts, by path from the project root", async () => {
-		await install("alpha", ruleDoc("alpha", { effort: "none" }));
-		await fs.mkdir("/p/.wiz/scry/alpha/scripts");
-		await fs.write("/p/.wiz/scry/alpha/scripts/check.sh", "exit 0\n");
+describe("Rules.check", () => {
+	const fs = new NodeFs();
+	let root: string;
 
-		const rules = await Rules.load("/p", { fs });
+	/** Installs a rule, with a check when one is given. */
+	const install = async (id: string, check?: string, doc = ruleDoc(id)) => {
+		await fs.mkdir(`${root}/.wiz/scry/${id}`);
+		await fs.write(`${root}/.wiz/scry/${id}/RULE.md`, doc);
+		if (check !== undefined) {
+			await fs.write(`${root}/.wiz/scry/${id}/rule.ts`, check);
+		}
+	};
+	const write = (path: string, text: string) =>
+		fs.write(`${root}/${path}`, text);
+	const run = async (paths: string[], decider = new FakeDecider()) =>
+		(await Rules.load(root, { fs })).check({ paths, tools: { decider } });
 
-		expect(rules.get("alpha")?.scripts).toEqual([
-			".wiz/scry/alpha/scripts/check.sh",
-		]);
+	/** A check flagging each line holding `word`, as sure as it is told. */
+	const flagging = (word: string, confidence = 1) => `
+		export default class {
+			async check(file) {
+				return file.lines.flatMap((line, index) =>
+					line.includes("${word}") ? [{ line: index + 1, message: "no ${word}", confidence: ${confidence} }] : [],
+				);
+			}
+		}
+	`;
+
+	beforeEach(async () => {
+		root = await mkdtemp(join(tmpdir(), "scry-rules-"));
+		await fs.mkdir(`${root}/src`);
 	});
 
-	it("finds each rule's eval cases, by path from the project root", async () => {
-		await install("alpha");
-		await fs.mkdir("/p/.wiz/scry/alpha/evals");
-		await fs.write("/p/.wiz/scry/alpha/evals/two-classes.bad.ts", "x\n");
-		await fs.write("/p/.wiz/scry/alpha/evals/one-class.good.ts", "x\n");
-
-		const rules = await Rules.load("/p", { fs });
-
-		expect(rules.get("alpha")?.evals).toEqual([
-			".wiz/scry/alpha/evals/one-class.good.ts",
-			".wiz/scry/alpha/evals/two-classes.bad.ts",
-		]);
+	afterEach(async () => {
+		await rm(root, { recursive: true, force: true });
 	});
 
-	it("reports an eval case that does not say whether it is good or bad", async () => {
-		await install("alpha");
-		await fs.mkdir("/p/.wiz/scry/alpha/evals");
-		await fs.write("/p/.wiz/scry/alpha/evals/one-class.ts", "x\n");
-
-		await expect(Rules.load("/p", { fs })).rejects.toThrow(
-			".wiz/scry/alpha/evals/one-class.ts: an eval case is named <name>.good.<ext> or <name>.bad.<ext>",
+	it("reports what each rule's check finds, by path then line, with the rule's level", async () => {
+		await install("no-foo", flagging("foo"));
+		await install(
+			"no-bar",
+			flagging("bar"),
+			ruleDoc("no-bar", { level: "warning" }),
 		);
+		await write("src/b.ts", "foo\n");
+		await write("src/a.ts", "bar\nfoo\n");
+
+		const report = await run(["src/a.ts", "src/b.ts"]);
+
+		expect(
+			report.problems.map(
+				({ path, line, rule, level }) => `${path}:${line} ${rule} ${level}`,
+			),
+		).toEqual([
+			"src/a.ts:1 no-bar warning",
+			"src/a.ts:2 no-foo error",
+			"src/b.ts:1 no-foo error",
+		]);
+		expect([report.files, report.rules]).toEqual([2, 2]);
+	});
+
+	it("checks a file only against the rules whose files it matches", async () => {
+		await install(
+			"no-foo",
+			flagging("foo"),
+			ruleDoc("no-foo", { files: "**/*.md" }),
+		);
+		await write("src/a.ts", "foo\n");
+
+		const report = await run(["src/a.ts"]);
+
+		expect([report.problems, report.files, report.rules]).toEqual([[], 0, 0]);
+	});
+
+	it("drops what falls under the rule's threshold, and what a scry-ignore excuses", async () => {
+		await install(
+			"unsure",
+			flagging("foo", 0.4),
+			ruleDoc("unsure", { threshold: 0.5 }),
+		);
+		await install("loud", flagging("bar"));
+		await write("src/a.ts", "foo\n// scry-ignore loud: a reason\nbar\n");
+
+		const report = await run(["src/a.ts"]);
+
+		expect([report.problems, report.dropped, report.ignored]).toEqual([
+			[],
+			1,
+			1,
+		]);
+	});
+
+	it("builds each rule with the tools, so its check can ask the decider", async () => {
+		await install(
+			"asks",
+			`export default class {
+				constructor(tools) { this.decider = tools.decider; }
+				async check(file) {
+					const [comment] = file.ts.comments();
+					return [comment.flag("restates", await this.decider.decide("Does it restate?", comment), "Does it restate?")];
+				}
+			}`,
+		);
+		await write("src/a.ts", "// add one\nn += 1;\n");
+		const decider = new FakeDecider({ "add one": 0.9 });
+
+		const report = await run(["src/a.ts"], decider);
+
+		expect(report.problems).toMatchObject([
+			{ line: 1, confidence: 0.9, decidedBy: "Does it restate?" },
+		]);
+		expect(decider.asked.map(({ about }) => about.text)).toEqual([
+			"// add one",
+		]);
+	});
+
+	it("lists the rules that have no check yet", async () => {
+		await install("no-foo");
+		await write("src/a.ts", "foo\n");
+
+		expect((await run(["src/a.ts"])).withoutCheck).toEqual(["no-foo"]);
+	});
+
+	it("reports a rule unchecked on a file its check threw on, and checks the rest", async () => {
+		await install(
+			"fragile",
+			`export default class { async check(file) { if (file.path.endsWith("a.ts")) throw new Error("boom"); return []; } }`,
+		);
+		await install("no-foo", flagging("foo"));
+		await write("src/a.ts", "foo\n");
+
+		const report = await run(["src/a.ts"]);
+
+		expect(report.unchecked).toEqual([
+			{ subject: "fragile on src/a.ts", reason: "boom" },
+		]);
+		expect(report.problems.map((problem) => problem.rule)).toEqual(["no-foo"]);
+	});
+
+	it("reports a rule unchecked whose rule.ts exports no class", async () => {
+		await install("empty", "export const nothing = 1;\n");
+		await write("src/a.ts", "x\n");
+
+		expect((await run(["src/a.ts"])).unchecked).toEqual([
+			{
+				subject: "empty",
+				reason:
+					".wiz/scry/empty/rule.ts does not default-export the rule's class",
+			},
+		]);
+	});
+
+	it("names the files still using rule-ignore", async () => {
+		await install("no-foo", flagging("foo"));
+		await write("src/a.ts", "// rule-ignore no-foo: old spelling\nfoo\n");
+
+		const report = await run(["src/a.ts"]);
+
+		expect([report.legacy, report.ignored]).toEqual([["src/a.ts"], 1]);
 	});
 });

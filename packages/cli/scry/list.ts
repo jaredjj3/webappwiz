@@ -19,7 +19,6 @@ export async function list(opts: RulesProjectOptions): Promise<void> {
 		[
 			"rule",
 			"level",
-			"effort",
 			"recommended",
 			"files",
 			"ships",
@@ -43,7 +42,6 @@ export async function list(opts: RulesProjectOptions): Promise<void> {
 		rows.push([
 			id,
 			rule.level,
-			rule.effort,
 			// what the catalog says, since that is what --recommended reads: a
 			// rule the project wrote is nobody's recommendation
 			offer.get(id)?.recommended ? "yes" : "-",

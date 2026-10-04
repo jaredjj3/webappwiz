@@ -22,6 +22,7 @@ export class Jev implements Judge {
 		opts: JevOptions = {},
 	) {
 		this.endpoint = new SystemOneEndpoint(
+			model,
 			`${opts.origin ?? "https://api.typesafe.ai"}/v1/systemone`,
 			token,
 			{ body: { model } },

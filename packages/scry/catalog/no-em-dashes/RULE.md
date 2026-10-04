@@ -3,7 +3,6 @@ name: no-em-dashes
 description: No em dashes, and no en dashes between words, in code, comments or prose.
 files: "**/*.{ts,md}"
 level: error
-effort: low
 recommended: true
 version: 0.0.31
 ---

@@ -6,20 +6,11 @@
  */
 export type Model = "clef" | "clef-flash" | `jev-${string}`;
 
-/** The models a check asks, by the effort of the rules they judge. */
-export interface Models {
-	low?: Model;
-	medium?: Model;
-	high?: Model;
-}
-
 /** How `wiz scry` runs. */
 export interface ScryConfig {
-	/**
-	 * The model for each effort. `clef` for all three when not set.
-	 */
-	models?: Models;
-	/** How many calls run at once. 8 when not set. */
+	/** The model a rule's decider asks. `clef` when not set. */
+	model?: Model;
+	/** How many requests to the model are out at once. 8 when not set. */
 	jobs?: number;
 }
 

@@ -24,28 +24,33 @@ describe("loadConfig", () => {
 		await rm(root, { recursive: true, force: true });
 	});
 
-	it("defaults to clef-flash, clef for high effort, and 8 jobs", async () => {
+	it("defaults to clef and 8 jobs", async () => {
 		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
-			models: { low: "clef", medium: "clef", high: "clef" },
+			model: "clef",
 			jobs: 8,
 		});
 	});
 
-	it("lays the user's config over the project's, one model at a time, and the environment over both", async () => {
+	it("lays the user's config over the project's, and the environment over both", async () => {
 		await fs.mkdir(`${root}/p/.wiz`);
 		await fs.write(
 			`${root}/p/.wiz/config.ts`,
-			config({ models: { low: "clef", medium: "clef" }, jobs: 2 }),
+			config({ model: "clef-flash", jobs: 2 }),
 		);
 		await fs.mkdir(`${root}/home/.config/wiz`);
 		await fs.write(
 			`${root}/home/.config/wiz/config.ts`,
-			config({ models: { medium: "jev-latest" } }),
+			config({ model: "jev-latest" }),
 		);
-		ps.setEnv({ WIZ_SCRY_MODEL_HIGH: "jev-preview", WIZ_SCRY_JOBS: "16" });
+		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
+			model: "jev-latest",
+			jobs: 2,
+		});
+
+		ps.setEnv({ WIZ_SCRY_MODEL: "jev-preview", WIZ_SCRY_JOBS: "16" });
 
 		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
-			models: { low: "clef", medium: "jev-latest", high: "jev-preview" },
+			model: "jev-preview",
 			jobs: 16,
 		});
 	});
@@ -58,15 +63,15 @@ describe("loadConfig", () => {
 		expect((await loadConfig(`${root}/p`, { fs, ps })).jobs).toEqual(7);
 	});
 
-	it("refuses the settings agents used to need, rather than ignore them", async () => {
+	it("refuses settings that no longer do anything, rather than ignore them", async () => {
 		await fs.mkdir(`${root}/p/.wiz`);
 		await fs.write(
 			`${root}/p/.wiz/config.ts`,
-			config({ agents: { medium: "claude -p" }, budget: 5 }),
+			config({ agents: { medium: "claude -p" }, models: { low: "clef" } }),
 		);
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
-			"scry.agents, scry.budget are gone: scry asks decision models now, chosen by scry.models",
+			"scry.agents, scry.models are gone: a rule's check asks one decision model now, chosen by scry.model",
 		);
 	});
 

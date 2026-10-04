@@ -1,25 +1,21 @@
 import {
-	Check,
-	type Effort,
+	BatchedDecider,
+	CachedDecider,
+	type DeciderUsage,
+	Decisions,
 	Git,
-	type Judge,
 	type Report,
 	Rules,
 } from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, type Glob, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import {
-	type Clock,
-	SystemClock,
-	SystemTimer,
-	type Timer,
-} from "webappwiz/time";
 import { ProjectCredentials } from "../credentials/project-credentials";
 import { loadConfig } from "../load-config";
 import { table } from "../table";
-import { Progress } from "./progress";
-import { HostedProviders, type Providers } from "./providers";
-import { type Screen, StderrScreen } from "./screen";
+import { HostedProviders, OnDemandJudge, type Providers } from "./providers";
+
+/** Where a project keeps the answers its decider was given, between runs. */
+export const DECISIONS = "node_modules/.cache/webappwiz/scry/decisions.json";
 
 export interface CheckOptions {
 	/**
@@ -30,12 +26,9 @@ export interface CheckOptions {
 	paths: string[];
 	/** The ref the change is measured from; see `Git.changes` for the default. */
 	since?: string;
-	/** How many calls run at once, over the config's `jobs`. */
+	/** How many requests to the model are out at once, over the config's `jobs`. */
 	jobs?: number;
-	/**
-	 * The model every rule is judged by, over the config's `models`, so two
-	 * models can be compared on one change.
-	 */
+	/** The model a rule's decider asks, over the config's `model`. */
 	model?: string;
 	/** `json` for the report as JSON; anything else is text. */
 	format: string;
@@ -43,24 +36,25 @@ export interface CheckOptions {
 	fs?: Fs;
 	ps?: Ps;
 	glob?: Glob;
-	/** Where progress is drawn while the calls run; stderr by default. */
-	screen?: Screen;
-	/** What progress times the calls by. */
-	clock?: Clock;
-	/** What ticks progress over. */
-	timer?: Timer;
 	/** What makes the judge for a model; Workers AI and TypeSafe by default. */
 	providers?: Providers;
 }
 
+/** What the decider spent, beside the report. */
+interface Spent extends DeciderUsage {
+	/** Questions answered from what was kept from an earlier run. */
+	cached: number;
+}
+
 /**
  * Checks a change against the project's rules, the way a linter checks code:
- * one block of findings, and a nonzero exit when any is an error. It exits 1
- * on an error finding, 2 when a file or script went unchecked, 0 otherwise.
+ * one block of problems, and a nonzero exit when any is an error. It exits 1
+ * on an error, 2 when a rule went unchecked on a file, 0 otherwise.
  *
- * A decision model judges each rule, saying how likely the change is to
- * break it, and no model writes anything: the report is for whoever fixes
- * the code, person or agent, to act on.
+ * Each rule's `rule.ts` reads the changed files it applies to. Where code
+ * cannot settle a question it asks a decision model, which answers with how
+ * likely a yes is and writes nothing: the report is for whoever fixes the
+ * code, person or agent, to act on.
  */
 export async function check(opts: CheckOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -80,46 +74,9 @@ export async function check(opts: CheckOptions): Promise<void> {
 		);
 		return;
 	}
-	const prepared = await Check.prepare({
-		dir,
-		rules,
-		changes,
-		fs,
-		ps,
-		glob: opts.glob,
-	});
 
-	const providers =
-		opts.providers ??
-		new HostedProviders(
-			(await ProjectCredentials.open(dir, { fs, ps })).credentials,
-		);
-	const judges = new Map<Effort, Judge>();
-	for (const effort of prepared.efforts) {
-		if (effort !== "none") {
-			judges.set(
-				effort,
-				await providers.judge(opts.model ?? settings.models[effort]),
-			);
-		}
-	}
-
-	// progress goes to stderr, so the report on stdout stays one clean block
-	const jobs = opts.jobs ?? settings.jobs;
-	const total = prepared.calls.length;
-	const progress = new Progress(prepared, {
-		screen: opts.screen ?? new StderrScreen(),
-		log,
-		clock: opts.clock ?? new SystemClock(),
-		timer: opts.timer ?? new SystemTimer(),
-	});
-	if (total > 0) {
-		progress.start(
-			`sending ${total} ${plural(total, "call")} (~${thousands(prepared.tokens)} input tokens), ${Math.min(jobs, total)} at a time`,
-		);
-	}
 	// the first ctrl-c stops the check and reports what came back; one after
-	// that, or once the calls are done, quits as usual
+	// that, or once it is done, quits as usual
 	const cancel = new AbortController();
 	let running = true;
 	ps.on("SIGINT", () => {
@@ -129,12 +86,32 @@ export async function check(opts: CheckOptions): Promise<void> {
 			ps.exit(130);
 		}
 	});
-	const report = await prepared
-		.run({ judges, jobs, signal: cancel.signal })
+
+	const model = opts.model ?? settings.model;
+	const providers =
+		opts.providers ??
+		new HostedProviders(
+			(await ProjectCredentials.open(dir, { fs, ps })).credentials,
+		);
+	const batched = new BatchedDecider(new OnDemandJudge(providers, model), {
+		jobs: opts.jobs ?? settings.jobs,
+		signal: cancel.signal,
+	});
+	const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
+	const decider = new CachedDecider(batched, decisions, model);
+	const report = await rules
+		.check({
+			paths: changes.files.map((file) => file.path),
+			tools: { decider },
+			glob: opts.glob,
+			signal: cancel.signal,
+		})
 		.finally(() => {
 			running = false;
-			progress.dispose();
 		});
+	await decisions.save();
+	const spent: Spent = { ...batched.usage, cached: decider.hits };
+
 	if (report.legacy.length > 0) {
 		log.error(
 			`${report.legacy.length} ${plural(report.legacy.length, "file")} still ${report.legacy.length === 1 ? "uses" : "use"} rule-ignore, which scry honors for now: rename it to scry-ignore`,
@@ -142,48 +119,54 @@ export async function check(opts: CheckOptions): Promise<void> {
 	}
 	log.info(
 		opts.format === "json"
-			? JSON.stringify(report, null, 2)
-			: text(report).join("\n"),
+			? JSON.stringify({ since: changes.since, ...report, spent }, null, 2)
+			: text(report, changes.since, spent).join("\n"),
 	);
-	if (report.findings.some((finding) => finding.level === "error")) {
+	if (report.problems.some((problem) => problem.level === "error")) {
 		ps.exit(1);
 	} else if (report.unchecked.length > 0) {
 		ps.exit(2);
 	}
 }
 
-/** The report as a linter prints one: findings under each file, then a tally. */
-function text(report: Report): string[] {
-	const rows = report.findings.map((finding) => [
-		`  ${color.dim(String(finding.line))}`,
-		finding.level === "error"
-			? color.red(finding.level)
-			: color.yellow(finding.level),
-		color.dim(`${Math.round(finding.probability * 100)}%`),
-		finding.message,
-		color.dim(finding.rule),
+/** The report as a linter prints one: problems under each file, then a tally. */
+function text(report: Report, since: string, spent: Spent): string[] {
+	const rows = report.problems.map((problem) => [
+		`  ${color.dim(String(problem.line))}`,
+		problem.level === "error"
+			? color.red(problem.level)
+			: color.yellow(problem.level),
+		color.dim(`${Math.round(problem.confidence * 100)}%`),
+		problem.message,
+		color.dim(problem.rule),
 	]);
 	const aligned = table(rows);
 	const lines: string[] = [];
-	for (const [index, finding] of report.findings.entries()) {
-		if (report.findings[index - 1]?.file !== finding.file) {
-			lines.push(...(index === 0 ? [] : [""]), color.bold(finding.file));
+	for (const [index, problem] of report.problems.entries()) {
+		if (report.problems[index - 1]?.path !== problem.path) {
+			lines.push(...(index === 0 ? [] : [""]), color.bold(problem.path));
 		}
 		lines.push(aligned[index] ?? "");
 	}
 	if (report.unchecked.length > 0) {
-		const unchecked = table(
-			report.unchecked.map((item) => [`  ${item.subject}`, item.reason]),
-		);
 		lines.push(
 			...(lines.length === 0 ? [] : [""]),
 			color.bold("not checked"),
-			...unchecked,
+			...table(
+				report.unchecked.map((item) => [`  ${item.subject}`, item.reason]),
+			),
 		);
 	}
-	lines.push(...(lines.length === 0 ? [] : [""]), tally(report));
-	if (report.usage) {
-		lines.push(color.dim(spent(report.usage)));
+	lines.push(...(lines.length === 0 ? [] : [""]), tally(report, since));
+	if (report.withoutCheck.length > 0) {
+		lines.push(
+			color.dim(
+				`  ${report.withoutCheck.length} ${plural(report.withoutCheck.length, "rule")} with no rule.ts yet checked nothing: ${report.withoutCheck.join(", ")}`,
+			),
+		);
+	}
+	if (spent.questions + spent.cached > 0) {
+		lines.push(color.dim(asked(spent)));
 	}
 	return lines;
 }
@@ -192,28 +175,32 @@ function text(report: Report): string[] {
  * The last line: what was found, where, and what the check could not vouch
  * for. It never says `no problems` of files it did not check.
  */
-function tally(report: Report): string {
-	const errors = report.findings.filter(
-		(finding) => finding.level === "error",
+function tally(report: Report, since: string): string {
+	const errors = report.problems.filter(
+		(problem) => problem.level === "error",
 	).length;
-	const warnings = report.findings.length - errors;
-	const scope = `${report.files} ${plural(report.files, "file")} since ${report.since}`;
-	const missed = new Set(report.unchecked.map((item) => item.subject)).size;
+	const warnings = report.problems.length - errors;
+	const scope = `${report.files} ${plural(report.files, "file")} since ${since}`;
+	const missed = report.unchecked.length;
 	const stopped = report.cancelled ? "cancelled: " : "";
 	const but = missed === 0 ? "" : `, but ${missed} not checked`;
-	if (report.findings.length > 0) {
+	if (report.problems.length > 0) {
 		return (errors > 0 ? color.red : color.yellow)(
-			`✖ ${stopped}${report.findings.length} ${plural(report.findings.length, "problem")} (${errors} ${plural(errors, "error")}, ${warnings} ${plural(warnings, "warning")}) in ${scope}${but}`,
+			`✖ ${stopped}${report.problems.length} ${plural(report.problems.length, "problem")} (${errors} ${plural(errors, "error")}, ${warnings} ${plural(warnings, "warning")}) in ${scope}${but}`,
 		);
 	}
-	return missed === 0
+	return missed === 0 && !report.cancelled
 		? color.green(`✔ no problems in ${scope}`)
 		: color.yellow(`⚠ ${stopped}no problems found in ${scope}${but}`);
 }
 
-/** What the judges that report usage really spent. */
-function spent(usage: NonNullable<Report["usage"]>): string {
-	return `  spent ${thousands(usage.input)} input tokens across ${usage.calls} ${plural(usage.calls, "call")}`;
+/** What the decider asked, and what it cost. */
+function asked(spent: Spent): string {
+	const cached =
+		spent.cached === 0 ? "" : `, ${spent.cached} answered from earlier runs`;
+	const tokens =
+		spent.input === 0 ? "" : `, ${thousands(spent.input)} input tokens`;
+	return `  asked ${spent.questions} ${plural(spent.questions, "question")} in ${spent.requests} ${plural(spent.requests, "request")}${cached}${tokens}`;
 }
 
 function plural(count: number, noun: string): string {

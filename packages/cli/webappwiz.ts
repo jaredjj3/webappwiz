@@ -10,10 +10,11 @@ import { remove as removeCredential } from "./credentials/remove";
 import { version } from "./package.json";
 import { add as addRule } from "./scry/add";
 import { check } from "./scry/check";
-import { evaluate } from "./scry/evaluate";
 import { list as listRules } from "./scry/list";
 import { remove as removeRule } from "./scry/remove";
+import { test as testRules } from "./scry/test";
 import { update as updateRules } from "./scry/update";
+import { why } from "./scry/why";
 import { add } from "./skills/add";
 import { list } from "./skills/list";
 import { update as updateSkills } from "./skills/update";
@@ -65,12 +66,12 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		})
 		.option("jobs", z.coerce.number(), {
 			default: undefined,
-			description: "calls at once (default: scry.jobs, else 8)",
+			description: "requests to the model at once (default: scry.jobs, else 8)",
 		})
 		.option("model", z.string(), {
 			default: undefined,
 			description:
-				"judge every rule with this model: clef, clef-flash, or a jev like jev-latest (default: scry.models)",
+				"the model rules' deciders ask: clef, clef-flash, or a jev like jev-latest (default: scry.model, else clef)",
 		})
 		.option("format", z.enum(["text", "json"]), {
 			default: "text",
@@ -80,28 +81,22 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.action((opts, { log, fs, ps }) => check({ ...opts, log, fs, ps }));
 
 	scry
-		.command("eval")
-		.description(
-			"judge the rules against their own Good and Bad examples, to compare models",
-		)
+		.command("test")
+		.description("run the tests beside each rule in .wiz/scry")
 		.rest("ids", z.string(), {
 			description: "rule ids, as `scry list` names them (default: every rule)",
 		})
-		.option("model", z.string(), {
-			default: undefined,
-			description:
-				"judge every rule with this model: clef, clef-flash, or a jev like jev-latest (default: scry.models)",
+		.action((opts, { log, fs, ps }) => testRules({ ...opts, log, fs, ps }));
+
+	scry
+		.command("why")
+		.description(
+			"say what a model was asked about a line, and what it answered",
+		)
+		.arg("at", z.string(), {
+			description: "path:line, as a report prints it",
 		})
-		.option("jobs", z.coerce.number(), {
-			default: undefined,
-			description: "calls at once (default: scry.jobs, else 8)",
-		})
-		.option("format", z.enum(["text", "json"]), {
-			default: "text",
-			description: "text or json (default: text)",
-		})
-		.use(timed())
-		.action((opts, { log, fs, ps }) => evaluate({ ...opts, log, fs, ps }));
+		.action((opts, { log, fs, ps }) => why({ ...opts, log, fs, ps }));
 
 	scry
 		.command("list")

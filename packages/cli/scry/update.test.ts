@@ -43,25 +43,28 @@ describe("scry update", () => {
 		]);
 	});
 
-	it("says to read a script the refresh changed, and not one it left as it was", async () => {
-		const scripted = {
+	it("says to read code the refresh changed, and not code it left as it was, nor tests", async () => {
+		const coded = {
 			"no-foo": {
 				"RULE.md": ruleDoc("no-foo", { version: "1.0.0" }),
-				"scripts/new.sh": "exit 0\n",
-				"scripts/same.sh": "exit 0\n",
+				"rule.ts": "export default class {}\n",
+				"words.ts": "export const WORDS = [];\n",
+				"rule.test.ts": "test();\n",
 			},
 		};
 		await install("no-foo", ruleDoc("no-foo", { version: "0.9.0" }));
-		await fs.mkdir("/p/.wiz/scry/no-foo/scripts");
-		await fs.write("/p/.wiz/scry/no-foo/scripts/same.sh", "exit 0\n");
+		await fs.write(
+			"/p/.wiz/scry/no-foo/words.ts",
+			"export const WORDS = [];\n",
+		);
 
-		await update({ dir: "/p", log, fs, rules: scripted });
+		await update({ dir: "/p", log, fs, rules: coded });
 
 		const warned = log.entries
 			.map((entry) => String(entry.message))
 			.filter((message) => message.startsWith("⚠️"));
 		expect(warned).toEqual([
-			"⚠️ .wiz/scry/no-foo/scripts/new.sh is a script that runs on every `wiz scry`: read it before the next one",
+			"⚠️ .wiz/scry/no-foo/rule.ts is code that runs on every `wiz scry`: read it before the next one",
 		]);
 	});
 });

@@ -1,15 +1,9 @@
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import type {
-	Config,
-	CredentialsConfig,
-	Model,
-	Models,
-	ScryConfig,
-} from "./config";
+import type { Config, CredentialsConfig, Model, ScryConfig } from "./config";
 
 /** `scry` with every default filled in. */
 export interface Settings {
-	models: Required<Models>;
+	model: Model;
 	jobs: number;
 }
 
@@ -20,15 +14,11 @@ export interface LoadConfigOptions {
 	ps?: Ps;
 }
 
-const EFFORTS = ["low", "medium", "high"] as const;
-
 /**
  * The settings `wiz scry` runs with, each layer over the last: the
  * defaults, the project's `.wiz/config.ts`, the user's
  * `$XDG_CONFIG_HOME/wiz/config.ts` (`~/.config/wiz/config.ts`), then
- * `WIZ_SCRY_MODEL_LOW`, `_MEDIUM`, `_HIGH` and `WIZ_SCRY_JOBS`. The models
- * merge one effort at a time, so a user can swap the project's `high` and
- * keep its `low`.
+ * `WIZ_SCRY_MODEL` and `WIZ_SCRY_JOBS`.
  */
 export async function loadConfig(
 	dir: string,
@@ -40,12 +30,9 @@ export async function loadConfig(
 		...(await files(dir, fs, ps)).map((config) => scry(config)),
 		environment(ps),
 	];
-	const settings: Settings = {
-		models: { low: "clef", medium: "clef", high: "clef" },
-		jobs: 8,
-	};
+	const settings: Settings = { model: "clef", jobs: 8 };
 	for (const layer of layers) {
-		settings.models = { ...settings.models, ...layer.models };
+		settings.model = layer.model ?? settings.model;
 		settings.jobs = layer.jobs ?? settings.jobs;
 	}
 	return settings;
@@ -97,25 +84,21 @@ async function files(
 function scry({ path, config }: { path: string; config: Config }): ScryConfig {
 	const scry = (config.scry ?? {}) as ScryConfig & Record<string, unknown>;
 	// a setting that does nothing now is a check run unlike its author meant
-	const gone = ["agents", "budget", "batch"].filter((key) => key in scry);
+	const gone = ["agents", "budget", "batch", "models"].filter(
+		(key) => key in scry,
+	);
 	if (gone.length > 0) {
 		throw new Error(
-			`${path}: scry.${gone.join(", scry.")} ${gone.length === 1 ? "is" : "are"} gone: scry asks decision models now, chosen by scry.models`,
+			`${path}: scry.${gone.join(", scry.")} ${gone.length === 1 ? "is" : "are"} gone: a rule's check asks one decision model now, chosen by scry.model`,
 		);
 	}
 	return scry;
 }
 
 function environment(ps: Ps): ScryConfig {
-	const models: Models = {};
-	for (const effort of EFFORTS) {
-		const model = ps.env(`WIZ_SCRY_MODEL_${effort.toUpperCase()}`);
-		if (model) {
-			// checked where the model is used, which knows every provider
-			models[effort] = model as Model;
-		}
-	}
-	return { models, jobs: number(ps, "WIZ_SCRY_JOBS") };
+	// checked where the model is used, which knows every provider
+	const model = (ps.env("WIZ_SCRY_MODEL") || undefined) as Model | undefined;
+	return { model, jobs: number(ps, "WIZ_SCRY_JOBS") };
 }
 
 function number(ps: Ps, name: string): number | undefined {

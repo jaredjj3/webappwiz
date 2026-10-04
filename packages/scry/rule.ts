@@ -1,183 +1,40 @@
-import { Markdown } from "webappwiz/md";
-import { z } from "zod";
-import { EVAL_FILE } from "./layout";
-
-/** How loudly a violation reports. */
-export type Level = "error" | "warning";
-export const LEVELS = ["error", "warning"] as const;
+import type { Decider } from "./decider";
+import type { SourceFile } from "./source-file";
 
 /**
- * How much judgment the rule takes, which picks the model that checks it:
- * `none` when its scripts decide it alone and no model runs, `low` for a grep
- * or a count, `high` for design judgment across a file, `medium` between.
+ * A rule's check: it reads one file and says where the file breaks the rule.
+ * A rule's `rule.ts` default-exports a class implementing it. Which files it
+ * reads, its threshold, `scry-ignore` comments and the report are not its
+ * concern: its `RULE.md` and the check that runs it handle those.
  */
-export type Effort = "none" | "low" | "medium" | "high";
-export const EFFORTS = ["none", "low", "medium", "high"] as const;
-
-/** A `RULE.md` that does not have the shape a rule needs: `path:line: why`. */
-export class RuleError extends Error {}
-
-/** Where a document came from, for the errors it can raise. */
-export interface ParseOptions {
-	/** How errors name the document; `RULE.md` when not given. */
-	path?: string;
-	/** The directory the document sits in, which its `name` must match. */
-	id?: string;
-	/** Its scripts, by path from the project root. */
-	scripts?: string[];
-	/** Its eval cases, by path from the project root. */
-	evals?: string[];
+export interface Rule {
+	check(file: SourceFile): Promise<Finding[]>;
 }
 
-const FRONTMATTER = z.object({
-	name: z.string(),
-	description: z.string(),
-	files: z.optional(z.string()),
-	level: z.optional(
-		z.enum(LEVELS, { error: `expected one of ${LEVELS.join(", ")}` }),
-	),
-	effort: z.optional(
-		z.enum(EFFORTS, { error: `expected one of ${EFFORTS.join(", ")}` }),
-	),
-	// frontmatter arrives as strings, so the two spellings of a boolean are an
-	// enum here rather than z.boolean()
-	recommended: z.optional(
-		z.enum(["true", "false"], { error: "expected one of true, false" }),
-	),
-	threshold: z.optional(
-		z
-			.string()
-			.transform(Number)
-			.refine((value) => value >= 0 && value <= 1, {
-				error: "expected a number from 0 to 1",
-			}),
-	),
-	version: z.optional(z.string()),
-});
-
-const NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
-/**
- * One rule, parsed out of its `RULE.md`: the frontmatter a listing reads, and
- * the document a model judges by.
- *
- * Only `parse` makes one, so holding a `Rule` means the frontmatter passed:
- * it has a name matching its directory and a description. The body is the
- * rule author's, the way a skill's is, and nothing here reads it.
- */
-export class Rule {
-	private constructor(
-		/** Kebab case; what a report cites. */
-		readonly id: string,
-		/** One line for a listing, and for planning who reads the rule. */
-		readonly description: string,
-		/** Glob choosing which files this rule applies to. */
-		readonly files: string,
-		/** How loudly it reports; `error` when the frontmatter does not say. */
-		readonly level: Level,
-		/** Which model checks it; `medium` when the frontmatter does not say. */
-		readonly effort: Effort,
-		/**
-		 * How sure a model has to be that a change breaks the rule before it is
-		 * reported, from 0 to 1; 0.7 when the frontmatter does not say.
-		 */
-		readonly threshold: number,
-		/** Its scripts, by path from the project root, in name order. */
-		readonly scripts: readonly string[],
-		/**
-		 * Its eval cases, by path from the project root, in name order: each a
-		 * file named `<name>.good.<ext>` that should not be found to break it,
-		 * or `<name>.bad.<ext>` that should.
-		 */
-		readonly evals: readonly string[],
-		/**
-		 * Whether a catalog offers this rule as one to start with, which is what
-		 * `scry add --recommended` copies in. A project's own rule says nothing
-		 * by saying nothing: it is already installed.
-		 */
-		readonly recommended: boolean,
-		/** The release it shipped in; null for a rule written locally. */
-		readonly version: string | null,
-		/** The whole file, verbatim. */
-		readonly document: string,
-	) {}
-
-	/** Parses a `RULE.md`, or throws a `RuleError` saying what is wrong. */
-	static parse(text: string, opts: ParseOptions = {}): Rule {
-		const path = opts.path ?? "RULE.md";
-		const fail = (line: number, reason: string): RuleError =>
-			new RuleError(`${path}:${line}: ${reason}`);
-		const md = Markdown.parse(text);
-		if (Object.keys(md.fields).length === 0) {
-			throw fail(1, "no frontmatter: a rule opens with a --- block");
-		}
-		const parsed = FRONTMATTER.safeParse(md.fields);
-		if (!parsed.success) {
-			const issue = parsed.error.issues[0];
-			const key = String(issue?.path[0] ?? "frontmatter");
-			throw fail(
-				lineOf(text, key),
-				`${key}: ${issue?.message ?? "invalid frontmatter"}`,
-			);
-		}
-		const front = parsed.data;
-		if (!NAME.test(front.name)) {
-			throw fail(
-				lineOf(text, "name"),
-				`name: "${front.name}" is not kebab case`,
-			);
-		}
-		const effort = front.effort ?? "medium";
-		const scripts = (opts.scripts ?? []).toSorted();
-		if (effort === "none" && scripts.length === 0) {
-			throw fail(
-				lineOf(text, "effort"),
-				"effort: none means its scripts decide it, and it has no scripts/",
-			);
-		}
-		const evals = (opts.evals ?? []).toSorted();
-		const misnamed = evals.find(
-			(path) => !EVAL_FILE.test(path.split("/").at(-1) ?? ""),
-		);
-		if (misnamed !== undefined) {
-			throw new RuleError(
-				`${misnamed}: an eval case is named <name>.good.<ext> or <name>.bad.<ext>`,
-			);
-		}
-		if (opts.id !== undefined && opts.id !== front.name) {
-			throw fail(
-				lineOf(text, "name"),
-				`name: "${front.name}" does not match its directory "${opts.id}"`,
-			);
-		}
-		return new Rule(
-			front.name,
-			front.description,
-			front.files ?? "**/*",
-			front.level ?? "error",
-			effort,
-			front.threshold ?? 0.7,
-			scripts,
-			evals,
-			front.recommended === "true",
-			front.version ?? null,
-			text,
-		);
-	}
+/** One place a file breaks a rule, as the rule sees it. */
+export interface Finding {
+	/** From 1. */
+	line: number;
+	message: string;
+	/**
+	 * How sure whatever decided it was, from 0 to 1: 1 when code decided it,
+	 * a decider's answer when one did. Under the rule's threshold, the check
+	 * drops it.
+	 */
+	confidence: number;
+	/** The question a decider answered, when one decided it. */
+	decidedBy?: string;
 }
 
 /**
- * The 1-based line `key:` sits on in the frontmatter, so an error points at
- * it. Line 1, the opening fence, when the key is not there.
+ * What every rule is built with. A rule's constructor takes this and keeps
+ * what it uses; a rule that only reads code takes nothing. A tool that costs
+ * something to use, like a model, costs nothing until a rule uses it.
  */
-function lineOf(text: string, key: string): number {
-	for (const [index, line] of text.split("\n").entries()) {
-		if (line.startsWith(`${key}:`)) {
-			return index + 1;
-		}
-		if (index > 0 && line === "---") {
-			break;
-		}
-	}
-	return 1;
+export interface Tools {
+	/** Answers yes-or-no questions about code, with the probability of yes. */
+	decider: Decider;
 }
+
+/** What a rule's `rule.ts` default-exports. */
+export type RuleClass = new (tools: Tools) => Rule;

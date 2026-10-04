@@ -1,12 +1,13 @@
+import type { Decider } from "./decider";
 import type { Judge, Judgment, Verdict } from "./judge";
-import type { Effort, Level } from "./rule";
+import type { Level } from "./rule-document";
+import type { Span } from "./source-file";
 
 /** Whatever a test wants to differ from a plain rule document. */
 export interface RuleDocOptions {
 	description?: string;
 	files?: string;
 	level?: Level;
-	effort?: Effort;
 	recommended?: boolean;
 	threshold?: number;
 	version?: string;
@@ -20,7 +21,6 @@ export const ruleDoc = (name: string, opts: RuleDocOptions = {}): string =>
 		`description: ${opts.description ?? `Prose about ${name}.`}`,
 		`files: "${opts.files ?? "**/*.ts"}"`,
 		`level: ${opts.level ?? "error"}`,
-		...(opts.effort === undefined ? [] : [`effort: ${opts.effort}`]),
 		...(opts.recommended === undefined
 			? []
 			: [`recommended: ${opts.recommended}`]),
@@ -77,5 +77,24 @@ export class FakeJudge implements Judge {
 			),
 			...(this.opts.input === undefined ? {} : { input: this.opts.input }),
 		};
+	}
+}
+
+/** A decider for tests: answers by what the span it is asked about contains, and records what it was asked. */
+export class FakeDecider implements Decider {
+	readonly asked: { question: string; about: Span }[] = [];
+
+	constructor(
+		/** The probability to answer when the span's text contains the key. */
+		private answers: Record<string, number> = {},
+		private otherwise = 0,
+	) {}
+
+	async decide(question: string, about: Span): Promise<number> {
+		this.asked.push({ question, about });
+		const match = Object.entries(this.answers).find(([key]) =>
+			about.text.includes(key),
+		);
+		return match?.[1] ?? this.otherwise;
 	}
 }

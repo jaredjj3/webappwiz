@@ -3,7 +3,6 @@ name: named-options-last
 description: Settings go in one named opts object, after the parameters a caller cannot leave out.
 files: "**/*.ts"
 level: warning
-effort: medium
 recommended: true
 version: 0.0.31
 ---

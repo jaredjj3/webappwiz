@@ -33,6 +33,7 @@ export class Clef implements Judge {
 	) {
 		const origin = opts.origin ?? "https://api.cloudflare.com";
 		this.endpoint = new SystemOneEndpoint(
+			model,
 			`${origin}/client/v4/accounts/${account.id}/ai/run/@cf/cloudflare/${model}`,
 			account.token,
 		);

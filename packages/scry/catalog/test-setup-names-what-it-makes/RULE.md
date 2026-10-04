@@ -3,7 +3,6 @@ name: test-setup-names-what-it-makes
 description: Test setup is named for the thing it makes, never a harness.
 files: "**/{*.test,testing}.ts"
 level: error
-effort: low
 recommended: true
 version: 0.0.31
 ---

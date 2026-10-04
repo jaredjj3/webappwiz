@@ -11,10 +11,6 @@ import devServersFindAPort from "./dev-servers-find-a-port/RULE.md" with {
 import docCommentsAddressUsers from "./doc-comments-address-users/RULE.md" with {
 	type: "text",
 };
-import exampleScript from "./example-script/RULE.md" with { type: "text" };
-import exampleScriptCheck from "./example-script/scripts/check.sh" with {
-	type: "text",
-};
 import exportLeadsTheFile from "./export-leads-the-file/RULE.md" with {
 	type: "text",
 };
@@ -196,7 +192,7 @@ const EVALS: Record<string, string[]> = {
 
 /**
  * Every rule this package ships, id to the files in its directory by path:
- * its `RULE.md`, any scripts beside it, and its eval cases. Imported rather
+ * its `RULE.md`, its `rule.ts` and tests once it has them, and its eval cases. Imported rather
  * than read off a directory so the files travel inside the build, and so a
  * rule is here or it does not ship.
  */
@@ -205,10 +201,6 @@ export const catalog: Record<string, Record<string, string>> = withEvals({
 	"comments-say-why-not-what": { "RULE.md": commentsSayWhyNotWhat },
 	"dev-servers-find-a-port": { "RULE.md": devServersFindAPort },
 	"doc-comments-address-users": { "RULE.md": docCommentsAddressUsers },
-	"example-script": {
-		"RULE.md": exampleScript,
-		"scripts/check.sh": exampleScriptCheck,
-	},
 	"export-leads-the-file": { "RULE.md": exportLeadsTheFile },
 	"fakes-over-mocks": { "RULE.md": fakesOverMocks },
 	"matchers-over-test-logic": { "RULE.md": matchersOverTestLogic },

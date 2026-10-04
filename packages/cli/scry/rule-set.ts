@@ -1,4 +1,4 @@
-import { Rule } from "@webappwiz/scry";
+import { RuleDocument } from "@webappwiz/scry";
 import { catalog } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import type { Fs } from "webappwiz/system";
@@ -25,45 +25,37 @@ export interface RulesProjectOptions {
 export const offered = (opts: RulesProjectOptions): Record<string, Bundle> =>
 	opts.rules ?? catalog;
 
-/**
- * Every rule on offer, parsed, in id order. Each is parsed with the scripts
- * and eval cases its bundle holds, since a rule that leans on its scripts is only valid
- * with them.
- */
-export const shipped = (opts: RulesProjectOptions): Map<string, Rule> =>
+/** Every rule on offer, its `RULE.md` parsed, in id order. */
+export const shipped = (opts: RulesProjectOptions): Map<string, RuleDocument> =>
 	new Map(
 		Object.entries(offered(opts))
 			.toSorted(([left], [right]) => left.localeCompare(right))
 			.map(([id, bundle]) => [
 				id,
-				Rule.parse(bundle[RULES.file] ?? "", {
-					id,
-					scripts: Object.keys(bundle).filter((path) =>
-						path.startsWith("scripts/"),
-					),
-					evals: Object.keys(bundle).filter((path) =>
-						path.startsWith("evals/"),
-					),
-				}),
+				RuleDocument.parse(bundle[RULES.file] ?? "", { id }),
 			]),
 	);
 
 /**
- * Says which of the files a command just changed are scripts, since a review
- * runs them: they deserve the same reading before they run as any code an
- * agent is about to execute. `changed` is under the project root.
+ * Says which of the files a command just changed are code a check runs: a
+ * rule's `rule.ts` and what it imports run on every `wiz scry`, so they
+ * deserve the same reading before they run as any code an agent is about to
+ * execute. `changed` is under the project root.
  */
-export function warnOfScripts(
-	changed: string[],
-	opts: RulesProjectOptions,
-): void {
+export function warnOfCode(changed: string[], opts: RulesProjectOptions): void {
 	const log = opts.log ?? new ConsoleLogger();
-	const scripts = changed.filter(
-		(path) => path.slice(RULES.root.length + 1).split("/")[1] === "scripts",
-	);
-	for (const path of scripts) {
+	const code = changed.filter((path) => {
+		const [, ...inside] = path.slice(RULES.root.length + 1).split("/");
+		return (
+			/\.[cm]?[jt]sx?$/.test(path) &&
+			!/\.test\.[cm]?[jt]sx?$/.test(path) &&
+			inside[0] !== "evals" &&
+			inside[0] !== "fixtures"
+		);
+	});
+	for (const path of code) {
 		log.info(
-			`⚠️ ${path} is a script that runs on every \`wiz scry\`: read it before the next one`,
+			`⚠️ ${path} is code that runs on every \`wiz scry\`: read it before the next one`,
 		);
 	}
 }

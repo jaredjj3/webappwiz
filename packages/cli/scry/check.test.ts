@@ -7,7 +7,6 @@ import { FakeJudge, ruleDoc } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
-import { FakeClock } from "webappwiz/time/testing";
 import { check } from "./check";
 
 describe("wiz scry", () => {
@@ -16,9 +15,6 @@ describe("wiz scry", () => {
 	let proc: FakeProcess;
 	let ps: NodePs;
 	let log: MemoryLogger;
-
-	// plain lines, as on a pipe, whatever runs the tests
-	const screen = { live: false, columns: 80, write: () => undefined };
 
 	let judge: Judge;
 	let asked: string[];
@@ -44,6 +40,41 @@ describe("wiz scry", () => {
 	const git = async (...args: string[]) => {
 		await ps.spawnCapture(["git", "-C", root, ...args]);
 	};
+	/** Installs and commits a rule whose check is `rule`, the source of its `rule.ts`. */
+	const install = async (
+		id: string,
+		rule: string,
+		doc = ruleDoc(id, { description: `No ${id}.` }),
+	) => {
+		await fs.mkdir(`${root}/.wiz/scry/${id}`);
+		await fs.write(`${root}/.wiz/scry/${id}/RULE.md`, doc);
+		await fs.write(`${root}/.wiz/scry/${id}/rule.ts`, rule);
+		await git("add", ".wiz");
+		await git("commit", "-qm", `add ${id}`);
+	};
+	/** Flags each line holding `word`, decided by code. */
+	const flagging = (word: string) => `
+		export default class {
+			async check(file) {
+				return file.lines.flatMap((line, index) =>
+					line.includes("${word}") ? [{ line: index + 1, message: "no ${word}", confidence: 1 }] : [],
+				);
+			}
+		}
+	`;
+	/** Asks the decider about each comment. */
+	const asking = `
+		export default class {
+			constructor(tools) { this.decider = tools.decider; }
+			async check(file) {
+				return Promise.all(
+					file.ts.comments().map(async (comment) =>
+						comment.flag("restates the code", await this.decider.decide("Does it restate?", comment), "Does it restate?"),
+					),
+				);
+			}
+		}
+	`;
 
 	beforeEach(async () => {
 		root = await mkdtemp(join(tmpdir(), "rules-check-"));
@@ -58,14 +89,9 @@ describe("wiz scry", () => {
 		await git("init", "-q", "-b", "main");
 		await git("config", "user.email", "t@example.com");
 		await git("config", "user.name", "T");
-		await fs.mkdir(`${root}/.wiz/scry/no-foo`);
-		await fs.write(
-			`${root}/.wiz/scry/no-foo/RULE.md`,
-			ruleDoc("no-foo", { description: "No foo." }),
-		);
 		await fs.write(`${root}/a.ts`, "const a = 1;\n");
-		await git("add", ".");
-		await git("commit", "-qm", "base");
+		await git("add", "a.ts");
+		await install("no-foo", flagging("foo"));
 		await fs.write(`${root}/a.ts`, "const foo = 1;\n");
 	});
 
@@ -74,15 +100,15 @@ describe("wiz scry", () => {
 	});
 
 	const run = (format = "text", paths: string[] = [], model?: string) =>
-		check({ paths, format, model, log, fs, ps, screen, providers });
+		check({ paths, format, model, log, fs, ps, providers });
 
-	it("prints the findings under their file, how sure the model is, and exits 1 on an error", async () => {
+	it("prints the problems under their file, how sure the check is, and exits 1 on an error", async () => {
 		await run();
 
 		expect(printed()).toEqual(
 			[
 				"a.ts",
-				"  1   error   90%   No foo.   no-foo",
+				"  1   error   100%   no foo   no-foo",
 				"",
 				"✖ 1 problem (1 error, 0 warnings) in 1 file since HEAD",
 			].join("\n"),
@@ -90,69 +116,109 @@ describe("wiz scry", () => {
 		expect(proc.exits).toEqual([1]);
 	});
 
-	it("says so when the model is not sure enough of anything, and exits 0", async () => {
-		judge = new FakeJudge(0.2);
-
-		await run();
-
-		expect(printed()).toEqual("✔ no problems in 1 file since HEAD");
-		expect(proc.exits).toEqual([]);
-	});
-
-	it("prints the report as JSON when asked, probabilities and all", async () => {
+	it("prints the report as JSON when asked, confidence and all", async () => {
 		await run("json");
 
 		expect(JSON.parse(printed())).toMatchObject({
 			since: "HEAD",
-			findings: [
+			problems: [
 				{
-					file: "a.ts",
+					path: "a.ts",
 					line: 1,
 					rule: "no-foo",
 					level: "error",
-					probability: 0.9,
+					confidence: 1,
 				},
 			],
+			spent: { requests: 0, questions: 0, cached: 0 },
 		});
 	});
 
-	it("reports a file whose judge failed as not checked, and exits 2", async () => {
-		judge = new FakeJudge(new Error("Workers AI answered 401"));
+	it("asks no model, nor wants its credentials, when no rule asks the decider", async () => {
+		await run();
+
+		expect(asked).toEqual([]);
+	});
+
+	it("asks the configured model what a rule's decider asks, and drops what it thinks unlikely", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+		judge = new FakeJudge(0.2);
 
 		await run();
 
-		expect(printed()).toContain("not checked");
-		expect(printed()).toContain("a.ts   Workers AI answered 401");
-		expect(printed()).toEndWith(
-			"⚠ no problems found in 1 file since HEAD, but 1 not checked",
+		expect(asked).toEqual(["clef"]);
+		expect(printed()).toEqual(
+			[
+				"✔ no problems in 1 file since HEAD",
+				"  asked 1 question in 1 request",
+			].join("\n"),
 		);
+		expect(proc.exits).toEqual([]);
+	});
+
+	it("asks the model it is given over the config's", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+
+		await run("text", [], "jev-latest");
+
+		expect(asked).toEqual(["jev-latest"]);
+	});
+
+	it("answers from earlier runs what it was asked about an unchanged file", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+		judge = new FakeJudge(0, { input: 7000 });
+
+		await run();
+		await run();
+
+		expect(
+			printed()
+				.split("\n")
+				.filter((line) => line.includes("asked")),
+		).toEqual([
+			"  asked 1 question in 1 request, 7k input tokens",
+			"  asked 0 questions in 0 requests, 1 answered from earlier runs",
+		]);
+	});
+
+	it("reports a rule whose check threw as not checked, and exits 2", async () => {
+		await install(
+			"fragile",
+			"export default class { async check() { throw new Error('boom'); } }",
+		);
+
+		await run();
+
+		expect(printed()).toContain(
+			["not checked", "  fragile on a.ts   boom"].join("\n"),
+		);
+		expect(proc.exits).toEqual([1]);
+	});
+
+	it("exits 2 when something went unchecked and nothing is an error", async () => {
+		await install(
+			"fragile",
+			"export default class { async check() { throw new Error('boom'); } }",
+		);
+		await fs.write(`${root}/a.ts`, "const a = 2;\n");
+
+		await run();
+
 		expect(proc.exits).toEqual([2]);
 	});
 
-	it("judges each effort by its model: clef, unless the config says", async () => {
-		await fs.mkdir(`${root}/.wiz/scry/deep`);
-		await fs.write(
-			`${root}/.wiz/scry/deep/RULE.md`,
-			ruleDoc("deep", { effort: "high" }),
-		);
+	it("names the rules with no rule.ts yet, which checked nothing", async () => {
+		await fs.mkdir(`${root}/.wiz/scry/unwritten`);
+		await fs.write(`${root}/.wiz/scry/unwritten/RULE.md`, ruleDoc("unwritten"));
 
 		await run();
-		proc.env.WIZ_SCRY_MODEL_HIGH = "jev-latest";
-		await run();
 
-		expect(asked).toEqual(["clef", "clef", "clef", "jev-latest"]);
-	});
-
-	it("judges every effort by the one model it is given", async () => {
-		await fs.mkdir(`${root}/.wiz/scry/deep`);
-		await fs.write(
-			`${root}/.wiz/scry/deep/RULE.md`,
-			ruleDoc("deep", { effort: "high" }),
+		expect(printed()).toContain(
+			"1 rule with no rule.ts yet checked nothing: unwritten",
 		);
-
-		await run("text", [], "jev-preview");
-
-		expect(asked).toEqual(["jev-preview", "jev-preview"]);
 	});
 
 	it("says so when nothing changed", async () => {
@@ -170,8 +236,8 @@ describe("wiz scry", () => {
 
 		await run("json", ["."]);
 
-		expect(JSON.parse(printed()).findings).toMatchObject([
-			{ file: "src/b.ts", line: 1, rule: "no-foo" },
+		expect(JSON.parse(printed()).problems).toMatchObject([
+			{ path: "src/b.ts", line: 1, rule: "no-foo" },
 		]);
 	});
 
@@ -183,30 +249,9 @@ describe("wiz scry", () => {
 		expect(warned()).toEqual(["nothing changed since main in src"]);
 	});
 
-	it("says what it is sending, and each call as it comes back, on stderr", async () => {
-		judge = new FakeJudge(0);
-
-		await check({
-			paths: [],
-			format: "text",
-			log,
-			fs,
-			ps,
-			screen,
-			providers,
-			clock: new FakeClock(),
-		});
-
-		expect(warned().map((line) => color.strip(line))).toEqual([
-			expect.stringMatching(
-				/^sending 1 call \(~\d+ input tokens\), 1 at a time$/,
-			),
-			"  [1/1] medium: a.ts (0s)",
-		]);
-		expect(printed()).toEqual("✔ no problems in 1 file since HEAD");
-	});
-
 	it("stops on the first ctrl-c, reports what came back, and quits on the next", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
 		judge = { judge: () => new Promise(() => undefined) };
 		setTimeout(() => proc.dispatch("SIGINT"), 200);
 
@@ -215,26 +260,14 @@ describe("wiz scry", () => {
 		expect(printed()).toEqual(
 			[
 				"not checked",
-				"  a.ts   cancelled",
+				"  why-not-what on a.ts   cancelled",
 				"",
 				"⚠ cancelled: no problems found in 1 file since HEAD, but 1 not checked",
+				"  asked 1 question in 1 request",
 			].join("\n"),
 		);
 		expect(proc.exits).toEqual([2]);
 		proc.dispatch("SIGINT");
 		expect(proc.exits).toEqual([2, 130]);
-	});
-
-	it("says what the judges really spent when they report it", async () => {
-		judge = new FakeJudge(0, { input: 7000 });
-
-		await run();
-
-		expect(printed()).toEqual(
-			[
-				"✔ no problems in 1 file since HEAD",
-				"  spent 7k input tokens across 1 call",
-			].join("\n"),
-		);
 	});
 });

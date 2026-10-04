@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { Rule, RuleError } from "./rule";
+import { RuleDocument, RuleError } from "./rule-document";
 import { ruleDoc } from "./testing";
 
-describe("Rule", () => {
+describe("RuleDocument", () => {
 	it("reads every field a review needs out of the frontmatter", () => {
-		const rule = Rule.parse(
+		const rule = RuleDocument.parse(
 			ruleDoc("no-foo", {
 				description: "No foo.",
 				files: "**/*.tsx",
@@ -25,9 +25,9 @@ describe("Rule", () => {
 	});
 
 	it("recommends a rule only when its frontmatter says so", () => {
-		expect(Rule.parse(ruleDoc("no-foo")).recommended).toBe(false);
+		expect(RuleDocument.parse(ruleDoc("no-foo")).recommended).toBe(false);
 		expect(
-			Rule.parse(ruleDoc("no-foo", { recommended: false })).recommended,
+			RuleDocument.parse(ruleDoc("no-foo", { recommended: false })).recommended,
 		).toBe(false);
 	});
 
@@ -37,16 +37,16 @@ describe("Rule", () => {
 			"recommended: yes",
 		);
 
-		expect(() => Rule.parse(doc)).toThrow(
+		expect(() => RuleDocument.parse(doc)).toThrow(
 			/^RULE\.md:6: recommended: expected one of true, false/,
 		);
 	});
 
 	it("reports at a probability of 0.7 unless the frontmatter sets a threshold", () => {
-		expect(Rule.parse(ruleDoc("no-foo")).threshold).toEqual(0.7);
-		expect(Rule.parse(ruleDoc("no-foo", { threshold: 0.8 })).threshold).toEqual(
-			0.8,
-		);
+		expect(RuleDocument.parse(ruleDoc("no-foo")).threshold).toEqual(0.7);
+		expect(
+			RuleDocument.parse(ruleDoc("no-foo", { threshold: 0.8 })).threshold,
+		).toEqual(0.8);
 	});
 
 	it("rejects a threshold outside 0 to 1", () => {
@@ -56,7 +56,7 @@ describe("Rule", () => {
 				`threshold: ${threshold}`,
 			);
 
-			expect(() => Rule.parse(doc)).toThrow(
+			expect(() => RuleDocument.parse(doc)).toThrow(
 				/^RULE\.md:6: threshold: expected a number from 0 to 1/,
 			);
 		}
@@ -65,21 +65,21 @@ describe("Rule", () => {
 	it("keeps the whole document verbatim", () => {
 		const doc = ruleDoc("no-foo");
 
-		expect(Rule.parse(doc).document).toEqual(doc);
+		expect(RuleDocument.parse(doc).document).toEqual(doc);
 	});
 
 	it("applies to every file when the frontmatter names no glob", () => {
 		const doc = ruleDoc("no-foo").replace(/^files:.*\n/m, "");
 
-		expect(Rule.parse(doc).files).toEqual("**/*");
+		expect(RuleDocument.parse(doc).files).toEqual("**/*");
 	});
 
 	it("has no version when the frontmatter has none", () => {
-		expect(Rule.parse(ruleDoc("no-foo")).version).toBeNull();
+		expect(RuleDocument.parse(ruleDoc("no-foo")).version).toBeNull();
 	});
 
 	it("rejects a document with no frontmatter, at line 1", () => {
-		expect(() => Rule.parse("# No foo\n")).toThrow(
+		expect(() => RuleDocument.parse("# No foo\n")).toThrow(
 			new RuleError("RULE.md:1: no frontmatter: a rule opens with a --- block"),
 		);
 	});
@@ -87,15 +87,15 @@ describe("Rule", () => {
 	it("names the missing field and the file it was reading", () => {
 		const doc = ruleDoc("no-foo").replace(/^description:.*\n/m, "");
 
-		expect(() => Rule.parse(doc, { path: ".wiz/scry/no-foo/RULE.md" })).toThrow(
-			/^\.wiz\/scry\/no-foo\/RULE\.md:1: description: /,
-		);
+		expect(() =>
+			RuleDocument.parse(doc, { path: ".wiz/scry/no-foo/RULE.md" }),
+		).toThrow(/^\.wiz\/scry\/no-foo\/RULE\.md:1: description: /);
 	});
 
 	it("points a bad value at its line", () => {
 		const doc = ruleDoc("no-foo").replace("level: error", "level: loud");
 
-		expect(() => Rule.parse(doc)).toThrow(
+		expect(() => RuleDocument.parse(doc)).toThrow(
 			/^RULE\.md:5: level: expected one of error, warning/,
 		);
 	});
@@ -106,19 +106,21 @@ describe("Rule", () => {
 			"",
 		);
 
-		expect(Rule.parse(doc).level).toEqual("error");
+		expect(RuleDocument.parse(doc).level).toEqual("error");
 	});
 
 	it("rejects a name that is not kebab case", () => {
 		const doc = ruleDoc("no-foo").replace("name: no-foo", "name: No_Foo");
 
-		expect(() => Rule.parse(doc)).toThrow(
+		expect(() => RuleDocument.parse(doc)).toThrow(
 			new RuleError('RULE.md:2: name: "No_Foo" is not kebab case'),
 		);
 	});
 
 	it("rejects a name that is not its directory's", () => {
-		expect(() => Rule.parse(ruleDoc("no-foo"), { id: "no-bar" })).toThrow(
+		expect(() =>
+			RuleDocument.parse(ruleDoc("no-foo"), { id: "no-bar" }),
+		).toThrow(
 			new RuleError(
 				'RULE.md:2: name: "no-foo" does not match its directory "no-bar"',
 			),
@@ -128,27 +130,15 @@ describe("Rule", () => {
 	it("leaves the body to its author, the way a skill's is", () => {
 		const doc = "---\nname: no-foo\ndescription: x\n---\n";
 
-		expect(Rule.parse(doc).id).toEqual("no-foo");
+		expect(RuleDocument.parse(doc).id).toEqual("no-foo");
 	});
 
-	it("takes medium effort when the frontmatter names none", () => {
-		expect(Rule.parse(ruleDoc("no-foo")).effort).toEqual("medium");
-		expect(Rule.parse(ruleDoc("no-foo", { effort: "low" })).effort).toEqual(
-			"low",
+	it("ignores an effort, which rules no longer take", () => {
+		const doc = ruleDoc("no-foo").replace(
+			"level: error",
+			"level: error\neffort: high",
 		);
-	});
 
-	it("rejects effort none for a rule with no scripts to decide it", () => {
-		expect(() => Rule.parse(ruleDoc("no-foo", { effort: "none" }))).toThrow(
-			/^RULE\.md:6: effort: none means its scripts decide it/,
-		);
-	});
-
-	it("keeps its scripts in name order", () => {
-		const rule = Rule.parse(ruleDoc("no-foo", { effort: "none" }), {
-			scripts: ["s/b.sh", "s/a.sh"],
-		});
-
-		expect(rule.scripts).toEqual(["s/a.sh", "s/b.sh"]);
+		expect(RuleDocument.parse(doc).id).toEqual("no-foo");
 	});
 });

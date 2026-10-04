@@ -5,7 +5,7 @@ import {
 	RULES,
 	type RulesProjectOptions,
 	shipped,
-	warnOfScripts,
+	warnOfCode,
 } from "./rule-set";
 
 export interface AddOptions extends RulesProjectOptions {
@@ -31,7 +31,7 @@ export async function add(opts: AddOptions): Promise<void> {
 		if (opts.rule === "") {
 			throw new Error("scry add needs a rule id, or --recommended");
 		}
-		warnOfScripts(await documents.add(opts.rule, opts.dir), opts);
+		warnOfCode(await documents.add(opts.rule, opts.dir), opts);
 		return;
 	}
 	if (rules[opts.rule] !== undefined) {
@@ -44,7 +44,7 @@ export async function add(opts: AddOptions): Promise<void> {
 		.filter((rule) => rule.recommended)
 		.map((rule) => rule.id);
 	for (const id of ids) {
-		warnOfScripts(await documents.add(id, dir), opts);
+		warnOfCode(await documents.add(id, dir), opts);
 	}
 	if (ids.length === 0) {
 		(opts.log ?? new ConsoleLogger()).info("no rules recommend themselves");

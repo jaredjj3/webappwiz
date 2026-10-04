@@ -77,21 +77,21 @@ describe("scry add", () => {
 		]);
 	});
 
-	it("copies a rule's scripts beside it, and says to read them", async () => {
-		const scripted = {
+	it("copies a rule's code beside it, and says to read it", async () => {
+		const coded = {
 			"no-baz": {
 				"RULE.md": ruleDoc("no-baz"),
-				"scripts/check.sh": "exit 0\n",
+				"rule.ts": "export default class {}\n",
 			},
 		};
 
-		await add({ dir: "/p", rule: "no-baz", log, fs, rules: scripted });
+		await add({ dir: "/p", rule: "no-baz", log, fs, rules: coded });
 
-		expect(await fs.read("/p/.wiz/scry/no-baz/scripts/check.sh")).toEqual(
-			"exit 0\n",
+		expect(await fs.read("/p/.wiz/scry/no-baz/rule.ts")).toEqual(
+			"export default class {}\n",
 		);
 		expect(log.entries.map((entry) => String(entry.message))).toContain(
-			"⚠️ .wiz/scry/no-baz/scripts/check.sh is a script that runs on every `wiz scry`: read it before the next one",
+			"⚠️ .wiz/scry/no-baz/rule.ts is code that runs on every `wiz scry`: read it before the next one",
 		);
 	});
 });

@@ -3,7 +3,6 @@ name: reactive-over-use-state
 description: Logic with several moving parts lives in a class a component reads through useReactive, not in useState.
 files: "**/*.{ts,tsx}"
 level: warning
-effort: high
 version: 0.0.31
 ---
 # Reactive over useState

@@ -43,9 +43,9 @@ describe("scry list", () => {
 
 		expect(printed()).toEqual(
 			[
-				"rule     level     effort   recommended   files     ships   installed   description",
-				"no-bar   warning   medium   -             **/*.md   1.0.0   -           No bar.",
-				"no-foo   error     medium   yes           **/*.ts   1.0.0   -           No foo.",
+				"rule     level     recommended   files     ships   installed   description",
+				"no-bar   warning   -             **/*.md   1.0.0   -           No bar.",
+				"no-foo   error     yes           **/*.ts   1.0.0   -           No foo.",
 			].join("\n"),
 		);
 	});
@@ -56,7 +56,7 @@ describe("scry list", () => {
 		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain(
-			"no-foo   error     medium   yes           **/*.ts   1.0.0   0.9.0",
+			"no-foo   error     yes           **/*.ts   1.0.0   0.9.0",
 		);
 		expect(printed()).toContain("1 out of date: run `scry update`");
 	});
@@ -67,7 +67,7 @@ describe("scry list", () => {
 		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain(
-			"mine     error     medium   -             **/*.ts   -       local       Mine.",
+			"mine     error     -             **/*.ts   -       local       Mine.",
 		);
 		expect(printed()).not.toContain("out of date");
 	});

@@ -89,8 +89,9 @@ describe("Clef and Jev", () => {
 		);
 		const clef = new Clef("clef", { id: "acct", token: "bad" }, { origin });
 
+		// by its name, not its URL, which holds the account id
 		await expect(clef.judge(judgment)).rejects.toThrow(
-			/answered 401: Authentication error$/,
+			/^clef answered 401: Authentication error$/,
 		);
 	});
 
@@ -99,7 +100,7 @@ describe("Clef and Jev", () => {
 		const jev = new Jev("jev-latest", "ts-key", { origin });
 
 		await expect(jev.judge(judgment)).rejects.toThrow(
-			/answered with no answers in it$/,
+			/^jev-latest answered with no answers in it$/,
 		);
 	});
 });
