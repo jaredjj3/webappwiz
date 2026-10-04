@@ -5,9 +5,6 @@ import classesOverFunctionExports from "./classes-over-function-exports/RULE.md"
 import commentsSayWhyNotWhat from "./comments-say-why-not-what/RULE.md" with {
 	type: "text",
 };
-import devServersFindAPort from "./dev-servers-find-a-port/RULE.md" with {
-	type: "text",
-};
 import docCommentsAddressUsers from "./doc-comments-address-users/RULE.md" with {
 	type: "text",
 };
@@ -52,7 +49,6 @@ import testsOwnTheirState from "./tests-own-their-state/RULE.md" with {
 const CODE: Record<string, string[]> = {
 	"classes-over-function-exports": ["rule.test.ts", "rule.ts"],
 	"comments-say-why-not-what": ["rule.test.ts", "rule.ts"],
-	"dev-servers-find-a-port": ["rule.test.ts", "rule.ts"],
 	"doc-comments-address-users": ["rule.test.ts", "rule.ts"],
 	"export-leads-the-file": ["rule.test.ts", "rule.ts"],
 	"fakes-over-mocks": ["rule.test.ts", "rule.ts"],
@@ -91,14 +87,6 @@ const EVALS: Record<string, string[]> = {
 		"rate-limiter.good.ts",
 		"session-store.good.ts",
 		"webhook-handler.bad.ts",
-	],
-	"dev-servers-find-a-port": [
-		"admin-dashboard.test.bad.ts",
-		"docs-server.good.ts",
-		"mock-api-server.bad.ts",
-		"preview-server.test.good.ts",
-		"price-formatter.good.ts",
-		"storybook-server.bad.ts",
 	],
 	"doc-comments-address-users": [
 		"currency-code.bad.ts",
@@ -223,7 +211,6 @@ const EVALS: Record<string, string[]> = {
 export const catalog: Record<string, Record<string, string>> = withFiles({
 	"classes-over-function-exports": { "RULE.md": classesOverFunctionExports },
 	"comments-say-why-not-what": { "RULE.md": commentsSayWhyNotWhat },
-	"dev-servers-find-a-port": { "RULE.md": devServersFindAPort },
 	"doc-comments-address-users": { "RULE.md": docCommentsAddressUsers },
 	"export-leads-the-file": { "RULE.md": exportLeadsTheFile },
 	"fakes-over-mocks": { "RULE.md": fakesOverMocks },

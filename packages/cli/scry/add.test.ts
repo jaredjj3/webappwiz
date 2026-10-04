@@ -94,4 +94,33 @@ describe("scry add", () => {
 			"⚠️ .wiz/scry/no-baz/rule.ts is code that runs on every `wiz scry`: read it before the next one",
 		);
 	});
+
+	it("says to add @webappwiz/scry when package.json lacks it, since a rule's tests import it", async () => {
+		await fs.write("/p/package.json", JSON.stringify({ name: "p" }));
+
+		await add({ dir: "/p", rule: "no-bar", log, fs, rules });
+
+		expect(log.entries.map((entry) => String(entry.message))).toContain(
+			"⚠️ a rule's tests import @webappwiz/scry, which package.json does not list: add it as a devDependency",
+		);
+	});
+
+	it("says nothing of @webappwiz/scry once it is a dependency or a devDependency", async () => {
+		await fs.write(
+			"/p/package.json",
+			JSON.stringify({ devDependencies: { "@webappwiz/scry": "^1.0.0" } }),
+		);
+		await fs.write(
+			"/q/package.json",
+			JSON.stringify({ dependencies: { "@webappwiz/scry": "^1.0.0" } }),
+		);
+
+		await add({ dir: "/p", rule: "no-bar", log, fs, rules });
+		await add({ dir: "/q", rule: "", recommended: true, log, fs, rules });
+
+		expect(log.entries.map((entry) => String(entry.message))).toEqual([
+			"wrote /p/.wiz/scry/no-bar/RULE.md",
+			"wrote /q/.wiz/scry/no-foo/RULE.md",
+		]);
+	});
 });

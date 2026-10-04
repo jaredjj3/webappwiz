@@ -1,7 +1,7 @@
 import { RuleDocument } from "@webappwiz/scry";
 import { catalog } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
-import type { Fs } from "webappwiz/system";
+import { type Fs, NodeFs } from "webappwiz/system";
 import type { Bundle, Layout } from "../documents";
 
 /** Where a project keeps its rules: one directory per rule, holding `RULE.md`. */
@@ -56,6 +56,34 @@ export function warnOfCode(changed: string[], opts: RulesProjectOptions): void {
 	for (const path of code) {
 		log.info(
 			`⚠️ ${path} is code that runs on every \`wiz scry\`: read it before the next one`,
+		);
+	}
+}
+
+/**
+ * Says so when the project at `dir` does not depend on `@webappwiz/scry`: a
+ * rule's tests import it, and a project that only has the CLI resolves it,
+ * if at all, through whatever its package manager happened to hoist.
+ */
+export async function warnOfTests(
+	dir: string,
+	opts: RulesProjectOptions,
+): Promise<void> {
+	const fs = opts.fs ?? new NodeFs();
+	const path = `${dir}/package.json`;
+	if (!(await fs.exists(path))) {
+		return;
+	}
+	const manifest = JSON.parse(await fs.read(path)) as {
+		dependencies?: Record<string, string>;
+		devDependencies?: Record<string, string>;
+	};
+	if (
+		manifest.dependencies?.["@webappwiz/scry"] === undefined &&
+		manifest.devDependencies?.["@webappwiz/scry"] === undefined
+	) {
+		(opts.log ?? new ConsoleLogger()).info(
+			"⚠️ a rule's tests import @webappwiz/scry, which package.json does not list: add it as a devDependency",
 		);
 	}
 }

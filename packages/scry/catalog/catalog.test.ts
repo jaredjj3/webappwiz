@@ -22,11 +22,8 @@ describe("catalog", () => {
 			.map((rule) => rule.id);
 
 		// The rest read on any TypeScript, so a project takes them on faith;
-		// two are about a stack and a program that a project may not have.
-		expect(notRecommended).toEqual([
-			"dev-servers-find-a-port",
-			"reactive-over-use-state",
-		]);
+		// this one is about a stack that a project may not have.
+		expect(notRecommended).toEqual(["reactive-over-use-state"]);
 	});
 
 	it("bundles every file in each rule's directory, so none is left behind", () => {

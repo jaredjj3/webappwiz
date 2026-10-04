@@ -90,7 +90,9 @@ export default defineConfig({
 
 Each layer overrides the last: `.wiz/config.ts`, then the user's own
 `~/.config/wiz/config.ts` (under `$XDG_CONFIG_HOME` when set), then
-`WIZ_SCRY_MODEL` and `WIZ_SCRY_JOBS`. A config where `@webappwiz/cli` is not
+`WIZ_SCRY_MODEL` and `WIZ_SCRY_JOBS`. `exclude` takes globs, from the
+project root, of files no rule checks, like `[".agents/**"]` for skills
+copied in from elsewhere; the user's are added to the project's. A config where `@webappwiz/cli` is not
 installed exports the same object without `defineConfig`. A config still
 holding `agents`, `budget`, `batch` or `models`, from before a rule's check
 was code, is refused rather than half read.
@@ -124,7 +126,9 @@ wrong
 ```
 
 `scry test [ids]` runs the tests beside each rule, which check its code with
-a fake model. `scry measure [ids]` runs each rule on its labeled cases with
+a fake model. They import `@webappwiz/scry`, so a project adds it as a
+devDependency, and `add` says so when the project's `package.json` lacks
+it. `scry measure [ids]` runs each rule on its labeled cases with
 the real one: the files in its `evals/`, named `<name>.good.<ext>` and
 `<name>.bad.<ext>`, and the code blocks under its `RULE.md`'s `## Good` and
 `## Bad`. A bad case is right when the rule reports something in it, a good

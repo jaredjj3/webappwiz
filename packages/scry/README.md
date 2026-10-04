@@ -229,8 +229,11 @@ a rule's tests test its code: what it flags on its own, and what it asks
 about. Whether its questions are good ones is what measuring is for.
 
 `wiz scry test [ids]` runs the tests beside each rule in `.wiz/scry`. Unlike
-a `rule.ts`, a test imports values from `@webappwiz/scry`, so it runs only
-where the project can resolve that package.
+a `rule.ts`, a test imports values from `@webappwiz/scry`, so a project
+with rules adds the package as a devDependency, `bun add -d
+@webappwiz/scry`, rather than count on the copy the CLI brings being
+hoisted where the tests can find it. `wiz scry add` says so when it is
+missing.
 
 ## Measuring
 

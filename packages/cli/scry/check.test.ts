@@ -241,6 +241,22 @@ describe("wiz scry", () => {
 		]);
 	});
 
+	it("checks none of the files the config excludes", async () => {
+		await fs.mkdir(`${root}/.wiz`);
+		await fs.write(
+			`${root}/.wiz/config.ts`,
+			'export default { scry: { exclude: ["vendor/**"] } };\n',
+		);
+		await fs.mkdir(`${root}/vendor`);
+		await fs.write(`${root}/vendor/b.ts`, "const foo = 2;\n");
+
+		await run("json");
+
+		expect(JSON.parse(printed()).problems).toMatchObject([
+			{ path: "a.ts", line: 1, rule: "no-foo" },
+		]);
+	});
+
 	it("says where it looked when nothing changed under the paths", async () => {
 		await fs.mkdir(`${root}/src`);
 

@@ -97,6 +97,7 @@ export default defineConfig({
 	scry: {
 		model: "clef",
 		jobs: 8, // requests at once
+		exclude: ["vendor/**"], // files no rule checks, from the project root
 	},
 });
 ```
@@ -286,7 +287,9 @@ probability under the first key the span's text contains, else
 `otherwise`, and keeps what it was `asked`. A fake tests the rule's code;
 `wiz scry measure` tests its questions against the real model.
 
-`wiz scry test [ids]` runs the tests. `wiz scry measure [ids]` runs each
+The tests import `@webappwiz/scry`, so the project lists it as a
+devDependency (`bun add -d @webappwiz/scry`); `wiz scry add` says so when it
+does not. `wiz scry test [ids]` runs the tests. `wiz scry measure [ids]` runs each
 rule on its cases with the configured model and prints how many it got
 right, then each case it missed or falsely flagged. Tune a question's
 wording or a threshold there: change one thing, measure again.

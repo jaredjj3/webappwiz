@@ -28,6 +28,7 @@ describe("loadConfig", () => {
 		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
 			model: "clef",
 			jobs: 8,
+			exclude: [],
 		});
 	});
 
@@ -45,6 +46,7 @@ describe("loadConfig", () => {
 		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
 			model: "jev-latest",
 			jobs: 2,
+			exclude: [],
 		});
 
 		ps.setEnv({ WIZ_SCRY_MODEL: "jev-preview", WIZ_SCRY_JOBS: "16" });
@@ -52,7 +54,26 @@ describe("loadConfig", () => {
 		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
 			model: "jev-preview",
 			jobs: 16,
+			exclude: [],
 		});
+	});
+
+	it("excludes what the project's config and the user's both exclude", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			config({ exclude: ["vendor/**"] }),
+		);
+		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.write(
+			`${root}/home/.config/wiz/config.ts`,
+			config({ exclude: ["scratch/**"] }),
+		);
+
+		expect((await loadConfig(`${root}/p`, { fs, ps })).exclude).toEqual([
+			"vendor/**",
+			"scratch/**",
+		]);
 	});
 
 	it("reads the user's config from XDG_CONFIG_HOME when it is set", async () => {

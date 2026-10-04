@@ -5,6 +5,7 @@ import type { Config, CredentialsConfig, Model, ScryConfig } from "./config";
 export interface Settings {
 	model: Model;
 	jobs: number;
+	exclude: string[];
 }
 
 /** What `loadConfig` reads through; the real ones by default. */
@@ -18,7 +19,7 @@ export interface LoadConfigOptions {
  * The settings `wiz scry` runs with, each layer over the last: the
  * defaults, the project's `.wiz/config.ts`, the user's
  * `$XDG_CONFIG_HOME/wiz/config.ts` (`~/.config/wiz/config.ts`), then
- * `WIZ_SCRY_MODEL` and `WIZ_SCRY_JOBS`.
+ * `WIZ_SCRY_MODEL` and `WIZ_SCRY_JOBS`. `exclude` gathers every layer's.
  */
 export async function loadConfig(
 	dir: string,
@@ -30,10 +31,11 @@ export async function loadConfig(
 		...(await files(dir, fs, ps)).map((config) => scry(config)),
 		environment(ps),
 	];
-	const settings: Settings = { model: "clef", jobs: 8 };
+	const settings: Settings = { model: "clef", jobs: 8, exclude: [] };
 	for (const layer of layers) {
 		settings.model = layer.model ?? settings.model;
 		settings.jobs = layer.jobs ?? settings.jobs;
+		settings.exclude = [...settings.exclude, ...(layer.exclude ?? [])];
 	}
 	return settings;
 }

@@ -1,6 +1,13 @@
 import { Git, type Report, Rules } from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
-import { type Fs, type Glob, NodeFs, NodePs, type Ps } from "webappwiz/system";
+import {
+	type Fs,
+	type Glob,
+	NodeFs,
+	NodeGlob,
+	NodePs,
+	type Ps,
+} from "webappwiz/system";
 import { loadConfig } from "../load-config";
 import { table } from "../table";
 import { asked, ProjectDecider, plural, type Spent } from "./project-decider";
@@ -50,8 +57,17 @@ export async function check(opts: CheckOptions): Promise<void> {
 		return;
 	}
 	const settings = await loadConfig(dir, { fs, ps });
+	const glob = opts.glob ?? new NodeGlob();
 	const changes = await new Git(dir, { ps }).changes(opts.since, paths);
-	if (changes.files.length === 0) {
+	// what the config excludes, like code copied in from elsewhere, is not
+	// the project's to fix
+	const files = changes.files
+		.map((file) => file.path)
+		.filter(
+			(path) =>
+				!settings.exclude.some((pattern) => glob.matches(pattern, path)),
+		);
+	if (files.length === 0) {
 		log.error(
 			`nothing changed since ${changes.since}${paths.length === 0 ? "" : ` in ${opts.paths.join(", ")}`}`,
 		);
@@ -80,9 +96,9 @@ export async function check(opts: CheckOptions): Promise<void> {
 	});
 	const report = await rules
 		.check({
-			paths: changes.files.map((file) => file.path),
+			paths: files,
 			tools: { decider },
-			glob: opts.glob,
+			glob,
 			signal: cancel.signal,
 		})
 		.finally(() => {

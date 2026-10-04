@@ -12,6 +12,12 @@ export interface ScryConfig {
 	model?: Model;
 	/** How many requests to the model are out at once. 8 when not set. */
 	jobs?: number;
+	/**
+	 * Globs, from the project root, of files no rule checks, like
+	 * `vendor/**` for code the project copied in but does not own. The
+	 * user's config adds to the project's.
+	 */
+	exclude?: string[];
 }
 
 /** Which credentials a project keeps, and where. */
