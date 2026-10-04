@@ -71,9 +71,9 @@ describe("platform", () => {
 	it("names only entry points the manifest exports", () => {
 		// A platform entry point spelled wrong here would be checked as though it
 		// were neutral, which is the one way this file can pass and mean nothing.
-		for (const name of Object.keys(PLATFORM)) {
-			expect(Object.keys(exports)).toContain(name);
-		}
+		expect(Object.keys(exports)).toEqual(
+			expect.arrayContaining(Object.keys(PLATFORM)),
+		);
 	});
 
 	it.each(Object.entries(exports).filter(([name]) => !(name in PLATFORM)))(

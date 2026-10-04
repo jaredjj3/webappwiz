@@ -50,12 +50,22 @@ import testsOwnTheirState from "./tests-own-their-state/RULE.md" with {
  * run it on its cases. Read off disk like the cases below.
  */
 const CODE: Record<string, string[]> = {
+	"classes-over-function-exports": ["rule.test.ts", "rule.ts"],
+	"comments-say-why-not-what": ["rule.test.ts", "rule.ts"],
+	"dev-servers-find-a-port": ["rule.test.ts", "rule.ts"],
+	"doc-comments-address-users": ["rule.test.ts", "rule.ts"],
 	"export-leads-the-file": ["rule.test.ts", "rule.ts"],
 	"fakes-over-mocks": ["rule.test.ts", "rule.ts"],
 	"matchers-over-test-logic": ["rule.test.ts", "rule.ts"],
+	"named-options-last": ["rule.test.ts", "rule.ts"],
 	"no-em-dashes": ["rule.test.ts", "rule.ts"],
+	"objects-over-callbacks": ["rule.test.ts", "rule.ts"],
 	"one-class-per-file": ["rule.test.ts", "rule.ts"],
 	"parameters-declare-fields": ["rule.test.ts", "rule.ts"],
+	"reactive-over-use-state": ["rule.test.ts", "rule.ts"],
+	"resources-are-disposable": ["rule.test.ts", "rule.ts"],
+	"simple-test-setup": ["rule.test.ts", "rule.ts"],
+	"test-setup-names-what-it-makes": ["rule.test.ts", "rule.ts"],
 	"tests-own-their-state": ["rule.test.ts", "rule.ts"],
 };
 

@@ -17,40 +17,6 @@ export const SERVICE_INSTANCES = {
 	MICRO: { cpu: 256, memoryLimitMiB: 512 },
 } as const;
 
-export type LoadBalancerOptions = {
-	/** Target group health check path. Defaults to '/'. */
-	healthCheckPath?: string;
-	/** Scale out to at most this many tasks on request count. Omit for a fixed single task. */
-	maxCapacity?: number;
-	/** Requests per task before scaling out. Defaults to 50. */
-	requestsPerTarget?: number;
-};
-
-export type ServiceProps = {
-	/** Cluster to run on. Several services can share one. */
-	cluster: ecs.ICluster;
-	image: ServiceImage;
-	containerPort: number;
-	/** Container name, also the log stream prefix. Defaults to 'app'. */
-	containerName?: string;
-	/** Defaults to `SERVICE_INSTANCES.MICRO`. */
-	instance?: ServiceInstance;
-	/** Runtime environment, merged over the image's build-time variables. */
-	environment?: Record<string, string>;
-	/** Runtime secrets, merged over the image's. */
-	secrets?: Record<string, ecs.Secret>;
-	/** Container-level health check. An ALB-fronted service is already probed via its target group. */
-	healthCheck?: ecs.HealthCheck;
-	/** Front the service with an internal ALB. Omit for a service reached only from inside the VPC. */
-	loadBalancer?: LoadBalancerOptions;
-	/**
-	 * Register under this name in the cluster's default Cloud Map namespace, so other services
-	 * reach it privately at `<name>.<namespace>:<containerPort>`. The cluster must already have a
-	 * namespace (`cluster.addDefaultCloudMapNamespace({ name })`).
-	 */
-	discoveryName?: string;
-};
-
 /**
  * A containerized service on ECS Fargate. With `loadBalancer` it sits behind an *internal*
  * Application Load Balancer, ready to be fronted by a `Domain`'s CloudFront VPC origin; without
@@ -150,3 +116,37 @@ export class Service extends Construct implements Cacheable, ec2.IConnectable {
 		return this.service.connections;
 	}
 }
+
+export type LoadBalancerOptions = {
+	/** Target group health check path. Defaults to '/'. */
+	healthCheckPath?: string;
+	/** Scale out to at most this many tasks on request count. Omit for a fixed single task. */
+	maxCapacity?: number;
+	/** Requests per task before scaling out. Defaults to 50. */
+	requestsPerTarget?: number;
+};
+
+export type ServiceProps = {
+	/** Cluster to run on. Several services can share one. */
+	cluster: ecs.ICluster;
+	image: ServiceImage;
+	containerPort: number;
+	/** Container name, also the log stream prefix. Defaults to 'app'. */
+	containerName?: string;
+	/** Defaults to `SERVICE_INSTANCES.MICRO`. */
+	instance?: ServiceInstance;
+	/** Runtime environment, merged over the image's build-time variables. */
+	environment?: Record<string, string>;
+	/** Runtime secrets, merged over the image's. */
+	secrets?: Record<string, ecs.Secret>;
+	/** Container-level health check. An ALB-fronted service is already probed via its target group. */
+	healthCheck?: ecs.HealthCheck;
+	/** Front the service with an internal ALB. Omit for a service reached only from inside the VPC. */
+	loadBalancer?: LoadBalancerOptions;
+	/**
+	 * Register under this name in the cluster's default Cloud Map namespace, so other services
+	 * reach it privately at `<name>.<namespace>:<containerPort>`. The cluster must already have a
+	 * namespace (`cluster.addDefaultCloudMapNamespace({ name })`).
+	 */
+	discoveryName?: string;
+};

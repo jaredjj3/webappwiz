@@ -75,9 +75,11 @@ describe("ship", () => {
 	it("carries every skill copy to the version the packages went out at", async () => {
 		await ship(opts());
 
-		for (const path of SKILLS) {
-			expect(await fs.read(path)).toContain("version: 1.2.4\n");
-		}
+		const stamped = await Promise.all(SKILLS.map((path) => fs.read(path)));
+
+		expect(stamped).toEqual(
+			SKILLS.map(() => expect.stringContaining("version: 1.2.4\n")),
+		);
 	});
 
 	it("stops on a red gate, before anything is stamped", async () => {

@@ -1,3 +1,5 @@
+import type { Resource } from "webappwiz/disposable";
+
 /**
  * Ps is the process seam. Typically, this is assigned the variable name `ps`.
  */
@@ -23,8 +25,9 @@ export interface Ps {
 	env(name: string): string | undefined;
 	cd(path: string): void;
 	exit(code: number): void;
-	on(signal: string, handler: (...args: unknown[]) => void): void;
-	once(event: "exit", handler: () => void): void;
+	/** Listens until the returned resource is disposed. */
+	on(signal: string, handler: (...args: unknown[]) => void): Resource;
+	once(event: "exit", handler: () => void): Resource;
 }
 
 export interface SpawnOptions {

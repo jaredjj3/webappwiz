@@ -1,56 +1,5 @@
 // scry-ignore-file one-class-per-file: Section is a view Markdown hands out;
 // splitting the document model across files would hide that coupling
-/** Thrown when an accessor is asked for something the document does not have. */
-export class MarkdownError extends Error {}
-
-export interface CodeBlock {
-	/** The fence's info string, e.g. "ts". Empty when the fence has none. */
-	lang: string;
-	code: string;
-}
-
-/**
- * One heading and everything under it. `body` runs until the next heading of
- * the same or a higher level, so subsections are included; `lead` stops at the
- * first child heading, so it is the section's own prose.
- */
-export class Section {
-	constructor(
-		readonly heading: string,
-		readonly level: number,
-		/** 1-based line of the heading in the source document. */
-		readonly line: number,
-		readonly body: string,
-		readonly lead: string,
-	) {}
-
-	/**
-	 * Fenced code blocks, in `body` (subsections included, the default) or
-	 * just this section's own `lead`.
-	 */
-	codeBlocks(scope: "body" | "lead" = "body"): CodeBlock[] {
-		const blocks: CodeBlock[] = [];
-		let fence: { mark: string; lang: string; code: string[] } | null = null;
-		for (const line of this[scope].split("\n")) {
-			const open = line.match(/^(```+|~~~+)\s*(\S*)/);
-			if (fence === null && open) {
-				fence = { mark: open[1] ?? "`", lang: open[2] ?? "", code: [] };
-			} else if (
-				fence !== null &&
-				open &&
-				open[2] === "" &&
-				open[1]?.[0] === fence.mark[0]
-			) {
-				blocks.push({ lang: fence.lang, code: fence.code.join("\n") });
-				fence = null;
-			} else if (fence !== null) {
-				fence.code.push(line);
-			}
-		}
-		return blocks;
-	}
-}
-
 /**
  * A markdown document you can pull data out of: frontmatter fields, sections
  * by heading, fenced code. Markdown is the glue language between humans and
@@ -115,6 +64,57 @@ export class Markdown {
 		return this.sections.find(
 			(section) => section.heading.toLowerCase() === want,
 		);
+	}
+}
+
+/** Thrown when an accessor is asked for something the document does not have. */
+export class MarkdownError extends Error {}
+
+export interface CodeBlock {
+	/** The fence's info string, e.g. "ts". Empty when the fence has none. */
+	lang: string;
+	code: string;
+}
+
+/**
+ * One heading and everything under it. `body` runs until the next heading of
+ * the same or a higher level, so subsections are included; `lead` stops at the
+ * first child heading, so it is the section's own prose.
+ */
+export class Section {
+	constructor(
+		readonly heading: string,
+		readonly level: number,
+		/** 1-based line of the heading in the source document. */
+		readonly line: number,
+		readonly body: string,
+		readonly lead: string,
+	) {}
+
+	/**
+	 * Fenced code blocks, in `body` (subsections included, the default) or
+	 * just this section's own `lead`.
+	 */
+	codeBlocks(scope: "body" | "lead" = "body"): CodeBlock[] {
+		const blocks: CodeBlock[] = [];
+		let fence: { mark: string; lang: string; code: string[] } | null = null;
+		for (const line of this[scope].split("\n")) {
+			const open = line.match(/^(```+|~~~+)\s*(\S*)/);
+			if (fence === null && open) {
+				fence = { mark: open[1] ?? "`", lang: open[2] ?? "", code: [] };
+			} else if (
+				fence !== null &&
+				open &&
+				open[2] === "" &&
+				open[1]?.[0] === fence.mark[0]
+			) {
+				blocks.push({ lang: fence.lang, code: fence.code.join("\n") });
+				fence = null;
+			} else if (fence !== null) {
+				fence.code.push(line);
+			}
+		}
+		return blocks;
 	}
 }
 

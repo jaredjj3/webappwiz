@@ -1,9 +1,10 @@
 # @webappwiz/scry
 
-Rules written in markdown, the check that runs them against a change, and
-webappwiz's catalog of them. A rule is English a decision model judges by,
-helped by any scripts beside it; this package parses rules, plans and runs a
-check, and ships the rules webappwiz maintains. `@webappwiz/cli scry` is its
+Rules written in markdown and checked by code, the engine that runs them
+against a change, and webappwiz's catalog of them. A rule is English a
+person reads and a class that checks it: code decides what it can, and asks
+a decision model only what code cannot. This package parses rules, runs
+them, and ships the rules webappwiz maintains. `@webappwiz/cli scry` is its
 command line. It was published as `@webappwiz/rules` until it took scry's
 name; `@webappwiz/cli update` renames the dependency.
 
@@ -16,27 +17,26 @@ directory. A project copies the ones it wants into `.wiz/scry` with
 ## A rule
 
 ```
-no-default-exports/
-├── RULE.md
-├── scripts/        # optional
-│   └── check.sh
-└── evals/          # optional
-    ├── route-table.good.ts
-    └── user-service.bad.ts
+comments-say-why/
+├── RULE.md          # what the rule wants, and why
+├── rule.ts          # the check
+├── rule.test.ts     # its tests
+└── evals/           # labeled cases
+    ├── rate-limiter.good.ts
+    └── order-summary.bad.ts
 ```
 
 ```markdown
 ---
-name: no-default-exports
-description: Modules export named bindings, never a default.
+name: comments-say-why
+description: A comment says why the code is so, not what it does.
 files: "**/*.{ts,tsx}"
-level: error
-effort: low
+level: warning
 threshold: 0.7
 recommended: true
 ---
 
-# No default exports
+# Comments say why
 
 Why, and what counts.
 
@@ -45,24 +45,203 @@ Why, and what counts.
 ## Bad
 ```
 
-`Rule.parse` is the only way to make one, so holding a `Rule` means the
-frontmatter passed: it has a `name` matching its directory and a
-`description`. Anything else fails with `path:line: why`. The body is the
-author's, the way a skill's is: it only has to say plainly enough what
-counts that a model reading nothing else can judge the rule.
+`RuleDocument.parse` is the only way to read one, so holding a
+`RuleDocument` means the frontmatter passed: it has a `name` matching its
+directory and a `description`. Anything else fails with `path:line: why`.
+The body is the author's, the way a skill's is: it says what counts for
+whoever fixes a finding, and its Good and Bad code blocks are cases the
+check is tested on.
 
 `files` is a glob of the files the rule applies to, every file when absent.
-`level` is `error` or `warning`, `error` when absent. `effort` is how much
-judgment the rule takes, which picks the model that checks it: `none` when
-its scripts decide it and no model runs, `low`, `medium` (the default), or
-`high`. `threshold` is how sure the model has to be, from 0 to 1, before a
-finding is reported, 0.7 when absent. `recommended: true` puts
-a rule in the set `scry add --recommended` installs, which is for a rule that
-reads on any project rather than one about a stack it may not have. A rule
-that shipped carries `version`; one a project wrote does not.
+`level` is `error` or `warning`, `error` when absent. `threshold` is how
+sure a check has to be, from 0 to 1, before a finding is reported, 0.7 when
+absent; code is sure, so only a decider's findings ever fall under it.
+`recommended: true` puts a rule in the set `scry add --recommended`
+installs, which is for a rule that reads on any project rather than one
+about a stack it may not have. A rule that shipped carries `version`; one a
+project wrote does not.
 
-`Rules.load(dir)` reads every rule under `<dir>/.wiz/scry` and reports every
-broken one at once.
+A rule with a `RULE.md` and no `rule.ts` yet checks nothing, and a check
+names it so it is not mistaken for a pass.
+
+## A rule's check
+
+`rule.ts` default-exports a class implementing `Rule`: `check(file)` reads
+one file and returns a `Finding` for each place it breaks the rule. Which
+files it reads, the threshold, `scry-ignore` comments and the report are not
+its concern; the engine handles those.
+
+```ts
+import type {
+	Comment,
+	Decider,
+	Finding,
+	Rule,
+	SourceFile,
+	Tools,
+} from "@webappwiz/scry";
+
+const RESTATES =
+	"Does this comment only restate what the code under it does, rather than say why?";
+
+/** Finds comments that say what the code does instead of why. */
+export default class CommentsSayWhy implements Rule {
+	private decider: Decider;
+
+	constructor(tools: Tools) {
+		this.decider = tools.decider;
+	}
+
+	async check(file: SourceFile): Promise<Finding[]> {
+		const findings = await Promise.all(
+			this.lineComments(file).map(async (comment) =>
+				comment.flag(
+					"Say why, not what.",
+					await this.decider.decide(RESTATES, comment),
+					RESTATES,
+				),
+			),
+		);
+		return findings;
+	}
+
+	/** Comments that are not doc comments: those are another rule's. */
+	private lineComments(file: SourceFile): Comment[] {
+		return file.ts.comments().filter((comment) => !comment.doc);
+	}
+}
+```
+
+Code first. Everything a program can settle, it settles: which nodes to
+look at, which are excused, what counts as a match. A finding code decides
+has confidence 1. Only what takes judgment goes to the decider, as a
+yes-or-no question about a span, and its answer, the probability of yes, is
+the finding's confidence: `span.flag(message, confidence, question)`. The
+question rides along on the finding, so a report can say what decided it.
+Ask about the narrowest span that holds the answer; the decider reads the
+whole file around it either way.
+
+Name the private methods for the sentences of the rule, so `check` reads as
+the rule does: `stateKeptBetweenCalls`, `setupOnlyOneTestUses`,
+`namedForTheFile`. A rule that only reads code takes no constructor at all.
+
+Import only types from `@webappwiz/scry` in `rule.ts`. They are erased when
+it runs, so a rule's check runs wherever the CLI does, whatever the project
+has installed.
+
+## The toolkit
+
+`SourceFile` is the file a rule reads: its `path` from the project root,
+`text`, `lines`, and `stem`, the name up to its first dot (`cart` for
+`cart.test.ts`). `matches(pattern)` gives a `Span` for each match of a
+global regular expression, for rules about text.
+
+`file.ts` is the file as TypeScript, parsed once however many rules read it,
+over [ast-grep](https://ast-grep.github.io):
+
+- `topLevel()`: the top-level statements, with `export` unwrapped to what
+  it exports.
+- `topLevelClasses()`: the classes declared there, as `Declaration`s with a
+  `name`.
+- `comments()`: every comment but `scry-ignore` directives, as `Comment`s
+  that know whether they are `doc` comments.
+- `tests()`: the body of every `it` and `test`, `.only`, `.skip` and
+  `.each(...)` included.
+- `findAll(matcher)` and `root`, for rules that walk the tree themselves. A
+  matcher is an ast-grep pattern like `this.$FIELD = $VALUE` or a rule like
+  `{ rule: { kind: "if_statement" } }`.
+
+Each of those is a `Span`, something a finding can point at: a `line` from
+1, its `text`, `withNext(count)` for it and the lines after, and `flag`. A
+`SyntaxNode` is a span with its `kind` (tree-sitter's TypeScript grammar's,
+like `call_expression`), `end`, `is(...kinds)`, `field(name)`, `children()`,
+`parent()`, `ancestors()`, `findAll(matcher)`, `captured(name)` for what a
+pattern's `$NAME` matched, and `inside(matcher)`.
+
+## Tests
+
+A rule's `rule.test.ts` runs it on its labeled cases, the way tests sit
+beside code, and pins anything subtler by hand:
+
+```ts
+import { describe, expect, it } from "bun:test";
+import { Cases, SourceFile } from "@webappwiz/scry";
+import OneClassPerFile from "./rule";
+
+const cases = await Cases.load(import.meta.dir);
+
+describe("one-class-per-file", () => {
+	const rule = new OneClassPerFile();
+
+	it.each(cases.bad)("flags $name", async ({ file }) => {
+		expect(await rule.check(file)).not.toEqual([]);
+	});
+
+	it.each(cases.good)("passes $name", async ({ file }) => {
+		expect(await rule.check(file)).toEqual([]);
+	});
+
+	it("keeps the class the file is named for, wherever it sits", async () => {
+		const file = new SourceFile(
+			"lru-cache.ts",
+			"class Entry {}\nexport class LruCache {}\n",
+		);
+
+		expect(await rule.check(file)).toEqual([
+			{ line: 1, message: "Give Entry a file of its own.", confidence: 1 },
+		]);
+	});
+});
+```
+
+A rule that asks a decider is built with a fake one, from
+`@webappwiz/scry/testing`:
+
+```ts
+import { FakeDecider } from "@webappwiz/scry/testing";
+
+it("asks about line comments, and not doc comments", async () => {
+	const decider = new FakeDecider({ "add one": 0.95 });
+	const file = new SourceFile("a.ts", "/** A counter. */\n// add one\ni++;\n");
+
+	const findings = await new CommentsSayWhy({ decider }).check(file);
+
+	expect(findings.map((finding) => [finding.line, finding.confidence])).toEqual(
+		[[2, 0.95]],
+	);
+});
+```
+
+`Cases.load(dir)` reads the rule in `dir`: each file in its `evals/`, and
+each code block under its `RULE.md`'s `## Good` and `## Bad`. A case file is
+`<name>.good.<ext>` or `<name>.bad.<ext>`, and the rule reads it as
+`<name>.<ext>`, so `cart.test.bad.ts` is a `cart.test.ts` that breaks the
+rule. A code block is named for a file the rule's `files` glob matches, so a
+rule about tests reads its examples as tests. A check never checks a rule's
+own directory or its cases, and the repository's biome and tsc leave cases
+out, since a bad one breaks the rule on purpose.
+
+`FakeDecider(answers, otherwise)` answers by what the span it is asked
+about contains: the probability under the first key the span's text
+includes, and `otherwise`, 0 by default, when none does. It keeps what it
+was `asked`, so a test can say which spans went to the model. With a fake,
+a rule's tests test its code: what it flags on its own, and what it asks
+about. Whether its questions are good ones is what measuring is for.
+
+`wiz scry test [ids]` runs the tests beside each rule in `.wiz/scry`. Unlike
+a `rule.ts`, a test imports values from `@webappwiz/scry`, so it runs only
+where the project can resolve that package.
+
+## Measuring
+
+`Rules.measure({ ids, tools })` runs each rule on its cases with a real
+decider, the way a check would: what a `scry-ignore` comment excuses and
+what falls under the threshold are not findings. A bad case is right when
+something is found in it, a good one when nothing is. `wiz scry measure
+[ids]` prints the score per rule, then each case a rule got wrong and why.
+It is how a question's wording, a threshold, or a model is tuned: measure,
+change one thing, measure again. Every case of every rule runs at once, so
+the decider batches them as it would a check.
 
 ## A check
 
@@ -70,68 +249,58 @@ broken one at once.
 const { root, paths } = await Git.locate(process.cwd(), ["packages/api"]);
 const rules = await Rules.load(root);
 const changes = await new Git(root).changes("main", paths);
-const check = await Check.prepare({ dir: root, rules, changes });
-console.log(check.tokens, check.efforts);
 const account = { id: accountId, token: apiToken };
-const report = await check.run({
-	judges: new Map([
-		["low", new Clef("clef", account)],
-		["medium", new Clef("clef", account)],
-		["high", new Jev("jev-latest", typesafeKey)],
-	]),
-	jobs: 8,
+const decider = new BatchedDecider(new Clef("clef", account), { jobs: 8 });
+const report = await rules.check({
+	paths: changes.files.map((file) => file.path),
+	tools: { decider },
 });
 ```
 
-`Git.changes` is what changed since a ref, or with none, the uncommitted work
-when there is any and otherwise the branch since trunk, kept to the paths it
-is given. `Git.locate` finds the repository root and turns paths from a
-working directory into paths from it. `Check.prepare` does everything that
-costs nothing: it matches rules to files, runs their scripts, and builds
-the `Call`s. A call is one judgment about one file, for the rules of one
-effort it matches: the file's numbered text, its diff and those rules go in
-its state once, with a yes-or-no question for each rule and each run of
-lines the change added, and one for each line a script flagged. Lines and
-files a `scry-ignore` comment excuses are never asked about. A file with
-more than 64 questions takes more than one call. `tokens` estimates what the
-calls would send.
+`Rules.load(dir)` reads every rule under `<dir>/.wiz/scry` and reports every
+broken one at once. `Git.changes` is what changed since a ref, or with none,
+the uncommitted work when there is any and otherwise the branch since
+trunk, kept to the paths it is given. `Git.locate` finds the repository root
+and turns paths from a working directory into paths from it.
 
-`run` sends them to a `Judge`, anything with `judge(judgment)` that answers
-each question with the probability of yes. `Clef` (`clef` or `clef-flash` on
-Cloudflare Workers AI) and `Jev` (on TypeSafe, or anything else serving
-`/v1/systemone`) are the two this package has; both take the request and
-reply of the Jev API. A finding is a question answered at or above its
-rule's threshold, with that `probability`, and it names the rule's
-description, or the script's message for a flagged line. A call that fails
-or leaves a question unanswered is reported as unchecked, never guessed at.
+`check` builds each rule whose `files` match a path with the `Tools`, then
+runs every rule on every file at once, reading and parsing each file once
+however many rules read it. A `Report` holds the `problems`, each a finding
+with its `path`, `rule` and `level`; what went `unchecked`, a rule that threw
+on loading or on a file, never guessed at; the rules `withoutCheck`; and how
+many findings were `dropped` under a threshold or `ignored` by a comment.
 
-## Evals
+A `Decider` answers `decide(question, span)` with the probability of yes.
+`BatchedDecider` holds questions until everything running has asked, then
+sends the ones about each file in one request, up to 64, to a `Judge`:
+`Clef` (`clef` or `clef-flash` on Cloudflare Workers AI) or `Jev` (on
+TypeSafe, or anything else serving `/v1/systemone`). A rule written as plain
+`await`s still shares a request with every other rule reading the file. A
+decider is cheap until a rule asks it something, so a change no rule asks
+about costs nothing.
 
-A rule's `evals/` holds cases whose answer is known, the way tests sit
-beside code: `<name>.good.<ext>` is a file that should not be found to
-break the rule, and `<name>.bad.<ext>` one that should. The model is shown
-`<name>.<ext>`, so a name says what the code is, never which it is. A check
-never checks a rule's eval cases, and the repository's own biome and tsc
-leave them out, since a bad one breaks the rule on purpose.
+## Thresholds and ignores
 
-`Evaluation.prepare({ dir, rules })` makes a call for each eval case and
-each code block under a rule's `## Good` and `## Bad`, the same call a check
-makes for a new file, and `run({ judges, jobs })` reports what probability
-each came back with and whether that is right at the rule's threshold:
-under it for a good case, at or over it for a bad one. The code blocks are
-in the rule the model reads, so they are a floor; the eval cases are code it
-has not seen. It is how two judges are compared, and how a rule's wording
-or threshold is tuned.
+A finding under its rule's `threshold` is dropped. Raise the threshold for a
+rule that reports too much, lower it for one that misses, and measure
+after either.
 
-## Scripts
+Code excuses itself from a rule with a `scry-ignore <id>: <reason>` comment
+in the comment lines right above the line, or `scry-ignore-file <id>:
+<reason>` anywhere for the file. `comments()` leaves these out, so a rule
+about comments never reads them. Before scry they were `rule-ignore` and
+`rule-ignore-file`, which still count.
 
-A script does the part of a rule a program can settle. A check runs every
-file in a rule's `scripts/` with the rule's changed files as arguments, by
-the interpreter its `#!` line names. It prints one candidate a line as
-`file:line: message`, exits 0 whether it found anything or not, and never
-writes. Under `effort: none` its lines are findings, honoring `scry-ignore`
-comments; under any other effort the model judges each one.
-[`example-script`](./catalog/example-script) shows the shape.
+## Decisions
 
-A script runs on every check of its rule, so it is code a project trusts the
+`CachedDecider` keeps every answer in `Decisions`, one JSON file the CLI
+keeps at `node_modules/.cache/webappwiz/scry/decisions.json`. An answer is
+reused for the same model, question, line and file to the byte, so checking
+an unchanged file again asks nothing, and an edit retires what was asked
+about it. The store doubles as the trace: `wiz scry why path:line` says what
+a model was asked about that line and what it answered, which is why a
+finding was reported or dropped. When nothing was asked there, code decided
+it.
+
+A rule's `rule.ts` runs on every check, so it is code a project trusts the
 way it trusts an agent skill: read it before it runs.

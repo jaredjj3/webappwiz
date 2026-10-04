@@ -14,4 +14,5 @@ export interface ProcessLike {
 	exit(code: number): void;
 	on(event: string, handler: (...args: unknown[]) => void): void;
 	once(event: string, handler: () => void): void;
+	off(event: string, handler: (...args: unknown[]) => void): void;
 }

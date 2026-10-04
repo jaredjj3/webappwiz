@@ -1,12 +1,10 @@
 import { Markdown } from "webappwiz/md";
 import { z } from "zod";
+import { RuleError } from "./rule-error";
 
 /** How loudly a violation reports. */
 export type Level = "error" | "warning";
 export const LEVELS = ["error", "warning"] as const;
-
-/** A `RULE.md` that does not have the shape a rule needs: `path:line: why`. */
-export class RuleError extends Error {}
 
 /** Where a document came from, for the errors it can raise. */
 export interface ParseOptions {

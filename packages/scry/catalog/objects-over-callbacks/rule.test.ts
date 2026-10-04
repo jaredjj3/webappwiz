@@ -1,0 +1,96 @@
+import { describe, expect, it } from "bun:test";
+import { Cases, SourceFile } from "@webappwiz/scry";
+import { FakeDecider } from "@webappwiz/scry/testing";
+import ObjectsOverCallbacks from "./rule";
+
+const cases = await Cases.load(import.meta.dir);
+
+describe("objects-over-callbacks", () => {
+	it.each(cases.bad)("flags $name", async ({ file }) => {
+		const rule = new ObjectsOverCallbacks({
+			decider: new FakeDecider({}, 0.9),
+		});
+
+		expect(await rule.check(file)).not.toEqual([]);
+	});
+
+	it.each(cases.good)(
+		"passes $name when the decider says no",
+		async ({ file }) => {
+			const rule = new ObjectsOverCallbacks({
+				decider: new FakeDecider({}, 0),
+			});
+
+			expect(
+				(await rule.check(file)).filter((finding) => finding.confidence > 0),
+			).toEqual([]);
+		},
+	);
+
+	it("asks about a function parameter a constructor does not keep, pointing at the declaration", async () => {
+		const decider = new FakeDecider({}, 0.3);
+		const file = new SourceFile(
+			"a.ts",
+			[
+				"export function largest(",
+				"\twords: string[],",
+				"\tsize: (word: string) => number,",
+				"): string {",
+				"\treturn words[0];",
+				"}",
+				"[1].map((item: number) => item);",
+			].join("\n"),
+		);
+
+		const findings = await new ObjectsOverCallbacks({ decider }).check(file);
+
+		expect([
+			findings.map((finding) => [finding.line, finding.confidence]),
+			decider.asked.map((asked) => asked.about.line),
+		]).toEqual([[[1, 0.3]], [1]]);
+	});
+
+	it("decides a kept constructor function and a bag of onX callbacks by code, and asks about an onX parameter", async () => {
+		const decider = new FakeDecider({}, 0);
+		const file = new SourceFile(
+			"a.ts",
+			[
+				"class Stamper {",
+				"\tconstructor(private now: () => Date) {}",
+				"\tsave(path: string, onDone?: () => void): void {}",
+				"}",
+				"interface Hooks {",
+				"\tonStart: () => void;",
+				"\tonError: (error: Error) => void;",
+				"}",
+			].join("\n"),
+		);
+
+		const findings = await new ObjectsOverCallbacks({ decider }).check(file);
+
+		expect([
+			findings.map((finding) => [finding.line, finding.confidence]),
+			decider.asked.map((asked) => asked.about.line),
+		]).toEqual([
+			[
+				[2, 1],
+				[3, 0],
+				[5, 1],
+			],
+			[3],
+		]);
+	});
+
+	it("leaves a named function type with one implementation that nothing injects", async () => {
+		const file = new SourceFile(
+			"a.ts",
+			"type Format = (cents: number) => string;\nconst usd: Format = (cents) => String(cents);\n",
+		);
+
+		expect(
+			await new ObjectsOverCallbacks({ decider: new FakeDecider() }).check(
+				file,
+			),
+		).toEqual([]);
+	});
+});

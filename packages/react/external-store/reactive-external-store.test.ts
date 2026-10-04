@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { Dispatcher } from "webappwiz/events";
 import { ReactiveExternalStore } from "./reactive-external-store";
 
@@ -41,12 +41,14 @@ describe("ReactiveExternalStore", () => {
 		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
-		const onStoreChange = mock(() => {});
-		store.subscribe(onStoreChange);
+		let notified = 0;
+		store.subscribe(() => {
+			notified++;
+		});
 
 		counter.bump();
 
-		expect(onStoreChange).toHaveBeenCalledTimes(1);
+		expect(notified).toBe(1);
 		expect(store.getSnapshot()).toBe(1);
 	});
 
@@ -54,25 +56,29 @@ describe("ReactiveExternalStore", () => {
 		const store = new ReactiveExternalStore(counter, (state) => state.label, [
 			"change",
 		]);
-		const onStoreChange = mock(() => {});
-		store.subscribe(onStoreChange);
+		let notified = 0;
+		store.subscribe(() => {
+			notified++;
+		});
 
 		counter.bump();
 
-		expect(onStoreChange).not.toHaveBeenCalled();
+		expect(notified).toBe(0);
 	});
 
 	it("stays quiet for events it was not given", () => {
 		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
-		const onStoreChange = mock(() => {});
-		store.subscribe(onStoreChange);
+		let notified = 0;
+		store.subscribe(() => {
+			notified++;
+		});
 
 		counter.count = 99;
 		counter.touch();
 
-		expect(onStoreChange).not.toHaveBeenCalled();
+		expect(notified).toBe(0);
 	});
 
 	it("stays quiet when an object selection is only shallowly unchanged", () => {
@@ -81,12 +87,14 @@ describe("ReactiveExternalStore", () => {
 			(state) => ({ label: state.label }),
 			["change"],
 		);
-		const onStoreChange = mock(() => {});
-		store.subscribe(onStoreChange);
+		let notified = 0;
+		store.subscribe(() => {
+			notified++;
+		});
 
 		counter.bump();
 
-		expect(onStoreChange).not.toHaveBeenCalled();
+		expect(notified).toBe(0);
 	});
 
 	it("catches up on a change that landed before subscribing", () => {
@@ -104,13 +112,15 @@ describe("ReactiveExternalStore", () => {
 		const store = new ReactiveExternalStore(counter, (state) => state.count, [
 			"change",
 		]);
-		const onStoreChange = mock(() => {});
-		const unsubscribe = store.subscribe(onStoreChange);
+		let notified = 0;
+		const unsubscribe = store.subscribe(() => {
+			notified++;
+		});
 
 		unsubscribe();
 		counter.bump();
 
-		expect(onStoreChange).not.toHaveBeenCalled();
+		expect(notified).toBe(0);
 	});
 
 	it("keeps its method identities stable, so React does not resubscribe", () => {

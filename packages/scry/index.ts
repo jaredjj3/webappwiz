@@ -42,8 +42,8 @@ export {
 	type Level,
 	type ParseOptions,
 	RuleDocument,
-	RuleError,
 } from "./rule-document";
+export { RuleError } from "./rule-error";
 export {
 	type CheckOptions,
 	type LoadOptions,

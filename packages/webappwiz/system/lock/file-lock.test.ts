@@ -133,6 +133,18 @@ describe("FileLock", () => {
 		expect(await fs.exists(path)).toBe(false);
 	});
 
+	it("stops listening for signals once released", async () => {
+		const lock = new FileLock(path, { fs: fs, ps: ps, log: log, pollMs: 10 });
+		await lock.acquire();
+		await lock.release();
+
+		ps.dispatch("SIGINT");
+		ps.dispatch("uncaughtException");
+
+		expect(ps.isExited()).toBe(false);
+		expect(log.entries).toEqual([]);
+	});
+
 	it("leaves a lock held by another process alone when calling releaseIfOurs", async () => {
 		const other = new FileLock(path, { fs: fs, ps: ps, log: log, pollMs: 10 });
 		await other.acquire();

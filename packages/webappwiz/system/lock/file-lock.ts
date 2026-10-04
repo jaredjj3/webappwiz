@@ -1,4 +1,5 @@
 import { rmSync } from "node:fs";
+import { Disposer } from "webappwiz/disposable";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { Duration, sleep } from "webappwiz/time";
 import type { Fs } from "../fs/fs";
@@ -30,7 +31,8 @@ export interface FileLockOptions {
  */
 export class FileLock implements Lock {
 	private held = false;
-	private handlersRegistered = false;
+	/** The process listeners that remove the lock, while it is held. */
+	private listeners: Disposer | null = null;
 	private readonly stalenessMs: number;
 	private readonly pollMs: number;
 
@@ -99,6 +101,8 @@ export class FileLock implements Lock {
 	}
 
 	async release(): Promise<void> {
+		this.listeners?.dispose();
+		this.listeners = null;
 		if (this.held) {
 			this.held = false;
 			await this.fs.rm(this.path, { recursive: true, force: true });
@@ -144,27 +148,32 @@ export class FileLock implements Lock {
 	 * because exit handlers cannot await.
 	 */
 	private registerCleanup(): void {
-		if (this.handlersRegistered) {
+		if (this.listeners !== null) {
 			return;
 		}
-		this.handlersRegistered = true;
+		const listeners = new Disposer();
+		this.listeners = listeners;
 		const drop = (): void => {
 			if (this.held) {
 				this.held = false;
 				rmSync(this.path, { recursive: true, force: true });
 			}
 		};
-		this.ps.once("exit", drop);
+		listeners.use(this.ps.once("exit", drop));
 		for (const signal of ["SIGINT", "SIGTERM"]) {
-			this.ps.on(signal, () => {
-				drop();
-				this.ps.exit(130);
-			});
+			listeners.use(
+				this.ps.on(signal, () => {
+					drop();
+					this.ps.exit(130);
+				}),
+			);
 		}
-		this.ps.on("uncaughtException", (error: unknown) => {
-			drop();
-			this.log.error(error);
-			this.ps.exit(1);
-		});
+		listeners.use(
+			this.ps.on("uncaughtException", (error: unknown) => {
+				drop();
+				this.log.error(error);
+				this.ps.exit(1);
+			}),
+		);
 	}
 }

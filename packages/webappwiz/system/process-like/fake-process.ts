@@ -61,6 +61,13 @@ export class FakeProcess implements ProcessLike {
 		this.on(event, handler);
 	}
 
+	off(event: string, handler: (...args: unknown[]) => void): void {
+		this.handlers.set(
+			event,
+			(this.handlers.get(event) ?? []).filter((held) => held !== handler),
+		);
+	}
+
 	/** Stands in for the OS, which never delivers anything to a fake. */
 	dispatch(event: string): void {
 		for (const handler of this.handlers.get(event) ?? []) {

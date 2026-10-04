@@ -52,15 +52,15 @@ describe("published", () => {
 			manifest({ private: false, workspaces: ["packages/*"] }),
 		);
 
-		for (const field of [
+		const left = [
 			"files",
 			"scripts",
 			"devDependencies",
 			"private",
 			"workspaces",
-		]) {
-			expect(out[field]).toBeUndefined();
-		}
+		].filter((field) => out[field] !== undefined);
+
+		expect(left).toEqual([]);
 	});
 
 	it("carries anything else across untouched", () => {

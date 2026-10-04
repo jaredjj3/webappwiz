@@ -49,12 +49,20 @@ describe("Command", () => {
 		expect(got).toEqual({ loud: true, name: "ada" });
 		cmd.exec(["--loud=false", "--name", "ada"], { log });
 		expect(got).toEqual({ loud: false, name: "ada" });
-		for (const raw of ["", "0", "no", "FALSE"]) {
+	});
+
+	it.each(["", "0", "no", "FALSE"])(
+		"rejects a z.boolean() switch given %p",
+		(raw) => {
+			const cmd = new Command("f")
+				.option("loud", z.boolean(), { default: false })
+				.option("name", z.string())
+				.action(() => {});
 			expect(() =>
 				cmd.exec([`--loud=${raw}`, "--name", "ada"], { log }),
 			).toThrow("expected true or false");
-		}
-	});
+		},
+	);
 
 	it("leaves a switch with no default off, and other options taking a value", () => {
 		let got: { loud: boolean; name: string } | undefined;

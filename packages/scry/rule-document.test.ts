@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { RuleDocument, RuleError } from "./rule-document";
+import { RuleDocument } from "./rule-document";
+import { RuleError } from "./rule-error";
 import { ruleDoc } from "./testing";
 
 describe("RuleDocument", () => {
@@ -49,8 +50,9 @@ describe("RuleDocument", () => {
 		).toEqual(0.8);
 	});
 
-	it("rejects a threshold outside 0 to 1", () => {
-		for (const threshold of ["1.5", "high"]) {
+	it.each(["1.5", "high"])(
+		"rejects a threshold of %p, outside 0 to 1",
+		(threshold) => {
 			const doc = ruleDoc("no-foo", { threshold: 0.8 }).replace(
 				"threshold: 0.8",
 				`threshold: ${threshold}`,
@@ -59,8 +61,8 @@ describe("RuleDocument", () => {
 			expect(() => RuleDocument.parse(doc)).toThrow(
 				/^RULE\.md:6: threshold: expected a number from 0 to 1/,
 			);
-		}
-	});
+		},
+	);
 
 	it("keeps the whole document verbatim", () => {
 		const doc = ruleDoc("no-foo");

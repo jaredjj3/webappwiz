@@ -1,3 +1,4 @@
+import { disposables, type Resource } from "webappwiz/disposable";
 import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 
 export class FakePs implements Ps {
@@ -74,22 +75,19 @@ export class FakePs implements Ps {
 		this.exited = true;
 	}
 
-	on(signal: string, handler: () => void): void {
+	on(signal: string, handler: () => void): Resource {
 		const handlers = this.handlers.get(signal) ?? [];
 		handlers.push(handler);
 		this.handlers.set(signal, handlers);
+		return disposables.callback(() => this.off(signal, handler));
 	}
 
-	once(event: "exit", handler: () => void): void {
+	once(event: "exit", handler: () => void): Resource {
 		const wrapped = () => {
 			handler();
-			const handlers = this.handlers.get(event) ?? [];
-			const index = handlers.indexOf(wrapped);
-			if (index !== -1) {
-				handlers.splice(index, 1);
-			}
+			this.off(event, wrapped);
 		};
-		this.on(event, wrapped);
+		return this.on(event, wrapped);
 	}
 
 	// scry-ignore objects-over-callbacks: a test knob on a fake, where what a spawn does is one expression, so an interface would only ask every test to wrap that expression in an object literal
@@ -125,7 +123,7 @@ export class FakePs implements Ps {
 
 	dispatch(signal: string): void {
 		if (!this.exited) {
-			for (const handler of this.handlers.get(signal) ?? []) {
+			for (const handler of [...(this.handlers.get(signal) ?? [])]) {
 				handler();
 			}
 		}
@@ -133,6 +131,14 @@ export class FakePs implements Ps {
 
 	isExited(): boolean {
 		return this.exited;
+	}
+
+	private off(signal: string, handler: () => void): void {
+		const handlers = this.handlers.get(signal) ?? [];
+		const index = handlers.indexOf(handler);
+		if (index !== -1) {
+			handlers.splice(index, 1);
+		}
 	}
 
 	/**

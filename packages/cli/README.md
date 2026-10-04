@@ -9,7 +9,9 @@ bunx @webappwiz/cli skills list            # what there is, and what you have
 bunx @webappwiz/cli skills add scry        # install an agent skill
 bunx @webappwiz/cli skills update          # refresh the ones already installed
 bunx @webappwiz/cli scry                   # check a change against the rules
-bunx @webappwiz/cli scry eval              # judge the rules on their own examples
+bunx @webappwiz/cli scry test              # run the tests beside each rule
+bunx @webappwiz/cli scry measure           # score the rules on their labeled cases
+bunx @webappwiz/cli scry why <path:line>   # what a model was asked about a line
 bunx @webappwiz/cli scry list              # every rule there is, and what you have
 bunx @webappwiz/cli scry add <id>          # copy a shipped rule in
 bunx @webappwiz/cli scry add --recommended # copy the recommended ones
@@ -23,22 +25,25 @@ bunx @webappwiz/cli creds remove <NAME>
 ## scry
 
 A project's rules live in `.wiz/scry`, tracked with its code, one directory
-per rule holding a `RULE.md` and, when it helps, `scripts/`, `evals/` and
-`references/` beside it. The ones that ship come from
-[`@webappwiz/scry`](../rules)'s catalog, and a project's own sit beside them
-in the same shape. The `scry` skill teaches an agent to write them.
+per rule holding a `RULE.md` that says what the rule wants, a `rule.ts` that
+checks it, a `rule.test.ts`, and `evals/`, its labeled cases. The ones that
+ship come from [`@webappwiz/scry`](../scry)'s catalog, and a project's own
+sit beside them in the same shape. The `scry` skill teaches an agent to
+write them, and the [package README](../scry/README.md) says how a check is
+written.
 
 ### Checking a change
 
 ```
 $ bunx @webappwiz/cli scry
 src/list.ts
-  32   warning   91%   Settings go in one named opts object, after the parameters a caller cannot leave out.   named-options-last
+  32   warning   91%    Settings go in one named opts object, after the parameters a caller cannot leave out.   named-options-last
 
 src/catalog.test.ts
-  35   error     78%   A test carries no if and no for; a matcher decides what the logic would have.           matchers-over-test-logic
+  35   error     100%   A test carries no if and no for; a matcher decides what the logic would have.           matchers-over-test-logic
 
 ✖ 2 problems (1 error, 1 warning) in 14 files since main
+  asked 3 questions in 1 request, 2.1k input tokens
 ```
 
 `scry` asks git what changed: the uncommitted work when there is any,
@@ -46,26 +51,25 @@ otherwise the branch since it left trunk, or whatever `--since <ref>` names.
 Paths narrow it, `scry packages/api packages/web`, to the changed files at
 or under them, from wherever it runs; the project is the git repository
 around it. It matches each rule's `files` glob against the changed files and
-runs the matching rules' scripts. A rule with `effort: none` stops there:
-its scripts' lines are its findings.
+runs the matching rules' checks, every rule on every file at once.
 
-Every other rule is judged by a decision model, which reads the file and
-answers yes-or-no questions with the probability of yes, and writes
-nothing. Each changed file is one call: its numbered text, its diff and its
-rules go in once, with a question for each rule and each run of lines the
-change added, and one for each line a script flagged. A finding is a
-question answered at or above its rule's `threshold`, 0.7 by default, and
-names the rule's description, or the script's message. The report is for
-whoever fixes the code, person or agent, to act on: no model decides more
-than whether a rule looks broken, and how sure it is.
+A check is code. What code can decide, it decides, and that finding is sure:
+100%. What takes judgment it asks a decision model, which reads the file and
+answers a yes-or-no question with the probability of yes, and writes
+nothing. The questions about one file go in one request, and every answer is
+kept in `node_modules/.cache/webappwiz/scry`, so checking an unchanged file
+again asks nothing. A finding a model decided is reported at or above its
+rule's `threshold`, 0.7 by default. A change no rule asks about costs
+nothing and needs no credentials. The report is for whoever fixes the code,
+person or agent, to act on.
 
-Every effort is judged by `clef` unless the config says otherwise. It got
-98% of the shipped rules' examples right, where `clef-flash` got 83% at
-about the same speed.
+`scry why <path:line>` says what a model was asked about a line, and what it
+answered: why a finding there was reported, or dropped. When nothing was
+asked, code decided it.
 
-The credentials come from the environment, or else from the operating
-system's secret store, where `creds add` keeps them (see
-[creds](#creds)).
+Rules ask `clef` unless the config says otherwise. The credentials come
+from the environment, or else from the operating system's secret store,
+where `creds add` keeps them (see [creds](#creds)).
 
 | Model | Provider | Credentials |
 | --- | --- | --- |
@@ -78,7 +82,7 @@ import { defineConfig } from "@webappwiz/cli/config";
 
 export default defineConfig({
 	scry: {
-		models: { low: "clef", medium: "clef", high: "clef" },
+		model: "clef",
 		jobs: 8,
 	},
 });
@@ -86,70 +90,68 @@ export default defineConfig({
 
 Each layer overrides the last: `.wiz/config.ts`, then the user's own
 `~/.config/wiz/config.ts` (under `$XDG_CONFIG_HOME` when set), then
-`WIZ_SCRY_MODEL_LOW`, `_MEDIUM`, `_HIGH` and `WIZ_SCRY_JOBS`. The models
-merge an effort at a time. A config where `@webappwiz/cli` is not installed
-exports the same object without `defineConfig`. A config still holding
-`agents`, `budget` or `batch`, from when agents judged the rules, is refused
-rather than half read.
+`WIZ_SCRY_MODEL` and `WIZ_SCRY_JOBS`. A config where `@webappwiz/cli` is not
+installed exports the same object without `defineConfig`. A config still
+holding `agents`, `budget`, `batch` or `models`, from before a rule's check
+was code, is refused rather than half read.
 
-`--model` judges every rule with one model, over the config, so two models
+`--model` asks another model for one run, over the config, so two models
 can be compared on the same change: `scry --model clef` then
 `scry --model jev-latest`.
 
-While the calls run, it draws each one on stderr, queued, running with its
-time, then answered or failed, redrawn in place on a terminal and a plain
-line a call anywhere else. The report goes to stdout once they are done.
-The first ctrl-c stops early: no more calls go out, the ones out are
+The first ctrl-c stops early: no more requests go out, the ones out are
 abandoned, and the report holds what came back, with the rest named as not
 checked. A second ctrl-c quits outright.
 
-It exits 1 when a finding is an error, 2 when a file or script went
-unchecked, and 0 otherwise. `--format json` prints the same report as JSON,
-each finding with its `probability`, and `--jobs` overrides how many calls
-run at once.
+It exits 1 when a finding is an error, 2 when a rule went unchecked on a
+file, and 0 otherwise. `--format json` prints the same report as JSON, each
+finding with its `confidence`, and `--jobs` overrides how many requests run
+at once. Rules with no `rule.ts` yet check nothing, and the report names
+them.
 
-### Comparing models
+### Testing and measuring rules
 
 ```
-$ bunx @webappwiz/cli scry eval --model clef-flash
-no-em-dashes         low      clef-flash   6 of 6 right
-named-options-last   medium   clef-flash   3 of 4 right
-  ✖ evals/request-options.good.ts: 61%, at or over its 70% threshold
+$ bunx @webappwiz/cli scry measure
+rule                 right   missed   false alarms
+comments-say-why     5/6     -        1
+no-em-dashes         9/9     -        -
 
-✖ 9 of 10 examples judged right across 2 rules
+wrong
+  comments-say-why   evals/rate-limiter.good.ts   line 4: Say why, not what. (74%)
+
+✖ 14 of 15 cases right (93.3%) across 2 rules
 ```
 
-`scry eval` judges each rule against cases whose answer is known: the files
-in its `evals/`, named `<name>.good.<ext>` and `<name>.bad.<ext>` and kept
-beside its `RULE.md` the way tests sit beside code, and the code blocks
-under its `## Good` and `## Bad`. It asks each the same question a check
-asks of a new file. A good case is right under the rule's threshold and a
-bad one at or over it. Run it once per model with `--model` to compare them,
-or after changing a rule's wording or `threshold` to see what moved. Name
-rule ids to judge only those. The code blocks are also in the rule the model
-reads, so they are a floor; the eval cases are code it has not seen. It
-exits 2 when a case went unchecked and 0 otherwise, however many it got
-wrong.
+`scry test [ids]` runs the tests beside each rule, which check its code with
+a fake model. `scry measure [ids]` runs each rule on its labeled cases with
+the real one: the files in its `evals/`, named `<name>.good.<ext>` and
+`<name>.bad.<ext>`, and the code blocks under its `RULE.md`'s `## Good` and
+`## Bad`. A bad case is right when the rule reports something in it, a good
+one when it reports nothing. Run it after changing a rule's question or
+`threshold` to see what moved, or once per `--model` to compare models.
 
 ### list, add, update, remove
 
 ```
-rule                 level    effort   recommended   files          ships    installed   description
-no-em-dashes         error    low      yes           **/*.{ts,md}   0.1.0    0.1.0       No em dashes, and no en dashes between words.
-one-class-per-file   error    low      yes           **/*.ts        0.1.0    -           A file declares one top-level class.
-mine                 error    medium   -             **/*.ts        -        local       What this project wants.
+rule                 level   recommended   check          files          ships    installed   description
+no-em-dashes         error   yes           yes            **/*.{ts,md}   0.1.0    0.1.0       No em dashes, and no en dashes between words.
+one-class-per-file   error   yes           yes            **/*.ts        0.1.0    -           A file declares one top-level class.
+mine                 error   -             no check yet   **/*.ts        -        local       What this project wants.
 ```
 
 `list` validates the frontmatter of every rule the project has and refuses to
 list a broken one, naming the file and line instead. The body is the author's,
-as a skill's is. `add` copies a shipped rule in, scripts and all, where it
-runs and can be edited; `update` refreshes those copies and leaves the
-project's own alone. Both replace what is there, as `skills` does.
+as a skill's is. `check` says whether the rule has a `rule.ts`: the project's
+copy when it has one, else the one that ships. `add` copies a shipped rule
+in, check and all, where it runs and can be edited; `update` refreshes those
+copies and leaves the project's own alone. Both replace what is there, as
+`skills` does.
 
-A rule's scripts run on every check, so they carry the same risk as an
-agent skill: whoever installs them is trusting their code. `add` and
-`update` name every script they write or change, so it can be read before
-the next check.
+A rule's `rule.ts` runs on every check, so it carries the same risk as an
+agent skill: whoever installs it is trusting its code. `add` and `update`
+name every one they write or change, so it can be read before the next
+check.
 
 `add --recommended` copies every rule the catalog recommends, which is the
 way to start: the rules that read on any TypeScript, without the ones that
@@ -158,7 +160,7 @@ directory is the only positional it reads, with the flag last as everywhere
 else here: `scry add ./project --recommended`. A project decides for itself
 after that, since a copied rule is the project's to edit or delete.
 
-`remove` deletes a rule's directory, scripts and all.
+`remove` deletes a rule's directory, check and all.
 
 Code excuses itself from a rule with a `scry-ignore <id>: <reason>`
 comment above the line, or `scry-ignore-file <id>: <reason>` for the

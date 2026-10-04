@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { constants, hostname } from "node:os";
+import { disposables, type Resource } from "webappwiz/disposable";
 import type { ProcessLike } from "../process-like/process-like";
 import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
 import { decode, reap } from "./reap";
@@ -112,12 +113,14 @@ export class NodePs implements Ps {
 		this.proc.exit(code);
 	}
 
-	on(signal: string, handler: () => void): void {
+	on(signal: string, handler: () => void): Resource {
 		this.proc.on(signal, handler);
+		return disposables.callback(() => this.proc.off(signal, handler));
 	}
 
-	once(event: "exit", handler: () => void): void {
+	once(event: "exit", handler: () => void): Resource {
 		this.proc.once(event, handler);
+		return disposables.callback(() => this.proc.off(event, handler));
 	}
 }
 

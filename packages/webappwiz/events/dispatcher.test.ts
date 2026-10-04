@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 
 import { Dispatcher } from "./index";
 
@@ -15,50 +15,48 @@ describe("Dispatcher", () => {
 	});
 
 	it("dispatches to listeners of that type only", () => {
-		const greeted = mock(() => {});
-		const stopped = mock(() => {});
-		dispatcher.on("greeted", greeted);
-		dispatcher.on("stopped", stopped);
+		const greeted: TestEvents["greeted"][] = [];
+		const stopped: TestEvents["stopped"][] = [];
+		dispatcher.on("greeted", (event) => greeted.push(event));
+		dispatcher.on("stopped", (event) => stopped.push(event));
 
 		dispatcher.dispatch("greeted", { message: "hello" });
 
-		expect(greeted).toHaveBeenCalledWith({ message: "hello" });
-		expect(stopped).not.toHaveBeenCalled();
+		expect(greeted).toEqual([{ message: "hello" }]);
+		expect(stopped).toEqual([]);
 	});
 
 	it("stops delivery after unlistening", () => {
-		const listener = mock(() => {});
-		const off = dispatcher.on("greeted", listener);
+		const heard: TestEvents["greeted"][] = [];
+		const off = dispatcher.on("greeted", (event) => heard.push(event));
 
 		off();
 		dispatcher.dispatch("greeted", { message: "hello" });
 
-		expect(listener).not.toHaveBeenCalled();
+		expect(heard).toEqual([]);
 	});
 
 	it("delivers only the first event to a once listener", () => {
-		const listener = mock(() => {});
-		dispatcher.on("greeted", listener, { once: true });
+		const heard: TestEvents["greeted"][] = [];
+		dispatcher.on("greeted", (event) => heard.push(event), { once: true });
 
 		dispatcher.dispatch("greeted", { message: "hello" });
 		dispatcher.dispatch("greeted", { message: "again" });
 
-		expect(listener).toHaveBeenCalledTimes(1);
-		expect(listener).toHaveBeenCalledWith({ message: "hello" });
+		expect(heard).toEqual([{ message: "hello" }]);
 	});
 
 	it("delivers every type to an all() listener, with the type as its first argument", () => {
-		const listener = mock((_type: keyof TestEvents, _event: unknown) => {});
-		dispatcher.all(listener);
+		const heard: [keyof TestEvents, unknown][] = [];
+		dispatcher.all((type, event) => heard.push([type, event]));
 
 		dispatcher.dispatch("greeted", { message: "hello" });
 		dispatcher.dispatch("stopped");
 
-		expect(listener).toHaveBeenCalledTimes(2);
-		expect(listener).toHaveBeenNthCalledWith(1, "greeted", {
-			message: "hello",
-		});
-		expect(listener).toHaveBeenNthCalledWith(2, "stopped", undefined);
+		expect(heard).toEqual([
+			["greeted", { message: "hello" }],
+			["stopped", undefined],
+		]);
 	});
 
 	it("runs listeners in registration order, scoped and universal alike", () => {
@@ -72,15 +70,13 @@ describe("Dispatcher", () => {
 	});
 
 	it("drops every listener when disposed", () => {
-		const scoped = mock(() => {});
-		const universal = mock(() => {});
-		dispatcher.on("greeted", scoped);
-		dispatcher.all(universal);
+		const heard: string[] = [];
+		dispatcher.on("greeted", () => heard.push("scoped"));
+		dispatcher.all(() => heard.push("universal"));
 
 		dispatcher.dispose();
 		dispatcher.dispatch("greeted", { message: "hello" });
 
-		expect(scoped).not.toHaveBeenCalled();
-		expect(universal).not.toHaveBeenCalled();
+		expect(heard).toEqual([]);
 	});
 });

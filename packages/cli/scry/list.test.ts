@@ -14,6 +14,7 @@ describe("scry list", () => {
 				recommended: true,
 				version: "1.0.0",
 			}),
+			"rule.ts": "export default class NoFoo {}\n",
 		},
 		"no-bar": {
 			"RULE.md": ruleDoc("no-bar", {
@@ -43,9 +44,9 @@ describe("scry list", () => {
 
 		expect(printed()).toEqual(
 			[
-				"rule     level     recommended   files     ships   installed   description",
-				"no-bar   warning   -             **/*.md   1.0.0   -           No bar.",
-				"no-foo   error     yes           **/*.ts   1.0.0   -           No foo.",
+				"rule     level     recommended   check          files     ships   installed   description",
+				"no-bar   warning   -             no check yet   **/*.md   1.0.0   -           No bar.",
+				"no-foo   error     yes           yes            **/*.ts   1.0.0   -           No foo.",
 			].join("\n"),
 		);
 	});
@@ -56,7 +57,7 @@ describe("scry list", () => {
 		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain(
-			"no-foo   error     yes           **/*.ts   1.0.0   0.9.0",
+			"no-foo   error     yes           no check yet   **/*.ts   1.0.0   0.9.0",
 		);
 		expect(printed()).toContain("1 out of date: run `scry update`");
 	});
@@ -67,9 +68,23 @@ describe("scry list", () => {
 		await list({ dir: "/p", log, fs, rules });
 
 		expect(printed()).toContain(
-			"mine     error     -             **/*.ts   -       local       Mine.",
+			"mine     error     -             no check yet   **/*.ts   -       local       Mine.",
 		);
 		expect(printed()).not.toContain("out of date");
+	});
+
+	it("says whether the project's copy has a check, whatever ships", async () => {
+		await install("mine", ruleDoc("mine", { description: "Mine." }));
+		await fs.write("/p/.wiz/scry/mine/rule.ts", "export default class {}\n");
+		await install("no-foo", ruleDoc("no-foo", { version: "1.0.0" }));
+
+		await list({ dir: "/p", log, fs, rules });
+
+		expect(printed().split("\n").slice(1, 4)).toEqual([
+			"mine     error     -             yes            **/*.ts   -       local       Mine.",
+			"no-bar   warning   -             no check yet   **/*.md   1.0.0   -           No bar.",
+			"no-foo   error     yes           no check yet   **/*.ts   1.0.0   1.0.0       Prose about no-foo.",
+		]);
 	});
 
 	it("describes a copied rule the way the copy does, not the shipped one", async () => {

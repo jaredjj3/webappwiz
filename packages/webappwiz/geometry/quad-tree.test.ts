@@ -25,9 +25,9 @@ describe("QuadTree", () => {
 
 	it("returns an item once even when the area spans the quadrants it splits into", () => {
 		const tree = new QuadTree<number>(BOUNDS, { capacity: 2 });
-		for (let index = 0; index < 20; index++) {
-			tree.insert(index, dot(index * 4, index * 4));
-		}
+		Array.from({ length: 20 }, (_, index) =>
+			tree.insert(index, dot(index * 4, index * 4)),
+		);
 
 		const found = tree.query(BOUNDS);
 
@@ -54,9 +54,7 @@ describe("QuadTree", () => {
 
 	it("stops splitting rather than chase items stacked on one point", () => {
 		const tree = new QuadTree<number>(BOUNDS, { capacity: 1, maxDepth: 2 });
-		for (let index = 0; index < 50; index++) {
-			tree.insert(index, dot(10, 10));
-		}
+		Array.from({ length: 50 }, (_, index) => tree.insert(index, dot(10, 10)));
 
 		expect(tree.query(new Rect(9, 9, 3, 3))).toHaveLength(50);
 	});

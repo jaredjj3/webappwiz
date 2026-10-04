@@ -4,89 +4,9 @@ import { type Case, Cases } from "./cases";
 import { ignored } from "./ignores";
 import { CASES_DIR, CHECK_FILE, RULE_FILE, RULES_ROOT } from "./layout";
 import type { Finding, Rule, RuleClass, Tools } from "./rule";
-import { type Level, RuleDocument, RuleError } from "./rule-document";
+import { type Level, RuleDocument } from "./rule-document";
+import { RuleError } from "./rule-error";
 import { SourceFile } from "./source-file";
-
-/** What reading a project's rules reads through. */
-export interface LoadOptions {
-	fs?: Fs;
-}
-
-/** A finding, where it is and which rule found it. */
-export interface Problem extends Finding {
-	/** From the project root. */
-	path: string;
-	rule: string;
-	level: Level;
-}
-
-/** Something a check could not look at, and why. */
-export interface Unchecked {
-	/** What was not checked: a rule, or a rule on one file. */
-	subject: string;
-	reason: string;
-}
-
-/** What a check found, and what it could not look at. */
-export interface Report {
-	/** By path, then line. */
-	problems: Problem[];
-	unchecked: Unchecked[];
-	/** Rules with a `RULE.md` and no `rule.ts` yet, which checked nothing. */
-	withoutCheck: string[];
-	/** How many of the files matched at least one rule. */
-	files: number;
-	/** How many rules matched at least one of the files. */
-	rules: number;
-	/** Findings under their rule's threshold: what a decider thought unlikely. */
-	dropped: number;
-	/** Findings a `scry-ignore` comment excused. */
-	ignored: number;
-	/**
-	 * Checked files still excusing themselves with `rule-ignore`, the
-	 * spelling from before scry, which counts the same but should be renamed.
-	 */
-	legacy: string[];
-	/** Whether it was stopped before every rule came back. */
-	cancelled: boolean;
-}
-
-/** How a rule did on one of its labeled cases. */
-export interface Scored {
-	/** Where the case came from, as `Case.name`. */
-	name: string;
-	kind: Case["kind"];
-	/** What the rule found in it, over its threshold and not ignored. */
-	findings: Finding[];
-	/** Why the rule could not check it, when it threw. */
-	error?: string;
-}
-
-/** A rule's score on its cases. */
-export interface Measurement {
-	rule: string;
-	/** Empty when the rule has no `rule.ts` yet. */
-	cases: Scored[];
-}
-
-/** Which rules to measure, and what to build them with. */
-export interface MeasureOptions {
-	/** Rule ids; every rule when empty. */
-	ids?: readonly string[];
-	tools: Tools;
-	signal?: AbortSignal;
-}
-
-/** What a check looks at, and what it builds the rules with. */
-export interface CheckOptions {
-	/** Files to check, from the project root. */
-	paths: readonly string[];
-	/** What every rule is built with. */
-	tools: Tools;
-	glob?: Glob;
-	/** Stops the check: what came back by then is the report. */
-	signal?: AbortSignal;
-}
 
 /**
  * The rules in a project's `.wiz/scry`. A rule is a directory: its `RULE.md`
@@ -359,6 +279,87 @@ export class Rules {
 		}
 		return new module.default(tools);
 	}
+}
+
+/** What reading a project's rules reads through. */
+export interface LoadOptions {
+	fs?: Fs;
+}
+
+/** A finding, where it is and which rule found it. */
+export interface Problem extends Finding {
+	/** From the project root. */
+	path: string;
+	rule: string;
+	level: Level;
+}
+
+/** Something a check could not look at, and why. */
+export interface Unchecked {
+	/** What was not checked: a rule, or a rule on one file. */
+	subject: string;
+	reason: string;
+}
+
+/** What a check found, and what it could not look at. */
+export interface Report {
+	/** By path, then line. */
+	problems: Problem[];
+	unchecked: Unchecked[];
+	/** Rules with a `RULE.md` and no `rule.ts` yet, which checked nothing. */
+	withoutCheck: string[];
+	/** How many of the files matched at least one rule. */
+	files: number;
+	/** How many rules matched at least one of the files. */
+	rules: number;
+	/** Findings under their rule's threshold: what a decider thought unlikely. */
+	dropped: number;
+	/** Findings a `scry-ignore` comment excused. */
+	ignored: number;
+	/**
+	 * Checked files still excusing themselves with `rule-ignore`, the
+	 * spelling from before scry, which counts the same but should be renamed.
+	 */
+	legacy: string[];
+	/** Whether it was stopped before every rule came back. */
+	cancelled: boolean;
+}
+
+/** How a rule did on one of its labeled cases. */
+export interface Scored {
+	/** Where the case came from, as `Case.name`. */
+	name: string;
+	kind: Case["kind"];
+	/** What the rule found in it, over its threshold and not ignored. */
+	findings: Finding[];
+	/** Why the rule could not check it, when it threw. */
+	error?: string;
+}
+
+/** A rule's score on its cases. */
+export interface Measurement {
+	rule: string;
+	/** Empty when the rule has no `rule.ts` yet. */
+	cases: Scored[];
+}
+
+/** Which rules to measure, and what to build them with. */
+export interface MeasureOptions {
+	/** Rule ids; every rule when empty. */
+	ids?: readonly string[];
+	tools: Tools;
+	signal?: AbortSignal;
+}
+
+/** What a check looks at, and what it builds the rules with. */
+export interface CheckOptions {
+	/** Files to check, from the project root. */
+	paths: readonly string[];
+	/** What every rule is built with. */
+	tools: Tools;
+	glob?: Glob;
+	/** Stops the check: what came back by then is the report. */
+	signal?: AbortSignal;
 }
 
 function reason(error: unknown): string {
