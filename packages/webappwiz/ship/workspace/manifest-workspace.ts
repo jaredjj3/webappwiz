@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { type Fs, NodeFs } from "webappwiz/system";
+import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import type { Package, Workspace } from "./workspace";
 
 interface Manifest {
@@ -15,13 +15,18 @@ interface Manifest {
  * The package.json files a release reads and stamps. One version covers the
  * whole workspace, and the root manifest is where it lives.
  */
-/** What a `ManifestWorkspace` reads through; the real filesystem by default. */
+/**
+ * What a `ManifestWorkspace` reads through and spawns `bun` with; the real
+ * filesystem and process by default.
+ */
 export interface ManifestWorkspaceOptions {
 	fs?: Fs;
+	ps?: Ps;
 }
 
 export class ManifestWorkspace implements Workspace {
 	private readonly fs: Fs;
+	private readonly ps: Ps;
 
 	constructor(
 		/** The directory whose package.json declares the workspaces. */
@@ -29,6 +34,7 @@ export class ManifestWorkspace implements Workspace {
 		opts: ManifestWorkspaceOptions = {},
 	) {
 		this.fs = opts.fs ?? new NodeFs();
+		this.ps = opts.ps ?? new NodePs();
 	}
 
 	/**
@@ -45,7 +51,7 @@ export class ManifestWorkspace implements Workspace {
 		for (let dir = from; ; dir = dirname(dir)) {
 			const manifest = await read(fs, dir);
 			if (manifest?.workspaces !== undefined) {
-				return new ManifestWorkspace(dir, { fs });
+				return new ManifestWorkspace(dir, { ...opts, fs });
 			}
 			if (single === null && manifest?.name !== undefined) {
 				single = dir;
@@ -54,7 +60,7 @@ export class ManifestWorkspace implements Workspace {
 				if (single === null) {
 					throw new Error(`no workspace above ${from}`);
 				}
-				return new ManifestWorkspace(single, { fs });
+				return new ManifestWorkspace(single, { ...opts, fs });
 			}
 		}
 	}
@@ -92,15 +98,19 @@ export class ManifestWorkspace implements Workspace {
 	}
 
 	/**
-	 * Stamps `version` into every package and the root manifest, in lockstep.
-	 * The root goes last, because it is the version a release reads: stamping it
-	 * first would leave a run that died partway reading as the version it never
-	 * finished, and send the next one past it.
+	 * Stamps `version` into every package, `bun.lock`, and the root manifest,
+	 * in lockstep. The root goes last, because it is the version a
+	 * release reads: stamping it first would leave a run that died partway
+	 * reading as the version it never finished, and send the next one past it.
 	 */
 	async setVersion(version: string): Promise<void> {
-		for (const dir of new Set([...(await this.dirs()), this.root])) {
+		// A workspace of one is its root, which is stamped once, last.
+		const dirs = (await this.dirs()).filter((dir) => dir !== this.root);
+		for (const dir of dirs) {
 			await this.stamp(dir, version);
 		}
+		await this.lock();
+		await this.stamp(this.root, version);
 	}
 
 	private async dirs(): Promise<string[]> {
@@ -122,6 +132,26 @@ export class ManifestWorkspace implements Workspace {
 			}
 		}
 		return dirs;
+	}
+
+	/**
+	 * Brings `bun.lock` up to the versions just stamped, as the next
+	 * `bun install` would; left behind, that install dirties the tree the
+	 * release just committed. bun writes it, so its format stays bun's business.
+	 */
+	private async lock(): Promise<void> {
+		if (!(await this.fs.exists(`${this.root}/bun.lock`))) {
+			return;
+		}
+		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(
+			["bun", "install", "--lockfile-only"],
+			{ cwd: this.root },
+		);
+		if (exitCode !== 0) {
+			throw new Error(
+				`bun install --lockfile-only: ${stderr.trim() || stdout.trim()}`,
+			);
+		}
 	}
 
 	private async manifest(): Promise<Manifest> {

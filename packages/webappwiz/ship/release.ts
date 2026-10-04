@@ -68,7 +68,7 @@ export class Release {
 		const log = opts.log ?? new ConsoleLogger();
 		const fs = opts.fs ?? new NodeFs();
 		const workspace =
-			opts.workspace ?? (await ManifestWorkspace.at(ps.cwd(), { fs }));
+			opts.workspace ?? (await ManifestWorkspace.at(ps.cwd(), { fs, ps }));
 		const git = opts.git ?? new CliGit(workspace.root, { ps });
 
 		const [branch, trunk] = [await git.branch(), await git.defaultBranch()];

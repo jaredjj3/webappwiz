@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import type { Fs } from "webappwiz/system";
-import { FakeFs } from "webappwiz/system/testing";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { ManifestWorkspace } from "./manifest-workspace";
 
 /** A filesystem that takes every write but the one path it is given. */
@@ -185,5 +185,43 @@ describe("workspace", () => {
 			version: "2.0.0",
 			private: true,
 		});
+	});
+
+	it("has bun bring bun.lock up to the new versions, before the root", async () => {
+		const ps = new FakePs();
+		let root: unknown;
+		ps.simulate(async () => {
+			root = await versionAt(fs, "/repo");
+			return 0;
+		});
+		await fs.write("/repo/bun.lock", "{}");
+
+		await new ManifestWorkspace("/repo", { fs, ps }).setVersion("2.0.0");
+
+		expect(ps.getCalls()).toEqual(["bun install --lockfile-only"]);
+		expect(ps.getCallDirs()).toEqual(["/repo"]);
+		// Packages stamped, root not yet: a run that dies here resumes at 2.0.0.
+		expect(await versionAt(fs, "/repo/packages/one")).toBe("2.0.0");
+		expect(root).toBe("1.2.3");
+	});
+
+	it("leaves the root at the old version when bun cannot lock", async () => {
+		const ps = new FakePs();
+		ps.simulate(async () => 1);
+		ps.setCaptureOutput("", "lockfile is corrupt\n");
+		await fs.write("/repo/bun.lock", "{}");
+
+		await expect(
+			new ManifestWorkspace("/repo", { fs, ps }).setVersion("2.0.0"),
+		).rejects.toThrow("bun install --lockfile-only: lockfile is corrupt");
+		expect(await versionAt(fs, "/repo")).toBe("1.2.3");
+	});
+
+	it("runs no bun where there is no bun.lock", async () => {
+		const ps = new FakePs();
+
+		await new ManifestWorkspace("/repo", { fs, ps }).setVersion("2.0.0");
+
+		expect(ps.getCalls()).toEqual([]);
 	});
 });

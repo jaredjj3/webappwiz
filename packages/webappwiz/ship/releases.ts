@@ -95,7 +95,7 @@ export class releases {
 	 */
 	static async workspace(opts: WorkspaceReleaseOptions = {}): Promise<Release> {
 		const ps = opts.ps ?? new NodePs();
-		const workspace = await ManifestWorkspace.at(ps.cwd(), { fs: opts.fs });
+		const workspace = await ManifestWorkspace.at(ps.cwd(), { fs: opts.fs, ps });
 		const registry = new NpmRegistry({ ps });
 		const artifacts: Artifact[] = (await workspace.packages())
 			.filter((pkg) => !pkg.private)
