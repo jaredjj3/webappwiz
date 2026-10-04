@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import type { Duration } from "webappwiz/time";
+import { FakeTimer } from "webappwiz/time/testing";
 import { Clef } from "./clef";
 import { Jev } from "./jev";
 import type { Judgment } from "./judge";
@@ -8,6 +10,9 @@ describe("Clef and Jev", () => {
 	let origin: string;
 	let received: { path: string; auth: string | null; body: unknown }[];
 	let reply: Response;
+	/** Answered in turn before `reply`, which answers the rest. */
+	let replies: Response[];
+	let timer: FakeTimer;
 
 	const judgment: Judgment = {
 		state: { path: "a.ts" },
@@ -17,6 +22,8 @@ describe("Clef and Jev", () => {
 	beforeEach(() => {
 		received = [];
 		reply = Response.json({});
+		replies = [];
+		timer = new FakeTimer();
 		server = Bun.serve({
 			port: 0,
 			fetch: async (request) => {
@@ -25,7 +32,7 @@ describe("Clef and Jev", () => {
 					auth: request.headers.get("authorization"),
 					body: await request.json(),
 				});
-				return reply.clone();
+				return (replies.shift() ?? reply).clone();
 			},
 		});
 		origin = `http://localhost:${server.port}`;
@@ -34,6 +41,19 @@ describe("Clef and Jev", () => {
 	afterEach(() => {
 		server.stop(true);
 	});
+
+	/** The wait before the next retry, once one is scheduled, and then its end, so no test waits in real time. */
+	const retried = async (): Promise<Duration> => {
+		while (timer.timeouts.length === 0) {
+			await Bun.sleep(0);
+		}
+		const delay = timer.timeouts[0]?.delay;
+		timer.fireTimeouts();
+		if (delay === undefined) {
+			throw new Error("no retry was scheduled");
+		}
+		return delay;
+	};
 
 	it("asks Clef on Workers AI, and reads Cloudflare's wrapped reply", async () => {
 		reply = Response.json({
@@ -102,5 +122,63 @@ describe("Clef and Jev", () => {
 		await expect(jev.judge(judgment)).rejects.toThrow(
 			/^jev-latest answered with no answers in it$/,
 		);
+	});
+
+	it("asks again after a 429, once the wait its Retry-After asks for is over", async () => {
+		replies = [
+			Response.json(
+				{ errors: [{ message: "Capacity temporarily exceeded" }] },
+				{ status: 429, headers: { "retry-after": "2" } },
+			),
+		];
+		reply = Response.json({ result: { answers: { q0: 0.4 } } });
+		const clef = new Clef(
+			"clef",
+			{ id: "acct", token: "cf-token" },
+			{ origin, timer },
+		);
+
+		const verdict = clef.judge(judgment);
+
+		expect((await retried()).ms).toBe(2000);
+		expect(await verdict).toEqual({ answers: new Map([["q0", 0.4]]) });
+		expect(received).toHaveLength(2);
+	});
+
+	it("backs off on a 5xx, doubling with jitter, and lets the refusal stand after four tries", async () => {
+		reply = Response.json({ error: "overloaded" }, { status: 503 });
+		const jev = new Jev("jev-latest", "ts-key", { origin, timer });
+
+		const verdict = jev.judge(judgment);
+		const first = await retried();
+		const second = await retried();
+		const third = await retried();
+
+		await expect(verdict).rejects.toThrow(
+			/^jev-latest answered 503: overloaded$/,
+		);
+		expect(received).toHaveLength(4);
+		expect(first.ms).toBeWithin(500, 1001);
+		expect(second.ms).toBeWithin(1000, 2001);
+		expect(third.ms).toBeWithin(2000, 4001);
+	});
+
+	it("stops waiting to ask again when the signal aborts", async () => {
+		reply = Response.json({ error: "busy" }, { status: 429 });
+		const clef = new Clef(
+			"clef",
+			{ id: "acct", token: "cf-token" },
+			{ origin, timer },
+		);
+		const controller = new AbortController();
+
+		const verdict = clef.judge(judgment, { signal: controller.signal });
+		while (timer.timeouts.length === 0) {
+			await Bun.sleep(0);
+		}
+		controller.abort(new Error("stopped"));
+
+		await expect(verdict).rejects.toThrow("stopped");
+		expect([timer.timeouts[0]?.disposed, received.length]).toEqual([true, 1]);
 	});
 });

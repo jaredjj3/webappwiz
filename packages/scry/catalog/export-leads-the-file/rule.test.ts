@@ -50,4 +50,33 @@ describe("export-leads-the-file", () => {
 			"Move trim below Stamper, or make it a private method of it.",
 		]);
 	});
+
+	it("counts the first screen from the first statement after the imports", async () => {
+		const imports = 'import { a } from "./a";\n'.repeat(60);
+		const below = new SourceFile(
+			"stamper.ts",
+			`${imports}${"export type A = 1;\n".repeat(51)}export class Stamper {}\n`,
+		);
+
+		expect([
+			await rule.check(
+				new SourceFile("stamper.ts", `${imports}export class Stamper {}\n`),
+			),
+			(await rule.check(below)).map((finding) => finding.message),
+		]).toEqual([
+			[],
+			[
+				"Bring Stamper onto the first screen: it starts on line 112, 52 lines below the imports.",
+			],
+		]);
+	});
+
+	it("leads with a value over a type of the same name, counting a hook for the name it uses", async () => {
+		const file = new SourceFile(
+			"files.ts",
+			`export function useFiles() {}\n${"export const A = 1;\n".repeat(60)}export type Files = ReturnType<typeof useFiles>;\n`,
+		);
+
+		expect(await rule.check(file)).toEqual([]);
+	});
 });

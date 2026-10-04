@@ -10,7 +10,9 @@ A function-typed parameter of your own is judged by when the callee runs
 the function:
 
 - During the call, to compute the call's result: a predicate, comparator
-  or transform. That is functional programming, and fine.
+  or transform. That is functional programming, and fine. So is a body
+  the call runs before it returns, inside something it opens and closes,
+  like a server it starts and stops around the body.
 - After the call returns, because something happened: that is a
   notification. Expose `Events` from `webappwiz/events` instead of taking
   an `onDone`.
@@ -18,7 +20,9 @@ the function:
   dependency. Name an interface and inject an object.
 
 An options bag of callbacks such as `{ onStart, onError }` is an events
-interface begging to exist. When a bare function genuinely is the cleanest
+interface begging to exist. A React component's props are not such a bag:
+they are how React passes events, so `onSelect` in the props of a function
+that returns JSX, or of a PascalCase function used as JSX, is fine. When a bare function genuinely is the cleanest
 design, keep it and `scry-ignore` the declaration with the reason: one
 marker at the declaration covers every call site.
 

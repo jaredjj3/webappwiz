@@ -16,9 +16,13 @@ const HELPERS = [
 /** What a helper is, when it is a `const` holding one. */
 const HELPER_VALUES = ["arrow_function", "function_expression", "class"];
 
+/** What declares only a type, which a value of the same name outranks. */
+const TYPES = ["type_alias_declaration", "interface_declaration"];
+
 /**
  * Finds a helper class or function above the export a file is named for, and
- * that export starting below the first screen.
+ * that export starting below the first screen of code: the imports above it
+ * are not what a reader wades through, so the screen starts after them.
  */
 export default class ExportLeadsTheFile implements Rule {
 	static readonly description =
@@ -35,6 +39,8 @@ export default class ExportLeadsTheFile implements Rule {
 		}
 		const name = nameOf(lead);
 		const above = statements.filter((statement) => statement.line < lead.line);
+		const start = this.start(file, lead);
+		const code = this.codeStart(statements);
 		return [
 			...above
 				.filter((statement) => this.isHelper(statement))
@@ -43,10 +49,10 @@ export default class ExportLeadsTheFile implements Rule {
 						`Move ${nameOf(helper)} below ${name}, or make it a private method of it.`,
 					),
 				),
-			...(this.start(file, lead) > SCREEN
+			...(start - code + 1 > SCREEN
 				? [
 						lead.flag(
-							`Bring ${name} onto the first screen: it starts on line ${this.start(file, lead)}.`,
+							`Bring ${name} onto the first screen: it starts on line ${start}${code > 1 ? `, ${start - code + 1} lines below the imports` : ""}.`,
 						),
 					]
 				: []),
@@ -54,9 +60,10 @@ export default class ExportLeadsTheFile implements Rule {
 	}
 
 	/**
-	 * The export named like the file, `RateLimiter` in `rate-limiter.ts`;
-	 * else the first exported class or function. None in a file of
-	 * re-exports.
+	 * The export named like the file, `RateLimiter` in `rate-limiter.ts`, or
+	 * the hook `useFiles` in `files.tsx`, and a value before a type of that
+	 * name, like `type Files = ReturnType<typeof useFiles>`; else the first
+	 * exported class or function. None in a file of re-exports.
 	 */
 	private leadingExport(
 		file: SourceFile,
@@ -66,9 +73,28 @@ export default class ExportLeadsTheFile implements Rule {
 			statement.parent()?.is("export_statement"),
 		);
 		const stem = squash(file.stem);
+		const named = exported.filter((statement) =>
+			[stem, `use${stem}`].includes(squash(nameOf(statement))),
+		);
 		return (
-			exported.find((statement) => squash(nameOf(statement)) === stem) ??
+			named.find((statement) => !statement.is(...TYPES)) ??
+			named[0] ??
 			exported.find((statement) => HELPERS.includes(statement.kind))
+		);
+	}
+
+	/** The line the code starts on: the first statement after the imports, or the top when there are none. */
+	private codeStart(statements: SyntaxNode[]): number {
+		const imports = statements.filter((statement) =>
+			statement.is("import_statement"),
+		);
+		const last = imports.at(-1);
+		if (last === undefined) {
+			return 1;
+		}
+		return (
+			statements.find((statement) => statement.line > last.end)?.line ??
+			last.end + 1
 		);
 	}
 

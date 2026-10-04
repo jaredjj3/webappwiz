@@ -107,7 +107,7 @@ describe("simple-test-setup", () => {
 		]);
 	});
 
-	it("asks about a test only when it declares several things", async () => {
+	it("asks about a test only when it declares several things before it first asserts", async () => {
 		const decider = new FakeDecider({ gateway: 0.9 }, 0.1);
 		const file = new SourceFile(
 			"a.test.ts",
@@ -121,6 +121,15 @@ describe("simple-test-setup", () => {
 				'it("empties when cleared", () => {',
 				"\tconst cart = new Cart();",
 				"\tcart.clear();",
+				"});",
+				'it("reads each currency", () => {',
+				'\texpect(parse("1 USD")).toBe(1);',
+				'\tconst euros = "12 EUR";',
+				"\texpect(parse(euros)).toBe(12);",
+				'\tconst pounds = "3 GBP";',
+				"\texpect(parse(pounds)).toBe(3);",
+				'\tconst yen = "500 JPY";',
+				"\texpect(parse(yen)).toBe(500);",
 				"});",
 			].join("\n"),
 		);

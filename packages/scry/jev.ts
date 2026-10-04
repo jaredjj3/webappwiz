@@ -1,3 +1,4 @@
+import type { Timer } from "webappwiz/time";
 import type { Judge, JudgeOptions, Judgment, Verdict } from "./judge";
 import { SystemOneEndpoint } from "./system-one-endpoint";
 
@@ -8,6 +9,8 @@ export interface JevOptions {
 	 * `/v1/systemone`, like Clef's open weights on your own hardware, works too.
 	 */
 	origin?: string;
+	/** Waits between tries of a request Jev turns away for now; real time when not given. */
+	timer?: Timer;
 }
 
 /** TypeSafe's decision model. */
@@ -25,7 +28,7 @@ export class Jev implements Judge {
 			model,
 			`${opts.origin ?? "https://api.typesafe.ai"}/v1/systemone`,
 			token,
-			{ body: { model } },
+			{ body: { model }, timer: opts.timer },
 		);
 	}
 

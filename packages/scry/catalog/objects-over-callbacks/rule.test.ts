@@ -93,4 +93,26 @@ describe("objects-over-callbacks", () => {
 			),
 		).toEqual([]);
 	});
+
+	it("skips the onX members of a component's props, inline or named, and flags the same bag on a plain function", async () => {
+		const file = new SourceFile(
+			"a.tsx",
+			[
+				"interface ChipProps {",
+				"\tonRemove: () => void;",
+				"}",
+				"const Chip = (props: ChipProps) => <button onClick={props.onRemove} />;",
+				"function Row({ onOpen }: { onOpen: () => void }) {",
+				"\treturn <Chip onRemove={onOpen} />;",
+				"}",
+				"function upload(callbacks: { onDone: () => void }): void {}",
+			].join("\n"),
+		);
+
+		const findings = await new ObjectsOverCallbacks({
+			decider: new FakeDecider(),
+		}).check(file);
+
+		expect(findings.map((finding) => finding.line)).toEqual([8]);
+	});
 });

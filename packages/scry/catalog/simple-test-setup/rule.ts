@@ -185,16 +185,15 @@ export default class SimpleTestSetup implements Rule {
 		);
 	}
 
-	/** Tests that declare several things before they act, which a decider weighs. */
+	/**
+	 * Tests that declare several things before they first assert, which a
+	 * decider weighs. A declaration after an assertion is an input to the
+	 * next one, like each case a table of checks walks through, not setup.
+	 */
 	private async setupDrowningTheBehavior(file: SourceFile): Promise<Finding[]> {
 		const candidates = file.ts
 			.tests()
-			.filter(
-				(test) =>
-					(test.field("body")?.children() ?? []).filter((statement) =>
-						statement.is("lexical_declaration", "variable_declaration"),
-					).length >= SETUP_DECLARATIONS,
-			);
+			.filter((test) => setup(test).length >= SETUP_DECLARATIONS);
 		return Promise.all(
 			candidates.map(async (test) =>
 				test.flag(
@@ -228,6 +227,25 @@ function opensOn(title: string): "action" | "name" | undefined {
 		return "action";
 	}
 	return /[A-Z_.()]/.test(first.slice(1)) ? "name" : undefined;
+}
+
+/** The declarations a test makes itself before its first `expect`. */
+function setup(test: SyntaxNode): SyntaxNode[] {
+	const statements = test.field("body")?.children() ?? [];
+	const first = statements.findIndex(
+		(statement) =>
+			statement.findAll({
+				rule: {
+					kind: "call_expression",
+					has: { field: "function", regex: "^expect$" },
+				},
+			}).length > 0,
+	);
+	return statements
+		.slice(0, first === -1 ? undefined : first)
+		.filter((statement) =>
+			statement.is("lexical_declaration", "variable_declaration"),
+		);
 }
 
 /**

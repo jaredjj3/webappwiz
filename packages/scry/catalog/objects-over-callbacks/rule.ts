@@ -22,13 +22,27 @@ const DECLARATIONS = [
 /** What a parameter is, whether required or not. */
 const PARAMETERS = ["required_parameter", "optional_parameter"];
 
+/** What can be a React component. */
+const FUNCTIONS = [
+	"function_declaration",
+	"function_expression",
+	"arrow_function",
+];
+
+/** JSX a component can return. */
+const JSX = ["jsx_element", "jsx_self_closing_element"];
+
+/** A component's name, as React requires one used as JSX to be. */
+const PASCAL_CASE = /^[A-Z][A-Za-z0-9]*$/;
+
 /**
  * Finds functions taken where an object belongs: a function a constructor
  * keeps as a field, a bag of `onX` callbacks, and a named function type
  * that several things implement or something injects. Whether any other
  * function parameter runs during the call, to compute its result, is a
- * decider's call. A finding points at the declaration, where one
- * `scry-ignore` covers it.
+ * decider's call. A React component's props are how React passes events,
+ * so their `onX` members are not a bag of callbacks. A finding points at
+ * the declaration, where one `scry-ignore` covers it.
  */
 export default class ObjectsOverCallbacks implements Rule {
 	static readonly description =
@@ -81,7 +95,7 @@ export default class ObjectsOverCallbacks implements Rule {
 		name: string,
 		of: string,
 	): Promise<Finding> {
-		const question = `Does ${of} keep the function ${name} to call later, or call it to announce that something happened, rather than only using it to compute what ${of} returns, like a predicate, comparator or transform? Answer no when ${of} exists to register a listener, like subscribe, on or defer.`;
+		const question = `Does ${of} call the function ${name} to announce that something happened, like onDone or onProgress, or keep it to call after ${of} returns? Answer no when ${name} only computes part of what ${of} returns, like a predicate, comparator or transform, or is a body ${of} runs between setting something up and tearing it down, or when ${of} exists to register a listener, like subscribe, on or defer.`;
 		return owner.flag(
 			`${name} runs after ${of} returns, or announces something: inject an object behind an interface, or expose Events.`,
 			await this.decider.decide(question, owner),
@@ -89,8 +103,12 @@ export default class ObjectsOverCallbacks implements Rule {
 		);
 	}
 
-	/** An interface or object type holding `onX` callbacks: an events interface waiting to exist. */
+	/**
+	 * An interface or object type holding `onX` callbacks: an events
+	 * interface waiting to exist, unless it is a component's props.
+	 */
 	private callbackBags(file: SourceFile): Finding[] {
+		const props = componentProps(file);
 		const bags = new Map<number, SyntaxNode>();
 		for (const property of file.ts.findAll({
 			rule: { kind: "property_signature" },
@@ -99,7 +117,8 @@ export default class ObjectsOverCallbacks implements Rule {
 			if (
 				bag !== undefined &&
 				NOTIFICATION.test(property.field("name")?.text ?? "") &&
-				takesFunction(property)
+				takesFunction(property) &&
+				!props.some((type) => holdsProps(bag, type))
 			) {
 				bags.set(bag.line, declaring(bag));
 			}
@@ -228,6 +247,101 @@ function keptAsField(parameter: SyntaxNode): boolean {
 function ownerName(owner: SyntaxNode): string {
 	const named = owner.field("name") ?? owner.parent()?.field("name");
 	return named?.text ?? "the function";
+}
+
+/**
+ * The props types of the file's React components: the type of each
+ * component's first parameter, inline or named in the file. A component is
+ * a function that returns JSX, or one named in PascalCase and used as JSX,
+ * so only a `.tsx` file has any.
+ */
+function componentProps(file: SourceFile): SyntaxNode[] {
+	if (!file.path.endsWith(".tsx")) {
+		return [];
+	}
+	const used = new Set(
+		file.ts
+			.findAll({
+				rule: {
+					any: ["jsx_opening_element", "jsx_self_closing_element"].map(
+						(kind) => ({ kind }),
+					),
+				},
+			})
+			.map((element) => element.field("name")?.text),
+	);
+	return file.ts
+		.findAll({ rule: { any: FUNCTIONS.map((kind) => ({ kind })) } })
+		.filter((fn) => {
+			const name = functionName(fn);
+			return (
+				returnsJsx(fn) ||
+				(name !== undefined && PASCAL_CASE.test(name) && used.has(name))
+			);
+		})
+		.flatMap((component) => {
+			const first = component
+				.field("parameters")
+				?.children()
+				.find((parameter) => parameter.is(...PARAMETERS));
+			const type = first === undefined ? undefined : typeOf(first);
+			return type === undefined ? [] : [type];
+		});
+}
+
+/** Whether an object type or interface body is a component's props type, inline or by name. */
+function holdsProps(bag: SyntaxNode, props: SyntaxNode): boolean {
+	if (props.is("type_identifier")) {
+		const owner = bag.parent();
+		return (
+			owner?.is("interface_declaration", "type_alias_declaration") === true &&
+			owner.field("name")?.text === props.text
+		);
+	}
+	return bag.line === props.line && bag.text === props.text;
+}
+
+/** What a function is called, by its declaration or the variable holding it. */
+function functionName(fn: SyntaxNode): string | undefined {
+	if (fn.is("function_declaration")) {
+		return fn.field("name")?.text;
+	}
+	const holder = fn.parent();
+	return holder?.is("variable_declarator") === true
+		? holder.field("name")?.text
+		: undefined;
+}
+
+/** Whether a function returns JSX itself, not from a function inside. */
+function returnsJsx(fn: SyntaxNode): boolean {
+	const body = fn.field("body");
+	if (body === undefined) {
+		return false;
+	}
+	if (!body.is("statement_block")) {
+		return isJsx(body);
+	}
+	return body
+		.findAll({ rule: { kind: "return_statement" } })
+		.some((statement) => {
+			const owner = statement.ancestors().find((node) => node.is(...FUNCTIONS));
+			return (
+				owner?.line === fn.line &&
+				owner.text === fn.text &&
+				statement.children().some((value) => isJsx(value))
+			);
+		});
+}
+
+/** Whether an expression is JSX, maybe in parentheses or a branch of a condition. */
+function isJsx(node: SyntaxNode): boolean {
+	if (node.is(...JSX)) {
+		return true;
+	}
+	return (
+		node.is("parenthesized_expression", "ternary_expression") &&
+		node.children().some((part) => isJsx(part))
+	);
 }
 
 /** The interface an interface body belongs to, or the object type itself. */

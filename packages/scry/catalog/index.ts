@@ -127,8 +127,10 @@ const EVALS: Record<string, string[]> = {
 		"retry-backoff.good.ts",
 		"session-store.bad.ts",
 		"slugify.good.ts",
+		"todo-store.good.ts",
 	],
 	"export-leads-the-file": [
+		"files.good.tsx",
 		"index.good.ts",
 		"job-scheduler.bad.ts",
 		"markdown-table.bad.ts",
@@ -139,6 +141,7 @@ const EVALS: Record<string, string[]> = {
 		"stamper-pad-method.good.ts",
 		"stamper.bad.ts",
 		"stamper.good.ts",
+		"task-board.good.tsx",
 		"token-bucket.good.ts",
 		"webhook-signer.bad.ts",
 	],
@@ -197,6 +200,7 @@ const EVALS: Record<string, string[]> = {
 	"objects-over-callbacks": [
 		"alert-service.bad.ts",
 		"file-uploader.bad.ts",
+		"fixture-server.good.ts",
 		"group-by.good.ts",
 		"largest-word.good.ts",
 		"price-label.good.ts",
@@ -208,6 +212,7 @@ const EVALS: Record<string, string[]> = {
 		"search-box.good.ts",
 		"stamper.bad.ts",
 		"stamper.good.ts",
+		"tag-filter.good.tsx",
 	],
 	"one-class-per-file": [
 		"date-ranges.good.ts",
@@ -263,6 +268,7 @@ const EVALS: Record<string, string[]> = {
 	"simple-test-setup": [
 		"cart-total.test.bad.ts",
 		"cart.test.good.ts",
+		"duration.test.good.ts",
 		"feature-flags.test.bad.ts",
 		"inline-world.test.bad.ts",
 		"invoice-parser.test.good.ts",

@@ -78,4 +78,28 @@ describe("doc-comments-address-users", () => {
 
 		expect(findings.map((finding) => finding.confidence)).toEqual([0.8]);
 	});
+
+	it("leaves a doc comment tagged @internal, which is for maintainers by design", async () => {
+		const decider = new FakeDecider({}, 0.9);
+		const file = new SourceFile(
+			"a.ts",
+			[
+				"export class Store {",
+				"\t/** @internal Writes under the lock. TODO: batch writes. */",
+				"\tsave() {}",
+				"\t/**",
+				"\t * Reads a todo.",
+				"\t */",
+				"\tread() {}",
+				"}",
+			].join("\n"),
+		);
+
+		const findings = await new DocCommentsAddressUsers({ decider }).check(file);
+
+		expect([
+			findings.map((finding) => finding.line),
+			decider.asked.map((asked) => asked.about.line),
+		]).toEqual([[4], [4]]);
+	});
 });

@@ -10,6 +10,9 @@ import type {
 /** A note left for whoever works on the code next. */
 const TODO = /\b(TODO|FIXME|HACK|XXX)\b/;
 
+/** The tag that marks a doc comment as written for maintainers. */
+const INTERNAL = /(^|\s)@internal\b/;
+
 /** Class and interface members a user can reach. */
 const MEMBERS = [
 	"method_definition",
@@ -24,7 +27,8 @@ const FOR_MAINTAINERS =
 /**
  * Finds doc comments on exports that speak to maintainers rather than users.
  * A TODO is plainly a maintainer's; a decider tells whether the rest of a
- * doc comment is about how the code is built.
+ * doc comment is about how the code is built. One tagged `@internal` is for
+ * maintainers by design, and left alone.
  */
 export default class DocCommentsAddressUsers implements Rule {
 	static readonly description =
@@ -75,14 +79,19 @@ export default class DocCommentsAddressUsers implements Rule {
 
 	/**
 	 * Doc comments on what users see: a top-level export, or a member of an
-	 * exported class or interface that is not private or protected.
+	 * exported class or interface that is not private or protected, unless
+	 * the comment is tagged `@internal`.
 	 */
 	private onExports(file: SourceFile): SyntaxNode[] {
 		return file.ts
 			.findAll({ rule: { kind: "comment", regex: "^/\\*\\*" } })
 			.filter((doc) => {
 				const documented = documents(doc);
-				return documented !== undefined && reachable(documented);
+				return (
+					!INTERNAL.test(doc.text) &&
+					documented !== undefined &&
+					reachable(documented)
+				);
 			});
 	}
 }
