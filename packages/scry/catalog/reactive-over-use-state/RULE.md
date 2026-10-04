@@ -4,7 +4,7 @@ description: Logic with several moving parts lives in a class a component reads 
 files: "**/*.{ts,tsx}"
 level: warning
 effort: high
-version: 0.0.29
+version: 0.0.30
 ---
 # Reactive over useState
 

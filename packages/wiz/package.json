@@ -1,6 +1,6 @@
 {
 	"name": "wiz",
-	"version": "0.0.29",
+	"version": "0.0.30",
 	"private": true,
 	"type": "module",
 	"module": "index.ts",
