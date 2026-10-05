@@ -22,7 +22,7 @@ export interface GitOptions {
 }
 
 /**
- * The change a check covers, as git sees it. Deleted files are left out:
+ * The files a check covers, as git sees them. Deleted files are left out:
  * there is nothing left in them to check.
  */
 export class Git {
@@ -111,6 +111,26 @@ export class Git {
 			files.push({ path, diff: stdout });
 		}
 		return { since, files };
+	}
+
+	/**
+	 * Every file at or under `paths`, from the root, changed or not: the
+	 * tracked ones, and the untracked ones git does not ignore.
+	 */
+	async files(paths: string[]): Promise<string[]> {
+		const pathspec = ["--", ...paths];
+		const deleted = new Set(
+			await this.lines("ls-files", "--deleted", ...pathspec),
+		);
+		const files = await this.lines(
+			"ls-files",
+			"--cached",
+			"--others",
+			"--exclude-standard",
+			...pathspec,
+		);
+		// a conflicted file is listed once per side
+		return [...new Set(files)].filter((path) => !deleted.has(path)).toSorted();
 	}
 
 	/** The commit to diff against, and what a report calls it. */

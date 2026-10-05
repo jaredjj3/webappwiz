@@ -15,12 +15,15 @@ import type { Providers } from "./providers";
 
 export interface CheckOptions {
 	/**
-	 * Where to look, from the working directory: only changed files at or
-	 * under these are checked. None checks the whole change. The project
-	 * root, holding `.wiz/scry`, is the root of the git repository.
+	 * Where to look, from the working directory: every file at or under
+	 * these is checked, changed or not. None checks the whole change. The
+	 * project root, holding `.wiz/scry`, is the root of the git repository.
 	 */
 	paths: string[];
-	/** The ref the change is measured from; see `Git.changes` for the default. */
+	/**
+	 * Checks only the files changed since this ref, under `paths` when there
+	 * are any. With no paths and no ref, see `Git.changes` for the default.
+	 */
 	since?: string;
 	/** How many requests to the model are out at once, over the config's `jobs`. */
 	jobs?: number;
@@ -37,11 +40,11 @@ export interface CheckOptions {
 }
 
 /**
- * Checks a change against the project's rules, the way a linter checks code:
+ * Checks a change, or every file under some paths, against the project's rules, the way a linter checks code:
  * one block of problems, and a nonzero exit when any is an error. It exits 1
  * on an error, 2 when a rule went unchecked on a file, 0 otherwise.
  *
- * Each rule's `rule.ts` reads the changed files it applies to. Where code
+ * Each rule's `rule.ts` reads the files it applies to. Where code
  * cannot settle a question it asks a decision model, which answers with how
  * likely a yes is and writes nothing: the report is for whoever fixes the
  * code, person or agent, to act on.
@@ -58,18 +61,26 @@ export async function check(opts: CheckOptions): Promise<void> {
 	}
 	const settings = await loadConfig(dir, { fs, ps });
 	const glob = opts.glob ?? new NodeGlob();
-	const changes = await new Git(dir, { ps }).changes(opts.since, paths);
+	const git = new Git(dir, { ps });
+	// paths alone check every file under them; a ref, or no paths, the change
+	const changes =
+		paths.length > 0 && opts.since === undefined
+			? undefined
+			: await git.changes(opts.since, paths);
+	const since = changes?.since;
+	const found =
+		changes?.files.map((file) => file.path) ?? (await git.files(paths));
 	// what the config excludes, like code copied in from elsewhere, is not
 	// the project's to fix
-	const files = changes.files
-		.map((file) => file.path)
-		.filter(
-			(path) =>
-				!settings.exclude.some((pattern) => glob.matches(pattern, path)),
-		);
+	const files = found.filter(
+		(path) => !settings.exclude.some((pattern) => glob.matches(pattern, path)),
+	);
 	if (files.length === 0) {
+		const under = paths.length === 0 ? "" : ` in ${opts.paths.join(", ")}`;
 		log.error(
-			`nothing changed since ${changes.since}${paths.length === 0 ? "" : ` in ${opts.paths.join(", ")}`}`,
+			since === undefined
+				? `no files to check${under}`
+				: `nothing changed since ${since}${under}`,
 		);
 		return;
 	}
@@ -114,8 +125,8 @@ export async function check(opts: CheckOptions): Promise<void> {
 	}
 	log.info(
 		opts.format === "json"
-			? JSON.stringify({ since: changes.since, ...report, spent }, null, 2)
-			: text(report, changes.since, spent).join("\n"),
+			? JSON.stringify({ since, ...report, spent }, null, 2)
+			: text(report, since, spent).join("\n"),
 	);
 	if (report.problems.some((problem) => problem.level === "error")) {
 		ps.exit(1);
@@ -125,7 +136,11 @@ export async function check(opts: CheckOptions): Promise<void> {
 }
 
 /** The report as a linter prints one: problems under each file, then a tally. */
-function text(report: Report, since: string, spent: Spent): string[] {
+function text(
+	report: Report,
+	since: string | undefined,
+	spent: Spent,
+): string[] {
 	const rows = report.problems.map((problem) => [
 		`  ${color.dim(String(problem.line))}`,
 		problem.level === "error"
@@ -161,14 +176,15 @@ function text(report: Report, since: string, spent: Spent): string[] {
 
 /**
  * The last line: what was found, where, and what the check could not vouch
- * for. It never says `no problems` of files it did not check.
+ * for. It never says `no problems` of files it did not check. `since` is
+ * what a change was measured from; a check of whole paths has none.
  */
-function tally(report: Report, since: string): string {
+function tally(report: Report, since: string | undefined): string {
 	const errors = report.problems.filter(
 		(problem) => problem.level === "error",
 	).length;
 	const warnings = report.problems.length - errors;
-	const scope = `${report.files} ${plural(report.files, "file")} since ${since}`;
+	const scope = `${report.files} ${plural(report.files, "file")}${since === undefined ? "" : ` since ${since}`}`;
 	const missed = report.unchecked.length;
 	const stopped = report.cancelled ? "cancelled: " : "";
 	const but = missed === 0 ? "" : `, but ${missed} not checked`;

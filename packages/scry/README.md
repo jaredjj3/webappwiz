@@ -265,7 +265,8 @@ const report = await rules.check({
 and reports every broken one at once: a directory with no `rule.ts`, one
 that fails to import, or a class missing a setting or giving a bad one. `Git.changes` is what changed since a ref, or with none,
 the uncommitted work when there is any and otherwise the branch since
-trunk, kept to the paths it is given. `Git.locate` finds the repository root
+trunk, kept to the paths it is given. `Git.files` is every file at or under
+the paths, changed or not, less what git ignores. `Git.locate` finds the repository root
 and turns paths from a working directory into paths from it.
 
 `check` builds each rule whose `files` match a path with the `Tools`, then

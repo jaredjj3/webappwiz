@@ -206,16 +206,68 @@ describe("wiz scry", () => {
 		expect(warned()).toEqual(["nothing changed since main"]);
 	});
 
-	it("checks only the changed files under the paths it is given, from the working directory", async () => {
+	it("checks every file under the paths it is given, changed or not, from the working directory", async () => {
 		await fs.mkdir(`${root}/src`);
 		await fs.write(`${root}/src/b.ts`, "const foo = 2;\n");
+		await fs.write(`${root}/src/.gitignore`, "ignored.ts\n");
+		await git("add", "src");
+		await git("commit", "-qm", "b");
+		await fs.write(`${root}/src/c.ts`, "const foo = 3;\n");
+		await fs.write(`${root}/src/ignored.ts`, "const foo = 4;\n");
 		proc.chdir(`${root}/src`);
 
-		await run("json", ["."]);
+		await run("text", ["."]);
 
-		expect(JSON.parse(printed()).problems).toMatchObject([
-			{ path: "src/b.ts", line: 1, rule: "no-foo" },
-		]);
+		expect(printed()).toEqual(
+			[
+				"src/b.ts",
+				"  1   error   100%   no foo   no-foo",
+				"",
+				"src/c.ts",
+				"  1   error   100%   no foo   no-foo",
+				"",
+				"✖ 2 problems (2 errors, 0 warnings) in 2 files",
+			].join("\n"),
+		);
+	});
+
+	it("checks a file it is given by name", async () => {
+		await git("commit", "-qam", "change");
+
+		await run("json", ["a.ts"]);
+
+		expect(JSON.parse(printed())).toMatchObject({
+			files: 1,
+			problems: [{ path: "a.ts", line: 1, rule: "no-foo" }],
+		});
+		expect(JSON.parse(printed()).since).toBeUndefined();
+	});
+
+	it("checks only the files under the paths that changed since a ref it is given", async () => {
+		await fs.mkdir(`${root}/src`);
+		await fs.write(`${root}/src/b.ts`, "const foo = 2;\n");
+		await git("add", ".");
+		await git("commit", "-qm", "b");
+		await fs.write(`${root}/src/c.ts`, "const foo = 3;\n");
+
+		await check({
+			paths: ["src"],
+			since: "HEAD",
+			format: "text",
+			log,
+			fs,
+			ps,
+			providers,
+		});
+
+		expect(printed()).toEqual(
+			[
+				"src/c.ts",
+				"  1   error   100%   no foo   no-foo",
+				"",
+				"✖ 1 problem (1 error, 0 warnings) in 1 file since HEAD",
+			].join("\n"),
+		);
 	});
 
 	it("checks none of the files the config excludes", async () => {
@@ -234,12 +286,28 @@ describe("wiz scry", () => {
 		]);
 	});
 
-	it("says where it looked when nothing changed under the paths", async () => {
+	it("says where it looked when there is no file under the paths", async () => {
 		await fs.mkdir(`${root}/src`);
 
 		await run("text", ["src"]);
 
-		expect(warned()).toEqual(["nothing changed since main in src"]);
+		expect(warned()).toEqual(["no files to check in src"]);
+	});
+
+	it("says where it looked when nothing changed under the paths since a ref", async () => {
+		await fs.mkdir(`${root}/src`);
+
+		await check({
+			paths: ["src"],
+			since: "HEAD",
+			format: "text",
+			log,
+			fs,
+			ps,
+			providers,
+		});
+
+		expect(warned()).toEqual(["nothing changed since HEAD in src"]);
 	});
 
 	it("stops on the first ctrl-c, reports what came back, and quits on the next", async () => {

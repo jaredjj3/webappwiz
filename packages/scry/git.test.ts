@@ -94,6 +94,26 @@ describe("Git", () => {
 		expect(changes.files.map((file) => file.path)).toEqual(["src/a.ts"]);
 	});
 
+	it("lists every file at or under the paths, tracked or new, and none git ignores or that was deleted", async () => {
+		await fs.mkdir(`${root}/src/deep`);
+		await fs.mkdir(`${root}/srcs`);
+		await fs.write(`${root}/src/a.ts`, "a\n");
+		await fs.write(`${root}/src/.gitignore`, "ignored.ts\n");
+		await run("add", ".");
+		await run("commit", "-qm", "src");
+		await fs.write(`${root}/src/deep/new.ts`, "fresh\n");
+		await fs.write(`${root}/src/ignored.ts`, "ignored\n");
+		await fs.write(`${root}/srcs/other.ts`, "other\n");
+		await rm(`${root}/gone.ts`);
+
+		expect(await git.files(["src", "kept.ts", "gone.ts"])).toEqual([
+			"kept.ts",
+			"src/.gitignore",
+			"src/a.ts",
+			"src/deep/new.ts",
+		]);
+	});
+
 	it("locates the root, and turns paths from a directory inside it into paths from the root", async () => {
 		await fs.mkdir(`${root}/src/deep`);
 		const top = (

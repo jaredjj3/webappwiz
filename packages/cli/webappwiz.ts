@@ -56,14 +56,17 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 
 	scry
 		.command("check")
-		.description("check a change against the rules, like a linter")
+		.description(
+			"check a change, or every file under some paths, against the rules, like a linter",
+		)
 		.rest("paths", z.string(), {
-			description: "check only changed files under these (default: all)",
+			description:
+				"check every file under these, changed or not (default: the change)",
 		})
 		.option("since", z.string(), {
 			default: undefined,
 			description:
-				"git ref the change is measured from (default: the uncommitted work, else the branch since trunk)",
+				"check only files changed since this git ref (default with no paths: the uncommitted work, else the branch since trunk)",
 		})
 		.option("jobs", z.coerce.number(), {
 			default: undefined,

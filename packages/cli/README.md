@@ -47,12 +47,14 @@ src/catalog.test.ts
   asked 3 questions in 1 request, 2.1k input tokens
 ```
 
-`scry` asks git what changed: the uncommitted work when there is any,
-otherwise the branch since it left trunk, or whatever `--since <ref>` names.
-Paths narrow it, `scry packages/api packages/web`, to the changed files at
-or under them, from wherever it runs; the project is the git repository
-around it. It matches each rule's `files` glob against the changed files and
-runs the matching rules' checks, every rule on every file at once.
+With no paths, `scry` asks git what changed: the uncommitted work when
+there is any, otherwise the branch since it left trunk, or whatever
+`--since <ref>` names. Paths, `scry packages/api src/app.ts`, check every
+file at or under them, changed or not: the tracked ones and the new ones git
+does not ignore, from wherever it runs; the project is the git repository
+around it. Paths with `--since <ref>` check only the files under them that
+changed since it. It matches each rule's `files` glob against those files
+and runs the matching rules' checks, every rule on every file at once.
 
 A check is code. What code can decide, it decides, and that finding is sure:
 100%. What takes judgment it asks a decision model, which reads the file and
