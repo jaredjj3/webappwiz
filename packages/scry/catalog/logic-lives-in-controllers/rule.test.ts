@@ -106,6 +106,27 @@ describe("logic-lives-in-controllers", () => {
 		expect(decider.asked.map(({ about }) => about.line)).toEqual([4, 6]);
 	});
 
+	it("points a chained route or action at the line that registers it, not where the chain starts", async () => {
+		const file = new SourceFile(
+			"a.ts",
+			[
+				'import { Hono } from "hono";',
+				'import { cli } from "webappwiz/cmd";',
+				"app",
+				'\t.get("/a", (c) => c.json(service.a()))',
+				'\t.get("/b", (c) => (c.req.query("all") ? all() : one()));',
+				'cli("app")',
+				'\t.command("c")',
+				'\t.description("does c")',
+				"\t.action((opts) => (opts.all ? all() : one()));",
+			].join("\n"),
+		);
+
+		const findings = await rule.check(file);
+
+		expect(findings.map(({ line }) => line)).toEqual([5, 9]);
+	});
+
 	it("asks about a function taking the web's Request only when it branches, and not about one taking a framework's", async () => {
 		const plain = new SourceFile(
 			"a.ts",

@@ -197,13 +197,13 @@ function routeHandlers(node: SyntaxNode): Adapter[] {
 			if (!path?.is("string", "template_string") || handler === undefined) {
 				return [];
 			}
-			const method = call.field("function")?.field("property")?.text ?? "";
+			const method = call.field("function")?.field("property");
 			return [
 				{
 					body: handler,
-					at: call,
+					at: method ?? call,
 					mayDecide: computes(handler),
-					message: `${method.toUpperCase()} ${path.text.slice(1, -1)} decides or computes in its handler: move that into a plain service with a method per route, and let the handler translate the request into one call and its result into the response.`,
+					message: `${method?.text.toUpperCase() ?? "A route"} ${path.text.slice(1, -1)} decides or computes in its handler: move that into a plain service with a method per route, and let the handler translate the request into one call and its result into the response.`,
 				},
 			];
 		});
@@ -273,7 +273,8 @@ function actions(node: SyntaxNode): Adapter[] {
 			return [
 				{
 					body: action,
-					at: call,
+					// a chain's call starts where the chain does, lines above
+					at: call.field("function")?.field("property") ?? call,
 					mayDecide: computes(action),
 					message: `${command === undefined ? "This command" : `The ${command} command`}'s action decides or computes itself: move that into a plain program the action calls, so it runs without the CLI.`,
 				},
@@ -385,7 +386,10 @@ const DECIDES =
 interface Adapter {
 	/** The function, which the decider reads. */
 	body: SyntaxNode;
-	/** Where its finding points: the function, or the call that registers it. */
+	/**
+	 * Where its finding points: the function, or the method name that
+	 * registers it, like `.action`, which in a chain is on its own line.
+	 */
 	at: SyntaxNode;
 	/** Whether code cannot tell it only translates, so the decider is asked. */
 	mayDecide: boolean;
