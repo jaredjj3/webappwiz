@@ -1,6 +1,6 @@
 {
 	"name": "@webappwiz/scry",
-	"version": "0.0.35",
+	"version": "0.0.36",
 	"description": "Rules checked by code, the engine that runs them against a change, and webappwiz's catalog of them",
 	"license": "MIT",
 	"author": "Jared Johnson",
