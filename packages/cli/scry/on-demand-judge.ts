@@ -7,7 +7,7 @@ import type { Providers } from "./providers";
  * credentials, nor complains that they are missing.
  */
 export class OnDemandJudge implements Judge {
-	private made?: Promise<Judge>;
+	private judging?: Promise<Judge>;
 
 	constructor(
 		private providers: Providers,
@@ -15,7 +15,15 @@ export class OnDemandJudge implements Judge {
 	) {}
 
 	async judge(judgment: Judgment, opts?: JudgeOptions): Promise<Verdict> {
-		this.made ??= this.providers.judge(this.model);
-		return (await this.made).judge(judgment, opts);
+		return (await this.made()).judge(judgment, opts);
+	}
+
+	async count(judgment: Judgment, opts?: JudgeOptions): Promise<number> {
+		return (await this.made()).count(judgment, opts);
+	}
+
+	private made(): Promise<Judge> {
+		this.judging ??= this.providers.judge(this.model);
+		return this.judging;
 	}
 }

@@ -5,6 +5,11 @@
  */
 export interface Judge {
 	judge(judgment: Judgment, opts?: JudgeOptions): Promise<Verdict>;
+	/**
+	 * The input tokens judging `judgment` would spend, without judging it:
+	 * exact where the provider counts them for free, an estimate otherwise.
+	 */
+	count(judgment: Judgment, opts?: JudgeOptions): Promise<number>;
 }
 
 /** How one judgment runs. */

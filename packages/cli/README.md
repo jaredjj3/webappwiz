@@ -123,6 +123,21 @@ and `--llm` ask another model for one run, over the effort's, so two models
 can be compared on the same change: `scry --model clef` then
 `scry --model jev-latest`.
 
+`--cost` says what a check would spend before it spends it: it runs the
+rules, but counts each request's input tokens rather than sending it, and
+prints that instead of the report. Every question it would ask, it asks
+of the counter, in the requests a check would make; what was kept from an
+earlier run costs nothing, as in a check, and nothing counted is kept.
+Anthropic counts Claude's tokens exactly, for free; Workers AI and TypeSafe
+count only by running the model, so Clef's and Jev's are estimated from the
+request's length, and the total says it is an estimate. It still needs each
+model's credentials.
+
+```
+$ bunx @webappwiz/cli scry --cost
+estimated 31k input tokens to check 14 files: 40 questions in 9 requests
+```
+
 While it runs on a terminal, one line on stderr counts the files done and
 the questions asked, answered and found in the cache, and is erased before
 the report. It draws nothing in a pipe, under CI, or with `--format json`.

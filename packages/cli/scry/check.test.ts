@@ -211,6 +211,98 @@ describe("wiz scry", () => {
 		]);
 	});
 
+	it("says what a check would cost with --cost, counting what it would ask rather than asking", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\n// and two\nconst a = 1;\n");
+		const counting = new FakeJudge(0.9, { input: 4200 });
+		judge = counting;
+
+		await check({
+			paths: [],
+			format: "text",
+			cost: true,
+			log,
+			fs,
+			ps,
+			providers,
+		});
+
+		expect(printed()).toEqual(
+			"estimated 4.2k input tokens to check 1 file: 2 questions in 1 request",
+		);
+		expect([counting.judgments, proc.exits]).toEqual([[], []]);
+	});
+
+	it("keeps nothing it counted with --cost, so a check after still asks", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+		judge = new FakeJudge(0.2, { input: 300 });
+
+		await check({
+			paths: [],
+			format: "text",
+			cost: true,
+			log,
+			fs,
+			ps,
+			providers,
+		});
+		await run();
+		await check({
+			paths: [],
+			format: "json",
+			cost: true,
+			log,
+			fs,
+			ps,
+			providers,
+		});
+
+		const lines = printed().split("\n");
+		expect(lines.slice(0, 3)).toEqual([
+			"estimated 300 input tokens to check 1 file: 1 question in 1 request",
+			"✔ no problems in 1 file since HEAD",
+			"  asked 1 question in 1 request, 300 input tokens",
+		]);
+		// what the check was told costs nothing again
+		expect(JSON.parse(lines.slice(3).join("\n"))).toEqual({
+			since: "HEAD",
+			files: 1,
+			unchecked: [],
+			cancelled: false,
+			spent: { requests: 0, questions: 0, input: 0, cached: 1 },
+		});
+	});
+
+	it("names what --cost could not count, and exits 2", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+		judge = new FakeJudge(0);
+		judge.count = async () => {
+			throw new Error("clef needs CLOUDFLARE_API_TOKEN");
+		};
+
+		await check({
+			paths: [],
+			format: "text",
+			cost: true,
+			log,
+			fs,
+			ps,
+			providers,
+		});
+
+		expect(printed()).toEqual(
+			[
+				"not counted",
+				"  why-not-what on a.ts   clef needs CLOUDFLARE_API_TOKEN",
+				"",
+				"estimated 0 input tokens to check 1 file: 1 question in 1 request, but 1 not counted",
+			].join("\n"),
+		);
+		expect(proc.exits).toEqual([2]);
+	});
+
 	it("reports a rule whose check threw as not checked, and exits 2", async () => {
 		await install("fragile", "async check() { throw new Error('boom'); }");
 
@@ -364,7 +456,7 @@ describe("wiz scry", () => {
 	it("stops on the first ctrl-c, reports what came back, and quits on the next", async () => {
 		await install("why-not-what", asking);
 		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
-		judge = { judge: () => new Promise(() => undefined) };
+		judge = { judge: () => new Promise(() => undefined), count: async () => 0 };
 		setTimeout(() => proc.dispatch("SIGINT"), 200);
 
 		await run();
@@ -393,6 +485,7 @@ describe("wiz scry", () => {
 				timer.fireIntervals();
 				return answering.judge(judgment);
 			},
+			count: async () => 0,
 		};
 
 		await run();
@@ -433,6 +526,7 @@ describe("wiz scry", () => {
 				proc.dispatch("SIGINT");
 				return new Promise(() => undefined);
 			},
+			count: async () => 0,
 		};
 
 		await run();

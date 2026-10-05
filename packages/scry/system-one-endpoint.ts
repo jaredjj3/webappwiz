@@ -24,6 +24,9 @@ const LONG_STATE = 4000;
 /** The id of the question asking whether the state arrived whole. */
 const WHOLE = "whole";
 
+/** About how many characters of a request make a token, for estimating what one costs. */
+const CHARS_PER_TOKEN = 4;
+
 /** The wait before the first retry, doubled before each one after. */
 const BACKOFF = Duration.secs(1);
 
@@ -80,19 +83,7 @@ export class SystemOneEndpoint {
 		let input: number | undefined;
 		for (let tries = 0; tries < TRIES; tries++) {
 			const marker = crypto.randomUUID().slice(0, 8);
-			const verdict = await this.ask(
-				{
-					state: { ...judgment.state, marker },
-					questions: {
-						...judgment.questions,
-						[WHOLE]: {
-							type: "noul",
-							instructions: `Does \`marker\` say "${marker}"?`,
-						},
-					},
-				},
-				opts.signal,
-			);
+			const verdict = await this.ask(marked(judgment, marker), opts.signal);
 			if (verdict.input !== undefined) {
 				input = (input ?? 0) + verdict.input;
 			}
@@ -107,6 +98,21 @@ export class SystemOneEndpoint {
 		}
 		throw new Error(
 			`${this.name} cut the file short in each of ${TRIES} tries, so its answers would not have read all of it`,
+		);
+	}
+
+	/**
+	 * An estimate of the input tokens `judge` would spend on its first try:
+	 * the request as sent, at about four characters a token, since no
+	 * provider of the Jev API counts tokens without running the model.
+	 */
+	count(judgment: Judgment): number {
+		const sent =
+			JSON.stringify(judgment.state).length <= LONG_STATE
+				? judgment
+				: marked(judgment, "00000000");
+		return Math.ceil(
+			JSON.stringify({ ...this.opts.body, ...sent }).length / CHARS_PER_TOKEN,
 		);
 	}
 
@@ -201,6 +207,20 @@ export class SystemOneEndpoint {
 			signal?.addEventListener("abort", abort, { once: true });
 		});
 	}
+}
+
+/** A judgment with `marker` after its state, and the question asking whether it arrived. */
+function marked(judgment: Judgment, marker: string): Judgment {
+	return {
+		state: { ...judgment.state, marker },
+		questions: {
+			...judgment.questions,
+			[WHOLE]: {
+				type: "noul",
+				instructions: `Does \`marker\` say "${marker}"?`,
+			},
+		},
+	};
 }
 
 /** The wait a reply's Retry-After asks for, when it gives one in seconds. */

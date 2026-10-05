@@ -60,6 +60,28 @@ describe("Clef and Jev", () => {
 		return delay;
 	};
 
+	it("estimates what a judgment would spend at four characters a token, sending nothing", async () => {
+		const jev = new Jev("jev-latest", "ts-key", { origin });
+		const long: Judgment = {
+			state: { file: "x".repeat(5000) },
+			questions: judgment.questions,
+		};
+
+		const short = await jev.count(judgment);
+		const marked = await jev.count(long);
+
+		expect(received).toEqual([]);
+		expect(short).toBe(
+			Math.ceil(
+				JSON.stringify({ model: "jev-latest", ...judgment }).length / 4,
+			),
+		);
+		// a long state goes with a marker and a question about it, which cost too
+		expect(marked).toBeGreaterThan(
+			Math.ceil(JSON.stringify({ model: "jev-latest", ...long }).length / 4),
+		);
+	});
+
 	it("asks Clef on Workers AI, and reads Cloudflare's wrapped reply", async () => {
 		reply = Response.json({
 			success: true,

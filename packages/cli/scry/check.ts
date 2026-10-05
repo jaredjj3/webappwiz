@@ -12,7 +12,13 @@ import { SystemTimer, type Timer } from "webappwiz/time";
 import type { Effort } from "../config";
 import { chooseModels, loadConfig } from "../load-config";
 import { table } from "../table";
-import { asked, ProjectTools, plural, type Spent } from "./project-tools";
+import {
+	asked,
+	ProjectTools,
+	plural,
+	type Spent,
+	wouldAsk,
+} from "./project-tools";
 import type { Providers } from "./providers";
 import type { Screen } from "./screen";
 import { Spinner } from "./spinner";
@@ -41,6 +47,11 @@ export interface CheckOptions {
 	llm?: string;
 	/** `json` for the report as JSON; anything else is text. */
 	format: string;
+	/**
+	 * Says what the check would cost instead of running it: every question it
+	 * would ask, counted rather than sent, and no report. False by default.
+	 */
+	cost?: boolean;
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
@@ -121,6 +132,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 		jobs: opts.jobs ?? settings.jobs,
 		signal: cancel.signal,
 		providers: opts.providers,
+		counting: opts.cost,
 		fs,
 		ps,
 	});
@@ -131,7 +143,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 			timer: opts.timer ?? new SystemTimer(),
 			progress,
 			asking,
-			verb: "checking",
+			verb: opts.cost ? "counting" : "checking",
 			noun: "file",
 		});
 	}
@@ -152,6 +164,27 @@ export async function check(opts: CheckOptions): Promise<void> {
 		});
 	await asking.save();
 	const spent = asking.spent;
+	if (opts.cost) {
+		log.info(
+			opts.format === "json"
+				? JSON.stringify(
+						{
+							since,
+							files: report.files,
+							unchecked: report.unchecked,
+							cancelled: report.cancelled,
+							spent,
+						},
+						null,
+						2,
+					)
+				: costed(report, spent).join("\n"),
+		);
+		if (report.cancelled || report.unchecked.length > 0) {
+			ps.exit(2);
+		}
+		return;
+	}
 
 	if (report.legacy.length > 0) {
 		log.error(
@@ -210,6 +243,24 @@ function text(
 		lines.push(color.dim(asked(spent)));
 	}
 	return lines;
+}
+
+/** What a check would cost, then what it could not count. */
+function costed(report: Report, spent: Spent): string[] {
+	const missed = report.unchecked.length;
+	const stopped = report.cancelled ? "cancelled: " : "";
+	const but = missed === 0 ? "" : `, but ${missed} not counted`;
+	const line = `${stopped}${wouldAsk(spent, report.files)}${but}`;
+	return missed === 0
+		? [report.cancelled ? color.yellow(line) : line]
+		: [
+				color.bold("not counted"),
+				...table(
+					report.unchecked.map((item) => [`  ${item.subject}`, item.reason]),
+				),
+				"",
+				color.yellow(line),
+			];
 }
 
 /**

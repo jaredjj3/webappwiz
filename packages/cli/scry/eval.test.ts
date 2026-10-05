@@ -27,6 +27,7 @@ describe("wiz scry eval", () => {
 				timer.fireIntervals();
 				return answering.judge(judgment);
 			},
+			count: async () => 0,
 		}),
 	};
 

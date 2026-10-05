@@ -46,4 +46,9 @@ export class Clef implements Judge {
 	judge(judgment: Judgment, opts: JudgeOptions = {}): Promise<Verdict> {
 		return this.endpoint.judge(judgment, opts);
 	}
+
+	/** An estimate: Workers AI and TypeSafe count tokens only by running the model. */
+	async count(judgment: Judgment): Promise<number> {
+		return this.endpoint.count(judgment);
+	}
 }

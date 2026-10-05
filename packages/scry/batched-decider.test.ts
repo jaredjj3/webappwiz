@@ -22,6 +22,7 @@ describe("BatchedDecider", () => {
 					),
 				};
 			},
+			count: async () => 0,
 		};
 	};
 	const cart = new SourceFile("src/cart.ts", "a\nb\nc\nd\ne\n");
@@ -187,6 +188,7 @@ describe("BatchedDecider", () => {
 					out--;
 					return judge.judge(judgment);
 				},
+				count: async () => 0,
 			},
 			{ jobs: 2 },
 		);
@@ -217,6 +219,7 @@ describe("BatchedDecider", () => {
 				new Promise<Verdict>((resolve) => {
 					reply = resolve;
 				}),
+			count: async () => 0,
 		});
 		const answers = Promise.all([
 			decider.decide("Is it?", at(cart, 1)),
@@ -242,7 +245,7 @@ describe("BatchedDecider", () => {
 	it("fails what is out, what waits, and what is asked after, once stopped", async () => {
 		const cancel = new AbortController();
 		const decider = new BatchedDecider(
-			{ judge: () => new Promise(() => undefined) },
+			{ judge: () => new Promise(() => undefined), count: async () => 0 },
 			{ jobs: 1, signal: cancel.signal },
 		);
 		const out = decider.decide("Is it?", at(cart, 1));

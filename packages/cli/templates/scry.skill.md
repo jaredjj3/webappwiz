@@ -98,7 +98,9 @@ The effort and the models each asks are set in `.wiz/config.ts` (the
 project's), `~/.config/wiz/config.ts` (the user's own, over the project's),
 or `WIZ_SCRY_EFFORT` and `WIZ_SCRY_JOBS` (over both). `--effort <level>`
 runs one check at another effort, and `--model <name>` and `--llm <name>`
-ask another decider or llm for one run:
+ask another decider or llm for one run. `--cost` prints only an estimate
+of the input tokens a check would spend, without asking a model; run it first
+when the user asks what a check costs:
 
 ```ts
 import { defineConfig } from "@webappwiz/cli/config";

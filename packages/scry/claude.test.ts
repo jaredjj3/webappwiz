@@ -90,6 +90,29 @@ describe("Claude", () => {
 		});
 	});
 
+	it("counts what a judgment would spend with Anthropic's token counting, sending what judging it would", async () => {
+		reply = Response.json({ input_tokens: 512 });
+		const claude = new Claude("claude-sonnet-5-5", "sk-key", { origin });
+
+		const counted = await claude.count(judgment);
+
+		const [request] = received;
+		expect(request?.path).toBe("/v1/messages/count_tokens");
+		const body = request?.body as {
+			model: string;
+			messages: { content: string }[];
+			output_config: { format: { schema: { properties: object } } };
+		};
+		expect(body.model).toBe("claude-sonnet-5-5");
+		expect(body.messages[0]?.content).toContain(
+			'<question id="q0">\nIs `file` a constant?',
+		);
+		expect(Object.keys(body.output_config.format.schema.properties)).toContain(
+			"answers",
+		);
+		expect(counted).toBe(512);
+	});
+
 	it("fails when Claude declines, rather than read no as the answer", async () => {
 		reply = message("", "refusal");
 

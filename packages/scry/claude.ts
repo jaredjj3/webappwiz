@@ -37,17 +37,9 @@ export class Claude implements Judge {
 
 	async judge(judgment: Judgment, opts: JudgeOptions = {}): Promise<Verdict> {
 		const ids = Object.keys(judgment.questions);
-		const reply = z.object({
-			answers: z.object(Object.fromEntries(ids.map((id) => [id, z.number()]))),
-		});
+		const reply = answers(judgment);
 		const response = await this.client.messages.create(
-			{
-				model: this.model,
-				max_tokens: 16000,
-				system: SYSTEM,
-				messages: [{ role: "user", content: asking(judgment) }],
-				output_config: { format: zodOutputFormat(reply) },
-			},
+			{ ...this.request(judgment, reply), max_tokens: 16000 },
 			{ signal: opts.signal },
 		);
 		// a refusal comes back with no answer to parse, so it is read first
@@ -76,6 +68,33 @@ export class Claude implements Judge {
 				(usage.cache_creation_input_tokens ?? 0),
 		};
 	}
+
+	/** Exact, from Anthropic's token counting, which is free. */
+	async count(judgment: Judgment, opts: JudgeOptions = {}): Promise<number> {
+		const counted = await this.client.messages.countTokens(
+			this.request(judgment, answers(judgment)),
+			{ signal: opts.signal },
+		);
+		return counted.input_tokens;
+	}
+
+	/** What a request for `judgment` sends, but for how long its answer may run. */
+	private request(judgment: Judgment, reply: z.ZodType) {
+		return {
+			model: this.model,
+			system: SYSTEM,
+			messages: [{ role: "user" as const, content: asking(judgment) }],
+			output_config: { format: zodOutputFormat(reply) },
+		};
+	}
+}
+
+/** The reply a judgment asks for: a probability under each question's id. */
+function answers(judgment: Judgment) {
+	const ids = Object.keys(judgment.questions);
+	return z.object({
+		answers: z.object(Object.fromEntries(ids.map((id) => [id, z.number()]))),
+	});
 }
 
 /** The state, then each question under its id. */

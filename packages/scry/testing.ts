@@ -6,7 +6,7 @@ export { type RuleSourceOptions, ruleSource } from "./rule-source";
 
 /** What a `FakeJudge` says beside its answers. */
 export interface FakeJudgeOptions {
-	/** The input tokens it says each judgment spent; none when not given. */
+	/** The input tokens it says each judgment spent, or would; none, or 0 counted, when not given. */
 	input?: number;
 }
 
@@ -34,5 +34,9 @@ export class FakeJudge implements Judge {
 			),
 			...(this.opts.input === undefined ? {} : { input: this.opts.input }),
 		};
+	}
+
+	async count(): Promise<number> {
+		return this.opts.input ?? 0;
 	}
 }

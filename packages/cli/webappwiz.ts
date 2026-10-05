@@ -99,6 +99,11 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: "text",
 			description: "text or json (default: text)",
 		})
+		.option("cost", z.boolean(), {
+			default: false,
+			description:
+				"estimate the input tokens the check would spend, without asking a model, instead of checking",
+		})
 		.use(timed())
 		.action(({ rule, ...opts }, { log, fs, ps }) =>
 			check({

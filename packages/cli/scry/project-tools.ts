@@ -1,6 +1,7 @@
 import {
 	BatchedDecider,
 	CachedDecider,
+	CountingJudge,
 	type DeciderUsage,
 	Decisions,
 	type Tools,
@@ -27,6 +28,11 @@ export interface ProjectToolsOptions {
 	jobs: number;
 	/** Stops it: what is out and what waits fails. */
 	signal?: AbortSignal;
+	/**
+	 * Counts what each request would spend instead of sending it, answering
+	 * every question no, and keeps none of those answers. False by default.
+	 */
+	counting?: boolean;
 	/** What makes the judge for a model; Workers AI, TypeSafe and Anthropic by default. */
 	providers?: Providers;
 	fs?: Fs;
@@ -45,6 +51,7 @@ export class ProjectTools {
 		private batched: BatchedDecider[],
 		private cached: CachedDecider[],
 		private decisions: Decisions,
+		private counting: boolean,
 	) {}
 
 	static async open(
@@ -60,10 +67,14 @@ export class ProjectTools {
 			);
 		const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
 		const ask = (model: string) => {
-			const batched = new BatchedDecider(new OnDemandJudge(providers, model), {
-				jobs: opts.jobs,
-				signal: opts.signal,
-			});
+			const judge = new OnDemandJudge(providers, model);
+			const batched = new BatchedDecider(
+				opts.counting ? new CountingJudge(judge) : judge,
+				{
+					jobs: opts.jobs,
+					signal: opts.signal,
+				},
+			);
 			return {
 				batched,
 				cached: new CachedDecider(batched, decisions, { model }),
@@ -76,6 +87,7 @@ export class ProjectTools {
 			[decider.batched, llm.batched],
 			[decider.cached, llm.cached],
 			decisions,
+			opts.counting ?? false,
 		);
 	}
 
@@ -94,9 +106,11 @@ export class ProjectTools {
 		return sum(this.batched.map((each) => each.answered));
 	}
 
-	/** Keeps the answers for the next run. */
-	save(): Promise<void> {
-		return this.decisions.save();
+	/** Keeps the answers for the next run; none, when it only counted. */
+	async save(): Promise<void> {
+		if (!this.counting) {
+			await this.decisions.save();
+		}
 	}
 }
 
@@ -111,6 +125,20 @@ export function asked(spent: Spent): string {
 	const tokens =
 		spent.input === 0 ? "" : `, ${thousands(spent.input)} input tokens`;
 	return `  asked ${spent.questions} ${plural(spent.questions, "question")} in ${spent.requests} ${plural(spent.requests, "request")}${cached}${tokens}`;
+}
+
+/**
+ * What a check would cost, as `--cost` says it: an estimate first, since
+ * only some providers count tokens exactly, then what it would ask.
+ */
+export function wouldAsk(spent: Spent, files: number): string {
+	const cached =
+		spent.cached === 0 ? "" : `, ${spent.cached} answered from earlier runs`;
+	const scope = `${files} ${plural(files, "file")}`;
+	if (spent.questions === 0) {
+		return `no input tokens to check ${scope}: no questions to ask${cached}`;
+	}
+	return `estimated ${thousands(spent.input)} input tokens to check ${scope}: ${spent.questions} ${plural(spent.questions, "question")} in ${spent.requests} ${plural(spent.requests, "request")}${cached}`;
 }
 
 export function plural(count: number, noun: string): string {
