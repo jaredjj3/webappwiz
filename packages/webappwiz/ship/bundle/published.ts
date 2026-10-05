@@ -8,6 +8,7 @@ export interface Manifest {
 	bin?: string | Record<string, string>;
 	exports?: Exports;
 	scripts?: Record<string, string>;
+	files?: string[];
 	dependencies?: Record<string, string>;
 	peerDependencies?: Record<string, string>;
 	[field: string]: unknown;

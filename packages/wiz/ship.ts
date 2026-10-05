@@ -44,7 +44,7 @@ export interface ShipOptions {
 export async function ship(opts: ShipOptions = {}): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
-	// These packages publish their source, so a typecheck is the only compile
+	// The build compiles without checking types, so a typecheck is the only
 	// gate there is: run it before anything is stamped or pushed. The suite is
 	// not run here; whoever ships is expected to have run it already.
 	await fix({ check: true, log, ps });

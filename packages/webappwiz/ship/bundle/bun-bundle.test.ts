@@ -119,6 +119,25 @@ describe("bun bundle", () => {
 		);
 	});
 
+	it("copies the files its manifest lists to where they sit in the source", async () => {
+		await written({
+			exports: { ".": "./index.ts" },
+			files: ["zones/*/data.ts"],
+		});
+		await fs.mkdir("/repo/packages/time/zones/utc");
+		await fs.write("/repo/packages/time/zones/utc/data.ts", "export {};");
+		await fs.write("/repo/packages/time/zones/utc/other.ts", "export {};");
+
+		await bundle.build("/repo/packages/time");
+
+		expect(await fs.read("/repo/packages/time/dist/zones/utc/data.ts")).toBe(
+			"export {};",
+		);
+		expect(await fs.exists("/repo/packages/time/dist/zones/utc/other.ts")).toBe(
+			false,
+		);
+	});
+
 	it("runs a package's own build script before compiling it", async () => {
 		await written({
 			exports: { ".": "./index.ts" },

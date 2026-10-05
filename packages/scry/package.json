@@ -16,6 +16,11 @@
 		"./catalog": "./catalog/index.ts",
 		"./testing": "./testing.ts"
 	},
+	"files": [
+		"catalog/*/rule.ts",
+		"catalog/*/rule.test.ts",
+		"catalog/*/evals/*"
+	],
 	"publishConfig": {
 		"access": "public"
 	},

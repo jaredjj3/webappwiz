@@ -1,4 +1,12 @@
-import { type Fs, NodeFs, NodePs, type Ps, walk } from "webappwiz/system";
+import {
+	type Fs,
+	type Glob,
+	NodeFs,
+	NodeGlob,
+	NodePs,
+	type Ps,
+	walk,
+} from "webappwiz/system";
 import type { Bundle } from "./bundle";
 import { type Exports, type Manifest, published } from "./published";
 
@@ -24,6 +32,7 @@ const DOCS = ["README.md", "LICENSE", "LICENSE.md", "CHANGELOG.md"];
 export interface BunBundleOptions {
 	fs?: Fs;
 	ps?: Ps;
+	glob?: Glob;
 }
 
 /**
@@ -38,14 +47,22 @@ export interface BunBundleOptions {
  * serves, which its own source then imports. The compiler still runs after,
  * because what a package makes for itself is its business and what it publishes
  * as is the release's.
+ *
+ * A package that reads files of its own at runtime lists them in its
+ * manifest's `files`, as globs from its root, and they are copied into `dist`
+ * where they sit in the source. The build inlines what is imported, but a file
+ * read off disk is invisible to it, and would otherwise be missing only once
+ * published.
  */
 export class BunBundle implements Bundle {
 	private readonly fs: Fs;
 	private readonly ps: Ps;
+	private readonly glob: Glob;
 
 	constructor(opts: BunBundleOptions = {}) {
 		this.fs = opts.fs ?? new NodeFs();
 		this.ps = opts.ps ?? new NodePs();
+		this.glob = opts.glob ?? new NodeGlob();
 	}
 
 	async build(dir: string): Promise<string> {
@@ -73,11 +90,33 @@ export class BunBundle implements Bundle {
 				);
 			}
 		}
+		await this.copy(dir, manifest.files ?? []);
 		return out;
 	}
 
 	async clean(dir: string): Promise<void> {
 		await this.fs.rm(`${dir}/dist`, { recursive: true, force: true });
+	}
+
+	/** Copies every file a `files` glob matches into the same place in `dist`. */
+	private async copy(dir: string, patterns: string[]): Promise<void> {
+		if (patterns.length === 0) {
+			return;
+		}
+		const out = `${dir}/dist`;
+		for await (const path of walk(dir, { fs: this.fs })) {
+			if (path.startsWith(`${out}/`)) {
+				continue;
+			}
+			const relative = path.slice(dir.length + 1);
+			if (patterns.some((pattern) => this.glob.matches(pattern, relative))) {
+				await this.fs.mkdir(`${out}/${relative}`.replace(/\/[^/]*$/, ""));
+				await this.fs.writeBytes(
+					`${out}/${relative}`,
+					await this.fs.readBytes(path),
+				);
+			}
+		}
 	}
 
 	/** The JavaScript and the declarations for every entry point a package has. */

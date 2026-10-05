@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { matchesGlob } from "node:path";
 import { DeclaredRule } from "../declared-rule";
 import { catalog } from "./index";
 
@@ -53,5 +54,23 @@ describe("catalog", () => {
 		);
 
 		expect(declared).toEqual(onDisk);
+	});
+
+	it("publishes every file it reads off disk, which the build leaves out", () => {
+		const { files: patterns }: { files: string[] } = JSON.parse(
+			readFileSync(`${import.meta.dir}/../package.json`, "utf8"),
+		);
+		// RULE.md is imported, so the build inlines it; everything else is read.
+		const unpublished = Object.entries(catalog)
+			.flatMap(([id, { files }]) =>
+				Object.keys(files)
+					.filter((path) => path !== "RULE.md")
+					.map((path) => `catalog/${id}/${path}`),
+			)
+			.filter(
+				(path) => !patterns.some((pattern) => matchesGlob(path, pattern)),
+			);
+
+		expect(unpublished).toEqual([]);
 	});
 });

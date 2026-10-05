@@ -92,7 +92,8 @@ const CODE: Record<string, string[]> = {
  * Each rule's eval cases, by name in its `evals/`. Listed like the imports
  * above, but read off disk rather than imported: tsc type checks a `.ts`
  * file even imported as text, and an eval case is a fragment that breaks a
- * rule on purpose. The package ships its source, so they sit beside this file.
+ * rule on purpose. The build only carries what is imported, so these and the
+ * code above reach the published package through its manifest's `files`.
  */
 const EVALS: Record<string, string[]> = {
 	"classes-over-function-exports": [
