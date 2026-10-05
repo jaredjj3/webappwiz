@@ -65,7 +65,7 @@ describe("ship", () => {
 		await ship(opts());
 
 		expect(ps.getCalls().slice(0, GATE.length)).toEqual(GATE);
-		expect(ps.getCalls()).toContain("bun publish --access public");
+		expect(ps.getCalls()).toContain("npm publish --access public");
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
 			"1.2.4",
 		);

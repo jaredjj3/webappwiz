@@ -18,7 +18,7 @@ describe("npm registry", () => {
 
 		expect(ps.getCalls()).toEqual([
 			"npm whoami",
-			"bun publish --access public",
+			"npm publish --access public",
 		]);
 	});
 
@@ -30,7 +30,7 @@ describe("npm registry", () => {
 		expect(ps.getCalls()).toEqual([
 			"npm whoami",
 			"npm login",
-			"bun publish --access public",
+			"npm publish --access public",
 		]);
 	});
 
