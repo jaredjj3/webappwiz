@@ -184,4 +184,60 @@ describe("Clef and Jev", () => {
 		await expect(verdict).rejects.toThrow("stopped");
 		expect([timer.timeouts[0]?.disposed, received.length]).toEqual([true, 1]);
 	});
+	describe("a long file", () => {
+		const long: Judgment = {
+			state: { path: "a.ts", file: "x\n".repeat(3000) },
+			questions: { q0: { type: "noul", instructions: "Is it?" } },
+		};
+		const answering = (whole: number, input: number) =>
+			Response.json({
+				result: {
+					answers: { q0: 0.7, whole },
+					usage: { prompt_tokens: input },
+				},
+			});
+
+		it("sends a marker after the state, and asks again when the answers show it was cut short", async () => {
+			replies = [answering(0.01, 2200)];
+			reply = answering(0.99, 9000);
+			const clef = new Clef("clef", { id: "acct", token: "t" }, { origin });
+
+			const verdict = await clef.judge(long);
+
+			expect(verdict).toEqual({
+				answers: new Map([["q0", 0.7]]),
+				input: 11200,
+			});
+			expect(received).toHaveLength(2);
+			const [sent] = received.map(({ body }) => body as Judgment);
+			const marker = sent?.state.marker as string;
+			expect(Object.keys(sent?.state ?? {})).toEqual([
+				"path",
+				"file",
+				"marker",
+			]);
+			expect(sent?.questions.whole?.instructions).toEqual(
+				`Does \`marker\` say "${marker}"?`,
+			);
+		});
+
+		it("fails once every try came back cut short", async () => {
+			reply = answering(0.01, 2200);
+			const clef = new Clef("clef", { id: "acct", token: "t" }, { origin });
+
+			await expect(clef.judge(long)).rejects.toThrow(
+				/^clef cut the file short in each of 4 tries/,
+			);
+			expect(received).toHaveLength(4);
+		});
+
+		it("sends a short state as it is", async () => {
+			reply = Response.json({ result: { answers: { q0: 0.5 } } });
+			const clef = new Clef("clef", { id: "acct", token: "t" }, { origin });
+
+			await clef.judge(judgment);
+
+			expect(received[0]?.body).toEqual(judgment);
+		});
+	});
 });

@@ -3,8 +3,11 @@ import type { Judge, Noul } from "./judge";
 import type { SourceFile } from "./source-file";
 import type { Span } from "./span";
 
-/** The most questions one request asks; Clef's limit. */
-const QUESTIONS = 64;
+/**
+ * The most questions one request asks: Clef's limit of 64, less the one a
+ * judge adds to check a long file arrived whole.
+ */
+const QUESTIONS = 63;
 
 interface Pending {
 	question: string;
@@ -24,7 +27,7 @@ export interface DeciderUsage {
 }
 
 export interface BatchedDeciderOptions {
-	/** The most questions one request asks; 64 by default. */
+	/** The most questions one request asks; 63 by default. */
 	questions?: number;
 	/** The most requests out at once; 8 by default. */
 	jobs?: number;
@@ -35,7 +38,7 @@ export interface BatchedDeciderOptions {
 /**
  * A decider over a decision model that holds each question until everything
  * running has asked what it is going to, then asks the questions about each
- * file together: one request per file for up to 64 questions, rather than one
+ * file together: one request per file for up to 63 questions, rather than one
  * each. Rules that run at once ask at once, so a rule written as plain
  * `await`s still shares a request with every other rule reading the file.
  *

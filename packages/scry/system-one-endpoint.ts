@@ -13,6 +13,17 @@ export interface SystemOneEndpointOptions {
 /** How many times a request is tried in all before its refusal stands. */
 const TRIES = 4;
 
+/**
+ * A state longer than this, as JSON, is long enough to be cut short. Workers
+ * AI keeps only about 2,200 tokens of the state in roughly a third of
+ * requests, at random, and answers as if the rest were not there; a state
+ * under this is under that whatever it holds.
+ */
+const LONG_STATE = 4000;
+
+/** The id of the question asking whether the state arrived whole. */
+const WHOLE = "whole";
+
 /** The wait before the first retry, doubled before each one after. */
 const BACKOFF = Duration.secs(1);
 
@@ -55,7 +66,55 @@ export class SystemOneEndpoint {
 		private readonly opts: SystemOneEndpointOptions = {},
 	) {}
 
+	/**
+	 * Asks the judgment's questions. A long state goes with a marker after
+	 * it, and a question asking whether the marker is there: a provider that
+	 * cut the state short cut the marker too, and answers no, so the
+	 * judgment is asked again, up to four times in all. The marker's
+	 * question is not among the answers; the input spent on every try is.
+	 */
 	async judge(judgment: Judgment, opts: JudgeOptions = {}): Promise<Verdict> {
+		if (JSON.stringify(judgment.state).length <= LONG_STATE) {
+			return this.ask(judgment, opts.signal);
+		}
+		let input: number | undefined;
+		for (let tries = 0; tries < TRIES; tries++) {
+			const marker = crypto.randomUUID().slice(0, 8);
+			const verdict = await this.ask(
+				{
+					state: { ...judgment.state, marker },
+					questions: {
+						...judgment.questions,
+						[WHOLE]: {
+							type: "noul",
+							instructions: `Does \`marker\` say "${marker}"?`,
+						},
+					},
+				},
+				opts.signal,
+			);
+			if (verdict.input !== undefined) {
+				input = (input ?? 0) + verdict.input;
+			}
+			const whole = verdict.answers.get(WHOLE) ?? 0;
+			verdict.answers.delete(WHOLE);
+			if (whole >= 0.5) {
+				return {
+					answers: verdict.answers,
+					...(input === undefined ? {} : { input }),
+				};
+			}
+		}
+		throw new Error(
+			`${this.name} cut the file short in each of ${TRIES} tries, so its answers would not have read all of it`,
+		);
+	}
+
+	private async ask(
+		judgment: Judgment,
+		signal: AbortSignal | undefined,
+	): Promise<Verdict> {
+		const opts = { signal };
 		let response = await this.request(judgment, opts.signal);
 		for (let retry = 0; retry < TRIES - 1; retry++) {
 			const delay = this.retryDelay(response, retry);
