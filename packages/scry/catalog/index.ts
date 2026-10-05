@@ -162,8 +162,12 @@ const EVALS: Record<string, string[]> = {
 	],
 	"logic-lives-in-controllers": [
 		"account-menu.good.tsx",
+		"bookmark-server.bad.ts",
+		"bookmark-server.good.ts",
 		"invoice-routes.good.ts",
 		"invoice-service.bad.ts",
+		"playlist.bad.tsx",
+		"playlist.good.tsx",
 		"prune.bad.ts",
 		"prune.good.ts",
 		"todo-editor.bad.tsx",

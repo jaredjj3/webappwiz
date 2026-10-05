@@ -8,8 +8,8 @@ import type {
 } from "@webappwiz/scry";
 
 /**
- * Finds logic a framework holds: a component, hook, route handler or CLI
- * action that decides or computes rather than translating to a plain object,
+ * Finds logic a framework holds: a component, hook, route or fetch handler,
+ * or CLI action that decides or computes rather than translating to a plain object,
  * and a plain class that uses a framework's names, so it cannot run without it.
  */
 export default class LogicLivesInControllers implements Rule {
@@ -96,7 +96,9 @@ export default class LogicLivesInControllers implements Rule {
 		);
 		const adapters = [
 			...components(file),
-			...(kinds.has("server") ? routeHandlers(file.ts.root) : []),
+			...(kinds.has("server")
+				? routeHandlers(file.ts.root)
+				: fetchHandlers(file, imported)),
 			...(kinds.has("cli") ? actions(file.ts.root) : []),
 		].filter((adapter) => adapter.mayDecide);
 		return Promise.all(
@@ -204,6 +206,45 @@ function routeHandlers(node: SyntaxNode): Adapter[] {
 					message: `${method.toUpperCase()} ${path.text.slice(1, -1)} decides or computes in its handler: move that into a plain service with a method per route, and let the handler translate the request into one call and its result into the response.`,
 				},
 			];
+		});
+}
+
+/**
+ * The functions a web server without a framework calls: each whose first
+ * parameter is the web's own `Request`, as `Bun.serve`, a Worker or a
+ * Next.js route hands them. A `Request` a file imports is some framework's,
+ * whose handlers `routeHandlers` reads.
+ */
+function fetchHandlers(
+	file: SourceFile,
+	imported: Map<string, string>,
+): Adapter[] {
+	if (imported.has("Request")) {
+		return [];
+	}
+	return file.ts
+		.findAll({ rule: { any: FUNCTIONS.map((kind) => ({ kind })) } })
+		.filter(
+			(handler) =>
+				handler
+					.field("parameters")
+					?.children()
+					.find((parameter) => parameter.is("required_parameter"))
+					?.field("type")
+					?.text.replace(/^:\s*/, "") === "Request",
+		)
+		.map((handler) => {
+			const name =
+				handler.field("name")?.text ??
+				(handler.parent()?.is("variable_declarator")
+					? handler.parent()?.field("name")?.text
+					: undefined);
+			return {
+				body: handler,
+				at: handler,
+				mayDecide: computes(handler),
+				message: `${name ?? "This handler"} decides or computes itself: move that into a plain service with a method per route, and let the handler translate the request into one call and its result into the response.`,
+			};
 		});
 }
 

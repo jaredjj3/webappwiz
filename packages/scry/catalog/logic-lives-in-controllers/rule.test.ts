@@ -106,6 +106,35 @@ describe("logic-lives-in-controllers", () => {
 		expect(decider.asked.map(({ about }) => about.line)).toEqual([4, 6]);
 	});
 
+	it("asks about a function taking the web's Request only when it branches, and not about one taking a framework's", async () => {
+		const plain = new SourceFile(
+			"a.ts",
+			[
+				"const one = (request: Request) => Response.json(todos.list());",
+				'const two = async (request: Request) => (request.method === "GET" ? list() : add());',
+			].join("\n"),
+		);
+		const framed = new SourceFile(
+			"b.ts",
+			[
+				'import type { Request } from "express";',
+				"const three = (request: Request) => (request.query.all ? all() : one());",
+			].join("\n"),
+		);
+
+		const findings = [
+			...(await rule.check(plain)),
+			...(await rule.check(framed)),
+		];
+
+		expect(findings.map(({ line, message }) => [line, message])).toEqual([
+			[
+				2,
+				"two decides or computes itself: move that into a plain service with a method per route, and let the handler translate the request into one call and its result into the response.",
+			],
+		]);
+	});
+
 	it("reads no route or action in a file that imports no framework", async () => {
 		const file = new SourceFile(
 			"a.ts",

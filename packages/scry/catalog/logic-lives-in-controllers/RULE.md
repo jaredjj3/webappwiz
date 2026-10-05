@@ -56,7 +56,8 @@ fake store and reads `state`.
 Servers and CLIs work the same way. A Hono or koa route translates the
 request into one call on a service with a method per route, and the result
 into a response, which keeps the boundary plain and another web server easy
-to swap in. A `webappwiz/cmd` action passes its options to a program.
+to swap in. So does a handler `Bun.serve` or a Worker calls with a
+`Request`. A `webappwiz/cmd` action passes its options to a program.
 
 In the framework's code, these are fine:
 
