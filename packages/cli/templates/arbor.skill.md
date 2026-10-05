@@ -39,9 +39,10 @@ stderr says.
    `ARBOR.md`. Only when conflicts would be hard to resolve, `arbor wait
    <task>` for the other task to land first. If it is doing the opposite of
    what you were asked, escalate instead.
-4. **Work.** Commit with git as you go; arbor never commits for you. When
-   something outside your Goal comes up (a bug next door, a follow-up, a reply
-   that widens the task), `arbor todo add` it from your worktree and move on,
+4. **Work.** Commit each step with git as you go, and move it to `## Done`
+   as you commit it; arbor never commits for you. When something outside
+   your Goal comes up (a bug next door, a follow-up, a reply that widens the
+   task), `arbor todo add` it from your worktree and move on,
    so the task stays one coherent change. Ask about each call the request
    does not settle as you make it, and keep going (see Asking as you go),
    bringing `## Blocked` up to date before each step.
