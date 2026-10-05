@@ -5,6 +5,7 @@ export {
 } from "./batched-decider";
 export { CachedDecider, type CachedDeciderOptions } from "./cached-decider";
 export { type Case, Cases, type CasesOptions } from "./cases";
+export { Claude, type ClaudeOptions } from "./claude";
 export {
 	CLEF_MODELS,
 	Clef,

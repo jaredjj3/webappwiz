@@ -78,30 +78,37 @@ than working around it.
 
 ## Models
 
-A rule's check asks one decision model, `clef` unless something says
-otherwise. `clef` and `clef-flash` run on Cloudflare Workers AI and need
-`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; a Jev like `jev-latest`
-runs on TypeSafe and needs `TYPESAFE_API_KEY`. They come from the
+A rule asks one of two models: its `decider`, a decision model, or its
+`llm`, a language model. The effort a check runs at picks both: `clef-flash`
+and `claude-haiku-4-5` at `low`, `clef` and `claude-sonnet-5-5` at `medium`,
+the default, `clef` and `claude-opus-5-5` at `high`. `clef` and `clef-flash`
+run on Cloudflare Workers AI and need `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN`; a Jev like `jev-latest` runs on TypeSafe and needs
+`TYPESAFE_API_KEY`; a Claude like `claude-sonnet-5-5` runs on Anthropic and
+needs `ANTHROPIC_API_KEY`. They come from the
 environment, else the project's store, else the device's. When `wiz scry` says one is
 missing, ask the user to run `bunx @webappwiz/cli creds add <NAME> --device`
 themselves, which asks for the value at a hidden prompt and keeps it for
 every project on their machine. Never ask for a
 value, set one, or look one up; `bunx @webappwiz/cli creds list` shows what
 is there without showing any. A rule that asks nothing needs no model and
-no credentials.
+no credentials, and a model no rule asks needs none either.
 
-The model is set in `.wiz/config.ts` (the project's),
-`~/.config/wiz/config.ts` (the user's own, over the project's), or
-`WIZ_SCRY_MODEL` and `WIZ_SCRY_JOBS` (over both), and `--model <name>` uses
-another for one run:
+The effort and the models each asks are set in `.wiz/config.ts` (the
+project's), `~/.config/wiz/config.ts` (the user's own, over the project's),
+or `WIZ_SCRY_EFFORT` and `WIZ_SCRY_JOBS` (over both). `--effort <level>`
+runs one check at another effort, and `--model <name>` and `--llm <name>`
+ask another decider or llm for one run:
 
 ```ts
 import { defineConfig } from "@webappwiz/cli/config";
 
 export default defineConfig({
 	scry: {
-		model: "clef",
-		jobs: 8, // requests at once
+		effort: "medium",
+		// over the defaults, only what it names
+		models: { high: { llm: "claude-fable-5-1" } },
+		jobs: 8, // requests at once, to each model
 		exclude: ["vendor/**"], // files no rule checks, from the project root
 	},
 });
@@ -110,9 +117,9 @@ export default defineConfig({
 Every answer is kept in `node_modules/.cache/webappwiz/scry`, so checking an
 unchanged file again asks nothing.
 
-When it refuses a config holding `agents`, `budget`, `batch` or `models`,
-those are from before: show the user the message, and with their yes,
-replace them with one `model`.
+When it refuses a config holding `agents`, `budget`, `batch` or `model`, or
+`WIZ_SCRY_MODEL`, those are from before: show the user the message, and with
+their yes, replace them with `effort` and the `models` it names.
 
 ## When a style change could be a rule
 
@@ -235,6 +242,14 @@ export default class CommentsSayWhy implements Rule {
   returns the probability of yes, which becomes the finding's confidence:
   `span.flag(message, probability, question)`. Ask it after code has
   narrowed the candidates, never about every line.
+- **The llm for what the decider gets wrong.** `tools.llm` answers the same
+  `decide(question, span)`, but reasons first: for a question that takes
+  following the code, like whether state outlives a test, rather than
+  reading it. It is slower and dearer, so reach for it when `wiz scry eval`
+  shows the decider missing, and keep the decider for the rest. A rule can
+  hold both and ask each the questions it is good at. Its probability is
+  one it states, not one read off its tokens, so evaluate before trusting
+  the default `threshold`.
 - **Private methods named for the rule's sentences**, so `check` reads as
   the rule does: `stateKeptBetweenCalls`, `namedForTheFile`.
 - **Import only types** from `@webappwiz/scry`, with `import type`, so the
@@ -276,7 +291,10 @@ const cases = await Cases.load(import.meta.dir);
 
 describe("comments-say-why", () => {
 	it.each(cases.bad)("flags $name", async ({ file }) => {
-		const rule = new CommentsSayWhy({ decider: new FakeDecider({}, 0.9) });
+		const rule = new CommentsSayWhy({
+			decider: new FakeDecider({}, 0.9),
+			llm: new FakeDecider(),
+		});
 		expect(await rule.check(file)).not.toEqual([]);
 	});
 
@@ -284,7 +302,10 @@ describe("comments-say-why", () => {
 		const decider = new FakeDecider({ "add one": 0.95 });
 		const file = new SourceFile("a.ts", "/** A counter. */\n// add one\ni++;\n");
 
-		const findings = await new CommentsSayWhy({ decider }).check(file);
+		const findings = await new CommentsSayWhy({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect(findings.map((finding) => finding.line)).toEqual([2]);
 	});

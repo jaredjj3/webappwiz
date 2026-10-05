@@ -29,7 +29,7 @@ describe("Rules.check", () => {
 	const run = async (paths: string[], decider: Decider = new FakeDecider()) =>
 		(await Rules.load(root, { fs })).check({
 			paths,
-			tools: { decider },
+			tools: { decider, llm: new FakeDecider() },
 			progress,
 		});
 
@@ -91,7 +91,7 @@ describe("Rules.check", () => {
 		await install("no-bar", flagging("bar"));
 		await write("src/a.ts", "foo\nbar\n");
 		const rules = await Rules.load(root, { fs });
-		const tools = { decider: new FakeDecider() };
+		const tools = { decider: new FakeDecider(), llm: new FakeDecider() };
 
 		const report = await rules.check({
 			paths: ["src/a.ts"],
@@ -277,7 +277,7 @@ describe("Rules.check", () => {
 		await write(".wiz/scry/no-bar/evals/b.good.ts", "Bar\n");
 
 		const evaluated = await (await Rules.load(root, { fs })).evaluate({
-			tools: { decider: new FakeDecider() },
+			tools: { decider: new FakeDecider(), llm: new FakeDecider() },
 			progress,
 		});
 
@@ -314,7 +314,7 @@ describe("Rules.check", () => {
 
 		const [evaluated] = await rules.evaluate({
 			ids: ["fragile"],
-			tools: { decider: new FakeDecider() },
+			tools: { decider: new FakeDecider(), llm: new FakeDecider() },
 		});
 
 		expect(evaluated?.cases.map(({ error }) => error)).toEqual([
@@ -322,7 +322,10 @@ describe("Rules.check", () => {
 			"boom",
 		]);
 		await expect(
-			rules.evaluate({ ids: ["nope"], tools: { decider: new FakeDecider() } }),
+			rules.evaluate({
+				ids: ["nope"],
+				tools: { decider: new FakeDecider(), llm: new FakeDecider() },
+			}),
 		).rejects.toThrow('no rule "nope" in .wiz/scry');
 	});
 });

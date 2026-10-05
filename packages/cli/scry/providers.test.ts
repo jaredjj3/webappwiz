@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Clef, Jev } from "@webappwiz/scry";
+import { Claude, Clef, Jev } from "@webappwiz/scry";
 import { Credentials, Environment } from "webappwiz/creds";
 import { FakeSecretStore } from "webappwiz/creds/testing";
 import { FakePs } from "webappwiz/system/testing";
@@ -36,6 +36,18 @@ describe("HostedProviders", () => {
 		expect((judge as Jev).model).toEqual("jev-1.13.0");
 	});
 
+	it("makes Claude for any of Anthropic's claude names, with ANTHROPIC_API_KEY", async () => {
+		const judge = await providers({ ANTHROPIC_API_KEY: "sk-key" }).judge(
+			"claude-sonnet-5-5",
+		);
+
+		expect(judge).toBeInstanceOf(Claude);
+		expect((judge as Claude).model).toEqual("claude-sonnet-5-5");
+		await expect(providers({}).judge("claude-opus-5-5")).rejects.toThrow(
+			"claude-opus-5-5 needs ANTHROPIC_API_KEY",
+		);
+	});
+
 	it("names every credential a model is missing, and how a person adds it", async () => {
 		await expect(
 			providers({ CLOUDFLARE_ACCOUNT_ID: "acct" }).judge("clef"),
@@ -46,7 +58,7 @@ describe("HostedProviders", () => {
 
 	it("refuses a model it does not know, and says which it does", async () => {
 		await expect(providers({}).judge("gpt-6-luna")).rejects.toThrow(
-			'no model "gpt-6-luna": scry knows clef, clef-flash, and Jev by TypeSafe\'s names, like jev-latest',
+			"no model \"gpt-6-luna\": scry knows clef, clef-flash, Jev by TypeSafe's names, like jev-latest, and Claude by Anthropic's, like claude-sonnet-5-5",
 		);
 	});
 });

@@ -11,7 +11,7 @@ describe("resources-are-disposable", () => {
 
 	beforeEach(() => {
 		decider = new FakeDecider({}, 0.4);
-		rule = new ResourcesAreDisposable({ decider });
+		rule = new ResourcesAreDisposable({ decider, llm: new FakeDecider() });
 	});
 
 	it.each(cases.bad)("flags $name", async ({ file }) => {

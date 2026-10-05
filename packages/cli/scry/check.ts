@@ -9,9 +9,10 @@ import {
 	type Ps,
 } from "webappwiz/system";
 import { SystemTimer, type Timer } from "webappwiz/time";
-import { loadConfig } from "../load-config";
+import type { Effort } from "../config";
+import { chooseModels, loadConfig } from "../load-config";
 import { table } from "../table";
-import { asked, ProjectDecider, plural, type Spent } from "./project-decider";
+import { asked, ProjectTools, plural, type Spent } from "./project-tools";
 import type { Providers } from "./providers";
 import type { Screen } from "./screen";
 import { Spinner } from "./spinner";
@@ -32,15 +33,19 @@ export interface CheckOptions {
 	rules?: string[];
 	/** How many requests to the model are out at once, over the config's `jobs`. */
 	jobs?: number;
-	/** The model a rule's decider asks, over the config's `model`. */
+	/** Which of the config's `models` to ask, over the config's `effort`. */
+	effort?: Effort;
+	/** The model a rule's `decider` asks, over the effort's. */
 	model?: string;
+	/** The model a rule's `llm` asks, over the effort's. */
+	llm?: string;
 	/** `json` for the report as JSON; anything else is text. */
 	format: string;
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
 	glob?: Glob;
-	/** What makes the judge for a model; Workers AI and TypeSafe by default. */
+	/** What makes the judge for a model; Workers AI, TypeSafe and Anthropic by default. */
 	providers?: Providers;
 	/**
 	 * Where a line of progress is drawn while the check runs, when it is
@@ -111,8 +116,8 @@ export async function check(opts: CheckOptions): Promise<void> {
 		}
 	});
 
-	const decider = await ProjectDecider.open(dir, {
-		model: opts.model ?? settings.model,
+	const asking = await ProjectTools.open(dir, {
+		models: chooseModels(settings, opts),
 		jobs: opts.jobs ?? settings.jobs,
 		signal: cancel.signal,
 		providers: opts.providers,
@@ -125,7 +130,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 			screen: opts.screen,
 			timer: opts.timer ?? new SystemTimer(),
 			progress,
-			decider,
+			asking,
 			verb: "checking",
 			noun: "file",
 		});
@@ -136,7 +141,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 		.check({
 			paths: files,
 			ids: opts.rules,
-			tools: { decider },
+			tools: asking.tools,
 			glob,
 			signal: cancel.signal,
 			progress,
@@ -145,8 +150,8 @@ export async function check(opts: CheckOptions): Promise<void> {
 			running = false;
 			spinner?.dispose();
 		});
-	await decider.save();
-	const spent = decider.spent;
+	await asking.save();
+	const spent = asking.spent;
 
 	if (report.legacy.length > 0) {
 		log.error(

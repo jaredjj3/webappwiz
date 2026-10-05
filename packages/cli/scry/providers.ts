@@ -1,5 +1,6 @@
 import {
 	CLEF_MODELS,
+	Claude,
 	Clef,
 	type ClefModel,
 	Jev,
@@ -14,9 +15,10 @@ export interface Providers {
 }
 
 /**
- * Clef on Cloudflare Workers AI and Jev on TypeSafe, with their credentials
- * from the environment or the system's store: `CLOUDFLARE_ACCOUNT_ID` and
- * `CLOUDFLARE_API_TOKEN` for Clef, `TYPESAFE_API_KEY` for Jev.
+ * Clef on Cloudflare Workers AI, Jev on TypeSafe and Claude on the Anthropic
+ * API, with their credentials from the environment or the system's store:
+ * `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` for Clef,
+ * `TYPESAFE_API_KEY` for Jev, `ANTHROPIC_API_KEY` for Claude.
  */
 export class HostedProviders implements Providers {
 	constructor(private readonly credentials: Credentials) {}
@@ -34,8 +36,12 @@ export class HostedProviders implements Providers {
 			const [token = ""] = await this.need(model, "TYPESAFE_API_KEY");
 			return new Jev(model, token);
 		}
+		if (/^claude-[\w.-]+$/.test(model)) {
+			const [token = ""] = await this.need(model, "ANTHROPIC_API_KEY");
+			return new Claude(model, token);
+		}
 		throw new Error(
-			`no model "${model}": scry knows ${CLEF_MODELS.join(", ")}, and Jev by TypeSafe's names, like jev-latest`,
+			`no model "${model}": scry knows ${CLEF_MODELS.join(", ")}, Jev by TypeSafe's names, like jev-latest, and Claude by Anthropic's, like claude-sonnet-5-5`,
 		);
 	}
 

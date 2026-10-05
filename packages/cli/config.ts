@@ -6,10 +6,35 @@
  */
 export type Model = "clef" | "clef-flash" | `jev-${string}`;
 
+/**
+ * A language model, by the name Anthropic gives it, like
+ * `claude-sonnet-5-5`, which reads `ANTHROPIC_API_KEY`.
+ */
+export type LlmModel = `claude-${string}`;
+
+/** How much a check spends to be right, which picks the models it asks. */
+export type Effort = "low" | "medium" | "high";
+export const EFFORTS = ["low", "medium", "high"] as const;
+
+/** The models a check at one effort asks. */
+export interface Models {
+	/** What a rule's `decider` asks. */
+	decider: Model;
+	/** What a rule's `llm` asks. */
+	llm: LlmModel;
+}
+
 /** How `wiz scry` runs. */
 export interface ScryConfig {
-	/** The model a rule's decider asks. `clef` when not set. */
-	model?: Model;
+	/** Which of `models` a check asks. `medium` when not set. */
+	effort?: Effort;
+	/**
+	 * The models each effort asks, over the defaults: `clef-flash` and
+	 * `claude-haiku-4-5` at low, `clef` and `claude-sonnet-5-5` at medium,
+	 * `clef` and `claude-opus-5-5` at high. A layer sets only what it names,
+	 * so `{ high: { llm: "claude-fable-5-1" } }` keeps the rest.
+	 */
+	models?: { [effort in Effort]?: Partial<Models> };
 	/** How many requests to the model are out at once. 8 when not set. */
 	jobs?: number;
 	/**

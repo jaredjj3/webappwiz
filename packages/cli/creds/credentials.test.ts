@@ -75,6 +75,7 @@ describe("wiz creds", () => {
 			[
 				"project: the project's store",
 				"device:  the device's store",
+				"ANTHROPIC_API_KEY       missing       Anthropic, for scry's claude models",
 				"CLOUDFLARE_ACCOUNT_ID   missing       Workers AI, for scry's clef and clef-flash",
 				"CLOUDFLARE_API_TOKEN    device        Workers AI, for scry's clef and clef-flash",
 				"STRIPE_SECRET_KEY       project       Stripe, for checkout",
@@ -253,7 +254,7 @@ describe("wiz creds", () => {
 		expect(await fs.read(`${root}/shop/seen`)).toEqual("sk_project cf_device ");
 		expect(proc.lastExit()).toEqual(3);
 		expect(log.entries.at(-1)?.message).toEqual(
-			"not in either store, so sh runs without them: CLOUDFLARE_ACCOUNT_ID, TYPESAFE_API_KEY",
+			"not in either store, so sh runs without them: ANTHROPIC_API_KEY, CLOUDFLARE_ACCOUNT_ID, TYPESAFE_API_KEY",
 		);
 	});
 

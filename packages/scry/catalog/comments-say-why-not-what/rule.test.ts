@@ -9,7 +9,9 @@ describe("comments-say-why-not-what", () => {
 	it.each(cases.bad)("asks about a comment in $name", async ({ file }) => {
 		const decider = new FakeDecider();
 
-		await new CommentsSayWhyNotWhat({ decider }).check(file);
+		await new CommentsSayWhyNotWhat({ decider, llm: new FakeDecider() }).check(
+			file,
+		);
 
 		expect(decider.asked).not.toEqual([]);
 	});
@@ -21,7 +23,10 @@ describe("comments-say-why-not-what", () => {
 			"// increment the counter\ncounter++;\nskip(); // the first is a header\n",
 		);
 
-		const findings = await new CommentsSayWhyNotWhat({ decider }).check(file);
+		const findings = await new CommentsSayWhyNotWhat({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect(
 			findings.map((finding) => [finding.line, finding.confidence]),
@@ -38,7 +43,9 @@ describe("comments-say-why-not-what", () => {
 			"// a sliding log: fixed windows\n// let a client send twice\nallow();\n",
 		);
 
-		await new CommentsSayWhyNotWhat({ decider }).check(file);
+		await new CommentsSayWhyNotWhat({ decider, llm: new FakeDecider() }).check(
+			file,
+		);
 
 		expect(decider.asked.map((asked) => asked.about.text)).toEqual([
 			"// a sliding log: fixed windows\n// let a client send twice",
@@ -52,7 +59,9 @@ describe("comments-say-why-not-what", () => {
 			"/** Adds one. */\nfunction add() {\n\t// @ts-expect-error\n\treturn x + 1;\n}\n// biome-ignore lint: reason\nrun();\n",
 		);
 
-		await new CommentsSayWhyNotWhat({ decider }).check(file);
+		await new CommentsSayWhyNotWhat({ decider, llm: new FakeDecider() }).check(
+			file,
+		);
 
 		expect(decider.asked).toEqual([]);
 	});

@@ -124,6 +124,14 @@ question rides along on the finding, so a report can say what decided it.
 Ask about the narrowest span that holds the answer; the decider reads the
 whole file around it either way.
 
+A question a decision model gets wrong, because answering it takes
+following the code rather than reading it, goes to `tools.llm` instead: the
+same `decide(question, span)`, answered by a language model that reasons
+first. It is slower and dearer, so a rule keeps the decider for what it
+gets right and holds both when it needs both. Which models answer is the
+caller's to say, by the effort it checks at; the rule only says which kind
+of question it is asking.
+
 Name the private methods for the sentences of the rule, so `check` reads as
 the rule does: `stateKeptBetweenCalls`, `setupOnlyOneTestUses`,
 `namedForTheFile`. A rule that only reads code takes no constructor at all.
@@ -207,7 +215,10 @@ it("asks about line comments, and not doc comments", async () => {
 	const decider = new FakeDecider({ "add one": 0.95 });
 	const file = new SourceFile("a.ts", "/** A counter. */\n// add one\ni++;\n");
 
-	const findings = await new CommentsSayWhy({ decider }).check(file);
+	const findings = await new CommentsSayWhy({
+		decider,
+		llm: new FakeDecider(),
+	}).check(file);
 
 	expect(findings.map((finding) => [finding.line, finding.confidence])).toEqual(
 		[[2, 0.95]],
@@ -255,9 +266,12 @@ const rules = await Rules.load(root);
 const changes = await new Git(root).changes("main", paths);
 const account = { id: accountId, token: apiToken };
 const decider = new BatchedDecider(new Clef("clef", account), { jobs: 8 });
+const llm = new BatchedDecider(new Claude("claude-sonnet-5-5", apiKey), {
+	jobs: 8,
+});
 const report = await rules.check({
 	paths: changes.files.map((file) => file.path),
-	tools: { decider },
+	tools: { decider, llm },
 });
 ```
 
@@ -282,8 +296,13 @@ it reads the counts when it likes.
 A `Decider` answers `decide(question, span)` with the probability of yes.
 `BatchedDecider` holds questions until everything running has asked, then
 sends the ones about each file in one request, up to 64, to a `Judge`:
-`Clef` (`clef` or `clef-flash` on Cloudflare Workers AI) or `Jev` (on
-TypeSafe, or anything else serving `/v1/systemone`). A rule written as plain
+`Clef` (`clef` or `clef-flash` on Cloudflare Workers AI), `Jev` (on
+TypeSafe, or anything else serving `/v1/systemone`), or `Claude` (on the
+Anthropic API). The first two are decision models, and back a rule's
+`decider`; Claude is a language model that reasons before it answers,
+slower and dearer, and backs its `llm`, for the questions a decision model
+gets wrong. It states its probability rather than reading one off its
+tokens, so a rule that asks it sets its `threshold` by evaluating. A rule written as plain
 `await`s still shares a request with every other rule reading the file. A
 decider is cheap until a rule asks it something, so a change no rule asks
 about costs nothing. Its `usage` counts what it asked, and `answered` what

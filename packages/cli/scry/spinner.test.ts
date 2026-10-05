@@ -7,7 +7,7 @@ import { type Asking, Spinner } from "./spinner";
 describe("Spinner", () => {
 	let timer: FakeTimer;
 	let progress: Progress;
-	let decider: { spent: Asking["spent"]; answered: number };
+	let asking: { spent: Asking["spent"]; answered: number };
 	let written: string[];
 
 	const screen = (live: boolean, columns = 200) => ({
@@ -22,7 +22,7 @@ describe("Spinner", () => {
 			screen: screen(live, columns),
 			timer,
 			progress,
-			decider,
+			asking,
 			verb: "checking",
 			noun: "file",
 		});
@@ -30,25 +30,25 @@ describe("Spinner", () => {
 	beforeEach(() => {
 		timer = new FakeTimer();
 		progress = new Progress();
-		decider = {
+		asking = {
 			spent: { requests: 0, questions: 0, input: 0, cached: 0 },
 			answered: 0,
 		};
 		written = [];
 	});
 
-	it("says how many files are done, and what the decider asked, answered and had cached", () => {
+	it("says how many files are done, and what the models were asked, answered and had cached", () => {
 		const shown = spinner();
 		progress.total = 100;
 		progress.done = 42;
 
 		expect(shown.text()).toBe("checking 42 of 100 files");
-		decider.spent = { requests: 3, questions: 120, input: 0, cached: 300 };
-		decider.answered = 80;
+		asking.spent = { requests: 3, questions: 120, input: 0, cached: 300 };
+		asking.answered = 80;
 		expect(shown.text()).toBe(
 			"checking 42 of 100 files · 120 questions asked, 80 answered, 300 from cache",
 		);
-		decider.spent = { requests: 0, questions: 0, input: 0, cached: 1 };
+		asking.spent = { requests: 0, questions: 0, input: 0, cached: 1 };
 		progress.total = 1;
 		expect(shown.text()).toBe("checking 42 of 1 file · 1 from cache");
 	});

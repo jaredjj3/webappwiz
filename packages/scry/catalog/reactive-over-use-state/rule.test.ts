@@ -11,7 +11,7 @@ describe("reactive-over-use-state", () => {
 
 	beforeEach(() => {
 		decider = new FakeDecider({}, 0.8);
-		rule = new ReactiveOverUseState({ decider });
+		rule = new ReactiveOverUseState({ decider, llm: new FakeDecider() });
 	});
 
 	it.each(cases.bad)("asks about $name", async ({ file }) => {

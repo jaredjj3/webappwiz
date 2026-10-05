@@ -33,8 +33,17 @@ export interface Finding {
  * something to use, like a model, costs nothing until a rule uses it.
  */
 export interface Tools {
-	/** Answers yes-or-no questions about code, with the probability of yes. */
+	/**
+	 * Answers yes-or-no questions about code, with the probability of yes: a
+	 * decision model, fast and cheap enough to ask about every span.
+	 */
 	decider: Decider;
+	/**
+	 * Answers the same questions with a language model that reasons before
+	 * it answers: slower and dearer, for the questions a decision model gets
+	 * wrong because answering takes following the code.
+	 */
+	llm: Decider;
 }
 
 /** How loudly a violation reports. */

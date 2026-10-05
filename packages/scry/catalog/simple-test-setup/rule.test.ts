@@ -7,13 +7,19 @@ const cases = await Cases.load(import.meta.dir);
 
 describe("simple-test-setup", () => {
 	it.each(cases.bad)("flags $name", async ({ file }) => {
-		const rule = new SimpleTestSetup({ decider: new FakeDecider({}, 0.9) });
+		const rule = new SimpleTestSetup({
+			decider: new FakeDecider({}, 0.9),
+			llm: new FakeDecider(),
+		});
 
 		expect(await rule.check(file)).not.toEqual([]);
 	});
 
 	it.each(cases.good)("passes $name", async ({ file }) => {
-		const rule = new SimpleTestSetup({ decider: new FakeDecider({}, 0.9) });
+		const rule = new SimpleTestSetup({
+			decider: new FakeDecider({}, 0.9),
+			llm: new FakeDecider(),
+		});
 
 		expect(await rule.check(file)).toEqual([]);
 	});
@@ -31,7 +37,10 @@ describe("simple-test-setup", () => {
 					'describe("a", () => {});',
 				].join("\n"),
 			);
-		const rule = new SimpleTestSetup({ decider: new FakeDecider() });
+		const rule = new SimpleTestSetup({
+			decider: new FakeDecider(),
+			llm: new FakeDecider(),
+		});
 
 		expect([
 			(await rule.check(opening(20))).map((finding) => finding.line),
@@ -52,6 +61,7 @@ describe("simple-test-setup", () => {
 
 		const findings = await new SimpleTestSetup({
 			decider: new FakeDecider(),
+			llm: new FakeDecider(),
 		}).check(file);
 
 		expect(findings.map((finding) => finding.line)).toEqual([2, 4]);
@@ -75,6 +85,7 @@ describe("simple-test-setup", () => {
 
 		const findings = await new SimpleTestSetup({
 			decider: new FakeDecider(),
+			llm: new FakeDecider(),
 		}).check(file);
 
 		expect(findings.map((finding) => finding.line)).toEqual([1, 6]);
@@ -92,7 +103,10 @@ describe("simple-test-setup", () => {
 			].join("\n"),
 		);
 
-		const findings = await new SimpleTestSetup({ decider }).check(file);
+		const findings = await new SimpleTestSetup({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect([
 			decider.asked.map(({ about }) => about.line),
@@ -134,7 +148,10 @@ describe("simple-test-setup", () => {
 			].join("\n"),
 		);
 
-		const findings = await new SimpleTestSetup({ decider }).check(file);
+		const findings = await new SimpleTestSetup({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect([
 			decider.asked.map(({ about }) => about.line),

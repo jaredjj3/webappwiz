@@ -12,6 +12,7 @@ export const WIZ_CREDENTIALS: Record<string, string> = {
 	CLOUDFLARE_ACCOUNT_ID: "Workers AI, for scry's clef and clef-flash",
 	CLOUDFLARE_API_TOKEN: "Workers AI, for scry's clef and clef-flash",
 	TYPESAFE_API_KEY: "TypeSafe, for scry's jev models",
+	ANTHROPIC_API_KEY: "Anthropic, for scry's claude models",
 };
 
 /** What `ProjectCredentials.open` reads through; the real ones by default. */

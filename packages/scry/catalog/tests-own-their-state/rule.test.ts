@@ -11,7 +11,7 @@ describe("tests-own-their-state", () => {
 
 	beforeEach(() => {
 		decider = new FakeDecider({}, 0.2);
-		rule = new TestsOwnTheirState({ decider });
+		rule = new TestsOwnTheirState({ decider, llm: new FakeDecider() });
 	});
 
 	it.each(cases.bad)("flags $name", async ({ file }) => {

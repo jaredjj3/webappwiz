@@ -11,7 +11,7 @@ describe("logic-lives-in-controllers", () => {
 
 	beforeEach(() => {
 		decider = new FakeDecider({}, 0.8);
-		rule = new LogicLivesInControllers({ decider });
+		rule = new LogicLivesInControllers({ decider, llm: new FakeDecider() });
 	});
 
 	it.each(cases.bad)(

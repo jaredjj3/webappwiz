@@ -2,7 +2,7 @@ import type { Progress } from "@webappwiz/scry";
 import type { Resource } from "webappwiz/disposable";
 import { color } from "webappwiz/log";
 import { Duration, type Timer } from "webappwiz/time";
-import { plural, type Spent } from "./project-decider";
+import { plural, type Spent } from "./project-tools";
 import type { Screen } from "./screen";
 
 const ESC = "\u001B";
@@ -10,10 +10,10 @@ const FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "
 /** About ten redraws a second: enough to look alive, cheap to draw. */
 const TICK = Duration.ms(100);
 
-/** What a `Spinner` counts questions from: the decider the rules ask. */
+/** What a `Spinner` counts questions from: the models the rules ask. */
 export interface Asking {
 	readonly spent: Spent;
-	/** Of the questions asked, how many the model has answered. */
+	/** Of the questions asked, how many the models have answered. */
 	readonly answered: number;
 }
 
@@ -22,7 +22,7 @@ export interface SpinnerOptions {
 	timer: Timer;
 	/** How far the work has got. */
 	progress: Progress;
-	decider: Asking;
+	asking: Asking;
 	/** What the work is doing, as `checking`. */
 	verb: string;
 	/** What it counts, as `file`. */
@@ -31,7 +31,7 @@ export interface SpinnerOptions {
 
 /**
  * One line on a live screen while a check runs: a spinner, how many of the
- * files are done, and what the decider has asked. It reads the counts on its
+ * files are done, and what the models have been asked. It reads the counts on its
  * own timer, so the work never waits on it, and draws nothing at all where
  * the screen is not live. `start` before the work; `dispose` before printing
  * anything else, which erases the line.
@@ -54,13 +54,13 @@ export class Spinner implements Resource {
 
 	/** What the line says now, without the spinner. */
 	text(): string {
-		const { progress, decider, verb, noun } = this.opts;
-		const { questions, cached } = decider.spent;
+		const { progress, asking, verb, noun } = this.opts;
+		const { questions, cached } = asking.spent;
 		const asked = [
 			...(questions === 0
 				? []
 				: [
-						`${questions} ${plural(questions, "question")} asked, ${decider.answered} answered`,
+						`${questions} ${plural(questions, "question")} asked, ${asking.answered} answered`,
 					]),
 			...(cached === 0 ? [] : [`${cached} from cache`]),
 		];

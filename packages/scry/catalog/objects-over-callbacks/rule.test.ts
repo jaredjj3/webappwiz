@@ -11,7 +11,7 @@ describe("objects-over-callbacks", () => {
 
 	beforeEach(() => {
 		decider = new FakeDecider({}, 0.3);
-		rule = new ObjectsOverCallbacks({ decider });
+		rule = new ObjectsOverCallbacks({ decider, llm: new FakeDecider() });
 	});
 
 	it.each(cases.bad)("flags $name", async ({ file }) => {
@@ -23,6 +23,7 @@ describe("objects-over-callbacks", () => {
 		async ({ file }) => {
 			const refusing = new ObjectsOverCallbacks({
 				decider: new FakeDecider({}, 0),
+				llm: new FakeDecider(),
 			});
 
 			expect(

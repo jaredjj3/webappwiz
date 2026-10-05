@@ -35,6 +35,7 @@ describe("update", () => {
 		ps = new FakePs();
 		ps.setCaptureOutput("/p\n/p/.git\n", "");
 		store = new FakeSecretStore({
+			ANTHROPIC_API_KEY: "sk-key",
 			CLOUDFLARE_ACCOUNT_ID: "account",
 			CLOUDFLARE_API_TOKEN: "token",
 			TYPESAFE_API_KEY: "key",

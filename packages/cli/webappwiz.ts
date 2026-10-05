@@ -1,6 +1,7 @@
 import { type Cli, cli, type Deps, timed } from "webappwiz/cmd";
 import type { Fs } from "webappwiz/system";
 import { z } from "zod";
+import { EFFORTS } from "./config";
 // Every @webappwiz package is released in lockstep, so this one's version is
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
@@ -79,10 +80,20 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: undefined,
 			description: "requests to the model at once (default: scry.jobs, else 8)",
 		})
+		.option("effort", z.enum(EFFORTS), {
+			default: undefined,
+			description:
+				"low, medium or high, which picks the models scry.models names for it (default: scry.effort, else medium)",
+		})
 		.option("model", z.string(), {
 			default: undefined,
 			description:
-				"the model rules' deciders ask: clef, clef-flash, or a jev like jev-latest (default: scry.model, else clef)",
+				"the model rules' deciders ask: clef, clef-flash, or a jev like jev-latest (default: the effort's)",
+		})
+		.option("llm", z.string(), {
+			default: undefined,
+			description:
+				"the model rules' llms ask: a claude like claude-sonnet-5-5 (default: the effort's)",
 		})
 		.option("format", z.enum(["text", "json"]), {
 			default: "text",
@@ -120,10 +131,20 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: undefined,
 			description: "requests to the model at once (default: scry.jobs, else 8)",
 		})
+		.option("effort", z.enum(EFFORTS), {
+			default: undefined,
+			description:
+				"low, medium or high, which picks the models scry.models names for it (default: scry.effort, else medium)",
+		})
 		.option("model", z.string(), {
 			default: undefined,
 			description:
-				"the model rules' deciders ask (default: scry.model, else clef)",
+				"the model rules' deciders ask: clef, clef-flash, or a jev like jev-latest (default: the effort's)",
+		})
+		.option("llm", z.string(), {
+			default: undefined,
+			description:
+				"the model rules' llms ask: a claude like claude-sonnet-5-5 (default: the effort's)",
 		})
 		.option("format", z.enum(["text", "json"]), {
 			default: "text",

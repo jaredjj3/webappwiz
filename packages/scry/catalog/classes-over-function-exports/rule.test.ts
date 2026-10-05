@@ -9,9 +9,10 @@ describe("classes-over-function-exports", () => {
 	it.each(cases.bad)("asks about or flags $name", async ({ file }) => {
 		const decider = new FakeDecider({}, 0.9);
 
-		const findings = await new ClassesOverFunctionExports({ decider }).check(
-			file,
-		);
+		const findings = await new ClassesOverFunctionExports({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect(findings).not.toEqual([]);
 	});
@@ -19,9 +20,10 @@ describe("classes-over-function-exports", () => {
 	it.each(cases.good)("passes $name on code alone", async ({ file }) => {
 		const decider = new FakeDecider({}, 0);
 
-		const findings = await new ClassesOverFunctionExports({ decider }).check(
-			file,
-		);
+		const findings = await new ClassesOverFunctionExports({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect(findings.filter((finding) => finding.confidence > 0)).toEqual([]);
 	});
@@ -40,9 +42,10 @@ describe("classes-over-function-exports", () => {
 			].join("\n"),
 		);
 
-		const findings = await new ClassesOverFunctionExports({ decider }).check(
-			file,
-		);
+		const findings = await new ClassesOverFunctionExports({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.message]),
@@ -73,6 +76,7 @@ describe("classes-over-function-exports", () => {
 
 		const findings = await new ClassesOverFunctionExports({
 			decider: new FakeDecider(),
+			llm: new FakeDecider(),
 		}).check(file);
 
 		expect(findings.map((finding) => finding.line)).toEqual([1]);
@@ -90,7 +94,10 @@ describe("classes-over-function-exports", () => {
 			].join("\n"),
 		);
 
-		await new ClassesOverFunctionExports({ decider }).check(file);
+		await new ClassesOverFunctionExports({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect(decider.asked.map((asked) => asked.question)).toEqual([
 			"Is NodeFs one implementation of Fs, which has others, such as a fake for tests?",

@@ -11,7 +11,7 @@ describe("test-setup-names-what-it-makes", () => {
 
 	beforeEach(() => {
 		decider = new FakeDecider({ Cart: 0.85 }, 0.1);
-		rule = new TestSetupNamesWhatItMakes({ decider });
+		rule = new TestSetupNamesWhatItMakes({ decider, llm: new FakeDecider() });
 	});
 
 	it.each(cases.bad)("flags $name", async ({ file }) => {
@@ -21,6 +21,7 @@ describe("test-setup-names-what-it-makes", () => {
 	it.each(cases.good)("finds no harness by name in $name", async ({ file }) => {
 		const refusing = new TestSetupNamesWhatItMakes({
 			decider: new FakeDecider({}, 0),
+			llm: new FakeDecider(),
 		});
 
 		expect(

@@ -59,9 +59,12 @@ and runs the matching rules' checks, every rule on every file at once;
 `--rule <id>,<id>` runs only those rules.
 
 A check is code. What code can decide, it decides, and that finding is sure:
-100%. What takes judgment it asks a decision model, which reads the file and
+100%. What takes judgment it asks a model, which reads the file and
 answers a yes-or-no question with the probability of yes, and writes
-nothing. The questions about one file go in one request, and every answer is
+nothing. A rule asks one of two: its `decider`, a decision model fast and
+cheap enough to ask about every span, or its `llm`, a language model that
+reasons before it answers, for the questions a decision model gets wrong.
+The questions about one file go in one request to each, and every answer is
 kept in `node_modules/.cache/webappwiz/scry`, so checking an unchanged file
 again asks nothing. A finding a model decided is reported at or above its
 rule's `threshold`, 0.7 by default. A change no rule asks about costs
@@ -72,14 +75,21 @@ person or agent, to act on.
 answered: why a finding there was reported, or dropped. When nothing was
 asked, code decided it.
 
-Rules ask `clef` unless the config says otherwise. The credentials come
+The effort a check runs at picks both models. The credentials come
 from the environment, or else from the operating system's secret store,
 where `creds add` keeps them (see [creds](#creds)).
+
+| Effort | `decider` | `llm` |
+| --- | --- | --- |
+| `low` | `clef-flash` | `claude-haiku-4-5` |
+| `medium`, the default | `clef` | `claude-sonnet-5-5` |
+| `high` | `clef` | `claude-opus-5-5` |
 
 | Model | Provider | Credentials |
 | --- | --- | --- |
 | `clef`, `clef-flash` | Cloudflare Workers AI | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` |
 | `jev-latest`, `jev-preview`, `jev-1.13.0`, ... | TypeSafe | `TYPESAFE_API_KEY` |
+| `claude-sonnet-5-5`, `claude-opus-5-5`, ... | Anthropic | `ANTHROPIC_API_KEY` |
 
 ```ts
 // .wiz/config.ts
@@ -87,7 +97,10 @@ import { defineConfig } from "@webappwiz/cli/config";
 
 export default defineConfig({
 	scry: {
-		model: "clef",
+		effort: "medium",
+		models: {
+			high: { decider: "jev-latest", llm: "claude-fable-5-1" },
+		},
 		jobs: 8,
 	},
 });
@@ -95,14 +108,18 @@ export default defineConfig({
 
 Each layer overrides the last: `.wiz/config.ts`, then the user's own
 `~/.config/wiz/config.ts` (under `$XDG_CONFIG_HOME` when set), then
-`WIZ_SCRY_MODEL` and `WIZ_SCRY_JOBS`. `exclude` takes globs, from the
+`WIZ_SCRY_EFFORT` and `WIZ_SCRY_JOBS`. `models` overrides only the models it
+names, so the config above keeps the defaults at `low` and `medium`.
+`exclude` takes globs, from the
 project root, of files no rule checks, like `[".agents/**"]` for skills
 copied in from elsewhere; the user's are added to the project's. A config where `@webappwiz/cli` is not
 installed exports the same object without `defineConfig`. A config still
-holding `agents`, `budget`, `batch` or `models`, from before a rule's check
-was code, is refused rather than half read.
+holding `agents`, `budget` or `batch`, from before a rule's check
+was code, or `model`, from before effort picked the models, is refused
+rather than half read, and so is `WIZ_SCRY_MODEL`.
 
-`--model` asks another model for one run, over the config, so two models
+`--effort` runs one check at another effort, over the config. `--model`
+and `--llm` ask another model for one run, over the effort's, so two models
 can be compared on the same change: `scry --model clef` then
 `scry --model jev-latest`.
 
@@ -206,6 +223,7 @@ bunx @webappwiz/cli update ./apps --version 1.4.0
 $ bunx @webappwiz/cli creds
 project: the macOS Keychain as "webappwiz:shop"
 device:  the macOS Keychain as "webappwiz"
+ANTHROPIC_API_KEY       device        Anthropic, for scry's claude models
 CLOUDFLARE_ACCOUNT_ID   device        Workers AI, for scry's clef and clef-flash
 CLOUDFLARE_API_TOKEN    device        Workers AI, for scry's clef and clef-flash
 STRIPE_SECRET_KEY       missing       Stripe, for checkout

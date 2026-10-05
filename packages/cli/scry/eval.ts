@@ -8,9 +8,10 @@ import {
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { SystemTimer, type Timer } from "webappwiz/time";
-import { loadConfig } from "../load-config";
+import type { Effort } from "../config";
+import { chooseModels, loadConfig } from "../load-config";
 import { table } from "../table";
-import { asked, ProjectDecider, plural } from "./project-decider";
+import { asked, ProjectTools, plural } from "./project-tools";
 import type { Providers } from "./providers";
 import type { Screen } from "./screen";
 import { Spinner } from "./spinner";
@@ -20,8 +21,12 @@ export interface EvaluateOptions {
 	ids: string[];
 	/** How many requests to the model are out at once, over the config's `jobs`. */
 	jobs?: number;
-	/** The model a rule's decider asks, over the config's `model`. */
+	/** Which of the config's `models` to ask, over the config's `effort`. */
+	effort?: Effort;
+	/** The model a rule's `decider` asks, over the effort's. */
 	model?: string;
+	/** The model a rule's `llm` asks, over the effort's. */
+	llm?: string;
 	/** `json` for the scores as JSON; anything else is text. */
 	format: string;
 	log?: Logger;
@@ -49,8 +54,8 @@ export async function evaluate(opts: EvaluateOptions): Promise<void> {
 	const { root: dir } = await Git.locate(ps.cwd(), [], { ps });
 	const rules = await Rules.load(dir, { fs });
 	const settings = await loadConfig(dir, { fs, ps });
-	const decider = await ProjectDecider.open(dir, {
-		model: opts.model ?? settings.model,
+	const asking = await ProjectTools.open(dir, {
+		models: chooseModels(settings, opts),
 		jobs: opts.jobs ?? settings.jobs,
 		providers: opts.providers,
 		fs,
@@ -64,24 +69,24 @@ export async function evaluate(opts: EvaluateOptions): Promise<void> {
 					screen: opts.screen,
 					timer: opts.timer ?? new SystemTimer(),
 					progress,
-					decider,
+					asking,
 					verb: "scoring",
 					noun: "case",
 				});
 	spinner?.start();
 	const evaluated = await rules
-		.evaluate({ ids: opts.ids, tools: { decider }, progress })
+		.evaluate({ ids: opts.ids, tools: asking.tools, progress })
 		.finally(() => spinner?.dispose());
-	await decider.save();
+	await asking.save();
 	if (opts.format === "json") {
 		log.info(
-			JSON.stringify({ rules: evaluated, spent: decider.spent }, null, 2),
+			JSON.stringify({ rules: evaluated, spent: asking.spent }, null, 2),
 		);
 		return;
 	}
 	log.info(text(evaluated).join("\n"));
-	if (decider.spent.questions + decider.spent.cached > 0) {
-		log.info(color.dim(asked(decider.spent)));
+	if (asking.spent.questions + asking.spent.cached > 0) {
+		log.info(color.dim(asked(asking.spent)));
 	}
 }
 

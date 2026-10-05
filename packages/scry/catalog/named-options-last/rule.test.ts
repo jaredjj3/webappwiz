@@ -6,7 +6,10 @@ import NamedOptionsLast from "./rule";
 const cases = await Cases.load(import.meta.dir);
 
 describe("named-options-last", () => {
-	const rule = new NamedOptionsLast({ decider: new FakeDecider({}, 0.9) });
+	const rule = new NamedOptionsLast({
+		decider: new FakeDecider({}, 0.9),
+		llm: new FakeDecider(),
+	});
 
 	it.each(cases.bad)("flags $name", async ({ file }) => {
 		expect(await rule.check(file)).not.toEqual([]);
@@ -27,7 +30,10 @@ describe("named-options-last", () => {
 			].join("\n"),
 		);
 
-		const findings = await new NamedOptionsLast({ decider }).check(file);
+		const findings = await new NamedOptionsLast({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.confidence]),

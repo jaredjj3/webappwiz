@@ -11,9 +11,10 @@ describe("doc-comments-address-users", () => {
 		async ({ file }) => {
 			const decider = new FakeDecider();
 
-			const findings = await new DocCommentsAddressUsers({ decider }).check(
-				file,
-			);
+			const findings = await new DocCommentsAddressUsers({
+				decider,
+				llm: new FakeDecider(),
+			}).check(file);
 
 			expect([
 				...decider.asked,
@@ -29,7 +30,10 @@ describe("doc-comments-address-users", () => {
 			"/** Parses. TODO: drop the switch. */\nexport function parse() {}\n",
 		);
 
-		const findings = await new DocCommentsAddressUsers({ decider }).check(file);
+		const findings = await new DocCommentsAddressUsers({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.confidence]),
@@ -62,7 +66,10 @@ describe("doc-comments-address-users", () => {
 			].join("\n"),
 		);
 
-		await new DocCommentsAddressUsers({ decider }).check(file);
+		await new DocCommentsAddressUsers({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect(decider.asked.map((asked) => asked.about.line)).toEqual([3, 5, 15]);
 	});
@@ -74,7 +81,10 @@ describe("doc-comments-address-users", () => {
 			"/** This used to live in ResizeQueue. */\nexport function resize() {}\n",
 		);
 
-		const findings = await new DocCommentsAddressUsers({ decider }).check(file);
+		const findings = await new DocCommentsAddressUsers({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect(findings.map((finding) => finding.confidence)).toEqual([0.8]);
 	});
@@ -95,7 +105,10 @@ describe("doc-comments-address-users", () => {
 			].join("\n"),
 		);
 
-		const findings = await new DocCommentsAddressUsers({ decider }).check(file);
+		const findings = await new DocCommentsAddressUsers({
+			decider,
+			llm: new FakeDecider(),
+		}).check(file);
 
 		expect([
 			findings.map((finding) => finding.line),
