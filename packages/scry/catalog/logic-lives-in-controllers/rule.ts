@@ -12,9 +12,9 @@ import type {
  * action that decides or computes rather than translating to a plain object,
  * and a plain class that uses a framework's names, so it cannot run without it.
  */
-export default class FrameworksOnlyTranslate implements Rule {
+export default class LogicLivesInControllers implements Rule {
 	static readonly description =
-		"Logic, meaningful state and decisions live in plain classes; a component, route or CLI action only translates.";
+		"Logic, meaningful state and decisions live in a controller, a plain class; a component, route or CLI action only translates.";
 	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "warning";
 	static readonly recommended = true;

@@ -11,7 +11,7 @@ stays for what it is good at: one local, self contained value nothing else
 cares about. Once two pieces of state have to agree, or an effect exists to
 keep them in step, the component is modeling the logic and the class should be. This rule is
 about state kept in step; whether a component decides things at all is
-what frameworks-only-translate asks.
+what logic-lives-in-controllers asks.
 
 Its cases are in `evals/`: each `.good.` file follows the rule, and each
 `.bad.` file breaks it.

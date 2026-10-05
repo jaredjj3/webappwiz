@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { Cases, SourceFile } from "@webappwiz/scry";
 import { FakeDecider } from "@webappwiz/scry/testing";
-import FrameworksOnlyTranslate from "./rule";
+import LogicLivesInControllers from "./rule";
 
 const cases = await Cases.load(import.meta.dir);
 
-describe("frameworks-only-translate", () => {
+describe("logic-lives-in-controllers", () => {
 	let decider: FakeDecider;
-	let rule: FrameworksOnlyTranslate;
+	let rule: LogicLivesInControllers;
 
 	beforeEach(() => {
 		decider = new FakeDecider({}, 0.8);
-		rule = new FrameworksOnlyTranslate({ decider });
+		rule = new LogicLivesInControllers({ decider });
 	});
 
 	it.each(cases.bad)(

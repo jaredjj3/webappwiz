@@ -18,10 +18,10 @@ import exportLeadsTheFile from "./export-leads-the-file/RULE.md" with {
 import ExportLeadsTheFile from "./export-leads-the-file/rule";
 import fakesOverMocks from "./fakes-over-mocks/RULE.md" with { type: "text" };
 import FakesOverMocks from "./fakes-over-mocks/rule";
-import frameworksOnlyTranslate from "./frameworks-only-translate/RULE.md" with {
+import logicLivesInControllers from "./logic-lives-in-controllers/RULE.md" with {
 	type: "text",
 };
-import FrameworksOnlyTranslate from "./frameworks-only-translate/rule";
+import LogicLivesInControllers from "./logic-lives-in-controllers/rule";
 import matchersOverTestLogic from "./matchers-over-test-logic/RULE.md" with {
 	type: "text",
 };
@@ -74,7 +74,7 @@ const CODE: Record<string, string[]> = {
 	"doc-comments-address-users": ["rule.test.ts", "rule.ts"],
 	"export-leads-the-file": ["rule.test.ts", "rule.ts"],
 	"fakes-over-mocks": ["rule.test.ts", "rule.ts"],
-	"frameworks-only-translate": ["rule.test.ts", "rule.ts"],
+	"logic-lives-in-controllers": ["rule.test.ts", "rule.ts"],
 	"matchers-over-test-logic": ["rule.test.ts", "rule.ts"],
 	"named-options-last": ["rule.test.ts", "rule.ts"],
 	"no-em-dashes": ["rule.test.ts", "rule.ts"],
@@ -160,7 +160,7 @@ const EVALS: Record<string, string[]> = {
 		"theme-preference.test.bad.ts",
 		"user-signup.test.bad.ts",
 	],
-	"frameworks-only-translate": [
+	"logic-lives-in-controllers": [
 		"account-menu.good.tsx",
 		"invoice-routes.good.ts",
 		"invoice-service.bad.ts",
@@ -367,9 +367,9 @@ export const catalog: Record<string, ShippedRule> = withFiles({
 		rule: FakesOverMocks,
 		files: { "RULE.md": fakesOverMocks },
 	},
-	"frameworks-only-translate": {
-		rule: FrameworksOnlyTranslate,
-		files: { "RULE.md": frameworksOnlyTranslate },
+	"logic-lives-in-controllers": {
+		rule: LogicLivesInControllers,
+		files: { "RULE.md": logicLivesInControllers },
 	},
 	"matchers-over-test-logic": {
 		rule: MatchersOverTestLogic,
