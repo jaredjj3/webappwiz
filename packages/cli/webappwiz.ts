@@ -69,6 +69,11 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description:
 				"check only files changed since this git ref (default with no paths: the uncommitted work, else the branch since trunk)",
 		})
+		.option("rule", z.string(), {
+			default: "",
+			description:
+				"check with only these rules, comma separated, as `scry list` names them (default: every rule)",
+		})
 		.option("jobs", z.coerce.number(), {
 			default: undefined,
 			description: "requests to the model at once (default: scry.jobs, else 8)",
@@ -83,8 +88,15 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "text or json (default: text)",
 		})
 		.use(timed())
-		.action((opts, { log, fs, ps }) =>
-			check({ ...opts, log, fs, ps, screen: new StderrScreen(ps) }),
+		.action(({ rule, ...opts }, { log, fs, ps }) =>
+			check({
+				...opts,
+				rules: rule.split(",").filter((id) => id !== ""),
+				log,
+				fs,
+				ps,
+				screen: new StderrScreen(ps),
+			}),
 		);
 
 	scry

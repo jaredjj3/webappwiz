@@ -86,6 +86,28 @@ describe("Rules.check", () => {
 		expect([report.files, report.rules]).toEqual([2, 2]);
 	});
 
+	it("checks with only the rules it is given, and refuses one that is not there", async () => {
+		await install("no-foo", flagging("foo"));
+		await install("no-bar", flagging("bar"));
+		await write("src/a.ts", "foo\nbar\n");
+		const rules = await Rules.load(root, { fs });
+		const tools = { decider: new FakeDecider() };
+
+		const report = await rules.check({
+			paths: ["src/a.ts"],
+			ids: ["no-bar"],
+			tools,
+		});
+
+		expect([report.problems.map(({ rule }) => rule), report.rules]).toEqual([
+			["no-bar"],
+			1,
+		]);
+		await expect(
+			rules.check({ paths: ["src/a.ts"], ids: ["nope"], tools }),
+		).rejects.toThrow('no rule "nope" in .wiz/scry');
+	});
+
 	it("checks a file only against the rules whose files it matches", async () => {
 		await install("no-foo", flagging("foo", 1, { files: "**/*.md" }));
 		await write("src/a.ts", "foo\n");

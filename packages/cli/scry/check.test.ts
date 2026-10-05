@@ -264,6 +264,24 @@ describe("wiz scry", () => {
 		);
 	});
 
+	it("checks with only the rules it is given", async () => {
+		await install("no-const", flagging("const"));
+
+		await check({
+			paths: ["a.ts"],
+			rules: ["no-const"],
+			format: "json",
+			log,
+			fs,
+			ps,
+			providers,
+		});
+
+		expect(
+			JSON.parse(printed()).problems.map(({ rule }: { rule: string }) => rule),
+		).toEqual(["no-const"]);
+	});
+
 	it("checks a file it is given by name", async () => {
 		await git("commit", "-qam", "change");
 

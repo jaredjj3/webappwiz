@@ -28,6 +28,8 @@ export interface CheckOptions {
 	 * are any. With no paths and no ref, see `Git.changes` for the default.
 	 */
 	since?: string;
+	/** Checks with only the rules these ids name; every rule when empty. */
+	rules?: string[];
 	/** How many requests to the model are out at once, over the config's `jobs`. */
 	jobs?: number;
 	/** The model a rule's decider asks, over the config's `model`. */
@@ -133,6 +135,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 	const report = await rules
 		.check({
 			paths: files,
+			ids: opts.rules,
 			tools: { decider },
 			glob,
 			signal: cancel.signal,

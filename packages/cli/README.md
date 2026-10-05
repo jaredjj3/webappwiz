@@ -54,7 +54,8 @@ file at or under them, changed or not: the tracked ones and the new ones git
 does not ignore, from wherever it runs; the project is the git repository
 around it. Paths with `--since <ref>` check only the files under them that
 changed since it. It matches each rule's `files` glob against those files
-and runs the matching rules' checks, every rule on every file at once.
+and runs the matching rules' checks, every rule on every file at once;
+`--rule <id>,<id>` runs only those rules.
 
 A check is code. What code can decide, it decides, and that finding is sure:
 100%. What takes judgment it asks a decision model, which reads the file and

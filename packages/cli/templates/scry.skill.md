@@ -60,7 +60,8 @@ findings, each with how sure the check is: 100% where code decided it, a
 decision model's probability where the rule asked one. When the user names
 directories or files, pass them, as in `bunx @webappwiz/cli scry
 packages/api`, and it checks every file under them, changed or not; add
-`--since <ref>` to check only the ones changed since it.
+`--since <ref>` to check only the ones changed since it. When the user names
+rules, pass `--rule <id>,<id>` to check with only those.
 Show its report as it printed it, in one code block, and add nothing to it.
 Fixing what it found is a separate request; do not start unless asked.
 

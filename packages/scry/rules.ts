@@ -70,8 +70,21 @@ export class Rules {
 		return this.all.find((rule) => rule.id === id);
 	}
 
+	/** The rules with these ids, or every rule when there are none; an id with no rule is an error. */
+	private chosen(ids: readonly string[] = []): readonly DeclaredRule[] {
+		for (const id of ids) {
+			if (this.get(id) === undefined) {
+				throw new RuleError(`no rule "${id}" in ${RULES_ROOT}`);
+			}
+		}
+		return ids.length === 0
+			? this.all
+			: this.all.filter((declared) => ids.includes(declared.id));
+	}
+
 	/**
-	 * Checks each file against every rule whose `files` it matches. Every rule
+	 * Checks each file against every rule, or each one `ids` names, whose
+	 * `files` it matches. Every rule
 	 * runs on every file at once, so the questions they ask a decider arrive
 	 * together, and each file is read and parsed once however many rules read
 	 * it. A rule that throws, on one file or on being built, is reported
@@ -98,7 +111,7 @@ export class Rules {
 		);
 		// a rule's cases break it, or follow it, on purpose
 		const checked = opts.paths.filter((path) => !homes.get(path)?.isCase);
-		const matched = this.all
+		const matched = this.chosen(opts.ids)
 			.map((declared) => ({
 				declared,
 				paths: checked.filter((path) => glob.matches(declared.files, path)),
@@ -197,15 +210,7 @@ export class Rules {
 	 * so a decider batches them as it would a check.
 	 */
 	async evaluate(opts: EvaluateOptions): Promise<Evaluation[]> {
-		const ids = opts.ids ?? [];
-		for (const id of ids) {
-			if (this.get(id) === undefined) {
-				throw new RuleError(`no rule "${id}" in ${RULES_ROOT}`);
-			}
-		}
-		const evaluated = this.all.filter(
-			(declared) => ids.length === 0 || ids.includes(declared.id),
-		);
+		const evaluated = this.chosen(opts.ids);
 		// every case is loaded before any is scored, so the total is known
 		const loaded = await Promise.all(
 			evaluated.map(async (declared) => ({
@@ -364,6 +369,8 @@ export interface EvaluateOptions {
 export interface CheckOptions {
 	/** Files to check, from the project root. */
 	paths: readonly string[];
+	/** Rule ids; every rule when empty. */
+	ids?: readonly string[];
 	/** What every rule is built with. */
 	tools: Tools;
 	glob?: Glob;
