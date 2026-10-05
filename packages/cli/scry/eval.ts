@@ -1,4 +1,4 @@
-import { Git, type Measurement, Rules, type Scored } from "@webappwiz/scry";
+import { type Evaluation, Git, Rules, type Scored } from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { loadConfig } from "../load-config";
@@ -6,7 +6,7 @@ import { table } from "../table";
 import { asked, ProjectDecider, plural } from "./project-decider";
 import type { Providers } from "./providers";
 
-export interface MeasureOptions {
+export interface EvaluateOptions {
 	/** Rule ids; every rule when empty. */
 	ids: string[];
 	/** How many requests to the model are out at once, over the config's `jobs`. */
@@ -26,7 +26,7 @@ export interface MeasureOptions {
  * bad case is right when the rule reports something in it, a good one when
  * it reports nothing. Names every case it got wrong, and what that cost.
  */
-export async function measure(opts: MeasureOptions): Promise<void> {
+export async function evaluate(opts: EvaluateOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
@@ -40,15 +40,15 @@ export async function measure(opts: MeasureOptions): Promise<void> {
 		fs,
 		ps,
 	});
-	const measured = await rules.measure({ ids: opts.ids, tools: { decider } });
+	const evaluated = await rules.evaluate({ ids: opts.ids, tools: { decider } });
 	await decider.save();
 	if (opts.format === "json") {
 		log.info(
-			JSON.stringify({ rules: measured, spent: decider.spent }, null, 2),
+			JSON.stringify({ rules: evaluated, spent: decider.spent }, null, 2),
 		);
 		return;
 	}
-	log.info(text(measured).join("\n"));
+	log.info(text(evaluated).join("\n"));
 	if (decider.spent.questions + decider.spent.cached > 0) {
 		log.info(color.dim(asked(decider.spent)));
 	}
@@ -63,16 +63,14 @@ function right(scored: Scored): boolean {
 }
 
 /** A score per rule, then each case a rule got wrong, then the total. */
-function text(measured: Measurement[]): string[] {
-	const checked = measured.filter(
-		(measurement) => measurement.cases.length > 0,
-	);
-	const rows = checked.map((measurement) => {
-		const { cases } = measurement;
+function text(evaluated: Evaluation[]): string[] {
+	const checked = evaluated.filter((evaluation) => evaluation.cases.length > 0);
+	const rows = checked.map((evaluation) => {
+		const { cases } = evaluation;
 		const wrong = cases.filter((scored) => !right(scored));
 		const missed = wrong.filter((scored) => scored.kind === "bad").length;
 		return [
-			measurement.rule,
+			evaluation.rule,
 			`${cases.length - wrong.length}/${cases.length}`,
 			missed === 0 ? "-" : String(missed),
 			wrong.length - missed === 0 ? "-" : String(wrong.length - missed),
@@ -82,21 +80,21 @@ function text(measured: Measurement[]): string[] {
 		["rule", "right", "missed", "false alarms"].map(color.dim),
 		...rows,
 	]);
-	const wrong = checked.flatMap((measurement) =>
-		measurement.cases
+	const wrong = checked.flatMap((evaluation) =>
+		evaluation.cases
 			.filter((scored) => !right(scored))
-			.map((scored) => [`  ${measurement.rule}`, scored.name, why(scored)]),
+			.map((scored) => [`  ${evaluation.rule}`, scored.name, why(scored)]),
 	);
 	if (wrong.length > 0) {
 		lines.push("", color.bold("wrong"), ...table(wrong));
 	}
 	const total = checked.reduce(
-		(sum, measurement) => sum + measurement.cases.length,
+		(sum, evaluation) => sum + evaluation.cases.length,
 		0,
 	);
 	const correct = checked.reduce(
-		(sum, measurement) =>
-			sum + measurement.cases.filter((scored) => right(scored)).length,
+		(sum, evaluation) =>
+			sum + evaluation.cases.filter((scored) => right(scored)).length,
 		0,
 	);
 	const accuracy = total === 0 ? 0 : (correct / total) * 100;
@@ -106,13 +104,13 @@ function text(measured: Measurement[]): string[] {
 			`${wrong.length === 0 ? "✔" : "✖"} ${correct} of ${total} ${plural(total, "case")} right (${accuracy.toFixed(1)}%) across ${checked.length} ${plural(checked.length, "rule")}`,
 		),
 	);
-	const uncased = measured.filter(
-		(measurement) => measurement.cases.length === 0,
+	const uncased = evaluated.filter(
+		(evaluation) => evaluation.cases.length === 0,
 	);
 	if (uncased.length > 0) {
 		lines.push(
 			color.dim(
-				`  ${uncased.length} ${plural(uncased.length, "rule")} with no cases in evals/: ${uncased.map((measurement) => measurement.rule).join(", ")}`,
+				`  ${uncased.length} ${plural(uncased.length, "rule")} with no cases in evals/: ${uncased.map((evaluation) => evaluation.rule).join(", ")}`,
 			),
 		);
 	}

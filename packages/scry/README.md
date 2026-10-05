@@ -227,7 +227,7 @@ about contains: the probability under the first key the span's text
 includes, and `otherwise`, 0 by default, when none does. It keeps what it
 was `asked`, so a test can say which spans went to the model. With a fake,
 a rule's tests test its code: what it flags on its own, and what it asks
-about. Whether its questions are good ones is what measuring is for.
+about. Whether its questions are good ones is what evaluating is for.
 
 `wiz scry test [ids]` runs the tests beside each rule in `.wiz/scry`. Unlike
 a `rule.ts`, a test imports values from `@webappwiz/scry`, so a project
@@ -236,15 +236,15 @@ with rules adds the package as a devDependency, `bun add -d
 hoisted where the tests can find it. `wiz scry add` says so when it is
 missing.
 
-## Measuring
+## Evaluating
 
-`Rules.measure({ ids, tools })` runs each rule on its cases with a real
+`Rules.evaluate({ ids, tools })` runs each rule on its cases with a real
 decider, the way a check would: what a `scry-ignore` comment excuses and
 what falls under the threshold are not findings. A bad case is right when
-something is found in it, a good one when nothing is. `wiz scry measure
+something is found in it, a good one when nothing is. `wiz scry eval
 [ids]` prints the score per rule, then each case a rule got wrong and why.
-It is how a question's wording, a threshold, or a model is tuned: measure,
-change one thing, measure again. Every case of every rule runs at once, so
+It is how a question's wording, a threshold, or a model is tuned: evaluate,
+change one thing, evaluate again. Every case of every rule runs at once, so
 the decider batches them as it would a check.
 
 ## A check
@@ -287,7 +287,7 @@ about costs nothing.
 ## Thresholds and ignores
 
 A finding under its rule's `threshold` is dropped. Raise the threshold for a
-rule that reports too much, lower it for one that misses, and measure
+rule that reports too much, lower it for one that misses, and evaluate
 after either.
 
 Code excuses itself from a rule with a `scry-ignore <id>: <reason>` comment

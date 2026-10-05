@@ -175,18 +175,18 @@ export class Rules {
 	 * under the threshold are not findings. Every case of every rule at once,
 	 * so a decider batches them as it would a check.
 	 */
-	async measure(opts: MeasureOptions): Promise<Measurement[]> {
+	async evaluate(opts: EvaluateOptions): Promise<Evaluation[]> {
 		const ids = opts.ids ?? [];
 		for (const id of ids) {
 			if (this.get(id) === undefined) {
 				throw new RuleError(`no rule "${id}" in ${RULES_ROOT}`);
 			}
 		}
-		const measured = this.all.filter(
+		const evaluated = this.all.filter(
 			(declared) => ids.length === 0 || ids.includes(declared.id),
 		);
 		return Promise.all(
-			measured.map(async (declared): Promise<Measurement> => {
+			evaluated.map(async (declared): Promise<Evaluation> => {
 				const rule = declared.build(opts.tools);
 				const cases = await Cases.load(
 					`${this.dir}/${RULES_ROOT}/${declared.id}`,
@@ -311,13 +311,13 @@ export interface Scored {
 }
 
 /** A rule's score on its cases. */
-export interface Measurement {
+export interface Evaluation {
 	rule: string;
 	cases: Scored[];
 }
 
-/** Which rules to measure, and what to build them with. */
-export interface MeasureOptions {
+/** Which rules to evaluate, and what to build them with. */
+export interface EvaluateOptions {
 	/** Rule ids; every rule when empty. */
 	ids?: readonly string[];
 	tools: Tools;

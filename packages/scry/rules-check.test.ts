@@ -188,12 +188,12 @@ describe("Rules.check", () => {
 		);
 		await write(".wiz/scry/no-bar/evals/b.good.ts", "Bar\n");
 
-		const measured = await (await Rules.load(root, { fs })).measure({
+		const evaluated = await (await Rules.load(root, { fs })).evaluate({
 			tools: { decider: new FakeDecider() },
 		});
 
 		expect(
-			measured.map(({ rule, cases }) => [
+			evaluated.map(({ rule, cases }) => [
 				rule,
 				cases.map(({ name, kind, findings }) => [
 					name,
@@ -222,14 +222,17 @@ describe("Rules.check", () => {
 		await write(".wiz/scry/fragile/evals/b.bad.ts", "b\n");
 		const rules = await Rules.load(root, { fs });
 
-		const [measured] = await rules.measure({
+		const [evaluated] = await rules.evaluate({
 			ids: ["fragile"],
 			tools: { decider: new FakeDecider() },
 		});
 
-		expect(measured?.cases.map(({ error }) => error)).toEqual(["boom", "boom"]);
+		expect(evaluated?.cases.map(({ error }) => error)).toEqual([
+			"boom",
+			"boom",
+		]);
 		await expect(
-			rules.measure({ ids: ["nope"], tools: { decider: new FakeDecider() } }),
+			rules.evaluate({ ids: ["nope"], tools: { decider: new FakeDecider() } }),
 		).rejects.toThrow('no rule "nope" in .wiz/scry');
 	});
 });

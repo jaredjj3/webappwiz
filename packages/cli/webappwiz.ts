@@ -10,8 +10,8 @@ import { remove as removeCredential } from "./creds/remove";
 import { version } from "./package.json";
 import { add as addRule } from "./scry/add";
 import { check } from "./scry/check";
+import { evaluate } from "./scry/eval";
 import { list as listRules } from "./scry/list";
-import { measure } from "./scry/measure";
 import { remove as removeRule } from "./scry/remove";
 import { test as testRules } from "./scry/test";
 import { update as updateRules } from "./scry/update";
@@ -90,7 +90,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.action((opts, { log, fs, ps }) => testRules({ ...opts, log, fs, ps }));
 
 	scry
-		.command("measure")
+		.command("eval")
 		.description(
 			"score each rule on its labeled cases: its evals and its RULE.md examples",
 		)
@@ -111,7 +111,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "text or json (default: text)",
 		})
 		.use(timed())
-		.action((opts, { log, fs, ps }) => measure({ ...opts, log, fs, ps }));
+		.action((opts, { log, fs, ps }) => evaluate({ ...opts, log, fs, ps }));
 
 	scry
 		.command("why")

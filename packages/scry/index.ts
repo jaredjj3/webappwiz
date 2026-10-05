@@ -49,9 +49,9 @@ export {
 export { RuleError } from "./rule-error";
 export {
 	type CheckOptions,
+	type EvaluateOptions,
+	type Evaluation,
 	type LoadOptions,
-	type Measurement,
-	type MeasureOptions,
 	type Problem,
 	type Report,
 	Rules,

@@ -35,7 +35,7 @@ run and name every broken rule at once.
 
 `RULE.md` is for whoever fixes a finding, person or agent: what counts, what
 does not, and why, plainly, with a short example when one helps. Nothing
-reads it but people and agents; the cases the check is tested and measured
+reads it but people and agents; the cases the check is tested and evaluated
 on are in `evals/`. A rule copied from the catalog keeps a `version:` in its
 frontmatter, which says which release it came from.
 
@@ -48,7 +48,7 @@ find and replace. When you touch one of those files, rename its comments.
 
 Run the CLI with `bunx @webappwiz/cli scry`, which checks, or
 `bunx @webappwiz/cli scry <command>`: `list`, `add <id>`, `add --recommended`,
-`update`, `remove <id>`, `test [ids]`, `measure [ids]`, `why <path:line>`.
+`update`, `remove <id>`, `test [ids]`, `eval [ids]`, `why <path:line>`.
 `scry --help` says the rest. A project from before scry, with rules in
 `.wiz/rules`, moves them with `bunx @webappwiz/cli update`.
 
@@ -136,14 +136,14 @@ and adding the rule are two pieces of work; say which you are doing.
 4. Write its labeled cases (see Cases).
 5. Write its `rule.ts` (see The check) and its `rule.test.ts` (see Tests).
 6. Run `wiz scry list`, which loads every rule's class and names what is
-   wrong with its settings, then `wiz scry test <id>`, then `wiz scry measure
+   wrong with its settings, then `wiz scry test <id>`, then `wiz scry eval
    <id>`, and fix what they report.
 
 ## Updating a rule
 
 Edit it, and check the project's tooling again when what it asks changes.
 Keep its settings, cases, check and tests in step with its prose, and run
-`wiz scry test <id>` and `wiz scry measure <id>` after. A rule copied from
+`wiz scry test <id>` and `wiz scry eval <id>` after. A rule copied from
 the catalog takes local edits, but `wiz scry update` overwrites them; say so
 before editing one that carries a `version`, and offer to drop that line so
 the copy becomes the project's own.
@@ -169,7 +169,7 @@ Write a few of each for every rule:
   does not apply to.
 - No comment says which a case is.
 
-A check never checks them. When `wiz scry measure` gets one wrong, change
+A check never checks them. When `wiz scry eval` gets one wrong, change
 the rule's check, question or `threshold`, not the case, unless the case was
 wrong by the rule's own wording.
 
@@ -291,11 +291,11 @@ describe("comments-say-why", () => {
 `Cases.load(import.meta.dir)` reads the rule's `evals/`. `FakeDecider(answers, otherwise)` answers with the
 probability under the first key the span's text contains, else
 `otherwise`, and keeps what it was `asked`. A fake tests the rule's code;
-`wiz scry measure` tests its questions against the real model.
+`wiz scry eval` tests its questions against the real model.
 
 The tests import `@webappwiz/scry`, so the project lists it as a
 devDependency (`bun add -d @webappwiz/scry`); `wiz scry add` says so when it
-does not. `wiz scry test [ids]` runs the tests. `wiz scry measure [ids]` runs each
+does not. `wiz scry test [ids]` runs the tests. `wiz scry eval [ids]` runs each
 rule on its cases with the configured model and prints how many it got
 right, then each case it missed or falsely flagged. Tune a question's
-wording or a threshold there: change one thing, measure again.
+wording or a threshold there: change one thing, evaluate again.

@@ -16,7 +16,7 @@ export interface CasesOptions {
 
 /**
  * A rule's labeled cases: the files in its `evals/`, labeled by name. What a
- * rule's tests check it against, and what `wiz scry measure` scores it on.
+ * rule's tests check it against, and what `wiz scry eval` scores it on.
  */
 export class Cases {
 	private constructor(readonly all: readonly Case[]) {}

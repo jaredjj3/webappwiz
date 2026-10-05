@@ -10,7 +10,7 @@ bunx @webappwiz/cli skills add scry        # install an agent skill
 bunx @webappwiz/cli skills update          # refresh the ones already installed
 bunx @webappwiz/cli scry                   # check a change against the rules
 bunx @webappwiz/cli scry test              # run the tests beside each rule
-bunx @webappwiz/cli scry measure           # score the rules on their labeled cases
+bunx @webappwiz/cli scry eval              # score the rules on their labeled cases
 bunx @webappwiz/cli scry why <path:line>   # what a model was asked about a line
 bunx @webappwiz/cli scry list              # every rule there is, and what you have
 bunx @webappwiz/cli scry add <id>          # copy a shipped rule in
@@ -112,10 +112,10 @@ finding with its `confidence`, and `--jobs` overrides how many requests run
 at once. Rules with no `rule.ts` yet check nothing, and the report names
 them.
 
-### Testing and measuring rules
+### Testing and evaluating rules
 
 ```
-$ bunx @webappwiz/cli scry measure
+$ bunx @webappwiz/cli scry eval
 rule                 right   missed   false alarms
 comments-say-why     5/6     -        1
 no-em-dashes         9/9     -        -
@@ -129,7 +129,7 @@ wrong
 `scry test [ids]` runs the tests beside each rule, which check its code with
 a fake model. They import `@webappwiz/scry`, so a project adds it as a
 devDependency, and `add` says so when the project's `package.json` lacks
-it. `scry measure [ids]` runs each rule on its labeled cases with
+it. `scry eval [ids]` runs each rule on its labeled cases with
 the real one: the files in its `evals/`, named `<name>.good.<ext>` and
 `<name>.bad.<ext>`. A bad case is right when the rule reports something in it, a good
 one when it reports nothing. Run it after changing a rule's question or

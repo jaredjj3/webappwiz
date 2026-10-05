@@ -6,9 +6,9 @@ import { FakeJudge, ruleSource } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
-import { measure } from "./measure";
+import { evaluate } from "./eval";
 
-describe("wiz scry measure", () => {
+describe("wiz scry eval", () => {
 	const fs = new NodeFs();
 	let root: string;
 	let proc: FakeProcess;
@@ -43,7 +43,7 @@ describe("wiz scry measure", () => {
 		}`);
 
 	beforeEach(async () => {
-		root = await mkdtemp(join(tmpdir(), "scry-measure-"));
+		root = await mkdtemp(join(tmpdir(), "scry-eval-"));
 		proc = new FakeProcess();
 		proc.env = { PATH: process.env.PATH, HOME: root };
 		ps = new NodePs({ proc });
@@ -57,7 +57,7 @@ describe("wiz scry measure", () => {
 	});
 
 	const run = (ids: string[] = [], format = "text") =>
-		measure({ ids, format, log, fs, ps, providers });
+		evaluate({ ids, format, log, fs, ps, providers });
 
 	it("scores each rule on its cases, and names the ones it got wrong", async () => {
 		await install("no-bar", flagging("Bar"));
