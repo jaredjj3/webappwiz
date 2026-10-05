@@ -217,6 +217,11 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: false,
 			description: "read the value piped in on stdin instead of asking",
 		})
+		.option("device", z.boolean(), {
+			default: false,
+			description:
+				"keep it for every project on this device, not just this one",
+		})
 		.action((opts, { log, ps }) => addCredential({ ...opts, log, ps }));
 
 	credentials
@@ -224,6 +229,10 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.description("delete a credential's value from the store")
 		.arg("name", z.string(), {
 			description: "its environment variable name, as `creds list` shows it",
+		})
+		.option("device", z.boolean(), {
+			default: false,
+			description: "delete it from the device's store, not the project's",
 		})
 		.action((opts, { log, ps }) => removeCredential({ ...opts, log, ps }));
 

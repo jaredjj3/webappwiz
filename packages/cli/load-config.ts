@@ -1,5 +1,5 @@
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import type { Config, CredentialsConfig, Model, ScryConfig } from "./config";
+import type { Config, Model, ScryConfig } from "./config";
 
 /** `scry` with every default filled in. */
 export interface Settings {
@@ -41,25 +41,21 @@ export async function loadConfig(
 }
 
 /**
- * The credentials settings `wiz creds` and scry run with: the
- * project's `.wiz/config.ts`, then the user's own over it, their names
- * merged.
+ * The credentials `wiz creds` and scry know of: the project's
+ * `.wiz/config.ts`'s names and the user's own, merged. Where they are kept
+ * is `SystemSecretStore.forProject`'s to say.
  */
 export async function loadCredentialsConfig(
 	dir: string,
 	opts: LoadConfigOptions = {},
-): Promise<CredentialsConfig & { names: Record<string, string> }> {
+): Promise<{ names: Record<string, string> }> {
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
-	const settings: CredentialsConfig & { names: Record<string, string> } = {
-		names: {},
-	};
+	let names: Record<string, string> = {};
 	for (const { config } of await files(dir, fs, ps)) {
-		const layer = config.credentials ?? {};
-		settings.project = layer.project ?? settings.project;
-		settings.names = { ...settings.names, ...layer.names };
+		names = { ...names, ...config.credentials?.names };
 	}
-	return settings;
+	return { names };
 }
 
 /** The project's config, then the user's, each with where it came from. */

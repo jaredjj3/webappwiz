@@ -1,27 +1,61 @@
+import { basename, dirname } from "node:path";
+import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import type { SecretStore } from "./secret-store";
+
+/** What `SystemSecretStore.forProject` reads through; the real ones by default. */
+export interface ForProjectOptions {
+	fs?: Fs;
+	ps?: Ps;
+}
 
 /**
  * The operating system's own store, through `Bun.secrets`: the Keychain on
  * macOS, Credential Manager on Windows, and on Linux whatever secret service
- * daemon is running, such as GNOME Keyring or KWallet. Values are kept under
- * the service `webappwiz:<project>`, so each project's are its own, and
- * encrypted at rest by the system.
+ * daemon is running, such as GNOME Keyring or KWallet. A project's values are
+ * kept under the service `webappwiz:<project>`, so each project's are its
+ * own, and the device's under `webappwiz`, for keys that belong to the person
+ * rather than to one project. Encrypted at rest by the system. A headless
+ * server often has no secret service, which is why a deployed app reads the
+ * environment instead.
  */
 export class SystemSecretStore implements SecretStore {
-	/** The service its values are kept under. */
-	readonly service: string;
-	readonly label =
-		process.platform === "darwin"
-			? "the macOS Keychain"
-			: process.platform === "win32"
-				? "Windows Credential Manager"
-				: "the system's secret service";
+	readonly label: string;
 
-	constructor(
-		/** Names whose values these are: a repository's name, usually. */
-		readonly project: string,
+	private constructor(
+		/** The service its values are kept under. */
+		readonly service: string,
 	) {
-		this.service = `webappwiz:${project}`;
+		const system =
+			process.platform === "darwin"
+				? "the macOS Keychain"
+				: process.platform === "win32"
+					? "Windows Credential Manager"
+					: "the system's secret service";
+		this.label = `${system} as "${service}"`;
+	}
+
+	/** The store of the project named `project`, kept as `webappwiz:<project>`. */
+	static project(project: string): SystemSecretStore {
+		return new SystemSecretStore(`webappwiz:${project}`);
+	}
+
+	/**
+	 * The store of the project around `dir` (the working directory by
+	 * default). Its name is `credentials.project` from the user's
+	 * `~/.config/wiz/config.ts`, else from the project's `.wiz/config.ts`,
+	 * else the directory of the repository's main worktree, so a value added
+	 * from one git worktree is there in every other.
+	 */
+	static async forProject(
+		dir?: string,
+		opts: ForProjectOptions = {},
+	): Promise<SystemSecretStore> {
+		return SystemSecretStore.project(await projectName(dir, opts));
+	}
+
+	/** The device's store, kept as `webappwiz`, shared by every project. */
+	static device(): SystemSecretStore {
+		return new SystemSecretStore("webappwiz");
 	}
 
 	async get(name: string): Promise<string | undefined> {
@@ -37,4 +71,44 @@ export class SystemSecretStore implements SecretStore {
 	delete(name: string): Promise<boolean> {
 		return Bun.secrets.delete({ service: this.service, name });
 	}
+}
+
+/**
+ * What the project around `dir` keeps its credentials under: the last
+ * `credentials.project` among its config and the user's, else the directory
+ * of the repository's main worktree.
+ */
+async function projectName(
+	dir: string | undefined,
+	opts: ForProjectOptions = {},
+): Promise<string> {
+	const fs = opts.fs ?? new NodeFs();
+	const ps = opts.ps ?? new NodePs();
+	const from = dir ?? ps.cwd();
+	const { stdout, exitCode } = await ps.spawnCapture([
+		"git",
+		"-C",
+		from,
+		"rev-parse",
+		"--path-format=absolute",
+		"--show-toplevel",
+		"--git-common-dir",
+	]);
+	const [root, common] = exitCode === 0 ? stdout.trim().split("\n") : [];
+	const home = ps.env("XDG_CONFIG_HOME") ?? `${ps.env("HOME") ?? "~"}/.config`;
+	let named: string | undefined;
+	for (const path of [
+		`${root ?? from}/.wiz/config.ts`,
+		`${home}/wiz/config.ts`,
+	]) {
+		if (await fs.exists(path)) {
+			// failing beats falling back: a store silently chosen by the wrong
+			// name is a credential that is never found
+			const mod = (await import(path).catch((cause: unknown) => {
+				throw new Error(`could not load ${path}: ${cause}`, { cause });
+			})) as { default?: { credentials?: { project?: string } } };
+			named = mod.default?.credentials?.project ?? named;
+		}
+	}
+	return named ?? basename(common === undefined ? from : dirname(common));
 }

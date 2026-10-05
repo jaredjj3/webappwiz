@@ -36,8 +36,10 @@ export interface UpdateOptions {
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
-	/** Where credentials are saved; the system's store by default. */
+	/** The project's credential store; the system's by default. */
 	store?: SecretStore;
+	/** The device's credential store; the system's by default. */
+	deviceStore?: SecretStore;
 	/** The skills to refresh with; the ones this package ships by default. */
 	skills?: Skills;
 	/** The rules to refresh with; the catalog by default. */
@@ -97,6 +99,7 @@ export async function update(opts: UpdateOptions): Promise<void> {
 		fs,
 		ps: opts.ps ?? new NodePs(),
 		store: opts.store,
+		deviceStore: opts.deviceStore,
 	});
 	const missing = await credentials.missing();
 	if (missing.length > 0) {

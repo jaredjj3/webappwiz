@@ -203,29 +203,33 @@ bunx @webappwiz/cli update ./apps --version 1.4.0
 
 ```
 $ bunx @webappwiz/cli creds
-project shop, saved in the macOS Keychain as "webappwiz:shop"
-CLOUDFLARE_ACCOUNT_ID   store         Workers AI, for scry's clef and clef-flash
-CLOUDFLARE_API_TOKEN    store         Workers AI, for scry's clef and clef-flash
+project: the macOS Keychain as "webappwiz:shop"
+device:  the macOS Keychain as "webappwiz"
+CLOUDFLARE_ACCOUNT_ID   device        Workers AI, for scry's clef and clef-flash
+CLOUDFLARE_API_TOKEN    device        Workers AI, for scry's clef and clef-flash
 STRIPE_SECRET_KEY       missing       Stripe, for checkout
 TYPESAFE_API_KEY        environment   TypeSafe, for scry's jev models
 ```
 
 API keys and tokens, kept in the operating system's secret store through
 `Bun.secrets`: the Keychain on macOS, Credential Manager on Windows, and a
-running secret service such as GNOME Keyring or KWallet on Linux. Code reads
-them with [`webappwiz/creds`](../webappwiz/creds), the
-environment first and then the store, so CI and one-off overrides work as
-they always have.
+running secret service such as GNOME Keyring or KWallet on Linux. Each
+project has a store of its own, and the device has one every project
+shares, for keys that are yours rather than one project's. Code reads them
+with [`webappwiz/creds`](../webappwiz/creds), from whichever sources it
+lists. wiz itself reads the environment, then the project's store, then the
+device's, so CI hands scry its keys the way it always has.
 
-`list` shows every credential the project uses, where each would come
+`list` shows every credential the project uses, where wiz would read each
 from, and what it is for, and never a value, so an agent can run it to see
 what is missing. `add <NAME>` asks for the value at a prompt that shows
 nothing, so it is in no shell history, file or transcript, and refuses with
-no terminal: a person runs it. `--stdin` takes the value piped in instead,
-as in `op read op://vault/stripe | bunx @webappwiz/cli creds add
-STRIPE_SECRET_KEY --stdin`. `remove <NAME>` deletes one. There is no `get`:
-code that needs a value reads it itself, and nothing hands one to whoever
-runs a command.
+no terminal: a person runs it. `--device` keeps it in the device's store
+instead of the project's. `--stdin` takes the value piped in instead of
+asking, as in `op read op://vault/stripe | bunx @webappwiz/cli creds add
+STRIPE_SECRET_KEY --stdin`. `remove <NAME>` deletes one, from the device's
+store with `--device`. There is no `get`: code that needs a value reads it
+itself, and nothing hands one to whoever runs a command.
 
 The credentials wiz uses itself are always listed. A project names its own
 in `.wiz/config.ts`, and `add` refuses any name not there, so a typo fails
@@ -242,6 +246,8 @@ export default defineConfig({
 
 The project name defaults to the directory of the repository's main
 worktree, so a value added from one git worktree is there in all of them.
+`credentials.project` in your own `~/.config/wiz/config.ts` wins over the
+project's.
 
 ## skills
 

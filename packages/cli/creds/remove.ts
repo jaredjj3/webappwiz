@@ -7,18 +7,21 @@ import {
 
 export interface RemoveOptions extends ProjectCredentialsOptions {
 	name: string;
+	/** Deletes it from the device's store rather than the project's. */
+	device?: boolean;
 	log?: Logger;
 }
 
-/** Deletes a credential's value from the system's store. The environment is untouched. */
+/** Deletes a credential's value from one of the system's stores. The environment is untouched. */
 export async function remove(opts: RemoveOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
 	const project = await ProjectCredentials.open(ps.cwd(), { ...opts, ps });
 	project.known(opts.name);
+	const store = project.keptIn(opts.device ?? false);
 	log.info(
-		(await project.credentials.remove(opts.name))
-			? `deleted ${opts.name} from ${project.store.label} for the ${project.project} project`
-			: `${opts.name} was not in ${project.store.label} for the ${project.project} project`,
+		(await store.delete(opts.name))
+			? `deleted ${opts.name} from ${store.label}`
+			: `${opts.name} was not in ${store.label}`,
 	);
 }

@@ -54,10 +54,72 @@ here. A wrong module taken up is worse than one written twice.
 ## Credentials
 
 An API key, token or other secret a project's code needs comes from
-`webappwiz/creds`: the environment first, then the operating system's
-secret store (the Keychain, Credential Manager, or a Linux secret service).
-Never put one in a `.env` file, a config file, source, a test, or a command
-line, and never ask for one in chat.
+`webappwiz/creds`. Code reads it through `Credentials`, over a list of
+sources it chooses for each place the app runs; the first source with a
+value wins. Never put a secret in source, a config file, a test, or a
+command line, never write a `.env` file yourself, and never ask for one in
+chat.
+
+### Which source, where
+
+From most to least locked down:
+
+1. **The system's secret store**, `SystemSecretStore`: the Keychain,
+   Credential Manager, or a Linux secret service. Encrypted at rest, held
+   apart from files and the environment, so no file read, `env` dump, child
+   process, or agent sees a value. Use it on a person's machine, and only it.
+   - `SystemSecretStore.forProject()`, kept as `webappwiz:<project>`: keys
+     the app itself uses, like a Stripe test key. One project's keys are
+     never another's.
+   - `SystemSecretStore.device()`, kept as `webappwiz`: keys that belong to
+     the person and serve many projects, like the tokens scry runs on. Wider
+     reach, so only for keys that really are shared.
+2. **A hosted secrets manager** (1Password, Vault, AWS or GCP Secret
+   Manager), as a source of the app's own: any object with a `label` and an
+   async `get(name)`. Fetched at runtime and access-controlled. Use it where
+   the app is deployed, when the project has one.
+3. **The environment**, `Environment`: how CI, containers and hosting
+   platforms hand a deployed app its secrets. Every child process inherits
+   it, and it shows up in crash reports and debug dumps. Use it where the
+   app is deployed. On a person's machine it means exports in a shell
+   profile, which every program they run can read, so leave it out of the
+   development list.
+4. **A `.env` file**, `DotenvFile(path)`: plaintext on disk, one mistake
+   from being committed, and read by any tool or agent that opens it. Use it
+   only where a deploy target insists on one, never on a person's machine.
+   Under Bun, `.env` files are loaded into the environment already, so
+   `Environment` covers them there.
+
+How the app tells development from production, and which sources each
+lists, is the project's choice: ask the user when the project does not
+already say. The usual lists:
+
+```ts
+import {
+	Credentials,
+	Environment,
+	SystemSecretStore,
+} from "webappwiz/creds";
+
+const credentials =
+	process.env.APP_ENV === "development"
+		? new Credentials([
+				await SystemSecretStore.forProject(),
+				SystemSecretStore.device(),
+			])
+		: new Credentials([new Environment()]);
+const key = await credentials.require("STRIPE_SECRET_KEY");
+```
+
+`Credentials` is a source itself, so a fallback pattern of the project's
+own is a list of lists: `new Credentials([vault, new
+Credentials([new Environment(), new DotenvFile(".env")])])` reads the
+vault, then the environment, then the file. `forProject()` finds the
+store's name itself, so never write a project name into code. Take the
+`Credentials` as a dependency, so a test hands in one over
+`FakeSecretStore` from `webappwiz/creds/testing`.
+
+### Adding one
 
 1. Name it in `.wiz/config.ts`, by its environment variable name, with what
    it is for:
@@ -68,24 +130,13 @@ line, and never ask for one in chat.
    };
    ```
 
-2. Read it in code with `Credentials` over a `SystemSecretStore` named for
-   the project, which `bunx @webappwiz/cli creds list` prints on its
-   first line (`project <project>, saved in ...`). Take the `Credentials` as a
-   dependency, so a test hands in one over `FakeSecretStore`:
-
-   ```ts
-   import { Credentials, SystemSecretStore } from "webappwiz/creds";
-
-   const credentials = new Credentials(new SystemSecretStore("<project>"));
-   const key = await credentials.require("STRIPE_SECRET_KEY");
-   ```
-
-3. Run `bunx @webappwiz/cli creds list` to see which are missing. It
+2. Run `bunx @webappwiz/cli creds list` to see which are missing. It
    never prints a value. For each missing one, ask the user to run
-   `bunx @webappwiz/cli creds add <NAME>` themselves: it asks for the
-   value at a prompt that shows nothing, and refuses when there is no
-   terminal, so you cannot and should not run it for them. `credentials
-   remove <NAME>` deletes one.
+   `bunx @webappwiz/cli creds add <NAME>` themselves, with `--device` for a
+   key that is theirs rather than the project's: it asks for the value at a
+   prompt that shows nothing, and refuses when there is no terminal, so you
+   cannot and should not run it for them. `creds remove <NAME>` deletes
+   one.
 
 Nothing reads a value back out for you to see, and nothing should: do not
 print one, log one, or look one up with the system's own tools

@@ -10,6 +10,7 @@ describe("update", () => {
 	let log: MemoryLogger;
 	let ps: FakePs;
 	let store: FakeSecretStore;
+	let device: FakeSecretStore;
 
 	const manifest = (deps: Record<string, string>) =>
 		JSON.stringify({ name: "app", dependencies: deps }, null, "\t");
@@ -24,6 +25,7 @@ describe("update", () => {
 		fs,
 		ps,
 		store,
+		deviceStore: device,
 		skills: { arbor: { "SKILL.md": skill("1.0.0") } },
 	});
 
@@ -37,6 +39,7 @@ describe("update", () => {
 			CLOUDFLARE_API_TOKEN: "token",
 			TYPESAFE_API_KEY: "key",
 		});
+		device = new FakeSecretStore();
 		await fs.mkdir("/p");
 	});
 

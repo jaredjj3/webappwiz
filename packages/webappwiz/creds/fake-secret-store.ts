@@ -2,10 +2,12 @@ import type { SecretStore } from "./secret-store";
 
 /** A store that is a map, so a test can say what is kept and see what changed. */
 export class FakeSecretStore implements SecretStore {
-	readonly label = "a fake store";
 	readonly values: Map<string, string>;
 
-	constructor(values: Record<string, string> = {}) {
+	constructor(
+		values: Record<string, string> = {},
+		readonly label = "a fake store",
+	) {
 		this.values = new Map(Object.entries(values));
 	}
 

@@ -1,6 +1,6 @@
-import { basename, dirname } from "node:path";
 import {
 	Credentials,
+	Environment,
 	type SecretStore,
 	SystemSecretStore,
 } from "webappwiz/creds";
@@ -18,30 +18,30 @@ export const WIZ_CREDENTIALS: Record<string, string> = {
 export interface ProjectCredentialsOptions {
 	fs?: Fs;
 	ps?: Ps;
-	/** Where values are kept; the system's store under the project's name by default. */
+	/** The project's store; the system's, under the project's name, by default. */
 	store?: SecretStore;
+	/** The device's store, shared by every project; the system's by default. */
+	deviceStore?: SecretStore;
 }
 
 /**
  * The credentials of the project around a directory: which it uses, named
- * in its config and by wiz itself, and where their values come from.
+ * in its config and by wiz itself, and the two stores a person keeps them
+ * in. wiz reads the environment first, then the project's store, then the
+ * device's, so CI hands scry its keys the way it always has.
  */
 export class ProjectCredentials {
 	private constructor(
-		/** What the store keeps them under, as `webappwiz:<project>`. */
-		readonly project: string,
 		/** Every credential the project uses, by name, with what it is for. */
 		readonly names: ReadonlyMap<string, string>,
-		/** Where values a person adds are saved. */
+		/** Where values for this project alone are kept. */
 		readonly store: SecretStore,
+		/** Where values for every project on this device are kept. */
+		readonly device: SecretStore,
 		readonly credentials: Credentials,
 	) {}
 
-	/**
-	 * The project around `dir`. Its name is `credentials.project` from the
-	 * config, or else the directory of the repository's main worktree, so a
-	 * value added from one worktree is there in every other.
-	 */
+	/** The project around `dir`. */
 	static async open(
 		dir: string,
 		opts: ProjectCredentialsOptions = {},
@@ -53,32 +53,30 @@ export class ProjectCredentials {
 			"-C",
 			dir,
 			"rev-parse",
-			"--path-format=absolute",
 			"--show-toplevel",
-			"--git-common-dir",
 		]);
-		const [root, common] = exitCode === 0 ? stdout.trim().split("\n") : [];
-		const config = await loadCredentialsConfig(root ?? dir, { fs, ps });
-		const project =
-			config.project ?? basename(common === undefined ? dir : dirname(common));
-		const store = opts.store ?? new SystemSecretStore(project);
+		const root = (exitCode === 0 && stdout.trim().split("\n")[0]) || dir;
+		const config = await loadCredentialsConfig(root, { fs, ps });
+		const store =
+			opts.store ?? (await SystemSecretStore.forProject(dir, { fs, ps }));
+		const device = opts.deviceStore ?? SystemSecretStore.device();
 		return new ProjectCredentials(
-			project,
 			new Map(
 				Object.entries({ ...WIZ_CREDENTIALS, ...config.names }).toSorted(
 					([left], [right]) => left.localeCompare(right),
 				),
 			),
 			store,
-			new Credentials(store, { ps }),
+			device,
+			new Credentials([new Environment({ ps }), store, device]),
 		);
 	}
 
-	/** The credentials the project uses that neither the environment nor the store has. */
+	/** The credentials the project uses that no source has. */
 	async missing(): Promise<string[]> {
 		const missing: string[] = [];
 		for (const name of this.names.keys()) {
-			if ((await this.credentials.source(name)) === "missing") {
+			if ((await this.credentials.source(name)) === undefined) {
 				missing.push(name);
 			}
 		}
@@ -92,5 +90,10 @@ export class ProjectCredentials {
 				`${name} is not a credential this project uses: name it in .wiz/config.ts under credentials.names, beside ${[...this.names.keys()].join(", ")}`,
 			);
 		}
+	}
+
+	/** The project's store, or the device's when `device` is set. */
+	keptIn(device: boolean): SecretStore {
+		return device ? this.device : this.store;
 	}
 }

@@ -19,6 +19,7 @@ describe("wiz creds", () => {
 	let ps: NodePs;
 	let log: MemoryLogger;
 	let store: FakeSecretStore;
+	let device: FakeSecretStore;
 	let typed: string | undefined;
 	let asked: string[];
 	const input: SecretInput = {
@@ -45,7 +46,8 @@ describe("wiz creds", () => {
 		proc.env = { PATH: process.env.PATH, HOME: root };
 		ps = new NodePs({ proc });
 		log = new MemoryLogger();
-		store = new FakeSecretStore();
+		store = new FakeSecretStore({}, "the project's store");
+		device = new FakeSecretStore({}, "the device's store");
 		typed = "typed-value";
 		asked = [];
 		await fs.mkdir(`${root}/shop/.wiz`);
@@ -63,16 +65,18 @@ describe("wiz creds", () => {
 
 	it("lists every credential wiz and the project use, where each comes from, and never a value", async () => {
 		store.values.set("STRIPE_SECRET_KEY", "sk_live_secret");
+		device.values.set("CLOUDFLARE_API_TOKEN", "cf_secret");
 		proc.env.TYPESAFE_API_KEY = "ts_secret";
 
-		await list({ log, ps, store });
+		await list({ log, ps, store, deviceStore: device });
 
 		expect(printed()).toEqual(
 			[
-				'project shop, saved in a fake store as "webappwiz:shop"',
+				"project: the project's store",
+				"device:  the device's store",
 				"CLOUDFLARE_ACCOUNT_ID   missing       Workers AI, for scry's clef and clef-flash",
-				"CLOUDFLARE_API_TOKEN    missing       Workers AI, for scry's clef and clef-flash",
-				"STRIPE_SECRET_KEY       store         Stripe, for checkout",
+				"CLOUDFLARE_API_TOKEN    device        Workers AI, for scry's clef and clef-flash",
+				"STRIPE_SECRET_KEY       project       Stripe, for checkout",
 				"TYPESAFE_API_KEY        environment   TypeSafe, for scry's jev models",
 			].join("\n"),
 		);
@@ -85,14 +89,13 @@ describe("wiz creds", () => {
 			log,
 			ps,
 			store,
+			deviceStore: device,
 			input,
 		});
 
 		expect(asked).toEqual(["STRIPE_SECRET_KEY: "]);
 		expect(store.values.get("STRIPE_SECRET_KEY")).toEqual("typed-value");
-		expect(printed()).toEqual(
-			"saved STRIPE_SECRET_KEY to a fake store for the shop project",
-		);
+		expect(printed()).toEqual("saved STRIPE_SECRET_KEY to the project's store");
 	});
 
 	it("keeps a value piped in when asked to, trimmed", async () => {
@@ -102,6 +105,7 @@ describe("wiz creds", () => {
 			log,
 			ps,
 			store,
+			deviceStore: device,
 			input,
 		});
 
@@ -112,7 +116,15 @@ describe("wiz creds", () => {
 		typed = undefined;
 
 		await expect(
-			add({ name: "STRIPE_SECRET_KEY", stdin: false, log, ps, store, input }),
+			add({
+				name: "STRIPE_SECRET_KEY",
+				stdin: false,
+				log,
+				ps,
+				store,
+				deviceStore: device,
+				input,
+			}),
 		).rejects.toThrow(
 			"no terminal to ask for STRIPE_SECRET_KEY on: ask a person to run `bunx @webappwiz/cli creds add STRIPE_SECRET_KEY` themselves",
 		);
@@ -121,7 +133,15 @@ describe("wiz creds", () => {
 
 	it("refuses a name the project does not use, before asking for a value", async () => {
 		await expect(
-			add({ name: "STRIPE_SECRET", stdin: false, log, ps, store, input }),
+			add({
+				name: "STRIPE_SECRET",
+				stdin: false,
+				log,
+				ps,
+				store,
+				deviceStore: device,
+				input,
+			}),
 		).rejects.toThrow(
 			"STRIPE_SECRET is not a credential this project uses: name it in .wiz/config.ts under credentials.names",
 		);
@@ -131,38 +151,61 @@ describe("wiz creds", () => {
 	it("removes a kept value, and says when there was none", async () => {
 		store.values.set("STRIPE_SECRET_KEY", "sk_live_secret");
 
-		await remove({ name: "STRIPE_SECRET_KEY", log, ps, store });
-		await remove({ name: "STRIPE_SECRET_KEY", log, ps, store });
+		await remove({
+			name: "STRIPE_SECRET_KEY",
+			log,
+			ps,
+			store,
+			deviceStore: device,
+		});
+		await remove({
+			name: "STRIPE_SECRET_KEY",
+			log,
+			ps,
+			store,
+			deviceStore: device,
+		});
 
 		expect(printed()).toEqual(
 			[
-				"deleted STRIPE_SECRET_KEY from a fake store for the shop project",
-				"STRIPE_SECRET_KEY was not in a fake store for the shop project",
+				"deleted STRIPE_SECRET_KEY from the project's store",
+				"STRIPE_SECRET_KEY was not in the project's store",
 			].join("\n"),
 		);
 	});
 
-	it("names the project after its main worktree, so every worktree shares one store", async () => {
-		await fs.write(`${root}/shop/README.md`, "shop\n");
-		await git("add", ".");
-		await git(
-			"-c",
-			"user.email=t@example.com",
-			"-c",
-			"user.name=T",
-			"commit",
-			"-qm",
-			"base",
-		);
-		await git("worktree", "add", "-q", `${root}/shop-task`);
+	it("keeps one for every project in the device's store, and warns when the project's wins", async () => {
+		store.values.set("STRIPE_SECRET_KEY", "sk_project");
 
-		const project = await ProjectCredentials.open(`${root}/shop-task`, {
+		await add({
+			name: "STRIPE_SECRET_KEY",
+			stdin: false,
+			device: true,
+			log,
+			ps,
+			store,
+			deviceStore: device,
+			input,
+		});
+
+		expect(device.values.get("STRIPE_SECRET_KEY")).toEqual("typed-value");
+		expect(printed()).toEqual("saved STRIPE_SECRET_KEY to the device's store");
+		expect(log.entries.at(-1)?.message).toEqual(
+			"STRIPE_SECRET_KEY is also in the project's store, which wiz reads first",
+		);
+	});
+
+	it("reads the project's config from anywhere in the repository", async () => {
+		await fs.mkdir(`${root}/shop/src`);
+		proc.chdir(`${root}/shop/src`);
+
+		const project = await ProjectCredentials.open(ps.cwd(), {
 			fs,
 			ps,
 			store,
+			deviceStore: device,
 		});
 
-		expect(project.project).toEqual("shop");
 		expect([...project.names.keys()]).toContain("STRIPE_SECRET_KEY");
 	});
 });

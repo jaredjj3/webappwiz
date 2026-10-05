@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { Clef, Jev } from "@webappwiz/scry";
-import { Credentials } from "webappwiz/creds";
+import { Credentials, Environment } from "webappwiz/creds";
 import { FakeSecretStore } from "webappwiz/creds/testing";
 import { FakePs } from "webappwiz/system/testing";
 import { HostedProviders } from "./providers";
@@ -13,7 +13,7 @@ describe("HostedProviders", () => {
 		const ps = new FakePs();
 		ps.setEnv(env);
 		return new HostedProviders(
-			new Credentials(new FakeSecretStore(kept), { ps }),
+			new Credentials([new Environment({ ps }), new FakeSecretStore(kept)]),
 		);
 	};
 

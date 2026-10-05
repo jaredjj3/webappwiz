@@ -104,7 +104,7 @@ describe("loadConfig", () => {
 		);
 	});
 
-	it("merges the credentials both configs name, the user's project name over the project's", async () => {
+	it("merges the credentials both configs name", async () => {
 		await fs.mkdir(`${root}/p/.wiz`);
 		await fs.write(
 			`${root}/p/.wiz/config.ts`,
@@ -117,7 +117,6 @@ describe("loadConfig", () => {
 		);
 
 		expect(await loadCredentialsConfig(`${root}/p`, { fs, ps })).toEqual({
-			project: "shop",
 			names: { STRIPE_SECRET_KEY: "Stripe", SENTRY_TOKEN: "Sentry" },
 		});
 	});

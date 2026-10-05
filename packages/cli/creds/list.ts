@@ -11,8 +11,8 @@ export interface ListOptions extends ProjectCredentialsOptions {
 }
 
 /**
- * Every credential the project uses, where its value would come from, and
- * what it is for. Never a value: an agent can run this to see what is
+ * Every credential the project uses, where wiz would read its value from,
+ * and what it is for. Never a value: an agent can run this to see what is
  * missing without being shown a secret.
  */
 export async function list(opts: ListOptions = {}): Promise<void> {
@@ -22,17 +22,22 @@ export async function list(opts: ListOptions = {}): Promise<void> {
 	const rows: string[][] = [];
 	for (const [name, purpose] of project.names) {
 		const source = await project.credentials.source(name);
-		rows.push([
-			name,
-			source === "missing" ? color.yellow(source) : color.green(source),
-			color.dim(purpose),
-		]);
+		const where =
+			source === undefined
+				? color.yellow("missing")
+				: color.green(
+						source === project.store
+							? "project"
+							: source === project.device
+								? "device"
+								: "environment",
+					);
+		rows.push([name, where, color.dim(purpose)]);
 	}
 	log.info(
 		[
-			color.dim(
-				`project ${project.project}, saved in ${project.store.label} as "webappwiz:${project.project}"`,
-			),
+			color.dim(`project: ${project.store.label}`),
+			color.dim(`device:  ${project.device.label}`),
 			...table(rows),
 		].join("\n"),
 	);

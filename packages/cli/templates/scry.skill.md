@@ -82,9 +82,10 @@ A rule's check asks one decision model, `clef` unless something says
 otherwise. `clef` and `clef-flash` run on Cloudflare Workers AI and need
 `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; a Jev like `jev-latest`
 runs on TypeSafe and needs `TYPESAFE_API_KEY`. They come from the
-environment, or else the system's secret store. When `wiz scry` says one is
-missing, ask the user to run `bunx @webappwiz/cli creds add <NAME>`
-themselves, which asks for the value at a hidden prompt. Never ask for a
+environment, else the project's store, else the device's. When `wiz scry` says one is
+missing, ask the user to run `bunx @webappwiz/cli creds add <NAME> --device`
+themselves, which asks for the value at a hidden prompt and keeps it for
+every project on their machine. Never ask for a
 value, set one, or look one up; `bunx @webappwiz/cli creds list` shows what
 is there without showing any. A rule that asks nothing needs no model and
 no credentials.

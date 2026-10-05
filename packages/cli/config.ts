@@ -23,9 +23,10 @@ export interface ScryConfig {
 /** Which credentials a project keeps, and where. */
 export interface CredentialsConfig {
 	/**
-	 * What the operating system's store keeps them under, as
+	 * What the operating system's store keeps the project's under, as
 	 * `webappwiz:<project>`. The repository's directory name when not set,
-	 * which every git worktree of it shares.
+	 * which every git worktree of it shares. The user's config wins over the
+	 * project's.
 	 */
 	project?: string;
 	/**

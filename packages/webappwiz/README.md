@@ -24,7 +24,7 @@ the rest unread.
 | [`webappwiz/assert`](./assert) | The invariants a type cannot state, checked at runtime |
 | [`webappwiz/browser`](./browser) | The browser platform behind interfaces: scrolling, animation frames, device and visibility |
 | [`webappwiz/cmd`](./cmd) | Builds a CLI: subcommands, typed positional arguments and flag options |
-| [`webappwiz/creds`](./creds) | API keys and tokens read from the environment, else the operating system's secret store |
+| [`webappwiz/creds`](./creds) | API keys and tokens, read from the environment, a `.env` file or the operating system's secret store, as the caller lists |
 | [`webappwiz/disposable`](./disposable) | Resources that must be released, and stacks that release them in reverse order |
 | [`webappwiz/events`](./events) | Typed event dispatch, with a read-only view to hand to whoever listens |
 | [`webappwiz/geometry`](./geometry) | The 2D value types a web app keeps rewriting: `Rect`, `Position` and a `QuadTree` |
