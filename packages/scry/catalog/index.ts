@@ -18,6 +18,10 @@ import exportLeadsTheFile from "./export-leads-the-file/RULE.md" with {
 import ExportLeadsTheFile from "./export-leads-the-file/rule";
 import fakesOverMocks from "./fakes-over-mocks/RULE.md" with { type: "text" };
 import FakesOverMocks from "./fakes-over-mocks/rule";
+import frameworksOnlyTranslate from "./frameworks-only-translate/RULE.md" with {
+	type: "text",
+};
+import FrameworksOnlyTranslate from "./frameworks-only-translate/rule";
 import matchersOverTestLogic from "./matchers-over-test-logic/RULE.md" with {
 	type: "text",
 };
@@ -70,6 +74,7 @@ const CODE: Record<string, string[]> = {
 	"doc-comments-address-users": ["rule.test.ts", "rule.ts"],
 	"export-leads-the-file": ["rule.test.ts", "rule.ts"],
 	"fakes-over-mocks": ["rule.test.ts", "rule.ts"],
+	"frameworks-only-translate": ["rule.test.ts", "rule.ts"],
 	"matchers-over-test-logic": ["rule.test.ts", "rule.ts"],
 	"named-options-last": ["rule.test.ts", "rule.ts"],
 	"no-em-dashes": ["rule.test.ts", "rule.ts"],
@@ -154,6 +159,17 @@ const EVALS: Record<string, string[]> = {
 		"report-exporter.test.bad.ts",
 		"theme-preference.test.bad.ts",
 		"user-signup.test.bad.ts",
+	],
+	"frameworks-only-translate": [
+		"account-menu.good.tsx",
+		"invoice-routes.good.ts",
+		"invoice-service.bad.ts",
+		"prune.bad.ts",
+		"prune.good.ts",
+		"todo-editor.bad.tsx",
+		"todo-editor.good.tsx",
+		"todo-routes.bad.ts",
+		"todo-routes.good.ts",
 	],
 	"matchers-over-test-logic": [
 		"cart-add.test.bad.ts",
@@ -350,6 +366,10 @@ export const catalog: Record<string, ShippedRule> = withFiles({
 	"fakes-over-mocks": {
 		rule: FakesOverMocks,
 		files: { "RULE.md": fakesOverMocks },
+	},
+	"frameworks-only-translate": {
+		rule: FrameworksOnlyTranslate,
+		files: { "RULE.md": frameworksOnlyTranslate },
 	},
 	"matchers-over-test-logic": {
 		rule: MatchersOverTestLogic,
