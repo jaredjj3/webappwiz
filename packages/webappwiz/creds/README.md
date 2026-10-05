@@ -72,7 +72,12 @@ bunx @webappwiz/cli creds add STRIPE_SECRET_KEY
 bunx @webappwiz/cli creds add CLOUDFLARE_API_TOKEN --device
 bunx @webappwiz/cli creds list
 bunx @webappwiz/cli creds remove STRIPE_SECRET_KEY
+bunx @webappwiz/cli creds run -- bunx prisma migrate dev
 ```
+
+`creds run` is for tools that read only their environment: it hands the
+command what the stores keep, for that run alone, and never an export of a
+credential the project names.
 
 The project's name is `credentials.project` from your own
 `~/.config/wiz/config.ts`, else from the project's `.wiz/config.ts`, else

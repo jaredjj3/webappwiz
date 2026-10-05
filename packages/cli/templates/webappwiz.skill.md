@@ -111,6 +111,12 @@ const credentials =
 const key = await credentials.require("STRIPE_SECRET_KEY");
 ```
 
+A tool that reads only its environment, like Prisma, Vite or `wrangler`,
+never calls `Credentials`. In development, run it through
+`bunx @webappwiz/cli creds run -- <command>`, which hands it the stored
+keys for that run alone, usually from a `package.json` script; never reach
+for a `.env` file or an export to feed it.
+
 `Credentials` is a source itself, so a fallback pattern of the project's
 own is a list of lists: `new Credentials([vault, new
 Credentials([new Environment(), new DotenvFile(".env")])])` reads the

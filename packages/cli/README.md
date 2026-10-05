@@ -20,6 +20,7 @@ bunx @webappwiz/cli scry remove <id>       # delete a rule
 bunx @webappwiz/cli creds                   # the API keys the project uses, never their values
 bunx @webappwiz/cli creds add <NAME>          # keep one, typed at a hidden prompt
 bunx @webappwiz/cli creds remove <NAME>
+bunx @webappwiz/cli creds run -- <command>    # run it with the stored keys in its environment
 ```
 
 ## scry
@@ -230,6 +231,22 @@ asking, as in `op read op://vault/stripe | bunx @webappwiz/cli creds add
 STRIPE_SECRET_KEY --stdin`. `remove <NAME>` deletes one, from the device's
 store with `--device`. There is no `get`: code that needs a value reads it
 itself, and nothing hands one to whoever runs a command.
+
+`run -- <command>` is for tools that read only their environment, like
+Prisma, Vite or `wrangler`: it runs the command with every credential the
+project names that either store keeps, in its environment for that run
+alone, and exits with the command's code. A credential the project names
+comes only from a store: an exported one is replaced by the stored value,
+or taken out when no store has it, so a stray export is never what a dev
+run reads. The rest of the environment passes through. It names on stderr
+any credential neither store has, and runs anyway.
+
+```bash
+bunx @webappwiz/cli creds run -- bunx prisma migrate dev
+```
+
+Put it in a `package.json` script, as in `"dev": "wiz creds run -- vite"`,
+and no `.env` file is needed in development.
 
 The credentials wiz uses itself are always listed. A project names its own
 in `.wiz/config.ts`, and `add` refuses any name not there, so a typo fails

@@ -33,6 +33,11 @@ export interface Ps {
 export interface SpawnOptions {
 	/** Added to the current environment, not a replacement for it. */
 	env?: Record<string, string>;
+	/**
+	 * Taken out of the environment the child inherits, so it sees them unset
+	 * rather than empty. `env` wins over it for a name in both.
+	 */
+	unset?: string[];
 	cwd?: string;
 	/**
 	 * Written to the child's stdin, which is then closed. Without it the child

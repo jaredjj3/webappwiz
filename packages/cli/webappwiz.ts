@@ -7,6 +7,7 @@ import { z } from "zod";
 import { add as addCredential } from "./creds/add";
 import { list as listCredentials } from "./creds/list";
 import { remove as removeCredential } from "./creds/remove";
+import { run as runWithCredentials } from "./creds/run";
 import { version } from "./package.json";
 import { add as addRule } from "./scry/add";
 import { check } from "./scry/check";
@@ -235,6 +236,18 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "delete it from the device's store, not the project's",
 		})
 		.action((opts, { log, ps }) => removeCredential({ ...opts, log, ps }));
+
+	credentials
+		.command("run")
+		.description(
+			"run a command with the project's stored credentials in its environment, for that run only",
+		)
+		.rest("command", z.string(), {
+			description: "the command and its arguments, after a `--`",
+		})
+		.passThroughOptions()
+		.allowUnknownOption()
+		.action((opts, { log, ps }) => runWithCredentials({ ...opts, log, ps }));
 
 	const skills = program
 		.group("skills")

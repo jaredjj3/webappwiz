@@ -10,6 +10,7 @@ import { add } from "./add";
 import { list } from "./list";
 import { ProjectCredentials } from "./project-credentials";
 import { remove } from "./remove";
+import { run } from "./run";
 import type { SecretInput } from "./secret-input";
 
 describe("wiz creds", () => {
@@ -207,5 +208,35 @@ describe("wiz creds", () => {
 		});
 
 		expect([...project.names.keys()]).toContain("STRIPE_SECRET_KEY");
+	});
+	it("runs a command with what the stores keep, never an export they lack, and exits with its code", async () => {
+		store.values.set("STRIPE_SECRET_KEY", "sk_project");
+		device.values.set("CLOUDFLARE_API_TOKEN", "cf_device");
+		proc.env.CLOUDFLARE_API_TOKEN = "cf_exported";
+		proc.env.TYPESAFE_API_KEY = "ts_exported";
+
+		await run({
+			command: [
+				"sh",
+				"-c",
+				'printf "%s %s %s" "$STRIPE_SECRET_KEY" "$CLOUDFLARE_API_TOKEN" "$TYPESAFE_API_KEY" > seen; exit 3',
+			],
+			log,
+			ps,
+			store,
+			deviceStore: device,
+		});
+
+		expect(await fs.read(`${root}/shop/seen`)).toEqual("sk_project cf_device ");
+		expect(proc.lastExit()).toEqual(3);
+		expect(log.entries.at(-1)?.message).toEqual(
+			"not in either store, so sh runs without them: CLOUDFLARE_ACCOUNT_ID, TYPESAFE_API_KEY",
+		);
+	});
+
+	it("refuses to run nothing", async () => {
+		await expect(
+			run({ command: [], log, ps, store, deviceStore: device }),
+		).rejects.toThrow("no command to run");
 	});
 });

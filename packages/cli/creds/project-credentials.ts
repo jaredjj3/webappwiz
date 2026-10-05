@@ -83,6 +83,29 @@ export class ProjectCredentials {
 		return missing;
 	}
 
+	/**
+	 * Every credential the project uses that a person keeps in the project's
+	 * store or the device's, by name, and the names neither has. The
+	 * environment is not read: these are what the stores add to it.
+	 */
+	async stored(): Promise<{
+		values: Record<string, string>;
+		missing: string[];
+	}> {
+		const stores = new Credentials([this.store, this.device]);
+		const values: Record<string, string> = {};
+		const missing: string[] = [];
+		for (const name of this.names.keys()) {
+			const value = await stores.get(name);
+			if (value === undefined) {
+				missing.push(name);
+			} else {
+				values[name] = value;
+			}
+		}
+		return { values, missing };
+	}
+
 	/** Throws, naming what is known, unless the project uses `name`. */
 	known(name: string): void {
 		if (!this.names.has(name)) {

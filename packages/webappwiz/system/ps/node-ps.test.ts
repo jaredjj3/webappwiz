@@ -47,6 +47,20 @@ describe("NodePs", () => {
 		expect(stdout).toBe("kept|new");
 	});
 
+	it("takes unset names out of what the child inherits, unless env gives them", async () => {
+		proc.env = { INHERITED: "kept", ADDED: "old" };
+		const ps = new NodePs({ proc: proc });
+
+		const dropped = await ps.spawnCapture(SHOW, { unset: ["INHERITED"] });
+		const given = await ps.spawnCapture(SHOW, {
+			unset: ["ADDED"],
+			env: { ADDED: "new" },
+		});
+
+		expect(dropped.stdout).toBe("|old");
+		expect(given.stdout).toBe("kept|new");
+	});
+
 	it("inherits the whole environment when no env is passed", async () => {
 		proc.env = { INHERITED: "kept" };
 

@@ -89,9 +89,13 @@ export class NodePs implements Ps {
 		timeout?: number;
 		signal?: AbortSignal;
 	} {
+		const env: NodeJS.ProcessEnv = { ...this.proc.env };
+		for (const name of opts?.unset ?? []) {
+			delete env[name];
+		}
 		return {
 			cwd: opts?.cwd,
-			env: { ...this.proc.env, ...opts?.env },
+			env: { ...env, ...opts?.env },
 			timeout: opts?.timeoutMs,
 			signal: opts?.signal,
 		};
