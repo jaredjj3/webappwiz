@@ -176,6 +176,14 @@ function exitCode(child: ChildProcess): Promise<number> {
 			resolve(exited ?? shellCode(code, signal));
 		});
 		child.on("error", (error) => {
+			// Once the watch has taken the exit status, the runtime's own wait
+			// finds no child: the exit is known, and still worth its drain.
+			if (
+				exited !== null &&
+				(error as NodeJS.ErrnoException).code === "ECHILD"
+			) {
+				return;
+			}
 			stop();
 			reject(error);
 		});

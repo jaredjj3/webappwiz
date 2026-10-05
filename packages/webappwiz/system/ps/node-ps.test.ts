@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { FakeProcess } from "../testing";
 import { NodePs } from "./node-ps";
+import { reap } from "./reap";
 
 describe("NodePs", () => {
 	const SHOW = ["sh", "-c", 'printf \'%s|%s\' "$INHERITED" "$ADDED"'];
@@ -66,6 +67,20 @@ describe("NodePs", () => {
 		expect(exitCode).toBe(137); // 128 + SIGKILL, the way a shell reports it
 	});
 
+	it.if(reap !== null)(
+		"reports the exit it reaped itself while the runtime was busy",
+		async () => {
+			const ps = new NodePs({ proc: proc });
+			// The runtime sees a process's first child exit however busy it is.
+			await ps.spawnCapture(["true"]);
+
+			const spawned = ps.spawnCapture(["true"]);
+			busy(700);
+
+			expect((await spawned).exitCode).toBe(0);
+		},
+	);
+
 	it("writes stdin to the child and closes it", async () => {
 		const { stdout } = await new NodePs({ proc: proc }).spawnCapture(["cat"], {
 			stdin: "fed through",
@@ -114,3 +129,9 @@ describe("NodePs", () => {
 		expect(seen).toEqual({ stdout: "out\n", stderr: "err\n" });
 	});
 });
+
+/** Holds the event loop for `ms`, longer than a reap poll, so the poll takes the exit before the runtime does. */
+function busy(ms: number): void {
+	const until = Date.now() + ms;
+	while (Date.now() < until) {}
+}
