@@ -3,7 +3,7 @@ import {
 	Credentials,
 	type SecretStore,
 	SystemSecretStore,
-} from "webappwiz/credentials";
+} from "webappwiz/creds";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { loadCredentialsConfig } from "../load-config";
 

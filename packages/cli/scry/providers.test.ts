@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { Clef, Jev } from "@webappwiz/scry";
-import { Credentials } from "webappwiz/credentials";
-import { FakeSecretStore } from "webappwiz/credentials/testing";
+import { Credentials } from "webappwiz/creds";
+import { FakeSecretStore } from "webappwiz/creds/testing";
 import { FakePs } from "webappwiz/system/testing";
 import { HostedProviders } from "./providers";
 

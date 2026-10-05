@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import type { ShippedRule } from "@webappwiz/scry/catalog";
-import type { SecretStore } from "webappwiz/credentials";
+import type { SecretStore } from "webappwiz/creds";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps, walk } from "webappwiz/system";
 import { ProjectCredentials } from "./creds/project-credentials";

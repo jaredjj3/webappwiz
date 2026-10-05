@@ -1,4 +1,4 @@
-# webappwiz/credentials
+# webappwiz/creds
 
 API keys and tokens, each named the way its environment variable is, read from
 the environment first and then from the operating system's secret store. A
@@ -7,7 +7,7 @@ every git worktree of the project without being in any of them, and an agent
 building or running the code uses it without ever being shown it.
 
 ```ts
-import { Credentials, SystemSecretStore } from "webappwiz/credentials";
+import { Credentials, SystemSecretStore } from "webappwiz/creds";
 
 const credentials = new Credentials(new SystemSecretStore("my-app"));
 const key = await credentials.require("STRIPE_SECRET_KEY");
@@ -46,5 +46,5 @@ export default {
 };
 ```
 
-`FakeSecretStore` in `webappwiz/credentials/testing` is a map, so a test says
+`FakeSecretStore` in `webappwiz/creds/testing` is a map, so a test says
 what is kept and sees what changed.

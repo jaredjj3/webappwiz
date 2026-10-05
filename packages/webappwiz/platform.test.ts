@@ -16,7 +16,7 @@ describe("platform", () => {
 		"./task/browser": "browser",
 		"./worker/web": "browser",
 		"./cmd": "node",
-		"./credentials": "node",
+		"./creds": "node",
 		"./ship": "node",
 		"./ship/testing": "node",
 		"./system": "node",

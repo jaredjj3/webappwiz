@@ -54,7 +54,7 @@ here. A wrong module taken up is worse than one written twice.
 ## Credentials
 
 An API key, token or other secret a project's code needs comes from
-`webappwiz/credentials`: the environment first, then the operating system's
+`webappwiz/creds`: the environment first, then the operating system's
 secret store (the Keychain, Credential Manager, or a Linux secret service).
 Never put one in a `.env` file, a config file, source, a test, or a command
 line, and never ask for one in chat.
@@ -74,7 +74,7 @@ line, and never ask for one in chat.
    dependency, so a test hands in one over `FakeSecretStore`:
 
    ```ts
-   import { Credentials, SystemSecretStore } from "webappwiz/credentials";
+   import { Credentials, SystemSecretStore } from "webappwiz/creds";
 
    const credentials = new Credentials(new SystemSecretStore("<project>"));
    const key = await credentials.require("STRIPE_SECRET_KEY");

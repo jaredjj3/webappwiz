@@ -213,7 +213,7 @@ TYPESAFE_API_KEY        environment   TypeSafe, for scry's jev models
 API keys and tokens, kept in the operating system's secret store through
 `Bun.secrets`: the Keychain on macOS, Credential Manager on Windows, and a
 running secret service such as GNOME Keyring or KWallet on Linux. Code reads
-them with [`webappwiz/credentials`](../webappwiz/credentials), the
+them with [`webappwiz/creds`](../webappwiz/creds), the
 environment first and then the store, so CI and one-off overrides work as
 they always have.
 

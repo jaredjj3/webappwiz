@@ -5,7 +5,7 @@ import {
 	Jev,
 	type Judge,
 } from "@webappwiz/scry";
-import type { Credentials } from "webappwiz/credentials";
+import type { Credentials } from "webappwiz/creds";
 
 /** What makes the judge a model name stands for. */
 export interface Providers {
