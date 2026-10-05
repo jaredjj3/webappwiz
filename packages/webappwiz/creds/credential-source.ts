@@ -10,3 +10,18 @@ export interface CredentialSource {
 	/** The value it has for `name`, or undefined when it has none. */
 	get(name: string): Promise<string | undefined>;
 }
+
+/**
+ * `name`, when it can be an environment variable's: letters, digits and
+ * `_`, not starting with a digit. Throws otherwise, so a store never keeps a
+ * value no environment could hold, and its own bookkeeping, under names
+ * that cannot be these, is safe from a credential's.
+ */
+export function credentialName(name: string): string {
+	if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+		throw new Error(
+			`${JSON.stringify(name)} is not an environment variable name: use letters, digits and _, not starting with a digit`,
+		);
+	}
+	return name;
+}

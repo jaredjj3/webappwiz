@@ -1,4 +1,4 @@
-export type { CredentialSource } from "./credential-source";
+export { type CredentialSource, credentialName } from "./credential-source";
 export { Credentials } from "./credentials";
 export { DotenvFile, type DotenvFileOptions } from "./dotenv-file";
 export { Environment, type EnvironmentOptions } from "./environment";

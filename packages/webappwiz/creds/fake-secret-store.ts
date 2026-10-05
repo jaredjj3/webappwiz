@@ -22,4 +22,8 @@ export class FakeSecretStore implements SecretStore {
 	async delete(name: string): Promise<boolean> {
 		return this.values.delete(name);
 	}
+
+	async names(): Promise<string[]> {
+		return [...this.values.keys()].toSorted();
+	}
 }

@@ -30,9 +30,10 @@ export interface CredentialsConfig {
 	 */
 	project?: string;
 	/**
-	 * Every credential the project's own code uses, by environment variable
-	 * name, with what it is for, so `creds list` shows it and
-	 * `creds add` takes it. The ones wiz uses itself are always there.
+	 * The credentials the project's own code needs, by environment variable
+	 * name, with what each is for, so `creds list` shows one even before
+	 * anyone keeps it. Optional: `creds add` takes any name, and what the
+	 * stores keep is listed anyway. The ones wiz uses itself are always there.
 	 */
 	names?: Record<string, string>;
 }

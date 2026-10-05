@@ -128,7 +128,8 @@ store's name itself, so never write a project name into code. Take the
 ### Adding one
 
 1. Name it in `.wiz/config.ts`, by its environment variable name, with what
-   it is for:
+   it is for. `creds add` takes any name, but a named one shows as missing
+   until someone keeps it, so whoever clones the project knows it is needed:
 
    ```ts
    export default {

@@ -26,13 +26,14 @@ export interface ProjectCredentialsOptions {
 
 /**
  * The credentials of the project around a directory: which it uses, named
- * in its config and by wiz itself, and the two stores a person keeps them
- * in. wiz reads the environment first, then the project's store, then the
- * device's, so CI hands scry its keys the way it always has.
+ * in its config, by wiz itself, or by being kept in either of the two
+ * stores a person keeps them in. wiz reads the environment first, then the
+ * project's store, then the device's, so CI hands scry its keys the way it
+ * always has.
  */
 export class ProjectCredentials {
 	private constructor(
-		/** Every credential the project uses, by name, with what it is for. */
+		/** Every credential the project uses, by name, with what it is for, or "" when nothing says. */
 		readonly names: ReadonlyMap<string, string>,
 		/** Where values for this project alone are kept. */
 		readonly store: SecretStore,
@@ -60,11 +61,19 @@ export class ProjectCredentials {
 		const store =
 			opts.store ?? (await SystemSecretStore.forProject(dir, { fs, ps }));
 		const device = opts.deviceStore ?? SystemSecretStore.device();
+		const names = new Map<string, string>();
+		for (const name of [...(await store.names()), ...(await device.names())]) {
+			names.set(name, "");
+		}
+		for (const [name, purpose] of Object.entries({
+			...WIZ_CREDENTIALS,
+			...config.names,
+		})) {
+			names.set(name, purpose);
+		}
 		return new ProjectCredentials(
 			new Map(
-				Object.entries({ ...WIZ_CREDENTIALS, ...config.names }).toSorted(
-					([left], [right]) => left.localeCompare(right),
-				),
+				[...names].toSorted(([left], [right]) => left.localeCompare(right)),
 			),
 			store,
 			device,
@@ -104,15 +113,6 @@ export class ProjectCredentials {
 			}
 		}
 		return { values, missing };
-	}
-
-	/** Throws, naming what is known, unless the project uses `name`. */
-	known(name: string): void {
-		if (!this.names.has(name)) {
-			throw new Error(
-				`${name} is not a credential this project uses: name it in .wiz/config.ts under credentials.names, beside ${[...this.names.keys()].join(", ")}`,
-			);
-		}
 	}
 
 	/** The project's store, or the device's when `device` is set. */

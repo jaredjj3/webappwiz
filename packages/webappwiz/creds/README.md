@@ -61,8 +61,11 @@ const credentials = new Credentials([
 
 `require` throws when no source has it, naming where it looked; the error
 never holds a value. `get` is the same with undefined instead, and `source`
-says which source a value would come from without reading it out. Nothing
-lists what a source holds, so code names what it needs.
+says which source a value would come from without reading it out. A source
+need not list what it holds, so code names what it needs. A `SecretStore`
+lists its own with `names()`: the system cannot list a service's entries, so
+`SystemSecretStore` keeps one more, `.names`, listing the rest, and refuses
+any name an environment variable cannot have.
 
 People put values in the stores with the CLI, which reads them at a hidden
 prompt:
@@ -82,8 +85,9 @@ credential the project names.
 The project's name is `credentials.project` from your own
 `~/.config/wiz/config.ts`, else from the project's `.wiz/config.ts`, else
 the directory of the repository's main worktree, and `forProject` finds it
-the same way the CLI does. Name each credential a project uses in
-`.wiz/config.ts`, so `list` can show them:
+the same way the CLI does. `add` takes any name, and `list` shows what the
+stores keep. Name the credentials a project needs in `.wiz/config.ts`, so
+`list` shows one as missing until someone keeps it:
 
 ```ts
 export default {

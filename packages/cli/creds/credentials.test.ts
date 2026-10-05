@@ -132,10 +132,35 @@ describe("wiz creds", () => {
 		expect(store.values.size).toEqual(0);
 	});
 
-	it("refuses a name the project does not use, before asking for a value", async () => {
+	it("keeps a name no config names, and lists it and runs with it once kept", async () => {
+		await add({
+			name: "ANTHROPIC_API_KEY",
+			stdin: false,
+			device: true,
+			log,
+			ps,
+			store,
+			deviceStore: device,
+			input,
+		});
+		await list({ log, ps, store, deviceStore: device });
+		await run({
+			command: ["sh", "-c", 'printf "%s" "$ANTHROPIC_API_KEY" > seen'],
+			log,
+			ps,
+			store,
+			deviceStore: device,
+		});
+
+		expect(device.values.get("ANTHROPIC_API_KEY")).toEqual("typed-value");
+		expect(printed()).toContain("ANTHROPIC_API_KEY       device");
+		expect(await fs.read(`${root}/shop/seen`)).toEqual("typed-value");
+	});
+
+	it("refuses a name no environment variable can have, before asking for a value", async () => {
 		await expect(
 			add({
-				name: "STRIPE_SECRET",
+				name: "STRIPE-SECRET",
 				stdin: false,
 				log,
 				ps,
@@ -143,9 +168,7 @@ describe("wiz creds", () => {
 				deviceStore: device,
 				input,
 			}),
-		).rejects.toThrow(
-			"STRIPE_SECRET is not a credential this project uses: name it in .wiz/config.ts under credentials.names",
-		);
+		).rejects.toThrow('"STRIPE-SECRET" is not an environment variable name');
 		expect(asked).toEqual([]);
 	});
 

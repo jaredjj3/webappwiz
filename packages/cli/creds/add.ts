@@ -1,3 +1,4 @@
+import { credentialName } from "webappwiz/creds";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { NodePs } from "webappwiz/system";
 import {
@@ -27,7 +28,7 @@ export async function add(opts: AddOptions): Promise<void> {
 	const ps = opts.ps ?? new NodePs();
 	const input = opts.input ?? new ProcessSecretInput();
 	const project = await ProjectCredentials.open(ps.cwd(), { ...opts, ps });
-	project.known(opts.name);
+	credentialName(opts.name);
 	const value = opts.stdin
 		? (await input.piped()).trim()
 		: await input.hidden(`${opts.name}: `);

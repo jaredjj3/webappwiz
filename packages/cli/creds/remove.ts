@@ -1,3 +1,4 @@
+import { credentialName } from "webappwiz/creds";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { NodePs } from "webappwiz/system";
 import {
@@ -17,7 +18,7 @@ export async function remove(opts: RemoveOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
 	const project = await ProjectCredentials.open(ps.cwd(), { ...opts, ps });
-	project.known(opts.name);
+	credentialName(opts.name);
 	const store = project.keptIn(opts.device ?? false);
 	log.info(
 		(await store.delete(opts.name))

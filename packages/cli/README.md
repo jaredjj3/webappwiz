@@ -233,8 +233,8 @@ store with `--device`. There is no `get`: code that needs a value reads it
 itself, and nothing hands one to whoever runs a command.
 
 `run -- <command>` is for tools that read only their environment, like
-Prisma, Vite or `wrangler`: it runs the command with every credential the
-project names that either store keeps, in its environment for that run
+Prisma, Vite or `wrangler`: it runs the command with every credential
+either store keeps, in its environment for that run
 alone, and exits with the command's code. A credential the project names
 comes only from a store: an exported one is replaced by the stored value,
 or taken out when no store has it, so a stray export is never what a dev
@@ -248,9 +248,11 @@ bunx @webappwiz/cli creds run -- bunx prisma migrate dev
 Put it in a `package.json` script, as in `"dev": "wiz creds run -- vite"`,
 and no `.env` file is needed in development.
 
-The credentials wiz uses itself are always listed. A project names its own
-in `.wiz/config.ts`, and `add` refuses any name not there, so a typo fails
-rather than keeping a value nothing reads:
+`add` takes any environment variable name, and each store keeps a list of
+the names it holds, so `list` and `run` find what it keeps. The credentials
+wiz uses itself are always listed. A project names those its own code needs
+in `.wiz/config.ts`, so `list` shows one as missing until someone keeps it,
+and says what it is for:
 
 ```ts
 export default defineConfig({

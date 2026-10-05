@@ -5,8 +5,9 @@ import type { CredentialSource } from "./credential-source";
  * from the sources the caller lists, first one with a value wins. Which
  * sources is the caller's choice: the environment and a `.env` file where the
  * app is deployed, only the system's store on a person's machine, so a stray
- * export or a forgotten `.env` is never what a dev run reads. There is no way
- * to list what a source holds; a caller names what it needs.
+ * export or a forgotten `.env` is never what a dev run reads. A source need
+ * not list what it holds, so a caller names what it needs; a `SecretStore`
+ * can also list its own.
  *
  * It is a source itself, so lists compose: a group of sources is one entry
  * in another list, and any object with a `label` and a `get`, such as one

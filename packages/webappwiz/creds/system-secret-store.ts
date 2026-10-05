@@ -1,6 +1,10 @@
 import { basename, dirname } from "node:path";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
+import { credentialName } from "./credential-source";
 import type { SecretStore } from "./secret-store";
+
+/** The entry each service lists its names under; no credential can have it. */
+const NAMES = ".names";
 
 /** What `SystemSecretStore.forProject` reads through; the real ones by default. */
 export interface ForProjectOptions {
@@ -16,7 +20,8 @@ export interface ForProjectOptions {
  * own, and the device's under `webappwiz`, for keys that belong to the person
  * rather than to one project. Encrypted at rest by the system. A headless
  * server often has no secret service, which is why a deployed app reads the
- * environment instead.
+ * environment instead. The system cannot list a service's entries, so each
+ * keeps one more, `.names`, listing the rest.
  */
 export class SystemSecretStore implements SecretStore {
 	readonly label: string;
@@ -65,11 +70,45 @@ export class SystemSecretStore implements SecretStore {
 	}
 
 	async set(name: string, value: string): Promise<void> {
-		await Bun.secrets.set({ service: this.service, name, value });
+		await Bun.secrets.set({
+			service: this.service,
+			name: credentialName(name),
+			value,
+		});
+		const names = await this.names();
+		if (!names.includes(name)) {
+			await this.list([...names, name]);
+		}
 	}
 
-	delete(name: string): Promise<boolean> {
-		return Bun.secrets.delete({ service: this.service, name });
+	async delete(name: string): Promise<boolean> {
+		const deleted = await Bun.secrets.delete({
+			service: this.service,
+			name: credentialName(name),
+		});
+		const names = await this.names();
+		if (names.includes(name)) {
+			await this.list(names.filter((kept) => kept !== name));
+		}
+		return deleted;
+	}
+
+	async names(): Promise<string[]> {
+		const list = await Bun.secrets.get({ service: this.service, name: NAMES });
+		return (list ?? "").split("\n").filter((name) => name !== "");
+	}
+
+	/** Keeps `names` as the service's list, sorted, or none when empty. */
+	private async list(names: string[]): Promise<void> {
+		if (names.length === 0) {
+			await Bun.secrets.delete({ service: this.service, name: NAMES });
+		} else {
+			await Bun.secrets.set({
+				service: this.service,
+				name: NAMES,
+				value: names.toSorted().join("\n"),
+			});
+		}
 	}
 }
 

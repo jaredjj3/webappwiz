@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	mock,
+	spyOn,
+} from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -116,6 +124,60 @@ describe("DotenvFile", () => {
 		const file = new DotenvFile("/app/.env", { fs: new FakeFs() });
 
 		expect(await file.get("ANY")).toBeUndefined();
+	});
+});
+
+describe("SystemSecretStore", () => {
+	let kept: Map<string, string>;
+
+	beforeEach(() => {
+		kept = new Map();
+		const key = ({ service, name }: { service: string; name: string }) =>
+			`${service}/${name}`;
+		spyOn(Bun.secrets, "get").mockImplementation(
+			async (opts) => kept.get(key(opts)) ?? null,
+		);
+		spyOn(Bun.secrets, "set").mockImplementation(async (opts) => {
+			kept.set(key(opts), opts.value);
+		});
+		spyOn(Bun.secrets, "delete").mockImplementation(async (opts) =>
+			kept.delete(key(opts)),
+		);
+	});
+
+	afterEach(() => {
+		mock.restore();
+	});
+
+	it("lists the names it keeps, which the system cannot", async () => {
+		const store = SystemSecretStore.project("shop");
+
+		await store.set("STRIPE_SECRET_KEY", "sk");
+		await store.set("ANTHROPIC_API_KEY", "ak");
+		await store.set("STRIPE_SECRET_KEY", "sk2");
+		expect(await store.names()).toEqual([
+			"ANTHROPIC_API_KEY",
+			"STRIPE_SECRET_KEY",
+		]);
+		expect(await SystemSecretStore.device().names()).toEqual([]);
+
+		expect(await store.delete("STRIPE_SECRET_KEY")).toBe(true);
+		expect(await store.delete("STRIPE_SECRET_KEY")).toBe(false);
+		expect(await store.names()).toEqual(["ANTHROPIC_API_KEY"]);
+		await store.delete("ANTHROPIC_API_KEY");
+		expect(kept.size).toEqual(0);
+	});
+
+	it("refuses a name no environment variable can have, so none is its list's", async () => {
+		const store = SystemSecretStore.device();
+
+		await expect(store.set(".names", "STOLEN")).rejects.toThrow(
+			'".names" is not an environment variable name',
+		);
+		await expect(store.delete(".names")).rejects.toThrow(
+			'".names" is not an environment variable name',
+		);
+		expect(kept.size).toEqual(0);
 	});
 });
 
