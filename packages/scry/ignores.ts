@@ -11,7 +11,7 @@ export function ignored(text: string, rule: string, line: number): boolean {
 	const lines = text.split("\n");
 	for (let at = line - 2; at >= 0; at--) {
 		const above = lines[at]?.trim() ?? "";
-		if (!/^(\/\/|#|\*|\/\*|<!--)/.test(above)) {
+		if (!COMMENT.test(above)) {
 			return false;
 		}
 		if (new RegExp(`(scry|rule)-ignore ${rule}\\b`).test(above)) {
@@ -20,3 +20,20 @@ export function ignored(text: string, rule: string, line: number): boolean {
 	}
 	return false;
 }
+
+/**
+ * Whether `text` still excuses itself from one of `rules` with the older
+ * `rule-ignore` or `rule-ignore-file`, which counts but should be renamed.
+ */
+export function legacy(text: string, rules: string[]): boolean {
+	if (rules.length === 0) {
+		return false;
+	}
+	// only a comment naming a rule: code and prose may mention the spelling
+	const directive = new RegExp(`rule-ignore(-file)? (${rules.join("|")})\\b`);
+	return text
+		.split("\n")
+		.some((line) => COMMENT.test(line.trim()) && directive.test(line));
+}
+
+const COMMENT = /^(\/\/|#|\*|\/\*|<!--)/;

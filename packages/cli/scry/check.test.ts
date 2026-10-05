@@ -130,6 +130,19 @@ describe("wiz scry", () => {
 		expect(proc.exits).toEqual([1]);
 	});
 
+	it("names each file still excusing itself with rule-ignore", async () => {
+		await fs.write(
+			`${root}/a.ts`,
+			"// rule-ignore no-foo: old spelling\nconst foo = 1;\n",
+		);
+
+		await run();
+
+		expect(warned()).toEqual([
+			"1 file still uses rule-ignore, which scry honors for now: rename it to scry-ignore\n  a.ts",
+		]);
+	});
+
 	it("prints the report as JSON when asked, confidence and all", async () => {
 		await run("json");
 

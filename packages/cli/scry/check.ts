@@ -147,7 +147,10 @@ export async function check(opts: CheckOptions): Promise<void> {
 
 	if (report.legacy.length > 0) {
 		log.error(
-			`${report.legacy.length} ${plural(report.legacy.length, "file")} still ${report.legacy.length === 1 ? "uses" : "use"} rule-ignore, which scry honors for now: rename it to scry-ignore`,
+			[
+				`${report.legacy.length} ${plural(report.legacy.length, "file")} still ${report.legacy.length === 1 ? "uses" : "use"} rule-ignore, which scry honors for now: rename it to scry-ignore`,
+				...report.legacy.map((path) => `  ${path}`),
+			].join("\n"),
 		);
 	}
 	log.info(

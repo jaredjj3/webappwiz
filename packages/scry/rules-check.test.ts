@@ -202,6 +202,18 @@ describe("Rules.check", () => {
 		expect([report.legacy, report.ignored]).toEqual([["src/a.ts"], 1]);
 	});
 
+	it("names no file that only mentions rule-ignore outside a comment naming a rule", async () => {
+		await install("no-foo", flagging("foo"));
+		await write(
+			"src/a.ts",
+			'/** Reads a rule-ignore directive. */\nwrite("// rule-ignore no-foo: x");\n',
+		);
+
+		const report = await run(["src/a.ts"]);
+
+		expect(report.legacy).toEqual([]);
+	});
+
 	it("checks no rule's cases, wherever the rule lives, since they break it on purpose", async () => {
 		await install("no-foo", flagging("foo"));
 		await fs.mkdir(`${root}/.wiz/scry/no-foo/evals`);

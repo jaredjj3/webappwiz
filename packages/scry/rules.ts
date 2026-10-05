@@ -2,7 +2,7 @@ import { basename, dirname, resolve } from "node:path";
 import { type Fs, type Glob, NodeFs, NodeGlob } from "webappwiz/system";
 import { type Case, Cases } from "./cases";
 import { DeclaredRule } from "./declared-rule";
-import { ignored } from "./ignores";
+import { ignored, legacy } from "./ignores";
 import { CASES_DIR, CHECK_FILE, RULES_ROOT } from "./layout";
 import { Progress } from "./progress";
 import type { Finding, Level, Rule, Tools } from "./rule";
@@ -172,8 +172,9 @@ export class Rules {
 		});
 		await Promise.all(checks);
 
+		const ids = this.all.map((declared) => declared.id);
 		for (const [path, file] of files) {
-			if (/\brule-ignore(-file)? /.test((await file).text)) {
+			if (legacy((await file).text, ids)) {
 				report.legacy.push(path);
 			}
 		}
