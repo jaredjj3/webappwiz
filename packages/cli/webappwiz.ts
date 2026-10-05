@@ -13,6 +13,7 @@ import { check } from "./scry/check";
 import { evaluate } from "./scry/eval";
 import { list as listRules } from "./scry/list";
 import { remove as removeRule } from "./scry/remove";
+import { StderrScreen } from "./scry/screen";
 import { test as testRules } from "./scry/test";
 import { update as updateRules } from "./scry/update";
 import { why } from "./scry/why";
@@ -82,7 +83,9 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "text or json (default: text)",
 		})
 		.use(timed())
-		.action((opts, { log, fs, ps }) => check({ ...opts, log, fs, ps }));
+		.action((opts, { log, fs, ps }) =>
+			check({ ...opts, log, fs, ps, screen: new StderrScreen(ps) }),
+		);
 
 	scry
 		.command("test")
@@ -114,7 +117,9 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "text or json (default: text)",
 		})
 		.use(timed())
-		.action((opts, { log, fs, ps }) => evaluate({ ...opts, log, fs, ps }));
+		.action((opts, { log, fs, ps }) =>
+			evaluate({ ...opts, log, fs, ps, screen: new StderrScreen(ps) }),
+		);
 
 	scry
 		.command("why")

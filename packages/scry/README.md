@@ -274,7 +274,10 @@ runs every rule on every file at once, reading and parsing each file once
 however many rules read it. A `Report` holds the `problems`, each a finding
 with its `path`, `rule` and `level`; what went `unchecked`, a rule that threw
 on being built or on a file, never guessed at; and how many findings were
-`dropped` under a threshold or `ignored` by a comment.
+`dropped` under a threshold or `ignored` by a comment. Given a `Progress`,
+`check` counts on it the files every rule is `done` with, out of a `total`
+set before the first; `evaluate` counts cases the same way. Whoever shows
+it reads the counts when it likes.
 
 A `Decider` answers `decide(question, span)` with the probability of yes.
 `BatchedDecider` holds questions until everything running has asked, then
@@ -283,7 +286,8 @@ sends the ones about each file in one request, up to 64, to a `Judge`:
 TypeSafe, or anything else serving `/v1/systemone`). A rule written as plain
 `await`s still shares a request with every other rule reading the file. A
 decider is cheap until a rule asks it something, so a change no rule asks
-about costs nothing.
+about costs nothing. Its `usage` counts what it asked, and `answered` what
+came back.
 
 ## Thresholds and ignores
 

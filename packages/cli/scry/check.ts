@@ -1,4 +1,4 @@
-import { Git, type Report, Rules } from "@webappwiz/scry";
+import { Git, Progress, type Report, Rules } from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import {
 	type Fs,
@@ -8,10 +8,13 @@ import {
 	NodePs,
 	type Ps,
 } from "webappwiz/system";
+import { SystemTimer, type Timer } from "webappwiz/time";
 import { loadConfig } from "../load-config";
 import { table } from "../table";
 import { asked, ProjectDecider, plural, type Spent } from "./project-decider";
 import type { Providers } from "./providers";
+import type { Screen } from "./screen";
+import { Spinner } from "./spinner";
 
 export interface CheckOptions {
 	/**
@@ -37,6 +40,13 @@ export interface CheckOptions {
 	glob?: Glob;
 	/** What makes the judge for a model; Workers AI and TypeSafe by default. */
 	providers?: Providers;
+	/**
+	 * Where a line of progress is drawn while the check runs, when it is
+	 * live and the report is text. None draws nothing.
+	 */
+	screen?: Screen;
+	/** What ticks that line. */
+	timer?: Timer;
 }
 
 /**
@@ -89,10 +99,12 @@ export async function check(opts: CheckOptions): Promise<void> {
 	// that, or once it is done, quits as usual
 	const cancel = new AbortController();
 	let running = true;
+	let spinner: Spinner | undefined;
 	ps.on("SIGINT", () => {
 		if (running && !cancel.signal.aborted) {
 			cancel.abort();
 		} else {
+			spinner?.dispose();
 			ps.exit(130);
 		}
 	});
@@ -105,15 +117,30 @@ export async function check(opts: CheckOptions): Promise<void> {
 		fs,
 		ps,
 	});
+	const progress = new Progress();
+	if (opts.screen !== undefined && opts.format !== "json") {
+		spinner = new Spinner({
+			screen: opts.screen,
+			timer: opts.timer ?? new SystemTimer(),
+			progress,
+			decider,
+			verb: "checking",
+			noun: "file",
+		});
+	}
+
+	spinner?.start();
 	const report = await rules
 		.check({
 			paths: files,
 			tools: { decider },
 			glob,
 			signal: cancel.signal,
+			progress,
 		})
 		.finally(() => {
 			running = false;
+			spinner?.dispose();
 		});
 	await decider.save();
 	const spent = decider.spent;

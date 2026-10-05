@@ -47,6 +47,8 @@ export interface BatchedDeciderOptions {
  */
 export class BatchedDecider implements Decider {
 	readonly usage: DeciderUsage = { requests: 0, questions: 0, input: 0 };
+	/** Questions the model has answered, of the `usage.questions` asked so far. */
+	answered = 0;
 	private pending: Pending[] = [];
 	private scheduled = false;
 	/** Requests ready to go, waiting for one of `jobs` to come back. */
@@ -168,6 +170,7 @@ export class BatchedDecider implements Decider {
 				if (answer === undefined) {
 					item.reject(new Error(`no answer to "${item.question}"`));
 				} else {
+					this.answered++;
 					item.resolve(answer);
 				}
 			});

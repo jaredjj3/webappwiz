@@ -104,6 +104,11 @@ was code, is refused rather than half read.
 can be compared on the same change: `scry --model clef` then
 `scry --model jev-latest`.
 
+While it runs on a terminal, one line on stderr counts the files done and
+the questions asked, answered and found in the cache, and is erased before
+the report. It draws nothing in a pipe, under CI, or with `--format json`.
+`scry eval` draws the same line, counting cases.
+
 The first ctrl-c stops early: no more requests go out, the ones out are
 abandoned, and the report holds what came back, with the rest named as not
 checked. A second ctrl-c quits outright.

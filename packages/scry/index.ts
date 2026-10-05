@@ -37,6 +37,7 @@ export {
 	RULE_FILE,
 	RULES_ROOT,
 } from "./layout";
+export { Progress } from "./progress";
 export {
 	type Finding,
 	LEVELS,

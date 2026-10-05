@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { BatchedDecider } from "./batched-decider";
-import type { Judge, Judgment } from "./judge";
+import type { Judge, Judgment, Verdict } from "./judge";
 import { SourceFile } from "./source-file";
 import { Span } from "./span";
 import { FakeJudge } from "./testing";
@@ -208,6 +208,31 @@ describe("BatchedDecider", () => {
 		]);
 
 		expect(decider.usage).toEqual({ requests: 2, questions: 3, input: 600 });
+	});
+
+	it("counts the questions answered apart from those asked, while a request is out", async () => {
+		let reply: (verdict: Verdict) => void = () => undefined;
+		const decider = new BatchedDecider({
+			judge: () =>
+				new Promise<Verdict>((resolve) => {
+					reply = resolve;
+				}),
+		});
+		const answers = Promise.all([
+			decider.decide("Is it?", at(cart, 1)),
+			decider.decide("Is it?", at(cart, 2)),
+		]);
+		await new Promise((resolve) => setTimeout(resolve, 5));
+
+		expect([decider.usage.questions, decider.answered]).toEqual([2, 0]);
+		reply({
+			answers: new Map([
+				["q0", 0.5],
+				["q1", 0.5],
+			]),
+		});
+		await answers;
+		expect([decider.usage.questions, decider.answered]).toEqual([2, 2]);
 	});
 
 	it("fails what is out, what waits, and what is asked after, once stopped", async () => {

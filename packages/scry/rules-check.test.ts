@@ -3,12 +3,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeFs } from "webappwiz/system";
+import type { Decider } from "./decider";
+import { Progress } from "./progress";
 import { Rules } from "./rules";
 import { FakeDecider, type RuleSourceOptions, ruleSource } from "./testing";
 
 describe("Rules.check", () => {
 	const fs = new NodeFs();
 	let root: string;
+	let progress: Progress;
 
 	/** Installs a rule whose `rule.ts` is `source`. */
 	const install = async (id: string, source: string) => {
@@ -17,9 +20,27 @@ describe("Rules.check", () => {
 	};
 	const write = (path: string, text: string) =>
 		fs.write(`${root}/${path}`, text);
-	const run = async (paths: string[], decider = new FakeDecider()) =>
-		(await Rules.load(root, { fs })).check({ paths, tools: { decider } });
+	/** Resolves once `ready` holds, checking each millisecond. */
+	const until = async (ready: () => boolean): Promise<void> => {
+		while (!ready()) {
+			await new Promise((resolve) => setTimeout(resolve, 1));
+		}
+	};
+	const run = async (paths: string[], decider: Decider = new FakeDecider()) =>
+		(await Rules.load(root, { fs })).check({
+			paths,
+			tools: { decider },
+			progress,
+		});
 
+	/** A rule asking the decider whether a file's first comment restates the code. */
+	const asking = ruleSource(
+		`constructor(tools) { this.decider = tools.decider; }
+		async check(file) {
+			const [comment] = file.ts.comments();
+			return comment === undefined ? [] : [comment.flag("restates", await this.decider.decide("Does it restate?", comment), "Does it restate?")];
+		}`,
+	);
 	/** A rule flagging each line holding `word`, as sure as it is told. */
 	const flagging = (
 		word: string,
@@ -37,6 +58,7 @@ describe("Rules.check", () => {
 
 	beforeEach(async () => {
 		root = await mkdtemp(join(tmpdir(), "scry-rules-"));
+		progress = new Progress();
 		await fs.mkdir(`${root}/src`);
 	});
 
@@ -88,16 +110,7 @@ describe("Rules.check", () => {
 	});
 
 	it("builds each rule with the tools, so its check can ask the decider", async () => {
-		await install(
-			"asks",
-			ruleSource(
-				`constructor(tools) { this.decider = tools.decider; }
-				async check(file) {
-					const [comment] = file.ts.comments();
-					return [comment.flag("restates", await this.decider.decide("Does it restate?", comment), "Does it restate?")];
-				}`,
-			),
-		);
+		await install("asks", asking);
 		await write("src/a.ts", "// add one\nn += 1;\n");
 		const decider = new FakeDecider({ "add one": 0.9 });
 
@@ -141,6 +154,45 @@ describe("Rules.check", () => {
 		]);
 	});
 
+	it("counts a file done once every rule that matched it is, out of a total known from the start", async () => {
+		await install("no-foo", flagging("foo"));
+		await install("asks", asking);
+		await write("src/a.ts", "foo\n");
+		await write("src/b.ts", "// add one\nn += 1;\n");
+		let answer: (probability: number) => void = () => undefined;
+		const decider = {
+			decide: () =>
+				new Promise<number>((resolve) => {
+					answer = resolve;
+				}),
+		};
+
+		const checking = run(["src/a.ts", "src/b.ts"], decider);
+		await until(() => progress.done > 0);
+
+		expect([progress.done, progress.total]).toEqual([1, 2]);
+		answer(0.9);
+		await checking;
+		expect([progress.done, progress.total]).toEqual([2, 2]);
+	});
+
+	it("counts a file done when a rule threw on it, or could not be built", async () => {
+		await install(
+			"fragile",
+			ruleSource('async check() { throw new Error("boom"); }'),
+		);
+		await install(
+			"broken",
+			ruleSource('constructor() { throw new Error("no tools"); }'),
+		);
+		await write("src/a.ts", "x\n");
+		await write("src/b.ts", "y\n");
+
+		await run(["src/a.ts", "src/b.ts"]);
+
+		expect([progress.done, progress.total]).toEqual([2, 2]);
+	});
+
 	it("names the files still using rule-ignore", async () => {
 		await install("no-foo", flagging("foo"));
 		await write("src/a.ts", "// rule-ignore no-foo: old spelling\nfoo\n");
@@ -179,7 +231,7 @@ describe("Rules.check", () => {
 		expect(report.problems.map(({ rule }) => rule)).toEqual(["loud"]);
 	});
 
-	it("scores each rule on its cases, with what stands of what it found", async () => {
+	it("scores each rule on its cases, with what stands of what it found, counting each case scored", async () => {
 		await install("no-bar", flagging("Bar"));
 		await fs.mkdir(`${root}/.wiz/scry/no-bar/evals`);
 		await write(
@@ -190,6 +242,7 @@ describe("Rules.check", () => {
 
 		const evaluated = await (await Rules.load(root, { fs })).evaluate({
 			tools: { decider: new FakeDecider() },
+			progress,
 		});
 
 		expect(
@@ -210,6 +263,7 @@ describe("Rules.check", () => {
 				],
 			],
 		]);
+		expect([progress.done, progress.total]).toEqual([2, 2]);
 	});
 
 	it("records a case the rule threw on, and refuses a rule that is not there", async () => {

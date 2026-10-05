@@ -4,6 +4,7 @@ import { type Case, Cases } from "./cases";
 import { DeclaredRule } from "./declared-rule";
 import { ignored } from "./ignores";
 import { CASES_DIR, CHECK_FILE, RULES_ROOT } from "./layout";
+import { Progress } from "./progress";
 import type { Finding, Level, Rule, Tools } from "./rule";
 import { RuleError } from "./rule-error";
 import { SourceFile } from "./source-file";
@@ -105,6 +106,21 @@ export class Rules {
 			.filter(({ paths }) => paths.length > 0);
 		report.rules = matched.length;
 		report.files = new Set(matched.flatMap(({ paths }) => paths)).size;
+		const progress = opts.progress ?? new Progress();
+		progress.total = report.files;
+		progress.done = 0;
+		// a file is done once every rule that matched it is done with it
+		const left = new Map<string, number>();
+		for (const path of matched.flatMap(({ paths }) => paths)) {
+			left.set(path, (left.get(path) ?? 0) + 1);
+		}
+		const finish = (path: string) => {
+			const count = (left.get(path) ?? 1) - 1;
+			left.set(path, count);
+			if (count === 0) {
+				progress.done++;
+			}
+		};
 
 		const files = new Map<string, Promise<SourceFile>>();
 		const open = (path: string): Promise<SourceFile> => {
@@ -124,30 +140,34 @@ export class Rules {
 				rule = declared.build(opts.tools);
 			} catch (error) {
 				report.unchecked.push({ subject: declared.id, reason: reason(error) });
+				paths.forEach(finish);
 				return;
 			}
 			await Promise.all(
-				paths
+				paths.map(async (path) => {
 					// a rule's own code and tests show what it forbids, on purpose
-					.filter((path) => homes.get(path)?.id !== declared.id)
-					.map(async (path) => {
-						const file = await open(path);
-						const findings = await rule.check(file).catch((error: unknown) => {
-							report.unchecked.push({
-								subject: `${declared.id} on ${path}`,
-								reason: reason(error),
-							});
-							return [];
+					if (homes.get(path)?.id === declared.id) {
+						finish(path);
+						return;
+					}
+					const file = await open(path);
+					const findings = await rule.check(file).catch((error: unknown) => {
+						report.unchecked.push({
+							subject: `${declared.id} on ${path}`,
+							reason: reason(error),
 						});
-						report.problems.push(
-							...this.sift(declared, file, findings, report).map((finding) => ({
-								...finding,
-								path,
-								rule: declared.id,
-								level: declared.level,
-							})),
-						);
-					}),
+						return [];
+					});
+					report.problems.push(
+						...this.sift(declared, file, findings, report).map((finding) => ({
+							...finding,
+							path,
+							rule: declared.id,
+							level: declared.level,
+						})),
+					);
+					finish(path);
+				}),
 			);
 		});
 		await Promise.all(checks);
@@ -185,13 +205,24 @@ export class Rules {
 		const evaluated = this.all.filter(
 			(declared) => ids.length === 0 || ids.includes(declared.id),
 		);
+		// every case is loaded before any is scored, so the total is known
+		const loaded = await Promise.all(
+			evaluated.map(async (declared) => ({
+				declared,
+				rule: declared.build(opts.tools),
+				cases: await Cases.load(`${this.dir}/${RULES_ROOT}/${declared.id}`, {
+					fs: this.fs,
+				}),
+			})),
+		);
+		const progress = opts.progress ?? new Progress();
+		progress.total = loaded.reduce(
+			(sum, { cases }) => sum + cases.all.length,
+			0,
+		);
+		progress.done = 0;
 		return Promise.all(
-			evaluated.map(async (declared): Promise<Evaluation> => {
-				const rule = declared.build(opts.tools);
-				const cases = await Cases.load(
-					`${this.dir}/${RULES_ROOT}/${declared.id}`,
-					{ fs: this.fs },
-				);
+			loaded.map(async ({ declared, rule, cases }): Promise<Evaluation> => {
 				const scored = await Promise.all(
 					cases.all.map(async (each): Promise<Scored> => {
 						const scoring = { name: each.name, kind: each.kind };
@@ -203,6 +234,8 @@ export class Rules {
 							};
 						} catch (error) {
 							return { ...scoring, findings: [], error: reason(error) };
+						} finally {
+							progress.done++;
 						}
 					}),
 				);
@@ -322,6 +355,8 @@ export interface EvaluateOptions {
 	ids?: readonly string[];
 	tools: Tools;
 	signal?: AbortSignal;
+	/** Counts the cases as each is scored, for showing as it goes. */
+	progress?: Progress;
 }
 
 /** What a check looks at, and what it builds the rules with. */
@@ -333,6 +368,8 @@ export interface CheckOptions {
 	glob?: Glob;
 	/** Stops the check: what came back by then is the report. */
 	signal?: AbortSignal;
+	/** Counts the files as every rule finishes with each, for showing as it goes. */
+	progress?: Progress;
 }
 
 function reason(error: unknown): string {

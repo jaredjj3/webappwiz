@@ -7,7 +7,9 @@ import { FakeJudge, ruleSource } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
+import { FakeTimer } from "webappwiz/time/testing";
 import { check } from "./check";
+import type { Screen } from "./screen";
 
 describe("wiz scry", () => {
 	const fs = new NodeFs();
@@ -15,6 +17,21 @@ describe("wiz scry", () => {
 	let proc: FakeProcess;
 	let ps: NodePs;
 	let log: MemoryLogger;
+	let screen: Screen | undefined;
+	let timer: FakeTimer;
+	/** What the screen was given, and how much of the report was printed by then. */
+	let drawn: { text: string; printed: number }[];
+	/** A screen that records what it is given, live or not. */
+	const recording = (live: boolean): Screen => ({
+		live,
+		columns: 200,
+		write: (text) => {
+			drawn.push({
+				text: color.strip(text),
+				printed: log.entries.filter((entry) => entry.level === "info").length,
+			});
+		},
+	});
 
 	let judge: Judge;
 	let asked: string[];
@@ -78,6 +95,9 @@ describe("wiz scry", () => {
 		ps = new NodePs({ proc });
 		proc.chdir(root);
 		log = new MemoryLogger();
+		screen = undefined;
+		timer = new FakeTimer();
+		drawn = [];
 		judge = new FakeJudge(0.9);
 		asked = [];
 		await git("init", "-q", "-b", "main");
@@ -94,7 +114,7 @@ describe("wiz scry", () => {
 	});
 
 	const run = (format = "text", paths: string[] = [], model?: string) =>
-		check({ paths, format, model, log, fs, ps, providers });
+		check({ paths, format, model, log, fs, ps, providers, screen, timer });
 
 	it("prints the problems under their file, how sure the check is, and exits 1 on an error", async () => {
 		await run();
@@ -330,5 +350,66 @@ describe("wiz scry", () => {
 		expect(proc.exits).toEqual([2]);
 		proc.dispatch("SIGINT");
 		expect(proc.exits).toEqual([2, 130]);
+	});
+
+	it("draws what is done and asked on a live screen as it checks, and erases it before the report", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+		screen = recording(true);
+		const answering = new FakeJudge(0.2);
+		judge = {
+			judge: (judgment) => {
+				timer.fireIntervals();
+				return answering.judge(judgment);
+			},
+		};
+
+		await run();
+
+		expect(drawn).toEqual([
+			{
+				text: "\r⠋ checking 0 of 1 file · 1 question asked, 0 answered\u001B[K",
+				printed: 0,
+			},
+			{ text: "\r\u001B[K", printed: 0 },
+		]);
+		expect(printed()).toEqual(
+			[
+				"✔ no problems in 1 file since HEAD",
+				"  asked 1 question in 1 request",
+			].join("\n"),
+		);
+		expect(timer.intervals.every((entry) => entry.disposed)).toBe(true);
+	});
+
+	it("draws nothing for a report in JSON, nor on a screen that is not live", async () => {
+		screen = recording(true);
+		await run("json");
+		screen = recording(false);
+		await run();
+
+		expect([drawn, timer.intervals]).toEqual([[], []]);
+	});
+
+	it("erases its line before quitting on a second ctrl-c", async () => {
+		await install("why-not-what", asking);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+		screen = recording(true);
+		judge = {
+			judge: () => {
+				timer.fireIntervals();
+				proc.dispatch("SIGINT");
+				proc.dispatch("SIGINT");
+				return new Promise(() => undefined);
+			},
+		};
+
+		await run();
+
+		expect(proc.exits[0]).toBe(130);
+		expect(drawn.map(({ text }) => text)).toEqual([
+			"\r⠋ checking 0 of 1 file · 1 question asked, 0 answered\u001B[K",
+			"\r\u001B[K",
+		]);
 	});
 });

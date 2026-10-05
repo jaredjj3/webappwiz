@@ -78,6 +78,11 @@ export class ProjectDecider implements Decider {
 		return { ...this.batched.usage, cached: this.cached.hits };
 	}
 
+	/** Of the questions asked so far, how many the model has answered. */
+	get answered(): number {
+		return this.batched.answered;
+	}
+
 	/** Keeps the answers for the next run. */
 	save(): Promise<void> {
 		return this.decisions.save();

@@ -1,10 +1,19 @@
-import { type Evaluation, Git, Rules, type Scored } from "@webappwiz/scry";
+import {
+	type Evaluation,
+	Git,
+	Progress,
+	Rules,
+	type Scored,
+} from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
+import { SystemTimer, type Timer } from "webappwiz/time";
 import { loadConfig } from "../load-config";
 import { table } from "../table";
 import { asked, ProjectDecider, plural } from "./project-decider";
 import type { Providers } from "./providers";
+import type { Screen } from "./screen";
+import { Spinner } from "./spinner";
 
 export interface EvaluateOptions {
 	/** Rule ids; every rule when empty. */
@@ -19,6 +28,13 @@ export interface EvaluateOptions {
 	fs?: Fs;
 	ps?: Ps;
 	providers?: Providers;
+	/**
+	 * Where a line of progress is drawn while the rules are scored, when it
+	 * is live and the scores are text. None draws nothing.
+	 */
+	screen?: Screen;
+	/** What ticks that line. */
+	timer?: Timer;
 }
 
 /**
@@ -40,7 +56,22 @@ export async function evaluate(opts: EvaluateOptions): Promise<void> {
 		fs,
 		ps,
 	});
-	const evaluated = await rules.evaluate({ ids: opts.ids, tools: { decider } });
+	const progress = new Progress();
+	const spinner =
+		opts.screen === undefined || opts.format === "json"
+			? undefined
+			: new Spinner({
+					screen: opts.screen,
+					timer: opts.timer ?? new SystemTimer(),
+					progress,
+					decider,
+					verb: "scoring",
+					noun: "case",
+				});
+	spinner?.start();
+	const evaluated = await rules
+		.evaluate({ ids: opts.ids, tools: { decider }, progress })
+		.finally(() => spinner?.dispose());
 	await decider.save();
 	if (opts.format === "json") {
 		log.info(
