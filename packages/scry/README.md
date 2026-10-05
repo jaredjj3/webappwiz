@@ -124,13 +124,14 @@ question rides along on the finding, so a report can say what decided it.
 Ask about the narrowest span that holds the answer; the decider reads the
 whole file around it either way.
 
-A question a decision model gets wrong, because answering it takes
-following the code rather than reading it, goes to `tools.llm` instead: the
-same `decide(question, span)`, answered by a language model that reasons
-first. It is slower and dearer, so a rule keeps the decider for what it
-gets right and holds both when it needs both. Which models answer is the
-caller's to say, by the effort it checks at; the rule only says which kind
-of question it is asking.
+The llm is a last resort. A question the decider still gets wrong after
+narrowing its span and rewording it, because answering takes following the
+code rather than reading it, goes to `tools.llm` instead: the same
+`decide(question, span)`, answered by a language model that reasons first,
+slower and dearer. Only that question moves; the rest stay with the
+decider, and `wiz scry eval` is what shows one needs to. Which models
+answer is the caller's to say, by the effort it checks at; the rule only
+says which kind of question it is asking.
 
 Name the private methods for the sentences of the rule, so `check` reads as
 the rule does: `stateKeptBetweenCalls`, `setupOnlyOneTestUses`,

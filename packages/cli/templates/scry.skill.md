@@ -242,14 +242,14 @@ export default class CommentsSayWhy implements Rule {
   returns the probability of yes, which becomes the finding's confidence:
   `span.flag(message, probability, question)`. Ask it after code has
   narrowed the candidates, never about every line.
-- **The llm for what the decider gets wrong.** `tools.llm` answers the same
-  `decide(question, span)`, but reasons first: for a question that takes
-  following the code, like whether state outlives a test, rather than
-  reading it. It is slower and dearer, so reach for it when `wiz scry eval`
-  shows the decider missing, and keep the decider for the rest. A rule can
-  hold both and ask each the questions it is good at. Its probability is
-  one it states, not one read off its tokens, so evaluate before trusting
-  the default `threshold`.
+- **The llm as a last resort.** `tools.llm` answers the same
+  `decide(question, span)`, but reasons first, slower and dearer. Reach
+  for it only when `wiz scry eval` shows the decider still wrong after
+  narrowing the span and rewording the question, and only for the
+  question it gets wrong: the rest stay with the decider. A rule that
+  asks it says so in its `rule.ts`, with the eval that showed the decider
+  missing. Its probability is one it states, not one read off its tokens,
+  so evaluate before trusting the default `threshold`.
 - **Private methods named for the rule's sentences**, so `check` reads as
   the rule does: `stateKeptBetweenCalls`, `namedForTheFile`.
 - **Import only types** from `@webappwiz/scry`, with `import type`, so the
