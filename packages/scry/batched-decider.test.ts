@@ -211,7 +211,7 @@ describe("BatchedDecider", () => {
 	});
 
 	it("counts the questions answered apart from those asked, while a request is out", async () => {
-		let reply: (verdict: Verdict) => void = () => undefined;
+		let reply: ((verdict: Verdict) => void) | undefined;
 		const decider = new BatchedDecider({
 			judge: () =>
 				new Promise<Verdict>((resolve) => {
@@ -222,7 +222,11 @@ describe("BatchedDecider", () => {
 			decider.decide("Is it?", at(cart, 1)),
 			decider.decide("Is it?", at(cart, 2)),
 		]);
-		await new Promise((resolve) => setTimeout(resolve, 5));
+		// until the request is out, a reply would answer nothing and the
+		// questions would wait forever
+		while (reply === undefined) {
+			await new Promise((resolve) => setTimeout(resolve, 1));
+		}
 
 		expect([decider.usage.questions, decider.answered]).toEqual([2, 0]);
 		reply({

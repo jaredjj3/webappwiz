@@ -181,7 +181,7 @@ describe("Rules.check", () => {
 		await install("asks", asking);
 		await write("src/a.ts", "foo\n");
 		await write("src/b.ts", "// add one\nn += 1;\n");
-		let answer: (probability: number) => void = () => undefined;
+		let answer: ((probability: number) => void) | undefined;
 		const decider = {
 			decide: () =>
 				new Promise<number>((resolve) => {
@@ -190,10 +190,12 @@ describe("Rules.check", () => {
 		};
 
 		const checking = run(["src/a.ts", "src/b.ts"], decider);
-		await until(() => progress.done > 0);
+		// b.ts can reach the decider after a.ts is done, so answering as soon
+		// as a.ts is done could answer nothing and leave b.ts waiting forever
+		await until(() => progress.done > 0 && answer !== undefined);
 
 		expect([progress.done, progress.total]).toEqual([1, 2]);
-		answer(0.9);
+		answer?.(0.9);
 		await checking;
 		expect([progress.done, progress.total]).toEqual([2, 2]);
 	});
