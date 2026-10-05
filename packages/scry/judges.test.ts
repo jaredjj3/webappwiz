@@ -42,11 +42,16 @@ describe("Clef and Jev", () => {
 		server.stop(true);
 	});
 
-	/** The wait before the next retry, once one is scheduled, and then its end, so no test waits in real time. */
-	const retried = async (): Promise<Duration> => {
+	/** Settles once the next retry is scheduled, for a test to act while it waits. */
+	const scheduled = async (): Promise<void> => {
 		while (timer.timeouts.length === 0) {
 			await Bun.sleep(0);
 		}
+	};
+
+	/** The wait before the next retry, once one is scheduled, and then its end, so no test waits in real time. */
+	const retried = async (): Promise<Duration> => {
+		await scheduled();
 		const delay = timer.timeouts[0]?.delay;
 		timer.fireTimeouts();
 		if (delay === undefined) {
@@ -173,9 +178,7 @@ describe("Clef and Jev", () => {
 		const controller = new AbortController();
 
 		const verdict = clef.judge(judgment, { signal: controller.signal });
-		while (timer.timeouts.length === 0) {
-			await Bun.sleep(0);
-		}
+		await scheduled();
 		controller.abort(new Error("stopped"));
 
 		await expect(verdict).rejects.toThrow("stopped");

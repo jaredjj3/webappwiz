@@ -47,13 +47,13 @@ describe("raf", () => {
 		expect(finished).toBe(true);
 	});
 
-	it("does not run a cancelled frame, and settles anyway", async () => {
+	it("does not run a disposed frame, and settles anyway", async () => {
 		let ran = false;
 
 		const frame = raf(clock, () => {
 			ran = true;
 		});
-		frame.cancel();
+		frame.dispose();
 		await frame.promise;
 
 		expect(ran).toBe(false);

@@ -8,16 +8,13 @@ import webappwiz from "../templates/webappwiz.skill.md" with { type: "text" };
 /** Skill name to what a project installs under that name. */
 export type Skills = Record<string, Bundle>;
 
-/**
- * The skills this package ships.
- *
- * They are imported rather than read out of a directory so they travel inside
- * the build: what publishes is the compiled JavaScript, and a document sitting
- * beside the source would not be part of it. Naming each one also means adding
- * a skill is a line here rather than a file that a directory listing may or may
- * not happen to pick up.
- */
+/** The skills this package ships, by the name a project installs each under. */
 export const bundled: Skills = {
+	// They are imported rather than read out of a directory so they travel
+	// inside the build: what publishes is the compiled JavaScript, and a
+	// document sitting beside the source would not be part of it. Naming each
+	// one also means adding a skill is a line here rather than a file that a
+	// directory listing may or may not happen to pick up.
 	arbor: { "SKILL.md": arbor },
 	scry: { "SKILL.md": scry },
 	webappwiz: { "SKILL.md": webappwiz },

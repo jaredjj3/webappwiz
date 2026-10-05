@@ -52,7 +52,7 @@ export class AnimationLoop implements Resource {
 			return;
 		}
 		this.running = false;
-		this.frame?.cancel();
+		this.frame?.dispose();
 		this.frame = null;
 	}
 

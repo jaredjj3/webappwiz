@@ -8,12 +8,14 @@ describe("FileHostMapper", () => {
 	const HOSTS = "127.0.0.1   localhost\n10.0.0.1   old.test";
 	let fs: FakeFs;
 	let ps: FakePs;
+	let log: MemoryLogger;
 	let mapper: FileHostMapper;
 
 	beforeEach(async () => {
 		fs = new FakeFs();
-		ps = new FakePs(); // darwin; the windows case builds its own below
-		mapper = FileHostMapper.default({ fs, ps, log: new MemoryLogger() });
+		ps = new FakePs(); // darwin; the windows cases build their own mapper
+		log = new MemoryLogger();
+		mapper = FileHostMapper.default({ fs, ps, log });
 		await fs.write("/etc/hosts", HOSTS);
 	});
 
@@ -44,31 +46,24 @@ describe("FileHostMapper", () => {
 		expect(ps.getCalls()).toEqual([]);
 	});
 
-	it("writes directly on windows and rejects unknown platforms", async () => {
-		const windows = new FakePs();
-		windows.platform = "win32";
-		const windowsMapper = FileHostMapper.default({
-			fs,
-			ps: windows,
-			log: new MemoryLogger(),
-		});
+	it("writes directly on windows", async () => {
+		ps.platform = "win32";
+		const windows = FileHostMapper.default({ fs, ps, log });
 		const hostsPath = "C:\\Windows\\System32\\drivers\\etc\\hosts";
 		await fs.write(hostsPath, HOSTS);
 
-		await windowsMapper.map("new.test", "10.0.0.9");
+		await windows.map("new.test", "10.0.0.9");
 
-		expect(windows.getCalls()).toEqual([]);
+		expect(ps.getCalls()).toEqual([]);
 		expect(await fs.read(hostsPath)).toContain("10.0.0.9   new.test");
+	});
 
-		const other = new FakePs();
-		other.platform = "freebsd";
-		expect(() =>
-			FileHostMapper.default({
-				fs: new FakeFs(),
-				ps: other,
-				log: new MemoryLogger(),
-			}),
-		).toThrow("Unsupported platform");
+	it("rejects an unknown platform", () => {
+		ps.platform = "freebsd";
+
+		expect(() => FileHostMapper.default({ fs, ps, log })).toThrow(
+			"Unsupported platform",
+		);
 	});
 
 	it("rejects when the sudo copy fails", async () => {

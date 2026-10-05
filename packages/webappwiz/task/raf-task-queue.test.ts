@@ -5,63 +5,6 @@ import { FakeClock } from "webappwiz/time/testing";
 
 import { type Raf, RafTaskQueue } from "./browser";
 
-type Entry = {
-	callback: (dt: Duration) => void | Promise<void>;
-	resolve: () => void;
-	settled: boolean;
-};
-
-/**
- * A `raf` the test drives, so nothing here waits on a real animation frame or
- * needs a DOM to run in.
- */
-class FakeRaf {
-	readonly clocks: Clock[] = [];
-	cancels = 0;
-	private entry: Entry | null = null;
-
-	readonly request: Raf = (clock, callback) => {
-		this.clocks.push(clock);
-		let resolve!: () => void;
-		const promise = new Promise<void>((settle) => {
-			resolve = settle;
-		});
-		const entry: Entry = { callback, resolve, settled: false };
-		this.entry = entry;
-		return {
-			promise,
-			// A frame already run cannot be given up, which is what the real one
-			// does once its callback has started.
-			cancel: () => {
-				if (entry.settled) {
-					return;
-				}
-				entry.settled = true;
-				this.entry = null;
-				this.cancels++;
-				resolve();
-			},
-		};
-	};
-
-	/** Whether a frame has been asked for and not yet run or given up. */
-	get requested(): boolean {
-		return this.entry !== null;
-	}
-
-	/** Runs the frame that was asked for, as the browser would. */
-	async run(): Promise<void> {
-		const entry = this.entry;
-		if (entry === null) {
-			throw new Error("no frame was asked for");
-		}
-		this.entry = null;
-		entry.settled = true;
-		await entry.callback(Duration.ms(16));
-		entry.resolve();
-	}
-}
-
 describe("RafTaskQueue", () => {
 	let frames: FakeRaf;
 	let clock: FakeClock;
@@ -137,3 +80,60 @@ describe("RafTaskQueue", () => {
 		expect(runs).toBe(0);
 	});
 });
+
+type Entry = {
+	callback: (dt: Duration) => void | Promise<void>;
+	resolve: () => void;
+	settled: boolean;
+};
+
+/**
+ * A `raf` the test drives, so nothing here waits on a real animation frame or
+ * needs a DOM to run in.
+ */
+class FakeRaf {
+	readonly clocks: Clock[] = [];
+	cancels = 0;
+	private entry: Entry | null = null;
+
+	readonly request: Raf = (clock, callback) => {
+		this.clocks.push(clock);
+		let resolve!: () => void;
+		const promise = new Promise<void>((settle) => {
+			resolve = settle;
+		});
+		const entry: Entry = { callback, resolve, settled: false };
+		this.entry = entry;
+		return {
+			promise,
+			// A frame already run cannot be given up, which is what the real one
+			// does once its callback has started.
+			dispose: () => {
+				if (entry.settled) {
+					return;
+				}
+				entry.settled = true;
+				this.entry = null;
+				this.cancels++;
+				resolve();
+			},
+		};
+	};
+
+	/** Whether a frame has been asked for and not yet run or given up. */
+	get requested(): boolean {
+		return this.entry !== null;
+	}
+
+	/** Runs the frame that was asked for, as the browser would. */
+	async run(): Promise<void> {
+		const entry = this.entry;
+		if (entry === null) {
+			throw new Error("no frame was asked for");
+		}
+		this.entry = null;
+		entry.settled = true;
+		await entry.callback(Duration.ms(16));
+		entry.resolve();
+	}
+}

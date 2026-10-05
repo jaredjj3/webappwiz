@@ -3,7 +3,7 @@ export {
 	type BatchedDeciderOptions,
 	type DeciderUsage,
 } from "./batched-decider";
-export { CachedDecider } from "./cached-decider";
+export { CachedDecider, type CachedDeciderOptions } from "./cached-decider";
 export { type Case, Cases, type CasesOptions } from "./cases";
 export {
 	CLEF_MODELS,

@@ -56,9 +56,9 @@ loop.events.on("frame", ({ dt }) => cursor.advance(dt));
 loop.start();
 ```
 
-`raf` is one frame, awaitable and cancellable. `AnimationLoop` keeps asking for
-the next one. For work that a stream of events triggers, `RafTaskQueue` in
-`webappwiz/task/browser` paces it to one run per frame.
+`raf` is one frame: await it, or dispose it to give it up. `AnimationLoop`
+keeps asking for the next one. For work that a stream of events triggers,
+`RafTaskQueue` in `webappwiz/task/browser` paces it to one run per frame.
 
 ## Observers
 

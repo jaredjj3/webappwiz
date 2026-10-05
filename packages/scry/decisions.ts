@@ -10,7 +10,10 @@ export interface Decision {
 	line: number;
 	probability: number;
 	model: string;
-	/** A hash of the whole file it was asked about, so an edit retires it. */
+	/**
+	 * The file it was asked about, by a hash of its whole text: an answer
+	 * holds only until the file changes.
+	 */
 	file: string;
 	/** When it was asked, as an ISO time. */
 	at: string;

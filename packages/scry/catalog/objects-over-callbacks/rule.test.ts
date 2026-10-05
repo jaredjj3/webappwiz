@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { Cases, SourceFile } from "@webappwiz/scry";
 import { FakeDecider } from "@webappwiz/scry/testing";
 import ObjectsOverCallbacks from "./rule";
@@ -6,29 +6,34 @@ import ObjectsOverCallbacks from "./rule";
 const cases = await Cases.load(import.meta.dir);
 
 describe("objects-over-callbacks", () => {
-	it.each(cases.bad)("flags $name", async ({ file }) => {
-		const rule = new ObjectsOverCallbacks({
-			decider: new FakeDecider({}, 0.9),
-		});
+	let decider: FakeDecider;
+	let rule: ObjectsOverCallbacks;
 
+	beforeEach(() => {
+		decider = new FakeDecider({}, 0.3);
+		rule = new ObjectsOverCallbacks({ decider });
+	});
+
+	it.each(cases.bad)("flags $name", async ({ file }) => {
 		expect(await rule.check(file)).not.toEqual([]);
 	});
 
 	it.each(cases.good)(
 		"passes $name when the decider says no",
 		async ({ file }) => {
-			const rule = new ObjectsOverCallbacks({
+			const refusing = new ObjectsOverCallbacks({
 				decider: new FakeDecider({}, 0),
 			});
 
 			expect(
-				(await rule.check(file)).filter((finding) => finding.confidence > 0),
+				(await refusing.check(file)).filter(
+					(finding) => finding.confidence > 0,
+				),
 			).toEqual([]);
 		},
 	);
 
 	it("asks about a function parameter a constructor does not keep, pointing at the declaration", async () => {
-		const decider = new FakeDecider({}, 0.3);
 		const file = new SourceFile(
 			"a.ts",
 			[
@@ -42,7 +47,7 @@ describe("objects-over-callbacks", () => {
 			].join("\n"),
 		);
 
-		const findings = await new ObjectsOverCallbacks({ decider }).check(file);
+		const findings = await rule.check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.confidence]),
@@ -51,7 +56,6 @@ describe("objects-over-callbacks", () => {
 	});
 
 	it("decides a kept constructor function and a bag of onX callbacks by code, and asks about an onX parameter", async () => {
-		const decider = new FakeDecider({}, 0);
 		const file = new SourceFile(
 			"a.ts",
 			[
@@ -66,7 +70,7 @@ describe("objects-over-callbacks", () => {
 			].join("\n"),
 		);
 
-		const findings = await new ObjectsOverCallbacks({ decider }).check(file);
+		const findings = await rule.check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.confidence]),
@@ -74,7 +78,7 @@ describe("objects-over-callbacks", () => {
 		]).toEqual([
 			[
 				[2, 1],
-				[3, 0],
+				[3, 0.3],
 				[5, 1],
 			],
 			[3],
@@ -87,11 +91,7 @@ describe("objects-over-callbacks", () => {
 			"type Format = (cents: number) => string;\nconst usd: Format = (cents) => String(cents);\n",
 		);
 
-		expect(
-			await new ObjectsOverCallbacks({ decider: new FakeDecider() }).check(
-				file,
-			),
-		).toEqual([]);
+		expect(await rule.check(file)).toEqual([]);
 	});
 
 	it("skips the onX members of a component's props, inline or named, and flags the same bag on a plain function", async () => {
@@ -109,9 +109,7 @@ describe("objects-over-callbacks", () => {
 			].join("\n"),
 		);
 
-		const findings = await new ObjectsOverCallbacks({
-			decider: new FakeDecider(),
-		}).check(file);
+		const findings = await rule.check(file);
 
 		expect(findings.map((finding) => finding.line)).toEqual([8]);
 	});

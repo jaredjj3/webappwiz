@@ -15,12 +15,10 @@ describe("CachedDecider", () => {
 	const comment = new Span(file, 1, "// add one");
 
 	const decider = async () =>
-		new CachedDecider(
-			inner,
-			await Decisions.open(path, { fs }),
-			"clef",
-			new FakeWallClock(),
-		);
+		new CachedDecider(inner, await Decisions.open(path, { fs }), {
+			model: "clef",
+			clock: new FakeWallClock(),
+		});
 
 	beforeEach(async () => {
 		fs = new FakeFs();
@@ -41,7 +39,7 @@ describe("CachedDecider", () => {
 
 	it("keeps what it was told between runs, once saved", async () => {
 		const decisions = await Decisions.open(path, { fs });
-		await new CachedDecider(inner, decisions, "clef").decide(
+		await new CachedDecider(inner, decisions, { model: "clef" }).decide(
 			"Does it restate?",
 			comment,
 		);
@@ -55,17 +53,17 @@ describe("CachedDecider", () => {
 
 	it("asks again once the file changed, or of another model", async () => {
 		const decisions = await Decisions.open(path, { fs });
-		await new CachedDecider(inner, decisions, "clef").decide(
+		await new CachedDecider(inner, decisions, { model: "clef" }).decide(
 			"Does it restate?",
 			comment,
 		);
 		const edited = new SourceFile("src/a.ts", "// add one\nn += 2;\n");
 
-		await new CachedDecider(inner, decisions, "clef").decide(
+		await new CachedDecider(inner, decisions, { model: "clef" }).decide(
 			"Does it restate?",
 			new Span(edited, 1, "// add one"),
 		);
-		await new CachedDecider(inner, decisions, "jev-latest").decide(
+		await new CachedDecider(inner, decisions, { model: "jev-latest" }).decide(
 			"Does it restate?",
 			comment,
 		);
@@ -75,7 +73,7 @@ describe("CachedDecider", () => {
 
 	it("says what was decided about a line of a file as it reads now", async () => {
 		const decisions = await Decisions.open(path, { fs });
-		await new CachedDecider(inner, decisions, "clef").decide(
+		await new CachedDecider(inner, decisions, { model: "clef" }).decide(
 			"Does it restate?",
 			comment,
 		);

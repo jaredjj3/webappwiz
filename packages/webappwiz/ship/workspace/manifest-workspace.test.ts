@@ -3,48 +3,6 @@ import type { Fs } from "webappwiz/system";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { ManifestWorkspace } from "./manifest-workspace";
 
-/** A filesystem that takes every write but the one path it is given. */
-class PartialFs extends FakeFs {
-	refuses?: string;
-
-	override async write(path: string, data: string): Promise<void> {
-		if (path === this.refuses) {
-			throw new Error(`no space left on device: ${path}`);
-		}
-		await super.write(path, data);
-	}
-}
-
-async function write(fs: Fs, dir: string, manifest: object): Promise<void> {
-	await fs.mkdir(dir);
-	await fs.write(`${dir}/package.json`, JSON.stringify(manifest));
-}
-
-async function manifest(fs: Fs, dir: string): Promise<Record<string, unknown>> {
-	return JSON.parse(await fs.read(`${dir}/package.json`));
-}
-
-async function versionAt(fs: Fs, dir: string): Promise<unknown> {
-	return (await manifest(fs, dir)).version;
-}
-
-/**
- * Seeds a workspace at 1.2.3 onto `fs`: a root at `/repo` declaring
- * `packages/*`, a public `@scope/one` under it, and a private `@scope/two`.
- */
-async function seeded(fs: Fs): Promise<void> {
-	await write(fs, "/repo", { version: "1.2.3", workspaces: ["packages/*"] });
-	await write(fs, "/repo/packages/one", {
-		name: "@scope/one",
-		version: "1.2.3",
-	});
-	await write(fs, "/repo/packages/two", {
-		name: "@scope/two",
-		version: "1.2.3",
-		private: true,
-	});
-}
-
 describe("workspace", () => {
 	let fs: FakeFs;
 	/** The workspace rooted at `/repo`, which is the one every test reads. */
@@ -225,3 +183,45 @@ describe("workspace", () => {
 		expect(ps.getCalls()).toEqual([]);
 	});
 });
+
+/** A filesystem that takes every write but the one path it is given. */
+class PartialFs extends FakeFs {
+	refuses?: string;
+
+	override async write(path: string, data: string): Promise<void> {
+		if (path === this.refuses) {
+			throw new Error(`no space left on device: ${path}`);
+		}
+		await super.write(path, data);
+	}
+}
+
+async function write(fs: Fs, dir: string, manifest: object): Promise<void> {
+	await fs.mkdir(dir);
+	await fs.write(`${dir}/package.json`, JSON.stringify(manifest));
+}
+
+async function manifest(fs: Fs, dir: string): Promise<Record<string, unknown>> {
+	return JSON.parse(await fs.read(`${dir}/package.json`));
+}
+
+async function versionAt(fs: Fs, dir: string): Promise<unknown> {
+	return (await manifest(fs, dir)).version;
+}
+
+/**
+ * Seeds a workspace at 1.2.3 onto `fs`: a root at `/repo` declaring
+ * `packages/*`, a public `@scope/one` under it, and a private `@scope/two`.
+ */
+async function seeded(fs: Fs): Promise<void> {
+	await write(fs, "/repo", { version: "1.2.3", workspaces: ["packages/*"] });
+	await write(fs, "/repo/packages/one", {
+		name: "@scope/one",
+		version: "1.2.3",
+	});
+	await write(fs, "/repo/packages/two", {
+		name: "@scope/two",
+		version: "1.2.3",
+		private: true,
+	});
+}

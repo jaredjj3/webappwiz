@@ -3,7 +3,7 @@ import { ConsoleLogger, color, MemoryLogger } from "webappwiz/log";
 import { NodePs } from "webappwiz/system";
 import { FakePs } from "webappwiz/system/testing";
 import { z } from "zod";
-import { cli } from "./cli";
+import { type Cli, cli } from "./cli";
 import type { Deps } from "./deps";
 
 /** One command at the top level, for the help the program prints. */
@@ -32,11 +32,13 @@ describe("cli", () => {
 	let log: MemoryLogger;
 	let ps: FakePs;
 	let deps: Deps;
+	let wiz: Cli;
 
 	beforeEach(() => {
 		log = new MemoryLogger();
 		ps = new FakePs();
 		deps = { log, ps };
+		wiz = cli("wiz");
 	});
 
 	/** Everything written to the logger so far, uncoloured, as one string. */
@@ -45,7 +47,6 @@ describe("cli", () => {
 
 	it("dispatches to the named command with parsed, typed opts", () => {
 		let got: { name: string; count: number } | undefined;
-		const wiz = cli("wiz");
 		wiz
 			.command("greet")
 			.option("name", z.string())
@@ -59,7 +60,6 @@ describe("cli", () => {
 
 	it("routes to the right command among several", () => {
 		const calls: string[] = [];
-		const wiz = cli("wiz");
 		wiz.command("foo").action(() => calls.push("foo"));
 		wiz.command("bar").action(() => calls.push("bar"));
 		wiz.run(deps, ["bar"]);
@@ -67,7 +67,6 @@ describe("cli", () => {
 	});
 
 	it("returns the command's value through run", () => {
-		const wiz = cli("wiz");
 		wiz.command("v").action(() => 7);
 		expect(wiz.run(deps, ["v"])).toBe(7);
 	});
@@ -101,7 +100,6 @@ describe("cli", () => {
 	});
 
 	it("writes command help to the injected logger, not the console", () => {
-		const wiz = cli("wiz");
 		wiz
 			.command("greet")
 			.description("greet someone")
@@ -113,7 +111,6 @@ describe("cli", () => {
 	});
 
 	it("reports an error and exits 1 when an option value is bad", () => {
-		const wiz = cli("wiz");
 		wiz
 			.command("n")
 			.option("x", z.coerce.number())
@@ -124,7 +121,6 @@ describe("cli", () => {
 	});
 
 	it("prints a readable error and exits 1 when a required option is missing", () => {
-		const wiz = cli("wiz");
 		wiz
 			.command("r")
 			.option("must", z.string())
@@ -137,7 +133,6 @@ describe("cli", () => {
 	});
 
 	it("reports the error and exits 1 when a sync action throws", () => {
-		const wiz = cli("wiz");
 		wiz.command("boom").action(() => {
 			throw new Error("nope");
 		});
@@ -147,7 +142,6 @@ describe("cli", () => {
 	});
 
 	it("reports the error and exits 1 when an async action rejects", async () => {
-		const wiz = cli("wiz");
 		wiz.command("boom").action(async () => {
 			throw new Error("nope");
 		});
@@ -157,7 +151,6 @@ describe("cli", () => {
 	});
 
 	it("reports the value when the action throws a non-Error", () => {
-		const wiz = cli("wiz");
 		wiz.command("boom").action(() => {
 			throw "plain string";
 		});
@@ -168,7 +161,6 @@ describe("cli", () => {
 
 	it("dispatches through a group to its subcommand", () => {
 		let got: { name: string } | undefined;
-		const wiz = cli("wiz");
 		wiz
 			.group("skills")
 			.command("add")
@@ -198,7 +190,6 @@ describe("cli", () => {
 
 	it("runs a group's fallback when no argument names a subcommand", () => {
 		const got: unknown[] = [];
-		const wiz = cli("wiz");
 		const scry = wiz.group("scry").fallback("check");
 		scry
 			.command("check")
@@ -223,7 +214,6 @@ describe("cli", () => {
 	});
 
 	it("marks a group's fallback in its help, which --help still prints", () => {
-		const wiz = cli("wiz");
 		const scry = wiz.group("scry").fallback("check");
 		scry.command("check").description("check a change");
 
@@ -247,7 +237,6 @@ describe("cli", () => {
 	});
 
 	it("names the full path in a subcommand's own help", () => {
-		const wiz = cli("wiz");
 		wiz
 			.group("skills")
 			.command("add")
@@ -260,7 +249,6 @@ describe("cli", () => {
 	});
 
 	it("exits once, at the root, when a subcommand fails", () => {
-		const wiz = cli("wiz");
 		wiz
 			.group("skills")
 			.command("add")
@@ -274,16 +262,18 @@ describe("cli", () => {
 
 	it("runs group middleware inside the program's", () => {
 		const order: string[] = [];
-		const wiz = cli("wiz").use<{ n: number }>(async (ctx, next) => {
+		const program = wiz.use<{ n: number }>(async (ctx, next) => {
 			order.push("outer");
 			await next({ ...ctx, n: 1 });
 		});
-		const skills = wiz.group("skills").use<{ n: number }>(async (ctx, next) => {
-			order.push("inner");
-			await next({ ...ctx, n: ctx.n + 1 });
-		});
+		const skills = program
+			.group("skills")
+			.use<{ n: number }>(async (ctx, next) => {
+				order.push("inner");
+				await next({ ...ctx, n: ctx.n + 1 });
+			});
 		skills.command("add").action((_o, ctx) => order.push(`n=${ctx.n}`));
-		return Promise.resolve(wiz.run(deps, ["skills", "add"])).then(() => {
+		return Promise.resolve(program.run(deps, ["skills", "add"])).then(() => {
 			expect(order).toEqual(["outer", "inner", "n=2"]);
 		});
 	});
@@ -292,7 +282,6 @@ describe("cli", () => {
 		const calls: string[] = [];
 		const sub = cli("webappwiz");
 		sub.command("update").action(() => calls.push("update"));
-		const wiz = cli("wiz");
 		wiz.mount("cli", sub);
 		wiz.run(deps, ["cli", "update"]);
 		expect(calls).toEqual(["update"]);
@@ -301,7 +290,6 @@ describe("cli", () => {
 	it("names a mounted cli's commands by the path they were reached through", () => {
 		const sub = cli("webappwiz");
 		sub.command("update").action(() => {});
-		const wiz = cli("wiz");
 		wiz.mount("cli", sub);
 
 		wiz.run(deps, ["cli", "update", "--help"]);
@@ -314,7 +302,6 @@ describe("cli", () => {
 	it("lists a mounted cli under its own description", () => {
 		const sub = cli("webappwiz").description("run webappwiz");
 		sub.command("update").action(() => {});
-		const wiz = cli("wiz");
 		wiz.mount("cli", sub);
 
 		wiz.run(deps, []);
@@ -327,7 +314,7 @@ describe("cli", () => {
 	it("prints usage through the logger it is run with", () => {
 		const out = new MemoryLogger();
 
-		cli("wiz").run({ log: out, ps }, []);
+		wiz.run({ log: out, ps }, []);
 
 		expect(
 			color.strip(out.entries.map((entry) => entry.message).join("\n")),
@@ -336,8 +323,7 @@ describe("cli", () => {
 
 	it("routes every argument past the command name to a forwarding command", () => {
 		let got: { pkg: string; args: string[] } | undefined;
-		const s2s = cli("s2s");
-		s2s
+		wiz
 			.command("test")
 			.allowUnknownOption()
 			.arg("pkg", z.string(), { default: "" })
@@ -345,7 +331,7 @@ describe("cli", () => {
 			.action((opts) => {
 				got = opts;
 			});
-		const e2e = s2s.group("e2e");
+		const e2e = wiz.group("e2e");
 		e2e
 			.command("run")
 			.allowUnknownOption()
@@ -354,16 +340,15 @@ describe("cli", () => {
 				got = { pkg: "", args: opts.args };
 			});
 
-		s2s.run({ log, ps }, ["test", "web", "viewframe", "--watch"]);
+		wiz.run(deps, ["test", "web", "viewframe", "--watch"]);
 		expect(got).toEqual({ pkg: "web", args: ["viewframe", "--watch"] });
 
-		s2s.run({ log, ps }, ["e2e", "run", "midi-fidelity", "--", "--headed"]);
+		wiz.run(deps, ["e2e", "run", "midi-fidelity", "--", "--headed"]);
 		expect(got).toEqual({ pkg: "", args: ["midi-fidelity", "--headed"] });
 	});
 
 	it("defaults the logger and process a command is given", () => {
 		let got: Deps | undefined;
-		const wiz = cli("wiz");
 		wiz.command("a").action((_o, ctx) => {
 			got = ctx;
 		});
@@ -376,7 +361,6 @@ describe("cli", () => {
 
 	it("defaults argv to the arguments the process was run with", () => {
 		const calls: string[] = [];
-		const wiz = cli("wiz");
 		wiz.command("a").action(() => calls.push("a"));
 
 		ps.args = ["a"];

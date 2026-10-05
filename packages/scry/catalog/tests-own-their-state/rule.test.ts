@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { Cases, SourceFile } from "@webappwiz/scry";
 import { FakeDecider } from "@webappwiz/scry/testing";
 import TestsOwnTheirState from "./rule";
@@ -6,7 +6,13 @@ import TestsOwnTheirState from "./rule";
 const cases = await Cases.load(import.meta.dir);
 
 describe("tests-own-their-state", () => {
-	const rule = new TestsOwnTheirState({ decider: new FakeDecider({}, 0.9) });
+	let decider: FakeDecider;
+	let rule: TestsOwnTheirState;
+
+	beforeEach(() => {
+		decider = new FakeDecider({}, 0.2);
+		rule = new TestsOwnTheirState({ decider });
+	});
 
 	it.each(cases.bad)("flags $name", async ({ file }) => {
 		expect(await rule.check(file)).not.toEqual([]);
@@ -17,13 +23,12 @@ describe("tests-own-their-state", () => {
 	});
 
 	it("asks the decider whether a class holding built objects is a harness", async () => {
-		const decider = new FakeDecider({}, 0.2);
 		const file = new SourceFile(
 			"a.test.ts",
 			"class FakeOutbox {\n\treadonly sent = [];\n}\nclass Harness {\n\treadonly cart = new Cart();\n}\n",
 		);
 
-		const findings = await new TestsOwnTheirState({ decider }).check(file);
+		const findings = await rule.check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.confidence]),

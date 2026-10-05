@@ -3,23 +3,49 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import manifest from "./package.json" with { type: "json" };
 
-/**
- * The entry points that only answer somewhere particular, and where that is.
- * Named one by one rather than inferred from a directory, because the split is
- * per entry point and not per module: `webappwiz/task` runs anywhere and
- * `webappwiz/task/browser` needs a DOM, out of the same directory.
- */
-const PLATFORM: Record<string, "browser" | "node"> = {
-	"./browser": "browser",
-	"./task/browser": "browser",
-	"./worker/web": "browser",
-	"./cmd": "node",
-	"./credentials": "node",
-	"./ship": "node",
-	"./ship/testing": "node",
-	"./system": "node",
-	"./system/testing": "node",
-};
+describe("platform", () => {
+	/**
+	 * The entry points that only answer somewhere particular, and where that
+	 * is. Named one by one rather than inferred from a directory, because the
+	 * split is per entry point and not per module: `webappwiz/task` runs
+	 * anywhere and `webappwiz/task/browser` needs a DOM, out of the same
+	 * directory.
+	 */
+	const PLATFORM: Record<string, "browser" | "node"> = {
+		"./browser": "browser",
+		"./task/browser": "browser",
+		"./worker/web": "browser",
+		"./cmd": "node",
+		"./credentials": "node",
+		"./ship": "node",
+		"./ship/testing": "node",
+		"./system": "node",
+		"./system/testing": "node",
+	};
+	const exports = manifest.exports as Record<string, string>;
+
+	it("names only entry points the manifest exports", () => {
+		// A platform entry point spelled wrong here would be checked as though it
+		// were neutral, which is the one way this file can pass and mean nothing.
+		expect(Object.keys(exports)).toEqual(
+			expect.arrayContaining(Object.keys(PLATFORM)),
+		);
+	});
+
+	it.each(Object.entries(exports).filter(([name]) => !(name in PLATFORM)))(
+		"keeps %s free of anything that only runs somewhere",
+		(name, path) => {
+			const platform = [...reaches(path)]
+				.filter((entry) => entry in PLATFORM)
+				.map((entry) => `${entry} (${PLATFORM[entry]})`);
+
+			expect(
+				platform,
+				`${name} runs anywhere, so it must not reach ${platform.join(", ")}`,
+			).toEqual([]);
+		},
+	);
+});
 
 /** A specifier this package imports from itself, which names an entry point. */
 const SELF = /from\s*"(webappwiz\/[^"]+)"/g;
@@ -64,29 +90,3 @@ const reaches = (entry: string): Set<string> => {
 	}
 	return found;
 };
-
-describe("platform", () => {
-	const exports = manifest.exports as Record<string, string>;
-
-	it("names only entry points the manifest exports", () => {
-		// A platform entry point spelled wrong here would be checked as though it
-		// were neutral, which is the one way this file can pass and mean nothing.
-		expect(Object.keys(exports)).toEqual(
-			expect.arrayContaining(Object.keys(PLATFORM)),
-		);
-	});
-
-	it.each(Object.entries(exports).filter(([name]) => !(name in PLATFORM)))(
-		"keeps %s free of anything that only runs somewhere",
-		(name, path) => {
-			const platform = [...reaches(path)]
-				.filter((entry) => entry in PLATFORM)
-				.map((entry) => `${entry} (${PLATFORM[entry]})`);
-
-			expect(
-				platform,
-				`${name} runs anywhere, so it must not reach ${platform.join(", ")}`,
-			).toEqual([]);
-		},
-	);
-});

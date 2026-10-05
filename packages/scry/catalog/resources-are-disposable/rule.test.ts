@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { Cases, SourceFile } from "@webappwiz/scry";
 import { FakeDecider } from "@webappwiz/scry/testing";
 import ResourcesAreDisposable from "./rule";
@@ -6,31 +6,29 @@ import ResourcesAreDisposable from "./rule";
 const cases = await Cases.load(import.meta.dir);
 
 describe("resources-are-disposable", () => {
-	it.each(cases.bad)("flags $name", async ({ file }) => {
-		const rule = new ResourcesAreDisposable({
-			decider: new FakeDecider({}, 0.9),
-		});
+	let decider: FakeDecider;
+	let rule: ResourcesAreDisposable;
 
+	beforeEach(() => {
+		decider = new FakeDecider({}, 0.4);
+		rule = new ResourcesAreDisposable({ decider });
+	});
+
+	it.each(cases.bad)("flags $name", async ({ file }) => {
 		expect(await rule.check(file)).not.toEqual([]);
 	});
 
 	it.each(cases.good)("passes $name", async ({ file }) => {
-		const decider = new FakeDecider({}, 0.9);
-
-		expect([
-			await new ResourcesAreDisposable({ decider }).check(file),
-			decider.asked,
-		]).toEqual([[], []]);
+		expect([await rule.check(file), decider.asked]).toEqual([[], []]);
 	});
 
 	it("asks whether a close() releases anything when the class takes nothing it can see", async () => {
-		const decider = new FakeDecider({}, 0.4);
 		const file = new SourceFile(
 			"a.ts",
 			"export class Watcher {\n\tclose(): void {\n\t\tthis.unlisten();\n\t}\n}\n",
 		);
 
-		const findings = await new ResourcesAreDisposable({ decider }).check(file);
+		const findings = await rule.check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.confidence]),
@@ -39,7 +37,6 @@ describe("resources-are-disposable", () => {
 	});
 
 	it("decides a close() by code when the class visibly takes a resource", async () => {
-		const decider = new FakeDecider();
 		const file = new SourceFile(
 			"a.ts",
 			[
@@ -54,7 +51,7 @@ describe("resources-are-disposable", () => {
 			].join("\n"),
 		);
 
-		const findings = await new ResourcesAreDisposable({ decider }).check(file);
+		const findings = await rule.check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.confidence]),
@@ -79,11 +76,7 @@ describe("resources-are-disposable", () => {
 			].join("\n"),
 		);
 
-		expect(
-			await new ResourcesAreDisposable({ decider: new FakeDecider() }).check(
-				file,
-			),
-		).toEqual([]);
+		expect(await rule.check(file)).toEqual([]);
 	});
 
 	it("leaves a factory named open, a listener on what the call made, a static timer, and a call handed no function", async () => {
@@ -107,11 +100,7 @@ describe("resources-are-disposable", () => {
 			].join("\n"),
 		);
 
-		expect(
-			await new ResourcesAreDisposable({ decider: new FakeDecider() }).check(
-				file,
-			),
-		).toEqual([]);
+		expect(await rule.check(file)).toEqual([]);
 	});
 
 	it("flags a handle kept in a field, and a listener on something handed in", async () => {
@@ -131,13 +120,9 @@ describe("resources-are-disposable", () => {
 			].join("\n"),
 		);
 
-		expect(
-			(
-				await new ResourcesAreDisposable({ decider: new FakeDecider() }).check(
-					file,
-				)
-			).map((finding) => finding.line),
-		).toEqual([1, 6]);
+		expect((await rule.check(file)).map((finding) => finding.line)).toEqual([
+			1, 6,
+		]);
 	});
 
 	it("leaves a plain number that no method taking a function hands out", async () => {
@@ -146,10 +131,6 @@ describe("resources-are-disposable", () => {
 			"export interface Counter {\n\tcount(): number;\n\tclear(at: number): void;\n}\n",
 		);
 
-		expect(
-			await new ResourcesAreDisposable({ decider: new FakeDecider() }).check(
-				file,
-			),
-		).toEqual([]);
+		expect(await rule.check(file)).toEqual([]);
 	});
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { Cases, SourceFile } from "@webappwiz/scry";
 import { FakeDecider } from "@webappwiz/scry/testing";
 import ReactiveOverUseState from "./rule";
@@ -6,24 +6,27 @@ import ReactiveOverUseState from "./rule";
 const cases = await Cases.load(import.meta.dir);
 
 describe("reactive-over-use-state", () => {
-	it.each(cases.bad)("asks about $name", async ({ file }) => {
-		const decider = new FakeDecider();
+	let decider: FakeDecider;
+	let rule: ReactiveOverUseState;
 
-		await new ReactiveOverUseState({ decider }).check(file);
+	beforeEach(() => {
+		decider = new FakeDecider({}, 0.8);
+		rule = new ReactiveOverUseState({ decider });
+	});
+
+	it.each(cases.bad)("asks about $name", async ({ file }) => {
+		await rule.check(file);
 
 		expect(decider.asked).not.toEqual([]);
 	});
 
 	it.each(cases.good)("asks nothing about $name", async ({ file }) => {
-		const decider = new FakeDecider();
-
-		await new ReactiveOverUseState({ decider }).check(file);
+		await rule.check(file);
 
 		expect(decider.asked).toEqual([]);
 	});
 
 	it("asks about the component holding several pieces of state, not a function inside it", async () => {
-		const decider = new FakeDecider({}, 0.8);
 		const file = new SourceFile(
 			"a.tsx",
 			[
@@ -39,7 +42,7 @@ describe("reactive-over-use-state", () => {
 			].join("\n"),
 		);
 
-		const findings = await new ReactiveOverUseState({ decider }).check(file);
+		const findings = await rule.check(file);
 
 		expect([
 			findings.map((finding) => [finding.line, finding.confidence]),

@@ -30,21 +30,15 @@ describe("MemoryLock", () => {
 	it("hands the lock to waiters in the order they arrived", async () => {
 		await lock.acquire();
 
-		const first = lock.acquire().then(() => {
-			order.push("first");
-			return lock.release();
-		});
-		const second = lock.acquire().then(() => {
-			order.push("second");
-			return lock.release();
-		});
-		const third = lock.acquire().then(() => {
-			order.push("third");
-			return lock.release();
-		});
+		const waiters = ["first", "second", "third"].map((name) =>
+			lock.acquire().then(() => {
+				order.push(name);
+				return lock.release();
+			}),
+		);
 
 		await lock.release();
-		await Promise.all([first, second, third]);
+		await Promise.all(waiters);
 
 		expect(order).toEqual(["first", "second", "third"]);
 	});

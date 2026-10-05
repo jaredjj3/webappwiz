@@ -1,11 +1,13 @@
+import type { Resource } from "webappwiz/disposable";
 import type { Clock, Duration } from "webappwiz/time";
 
-/** A frame that has been asked for: awaitable, and cancellable until it runs. */
-export interface Frame {
-	/** Resolves once the callback has run, or once the frame is cancelled. */
+/**
+ * A frame that has been asked for: await `promise` for it to run, or dispose
+ * it to give it up. Disposing does nothing once the callback has started.
+ */
+export interface Frame extends Resource {
+	/** Resolves once the callback has run, or once the frame is disposed. */
 	promise: Promise<void>;
-	/** Gives up the frame. Does nothing once the callback has started. */
-	cancel(): void;
 }
 
 /**
@@ -39,7 +41,7 @@ export function raf(
 
 	return {
 		promise,
-		cancel: () => {
+		dispose: () => {
 			if (id === null) {
 				return;
 			}

@@ -16,7 +16,8 @@ describe("cli github", () => {
 	});
 
 	it("logs in when gh has nobody, then writes the notes", async () => {
-		// Nobody is logged in, and the release does not exist yet.
+		// gh exits 1 both when nobody is logged in and when the release does not
+		// exist yet.
 		ps.simulate(async () => {
 			const call = ps.getCalls().at(-1);
 			return call === "gh auth status" || call === "gh release view v1.2.4"

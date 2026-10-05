@@ -11,7 +11,8 @@ export class SequentialIpProvider implements IpProvider {
 					return ip;
 				}
 			} catch {
-				// a failing provider just means try the next one
+				// swallowed rather than thrown: the next provider is the fallback
+				// for exactly this one failing
 			}
 		}
 		return "";

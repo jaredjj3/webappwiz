@@ -1,10 +1,16 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { MemoryLogger } from "webappwiz/log";
 import { Command } from "./command";
 
 describe("Command with Standard Schema", () => {
-	const log = new MemoryLogger();
+	let log: MemoryLogger;
+	let serve: Command<unknown>;
+
+	beforeEach(() => {
+		log = new MemoryLogger();
+		serve = new Command("serve");
+	});
 
 	function schema<T>(
 		validate: StandardSchemaV1.Props<unknown, T>["validate"],
@@ -14,7 +20,7 @@ describe("Command with Standard Schema", () => {
 
 	it("accepts another vendor and infers its transformed output", () => {
 		const number = schema((value) => ({ value: Number(value) }));
-		const command = new Command("serve").arg("port", number).action((opts) => {
+		const command = serve.arg("port", number).action((opts) => {
 			const port: number = opts.port;
 			return port;
 		});
@@ -30,27 +36,25 @@ describe("Command with Standard Schema", () => {
 			],
 		}));
 
-		expect(() =>
-			new Command("serve").arg("input", invalid).exec(["bad"], { log }),
-		).toThrow(new Error("servers.0.port: bad port"));
+		expect(() => serve.arg("input", invalid).exec(["bad"], { log })).toThrow(
+			new Error("servers.0.port: bad port"),
+		);
 	});
 
 	it("does not accept a failure with no issues as a parsed value", () => {
 		const invalid = schema(() => ({ issues: [] }));
 
-		expect(() =>
-			new Command("serve").arg("input", invalid).exec(["bad"], { log }),
-		).toThrow(new Error("invalid"));
+		expect(() => serve.arg("input", invalid).exec(["bad"], { log })).toThrow(
+			new Error("invalid"),
+		);
 	});
 
 	it("refuses asynchronous validation before running the action", () => {
 		let ran = false;
 		const asynchronous = schema(async (value) => ({ value }));
-		const command = new Command("serve")
-			.arg("input", asynchronous)
-			.action(() => {
-				ran = true;
-			});
+		const command = serve.arg("input", asynchronous).action(() => {
+			ran = true;
+		});
 
 		expect(() => command.exec(["value"], { log })).toThrow(
 			"elsewhere validated asynchronously, which is not supported here",

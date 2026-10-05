@@ -8,9 +8,9 @@ export const MAX_PORT = 65535;
 /** Where the port will be bound, when that is narrower than every interface. */
 export interface PortHost {
 	/**
-	 * Also probe the port on this address. A server bound to one address, like
-	 * 127.0.0.1, can hold a port that a probe of every interface still gets,
-	 * since the more specific bind is allowed alongside it.
+	 * The address the port is for, such as 127.0.0.1. Set it when that is where
+	 * the port will be bound: a port something holds on that one address can
+	 * still look open on every interface, so it is probed there as well.
 	 */
 	host?: string;
 }

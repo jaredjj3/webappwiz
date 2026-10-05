@@ -6,12 +6,15 @@ import { OpenPortProvider } from "./open-port-provider";
 describe("OpenPortProvider", () => {
 	const held: Server[] = [];
 
-	/** Binds a port and keeps it, answering with the port it got. */
-	const hold = (): Promise<number> =>
+	/**
+	 * Binds a port and keeps it, answering with the port it got. Binds every
+	 * host unless given one.
+	 */
+	const hold = (host?: string): Promise<number> =>
 		new Promise((resolve) => {
 			const server = createServer();
 			held.push(server);
-			server.listen(0, () => {
+			server.listen(0, host, () => {
 				const address = server.address();
 				resolve(typeof address === "object" && address ? address.port : 0);
 			});
@@ -42,14 +45,7 @@ describe("OpenPortProvider", () => {
 	});
 
 	it("looks past a port held on the one host it will be bound to", async () => {
-		const server = createServer();
-		held.push(server);
-		const taken = await new Promise<number>((resolve) =>
-			server.listen(0, "127.0.0.1", () => {
-				const address = server.address();
-				resolve(typeof address === "object" && address ? address.port : 0);
-			}),
-		);
+		const taken = await hold("127.0.0.1");
 
 		const port = await OpenPortProvider.span({
 			from: taken,

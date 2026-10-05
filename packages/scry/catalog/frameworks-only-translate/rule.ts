@@ -8,63 +8,6 @@ import type {
 } from "@webappwiz/scry";
 
 /**
- * The frameworks an adapter is written for, by the module each is imported
- * from, and what it adapts to: a UI, a web server or a CLI. A module's
- * subpaths count as it, so `hono/factory` is Hono.
- */
-const FRAMEWORKS: Record<string, "ui" | "server" | "cli"> = {
-	react: "ui",
-	"react-dom": "ui",
-	preact: "ui",
-	koa: "server",
-	"@koa/router": "server",
-	hono: "server",
-	express: "server",
-	fastify: "server",
-	"webappwiz/cmd": "cli",
-	commander: "cli",
-};
-
-/** The methods a web server routes a request through, as `app.get(path, handler)`. */
-const ROUTES = ["get", "post", "put", "patch", "delete", "all", "head"];
-
-const FUNCTIONS = [
-	"function_declaration",
-	"arrow_function",
-	"function_expression",
-];
-
-/** What makes code choose, rather than pass along what it was given. */
-const BRANCHES = [
-	"if_statement",
-	"switch_statement",
-	"ternary_expression",
-	"for_statement",
-	"for_in_statement",
-	"while_statement",
-	"do_statement",
-	"try_statement",
-];
-
-/** Tests and their fakes stand in for a framework on purpose. */
-const TESTING = /(\.test\.tsx?|(^|\/)testing\.tsx?)$/;
-
-const DECIDES =
-	"Does this adapter decide or compute things itself that a plain class or program should, such as keeping meaningful state (a draft, whether it is busy), making decisions (whether something changed or is allowed, which items to act on, what happens next), or running a query and computing from its result? Translating input into one call per control, route or command on a plain object, results into output, purely visual state like whether a menu is open, and keeping up with the framework's own lifecycle, such as mounts and renders, are not.";
-
-/** A function a framework calls: a component, a hook, a route handler or a CLI action. */
-interface Adapter {
-	/** The function, which the decider reads. */
-	body: SyntaxNode;
-	/** Where its finding points: the function, or the call that registers it. */
-	at: SyntaxNode;
-	/** Whether code cannot tell it only translates, so the decider is asked. */
-	mayDecide: boolean;
-	/** What to do instead, when it decides. */
-	message: string;
-}
-
-/**
  * Finds logic a framework holds: a component, hook, route handler or CLI
  * action that decides or computes rather than translating to a plain object,
  * and a plain class that uses a framework's names, so it cannot run without it.
@@ -350,4 +293,61 @@ function namesIn(node: SyntaxNode): string[] {
 			rule: { any: [{ kind: "identifier" }, { kind: "type_identifier" }] },
 		})
 		.map((name) => name.text);
+}
+
+/**
+ * The frameworks an adapter is written for, by the module each is imported
+ * from, and what it adapts to: a UI, a web server or a CLI. A module's
+ * subpaths count as it, so `hono/factory` is Hono.
+ */
+const FRAMEWORKS: Record<string, "ui" | "server" | "cli"> = {
+	react: "ui",
+	"react-dom": "ui",
+	preact: "ui",
+	koa: "server",
+	"@koa/router": "server",
+	hono: "server",
+	express: "server",
+	fastify: "server",
+	"webappwiz/cmd": "cli",
+	commander: "cli",
+};
+
+/** The methods a web server routes a request through, as `app.get(path, handler)`. */
+const ROUTES = ["get", "post", "put", "patch", "delete", "all", "head"];
+
+const FUNCTIONS = [
+	"function_declaration",
+	"arrow_function",
+	"function_expression",
+];
+
+/** What makes code choose, rather than pass along what it was given. */
+const BRANCHES = [
+	"if_statement",
+	"switch_statement",
+	"ternary_expression",
+	"for_statement",
+	"for_in_statement",
+	"while_statement",
+	"do_statement",
+	"try_statement",
+];
+
+/** Tests and their fakes stand in for a framework on purpose. */
+const TESTING = /(\.test\.tsx?|(^|\/)testing\.tsx?)$/;
+
+const DECIDES =
+	"Does this adapter decide or compute things itself that a plain class or program should, such as keeping meaningful state (a draft, whether it is busy), making decisions (whether something changed or is allowed, which items to act on, what happens next), or running a query and computing from its result? Translating input into one call per control, route or command on a plain object, results into output, purely visual state like whether a menu is open, and keeping up with the framework's own lifecycle, such as mounts and renders, are not.";
+
+/** A function a framework calls: a component, a hook, a route handler or a CLI action. */
+interface Adapter {
+	/** The function, which the decider reads. */
+	body: SyntaxNode;
+	/** Where its finding points: the function, or the call that registers it. */
+	at: SyntaxNode;
+	/** Whether code cannot tell it only translates, so the decider is asked. */
+	mayDecide: boolean;
+	/** What to do instead, when it decides. */
+	message: string;
 }

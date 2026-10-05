@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { Cases, SourceFile } from "@webappwiz/scry";
 import { FakeDecider } from "@webappwiz/scry/testing";
 import TestSetupNamesWhatItMakes from "./rule";
@@ -6,21 +6,25 @@ import TestSetupNamesWhatItMakes from "./rule";
 const cases = await Cases.load(import.meta.dir);
 
 describe("test-setup-names-what-it-makes", () => {
-	it.each(cases.bad)("flags $name", async ({ file }) => {
-		const rule = new TestSetupNamesWhatItMakes({
-			decider: new FakeDecider({}, 0.9),
-		});
+	let decider: FakeDecider;
+	let rule: TestSetupNamesWhatItMakes;
 
+	beforeEach(() => {
+		decider = new FakeDecider({ Cart: 0.85 }, 0.1);
+		rule = new TestSetupNamesWhatItMakes({ decider });
+	});
+
+	it.each(cases.bad)("flags $name", async ({ file }) => {
 		expect(await rule.check(file)).not.toEqual([]);
 	});
 
 	it.each(cases.good)("finds no harness by name in $name", async ({ file }) => {
-		const rule = new TestSetupNamesWhatItMakes({
+		const refusing = new TestSetupNamesWhatItMakes({
 			decider: new FakeDecider({}, 0),
 		});
 
 		expect(
-			(await rule.check(file)).filter(({ confidence }) => confidence > 0),
+			(await refusing.check(file)).filter(({ confidence }) => confidence > 0),
 		).toEqual([]);
 	});
 
@@ -35,9 +39,7 @@ describe("test-setup-names-what-it-makes", () => {
 			].join("\n"),
 		);
 
-		const findings = await new TestSetupNamesWhatItMakes({
-			decider: new FakeDecider(),
-		}).check(file);
+		const findings = await rule.check(file);
 
 		expect(findings.map(({ line }) => line)).toEqual([1, 1, 2, 4]);
 	});
@@ -48,15 +50,12 @@ describe("test-setup-names-what-it-makes", () => {
 			"// The harness every test runs against.\nexport function repo() {}\n",
 		);
 
-		const findings = await new TestSetupNamesWhatItMakes({
-			decider: new FakeDecider(),
-		}).check(file);
+		const findings = await rule.check(file);
 
 		expect(findings.map(({ line }) => line)).toEqual([1]);
 	});
 
 	it("asks the decider whether a Testing class holds the subject, and no other class", async () => {
-		const decider = new FakeDecider({ Cart: 0.85 }, 0.1);
 		const file = new SourceFile(
 			"testing.ts",
 			[
@@ -69,9 +68,7 @@ describe("test-setup-names-what-it-makes", () => {
 			].join("\n"),
 		);
 
-		const findings = await new TestSetupNamesWhatItMakes({ decider }).check(
-			file,
-		);
+		const findings = await rule.check(file);
 
 		expect([
 			decider.asked.map(({ about }) => about.line),

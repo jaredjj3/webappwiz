@@ -39,6 +39,7 @@ export interface ProjectDeciderOptions {
  */
 export class ProjectDecider implements Decider {
 	private constructor(
+		// scry-ignore classes-over-function-exports: usage and answered are BatchedDecider's own, not Decider's
 		private batched: BatchedDecider,
 		private cached: CachedDecider,
 		private decisions: Decisions,
@@ -65,7 +66,7 @@ export class ProjectDecider implements Decider {
 		const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
 		return new ProjectDecider(
 			batched,
-			new CachedDecider(batched, decisions, opts.model),
+			new CachedDecider(batched, decisions, { model: opts.model }),
 			decisions,
 		);
 	}

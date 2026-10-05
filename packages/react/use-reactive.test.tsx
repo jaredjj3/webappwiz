@@ -5,29 +5,6 @@ import { StrictMode } from "react";
 import { Dispatcher } from "webappwiz/events";
 import { useReactive } from "./use-reactive";
 
-type CounterEvents = { change: undefined };
-
-class Counter {
-	private dispatcher = new Dispatcher<CounterEvents>();
-	readonly events = this.dispatcher.events;
-
-	count = 0;
-	subscriptions = 0;
-
-	constructor() {
-		const on = this.dispatcher.events.on.bind(this.dispatcher.events);
-		this.dispatcher.events.on = (type, listener, opts) => {
-			this.subscriptions++;
-			return on(type, listener, opts);
-		};
-	}
-
-	bump(): void {
-		this.count++;
-		this.dispatcher.dispatch("change");
-	}
-}
-
 describe("useReactive", () => {
 	let counter: Counter;
 
@@ -130,3 +107,26 @@ describe("useReactive", () => {
 		expect(result.current).toBe(1);
 	});
 });
+
+type CounterEvents = { change: undefined };
+
+class Counter {
+	private dispatcher = new Dispatcher<CounterEvents>();
+	readonly events = this.dispatcher.events;
+
+	count = 0;
+	subscriptions = 0;
+
+	constructor() {
+		const on = this.dispatcher.events.on.bind(this.dispatcher.events);
+		this.dispatcher.events.on = (type, listener, opts) => {
+			this.subscriptions++;
+			return on(type, listener, opts);
+		};
+	}
+
+	bump(): void {
+		this.count++;
+		this.dispatcher.dispatch("change");
+	}
+}

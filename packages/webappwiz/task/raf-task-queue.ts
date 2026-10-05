@@ -37,7 +37,7 @@ export class RafTaskQueue implements TaskQueue, Resource {
 		this.queue = this.disposer.use(
 			new ConflatedTaskQueue(() => this.scheduleFrame()),
 		);
-		this.disposer.defer(() => this.frame?.cancel());
+		this.disposer.defer(() => this.frame?.dispose());
 	}
 
 	get events() {
@@ -54,7 +54,7 @@ export class RafTaskQueue implements TaskQueue, Resource {
 
 	cancel(): void {
 		this.queue.cancel();
-		this.frame?.cancel();
+		this.frame?.dispose();
 	}
 
 	dispose(): void {

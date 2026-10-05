@@ -1,13 +1,10 @@
 /**
- * Collects a child's exit status from the kernel, for the runtime that loses
- * it. Bun on macOS learns that a child exited from a one-shot kqueue event,
- * and under load it drops some: the child stays a zombie and `close` never
- * comes (oven-sh/bun#34069). `waitpid` with `WNOHANG` reaps a child that has
- * exited and returns at once for one that has not.
+ * Collects a child's exit status from the kernel, for the runtime that can lose
+ * it: call it with the child's pid when its `close` never comes.
  *
- * Returns the raw wait status, or null while the child runs or once someone
- * else has reaped it. The whole thing is null where exits are not lost: Node,
- * and Bun anywhere but macOS.
+ * Returns the raw wait status for `decode`, or null while the child runs or
+ * once someone else has reaped it. The whole thing is null where exits are not
+ * lost: Node, and Bun anywhere but macOS.
  */
 export const reap: ((pid: number) => number | null) | null =
 	process.versions.bun && process.platform === "darwin" ? await load() : null;
@@ -15,6 +12,10 @@ export const reap: ((pid: number) => number | null) | null =
 const WNOHANG = 1;
 
 async function load(): Promise<(pid: number) => number | null> {
+	// Bun on macOS learns that a child exited from a one-shot kqueue event, and
+	// under load it drops some: the child stays a zombie and `close` never comes
+	// (oven-sh/bun#34069). `waitpid` with `WNOHANG` reaps a child that has
+	// exited and returns at once for one that has not.
 	const { dlopen, FFIType, ptr } = await import("bun:ffi");
 	const { symbols } = dlopen("libc.dylib", {
 		waitpid: {
