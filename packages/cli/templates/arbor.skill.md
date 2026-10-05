@@ -231,6 +231,27 @@ tree committed (a part lands by fast-forwarding your checkout), re-read files
 before editing them, and squash only after every part has landed. Hand a
 part out only when describing it is shorter than doing it.
 
+A subagent that may change code works in a part, never its own task on
+trunk, so the user reviews one body of work rather than many small ones.
+Run `arbor add <part> --base task/<your task>` yourself, then tell the
+subagent:
+
+- to `arbor claim <part>` and work only in the worktree it prints;
+- not to escalate, report to the user, or take todos: it is your part, and
+  you are the one the user hears from;
+- to make any call the request does not settle as it sees fit, and list
+  each in its reply with what it chose and what else it could have done,
+  rather than under `## Blocked`, since `arbor merge` refuses while one is
+  open;
+- to squash and `arbor merge` the part when done, which lands it on your
+  branch.
+
+Write each call it lists under your own `## Blocked` (see Asking as you go),
+and redo the part when an answer overturns one. A subagent that only reads
+needs no part. When the user asks for the subagents' work to land on its own,
+give each one a task of its own on trunk instead, and let it follow this
+skill as written.
+
 ## Asking as you go
 
 Do not save questions for escalation. Whenever you make a decision that does
