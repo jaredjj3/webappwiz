@@ -4,9 +4,9 @@ import { z } from "zod";
 // Every @webappwiz package is released in lockstep, so this one's version is
 // the version of the packages to pin and of the skills bundled here. Imported
 // rather than read, so declaring the commands needs no filesystem.
-import { add as addCredential } from "./credentials/add";
-import { list as listCredentials } from "./credentials/list";
-import { remove as removeCredential } from "./credentials/remove";
+import { add as addCredential } from "./creds/add";
+import { list as listCredentials } from "./creds/list";
+import { remove as removeCredential } from "./creds/remove";
 import { version } from "./package.json";
 import { add as addRule } from "./scry/add";
 import { check } from "./scry/check";

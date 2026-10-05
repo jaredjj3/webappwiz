@@ -3,7 +3,7 @@ import type { ShippedRule } from "@webappwiz/scry/catalog";
 import type { SecretStore } from "webappwiz/credentials";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps, walk } from "webappwiz/system";
-import { ProjectCredentials } from "./credentials/project-credentials";
+import { ProjectCredentials } from "./creds/project-credentials";
 import { update as updateRules } from "./scry/update";
 import type { Skills } from "./skills/skill";
 import { update as updateSkills } from "./skills/update";

@@ -7,7 +7,7 @@ import {
 	type Span,
 } from "@webappwiz/scry";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import { ProjectCredentials } from "../credentials/project-credentials";
+import { ProjectCredentials } from "../creds/project-credentials";
 import { OnDemandJudge } from "./on-demand-judge";
 import { HostedProviders, type Providers } from "./providers";
 
