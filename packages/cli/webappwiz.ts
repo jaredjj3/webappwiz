@@ -102,18 +102,25 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.option("cost", z.boolean(), {
 			default: false,
 			description:
-				"estimate the input tokens the check would spend, without asking a model, instead of checking",
+				"estimate the input tokens the check would spend, and what it would leave of each budget, without asking a model, instead of checking",
+		})
+		.option("override-budget", z.boolean(), {
+			default: false,
+			description:
+				"check even past scry.budgets, or with none declared, spending without a limit",
 		})
 		.use(timed())
-		.action(({ rule, ...opts }, { log, fs, ps }) =>
-			check({
-				...opts,
-				rules: rule.split(",").filter((id) => id !== ""),
-				log,
-				fs,
-				ps,
-				screen: new StderrScreen(ps),
-			}),
+		.action(
+			({ rule, "override-budget": overrideBudget, ...opts }, { log, fs, ps }) =>
+				check({
+					...opts,
+					overrideBudget,
+					rules: rule.split(",").filter((id) => id !== ""),
+					log,
+					fs,
+					ps,
+					screen: new StderrScreen(ps),
+				}),
 		);
 
 	scry
@@ -155,9 +162,21 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: "text",
 			description: "text or json (default: text)",
 		})
+		.option("override-budget", z.boolean(), {
+			default: false,
+			description:
+				"score even past scry.budgets, or with none declared, spending without a limit",
+		})
 		.use(timed())
-		.action((opts, { log, fs, ps }) =>
-			evaluate({ ...opts, log, fs, ps, screen: new StderrScreen(ps) }),
+		.action(({ "override-budget": overrideBudget, ...opts }, { log, fs, ps }) =>
+			evaluate({
+				...opts,
+				overrideBudget,
+				log,
+				fs,
+				ps,
+				screen: new StderrScreen(ps),
+			}),
 		);
 
 	scry

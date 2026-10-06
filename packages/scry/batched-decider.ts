@@ -22,7 +22,7 @@ export interface DeciderUsage {
 	requests: number;
 	/** Questions those requests asked. */
 	questions: number;
-	/** Input tokens they spent, as far as the model reports them. */
+	/** Input tokens they spent, as the model reports them, or the judge counts them when it does not. */
 	input: number;
 }
 
@@ -33,6 +33,12 @@ export interface BatchedDeciderOptions {
 	jobs?: number;
 	/** Stops it: nothing more goes out, and every question still waiting fails. */
 	signal?: AbortSignal;
+	/**
+	 * The input tokens it may spend: once it has, nothing more goes out, and
+	 * every question still waiting fails with `reason`. Requests already out
+	 * may carry it past. No limit by default.
+	 */
+	budget?: { input: number; reason: string };
 }
 
 /**
@@ -149,6 +155,13 @@ export class BatchedDecider implements Decider {
 			}
 			return;
 		}
+		const budget = this.opts.budget;
+		if (budget !== undefined && this.usage.input >= budget.input) {
+			for (const item of batch) {
+				item.reject(new Error(budget.reason));
+			}
+			return;
+		}
 		const questions: Record<string, Noul> = Object.fromEntries(
 			batch.map((item, index) => [
 				`q${index}`,
@@ -160,14 +173,13 @@ export class BatchedDecider implements Decider {
 		try {
 			// a request still out when the check is stopped fails then, whether
 			// or not the judge gives up on it
+			const judgment = { state: state(first.about), questions };
 			const verdict = await Promise.race([
-				this.judge.judge(
-					{ state: state(first.about), questions },
-					{ signal: this.opts.signal },
-				),
+				this.judge.judge(judgment, { signal: this.opts.signal }),
 				aborted(this.opts.signal),
 			]);
-			this.usage.input += verdict.input ?? 0;
+			// a request is never free: what the judge does not report, it counts
+			this.usage.input += verdict.input ?? (await this.judge.count(judgment));
 			batch.forEach((item, index) => {
 				const answer = verdict.answers.get(`q${index}`);
 				if (answer === undefined) {

@@ -8,10 +8,12 @@ import {
 	NodePs,
 	type Ps,
 } from "webappwiz/system";
-import { SystemTimer, type Timer } from "webappwiz/time";
-import type { Effort } from "../config";
+import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
+import type { Effort, Role } from "../config";
 import { chooseModels, loadConfig } from "../load-config";
 import { table } from "../table";
+import type { Allowance } from "./budgets";
+import { NONE_DECLARED, OVER_BUDGET, ProjectBudgets } from "./project-budgets";
 import {
 	asked,
 	ProjectTools,
@@ -52,6 +54,11 @@ export interface CheckOptions {
 	 * would ask, counted rather than sent, and no report. False by default.
 	 */
 	cost?: boolean;
+	/**
+	 * Checks whatever `scry.budgets` says, spending without a limit, and
+	 * without one declared. False by default.
+	 */
+	overrideBudget?: boolean;
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
@@ -65,13 +72,20 @@ export interface CheckOptions {
 	screen?: Screen;
 	/** What ticks that line. */
 	timer?: Timer;
+	/** When spending happens, for the budgets' windows. */
+	clock?: WallClock;
 }
 
 /**
  * Checks every file under some paths, or only the ones a change touched,
  * against the project's rules, the way a linter checks code:
  * one block of problems, and a nonzero exit when any is an error. It exits 1
- * on an error, 2 when a rule went unchecked on a file, 0 otherwise.
+ * on an error, 2 when a rule went unchecked on a file, 3 when it would
+ * spend more than `scry.budgets` allows or none is declared, 0 otherwise.
+ *
+ * With a number to stay under, it counts what it would ask first, as
+ * `cost` does, and refuses to run when that would go over. A question it
+ * would still have to ask past a budget goes unasked, and unchecked.
  *
  * Each rule's `rule.ts` reads the files it applies to. Where code
  * cannot settle a question it asks a decision model, which answers with how
@@ -117,10 +131,22 @@ export async function check(opts: CheckOptions): Promise<void> {
 		return;
 	}
 
+	const budgets = await ProjectBudgets.open(dir, settings, {
+		override: opts.overrideBudget,
+		clock: opts.clock,
+		fs,
+		ps,
+	});
+	if (budgets.undeclared && !opts.cost) {
+		log.error(NONE_DECLARED);
+		ps.exit(OVER_BUDGET);
+		return;
+	}
+
 	// the first ctrl-c stops the check and reports what came back; one after
 	// that, or once it is done, quits as usual
 	const cancel = new AbortController();
-	let running = true;
+	let running = false;
 	let spinner: Spinner | undefined;
 	ps.on("SIGINT", () => {
 		if (running && !cancel.signal.aborted) {
@@ -131,44 +157,55 @@ export async function check(opts: CheckOptions): Promise<void> {
 		}
 	});
 
-	const asking = await ProjectTools.open(dir, {
-		models: chooseModels(settings, opts),
-		jobs: opts.jobs ?? settings.jobs,
-		signal: cancel.signal,
-		providers: opts.providers,
-		counting: opts.cost,
-		fs,
-		ps,
-	});
-	const progress = new Progress();
-	if (opts.screen !== undefined && opts.format !== "json") {
-		spinner = new Spinner({
-			screen: opts.screen,
-			timer: opts.timer ?? new SystemTimer(),
-			progress,
-			asking,
-			verb: opts.cost ? "counting" : "checking",
-			noun: "file",
-		});
-	}
-
-	spinner?.start();
-	const report = await rules
-		.check({
-			paths: files,
-			ids: opts.rules,
-			tools: asking.tools,
-			glob,
+	/** Runs the rules, counting what they ask or asking it. */
+	const pass = async (
+		counting: boolean,
+		allowances?: Partial<Record<Role, Allowance>>,
+	) => {
+		const asking = await ProjectTools.open(dir, {
+			models: chooseModels(settings, opts),
+			jobs: opts.jobs ?? settings.jobs,
 			signal: cancel.signal,
-			progress,
-		})
-		.finally(() => {
-			running = false;
-			spinner?.dispose();
+			providers: opts.providers,
+			counting,
+			budgets: allowances,
+			fs,
+			ps,
 		});
-	await asking.save();
-	const spent = asking.spent;
+		const progress = new Progress();
+		if (opts.screen !== undefined && opts.format !== "json") {
+			spinner = new Spinner({
+				screen: opts.screen,
+				timer: opts.timer ?? new SystemTimer(),
+				progress,
+				asking,
+				verb: counting ? "counting" : "checking",
+				noun: "file",
+			});
+		}
+		running = true;
+		spinner?.start();
+		const report = await rules
+			.check({
+				paths: files,
+				ids: opts.rules,
+				tools: asking.tools,
+				glob,
+				signal: cancel.signal,
+				progress,
+			})
+			.finally(() => {
+				running = false;
+				spinner?.dispose();
+			});
+		await asking.save();
+		return { asking, report };
+	};
+
 	if (opts.cost) {
+		const { asking, report } = await pass(true);
+		const spent = asking.spent;
+		const use = (role: Role) => asking.input(role);
 		log.info(
 			opts.format === "json"
 				? JSON.stringify(
@@ -178,17 +215,37 @@ export async function check(opts: CheckOptions): Promise<void> {
 							unchecked: report.unchecked,
 							cancelled: report.cancelled,
 							spent,
+							...budgets.json(use),
 						},
 						null,
 						2,
 					)
-				: costed(report, spent).join("\n"),
+				: [...costed(report, spent), ...budgets.lines(use)].join("\n"),
 		);
 		if (report.cancelled || report.unchecked.length > 0) {
 			ps.exit(2);
 		}
 		return;
 	}
+
+	if (budgets.countsFirst) {
+		// counted answers are never kept, so the check below still asks
+		const { asking: counted, report } = await pass(true);
+		if (report.cancelled) {
+			ps.exit(130);
+			return;
+		}
+		const overrun = budgets.overrun((role) => counted.input(role), "check");
+		if (overrun !== undefined) {
+			log.error(overrun);
+			ps.exit(OVER_BUDGET);
+			return;
+		}
+	}
+
+	const { asking, report } = await pass(false, budgets.allowances);
+	await budgets.record(asking);
+	const spent = asking.spent;
 
 	if (report.legacy.length > 0) {
 		log.error(

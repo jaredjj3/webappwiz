@@ -132,6 +132,67 @@ describe("loadConfig", () => {
 		);
 	});
 
+	it("spells the budget presets out, and takes the last layer's budgets whole", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			config({ budgets: [{ llm: 1000, per: "day" }] }),
+		);
+		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.write(
+			`${root}/home/.config/wiz/config.ts`,
+			config({ budgets: "unlimited" }),
+		);
+
+		expect((await loadConfig(`${root}/p`, { fs, ps })).budgets).toEqual([
+			{ decider: "unlimited", llm: "unlimited" },
+		]);
+	});
+
+	it.each([
+		[
+			{ budget: 1000 },
+			"scry.budget is gone: scry.budgets declares what a check may spend",
+		],
+		[
+			{ budgets: "some" },
+			'scry.budgets: expected "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]',
+		],
+		[
+			{ budgets: [{ per: "day" }] },
+			"scry.budgets[0]: expected decider, llm, or both",
+		],
+		[
+			{ budgets: [{ llm: -1, per: "day" }] },
+			'scry.budgets[0].llm: expected input tokens, "nothing" or "unlimited", got -1',
+		],
+		[
+			{ budgets: [{ llm: 1000 }] },
+			'scry.budgets[0]: a number of tokens needs a window: per "check", "day", "week" or "month", or within, like "7d"',
+		],
+		[
+			{ budgets: [{ llm: 1000, per: "year" }] },
+			'scry.budgets[0].per: expected one of check, day, week, month, got "year"',
+		],
+		[
+			{ budgets: [{ llm: 1000, within: "7 days" }] },
+			'scry.budgets[0].within: expected hours, days or weeks, like "24h", "7d" or "2w", got "7 days"',
+		],
+		[
+			{ budgets: [{ llm: 1000, per: "day", within: "7d" }] },
+			"scry.budgets[0]: expected per or within, not both",
+		],
+		[
+			{ budgets: [{ llm: 1000, per: "day", tokens: 5 }] },
+			"scry.budgets[0]: unknown tokens: expected decider, llm, per or within",
+		],
+	])("refuses budgets a check cannot hold to: %j", async (scry, message) => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(`${root}/p/.wiz/config.ts`, config(scry));
+
+		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(message);
+	});
+
 	it("refuses an effort that is not one", async () => {
 		await fs.mkdir(`${root}/p/.wiz`);
 		await fs.write(`${root}/p/.wiz/config.ts`, config({ effort: "max" }));

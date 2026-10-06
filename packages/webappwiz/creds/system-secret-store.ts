@@ -113,11 +113,12 @@ export class SystemSecretStore implements SecretStore {
 }
 
 /**
- * What the project around `dir` keeps its credentials under: the last
+ * What the project around `dir` is called on this device, which its
+ * credentials and anything else kept outside it go under: the last
  * `credentials.project` among its config and the user's, else the directory
- * of the repository's main worktree.
+ * of the repository's main worktree, so every worktree shares it.
  */
-async function projectName(
+export async function projectName(
 	dir: string | undefined,
 	opts: ForProjectOptions = {},
 ): Promise<string> {

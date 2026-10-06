@@ -24,8 +24,48 @@ export interface Models {
 	llm: LlmModel;
 }
 
+/** The roles a model plays for a rule, each with a budget of its own. */
+export type Role = keyof Models;
+export const ROLES = ["decider", "llm"] as const;
+
+/**
+ * What a role may spend: input tokens, `"nothing"`, which asks it no
+ * question, or `"unlimited"`.
+ */
+export type Spend = number | "nothing" | "unlimited";
+
+/**
+ * A calendar day, week (from Monday) or month in local time, or a single
+ * run of a check or an eval.
+ */
+export type Period = "check" | "day" | "week" | "month";
+
+/** One limit on what scry spends, over one window. */
+export interface Budget {
+	decider?: Spend;
+	llm?: Spend;
+	/** The calendar window the limit holds over. A number needs it or `within`. */
+	per?: Period;
+	/** A rolling window ending now, in hours, days or weeks, like `"7d"`. */
+	within?: `${number}${"h" | "d" | "w"}`;
+}
+
 /** How `wiz scry` runs. */
 export interface ScryConfig {
+	/**
+	 * What a check or an eval may spend, which every one needs declared. `"nothing"`
+	 * asks no model, `"unlimited"` caps neither; a list holds every limit in
+	 * it at once, and a role no entry names spends nothing. The last config
+	 * that sets it wins whole. Spending is kept per user on the device.
+	 *
+	 * ```ts
+	 * budgets: [
+	 *   { decider: "unlimited", llm: 2_000_000, per: "month" },
+	 *   { llm: 300_000, within: "7d" },
+	 * ]
+	 * ```
+	 */
+	budgets?: "nothing" | "unlimited" | Budget[];
 	/** Which of `models` a check asks. `medium` when not set. */
 	effort?: Effort;
 	/**

@@ -7,8 +7,9 @@ import {
 	type Tools,
 } from "@webappwiz/scry";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import type { Models } from "../config";
+import { type Models, ROLES, type Role } from "../config";
 import { ProjectCredentials } from "../creds/project-credentials";
+import type { Allowance, Spending } from "./budgets";
 import { OnDemandJudge } from "./on-demand-judge";
 import { HostedProviders, type Providers } from "./providers";
 
@@ -33,6 +34,8 @@ export interface ProjectToolsOptions {
 	 * every question no, and keeps none of those answers. False by default.
 	 */
 	counting?: boolean;
+	/** What each role may spend; no limit on one left out. */
+	budgets?: Partial<Record<Role, Allowance>>;
 	/** What makes the judge for a model; Workers AI, TypeSafe and Anthropic by default. */
 	providers?: Providers;
 	fs?: Fs;
@@ -48,9 +51,10 @@ export class ProjectTools {
 	private constructor(
 		/** What rules are built with. */
 		readonly tools: Tools,
-		private batched: BatchedDecider[],
+		private batched: Record<Role, BatchedDecider>,
 		private cached: CachedDecider[],
 		private decisions: Decisions,
+		private models: Models,
 		private counting: boolean,
 	) {}
 
@@ -66,13 +70,15 @@ export class ProjectTools {
 				(await ProjectCredentials.open(dir, { fs, ps })).credentials,
 			);
 		const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
-		const ask = (model: string) => {
+		const ask = (role: Role) => {
+			const model = opts.models[role];
 			const judge = new OnDemandJudge(providers, model);
 			const batched = new BatchedDecider(
 				opts.counting ? new CountingJudge(judge) : judge,
 				{
 					jobs: opts.jobs,
 					signal: opts.signal,
+					budget: opts.budgets?.[role],
 				},
 			);
 			return {
@@ -80,30 +86,47 @@ export class ProjectTools {
 				cached: new CachedDecider(batched, decisions, { model }),
 			};
 		};
-		const decider = ask(opts.models.decider);
-		const llm = ask(opts.models.llm);
+		const decider = ask("decider");
+		const llm = ask("llm");
 		return new ProjectTools(
 			{ decider: decider.cached, llm: llm.cached },
-			[decider.batched, llm.batched],
+			{ decider: decider.batched, llm: llm.batched },
 			[decider.cached, llm.cached],
 			decisions,
+			opts.models,
 			opts.counting ?? false,
 		);
 	}
 
 	/** What both models were asked, and what it cost. */
 	get spent(): Spent {
+		const batched = Object.values(this.batched);
 		return {
-			requests: sum(this.batched.map((each) => each.usage.requests)),
-			questions: sum(this.batched.map((each) => each.usage.questions)),
-			input: sum(this.batched.map((each) => each.usage.input)),
+			requests: sum(batched.map((each) => each.usage.requests)),
+			questions: sum(batched.map((each) => each.usage.questions)),
+			input: sum(batched.map((each) => each.usage.input)),
 			cached: sum(this.cached.map((each) => each.hits)),
 		};
 	}
 
+	/** The input tokens `role` spent, or would have, when counting. */
+	input(role: Role): number {
+		return this.batched[role].usage.input;
+	}
+
+	/** What each model spent, for the ledger, as of `at`. */
+	spending(at: number): Spending[] {
+		return ROLES.map((role) => ({
+			at,
+			role,
+			model: this.models[role],
+			input: this.input(role),
+		}));
+	}
+
 	/** Of the questions asked so far, how many the models have answered. */
 	get answered(): number {
-		return sum(this.batched.map((each) => each.answered));
+		return sum(Object.values(this.batched).map((each) => each.answered));
 	}
 
 	/** Keeps the answers for the next run; none, when it only counted. */
@@ -145,12 +168,14 @@ export function plural(count: number, noun: string): string {
 	return count === 1 ? noun : `${noun}s`;
 }
 
-function thousands(tokens: number): string {
+/** Tokens as a report says them: 300, 6.5k, 42k, 1.2m, 20m. */
+export function thousands(tokens: number): string {
 	if (tokens < 1000) {
 		return String(tokens);
 	}
 	// a decimal while it still tells two numbers apart: 6.5k cached of 7k
-	return tokens < 10_000
-		? `${Number((tokens / 1000).toFixed(1))}k`
-		: `${Math.round(tokens / 1000)}k`;
+	const [unit, size] = tokens < 1_000_000 ? ["k", 1000] : ["m", 1_000_000];
+	return tokens < size * 10
+		? `${Number((tokens / size).toFixed(1))}${unit}`
+		: `${Math.round(tokens / size)}${unit}`;
 }

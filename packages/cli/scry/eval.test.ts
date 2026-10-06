@@ -7,7 +7,7 @@ import { FakeJudge, ruleSource } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
-import { FakeTimer } from "webappwiz/time/testing";
+import { FakeTimer, FakeWallClock } from "webappwiz/time/testing";
 import { evaluate } from "./eval";
 import type { Screen } from "./screen";
 
@@ -75,7 +75,17 @@ describe("wiz scry eval", () => {
 		screen = undefined;
 		timer = new FakeTimer();
 		await ps.spawnCapture(["git", "-C", root, "init", "-q"]);
+		await budget('"unlimited"');
 	});
+
+	/** Declares `budgets`, as source, in the user's config. */
+	async function budget(budgets: string) {
+		await fs.mkdir(`${root}/.config/wiz`, { recursive: true });
+		await fs.write(
+			`${root}/.config/wiz/config.ts`,
+			`export default { scry: { budgets: ${budgets} } };\n`,
+		);
+	}
 
 	afterEach(async () => {
 		await rm(root, { recursive: true, force: true });
@@ -117,6 +127,68 @@ describe("wiz scry eval", () => {
 		expect(printed()).toContain(
 			"✖ 1 of 2 cases right (50.0%) across 1 rule\n  asked 2 questions in 2 requests",
 		);
+	});
+
+	it("refuses to score with no budget declared, and exits 3", async () => {
+		await install("asks", asking);
+		await fs.rm(`${root}/.config/wiz/config.ts`);
+
+		await run();
+
+		expect([printed(), proc.exits]).toEqual([
+			'no budget declared: set scry.budgets in .wiz/config.ts or ~/.config/wiz/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
+			[3],
+		]);
+	});
+
+	it("refuses up front to score past a budget, and asks nothing", async () => {
+		await install("asks", asking);
+		await budget('[{ decider: 50, llm: "unlimited", per: "check" }]');
+		const judge = new FakeJudge(0.9, { input: 40 });
+
+		await evaluate({
+			ids: [],
+			format: "text",
+			log,
+			fs,
+			ps,
+			providers: { judge: async () => judge },
+		});
+
+		expect([printed(), judge.judgments, proc.exits]).toEqual([
+			[
+				"over budget: this eval would spend more than scry.budgets allows",
+				"budgets",
+				"  decider   this check   would use 80 of 50, 0 spent   over by 30",
+				"  llm       unlimited    would use 0",
+				"raise scry.budgets, evaluate fewer rules, or run again with --override-budget",
+			].join("\n"),
+			[],
+			[3],
+		]);
+	});
+
+	it("keeps what it spent on the device, where the budgets of a check count it", async () => {
+		await install("asks", asking);
+		const clock = new FakeWallClock(1_000);
+
+		await evaluate({
+			ids: ["asks"],
+			format: "text",
+			log,
+			fs,
+			ps,
+			providers: { judge: async () => new FakeJudge(0.9, { input: 40 }) },
+			clock,
+		});
+
+		expect(
+			JSON.parse(
+				await fs.read(
+					`${root}/.local/state/wiz/${root.split("/").pop()}/scry-spent.json`,
+				),
+			),
+		).toEqual([{ at: 1_000, role: "decider", model: "clef", input: 80 }]);
 	});
 
 	it("draws how many cases are scored on a live screen, and erases it before the scores", async () => {

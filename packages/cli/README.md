@@ -114,9 +114,46 @@ names, so the config above keeps the defaults at `low` and `medium`.
 project root, of files no rule checks, like `[".agents/**"]` for skills
 copied in from elsewhere; the user's are added to the project's. A config where `@webappwiz/cli` is not
 installed exports the same object without `defineConfig`. A config still
-holding `agents`, `budget` or `batch`, from before a rule's check
-was code, or `model`, from before effort picked the models, is refused
-rather than half read, and so is `WIZ_SCRY_MODEL`.
+holding `agents` or `batch`, from before a rule's check
+was code, `model`, from before effort picked the models, or `budget`, from
+before `budgets`, is refused rather than half read, and so is
+`WIZ_SCRY_MODEL`.
+
+### Budgets
+
+A check, or `scry eval`, runs only with `budgets` declared, in either config, saying what it
+may spend in input tokens on each model. The last config to set it wins
+whole, so a user's own config can loosen or tighten the project's.
+
+```ts
+scry: { budgets: "nothing" }    // ask no model: only code decides
+scry: { budgets: "unlimited" }  // spend without a limit
+scry: {
+	budgets: [
+		{ decider: "unlimited", llm: 2_000_000, per: "month" },
+		{ llm: 300_000, within: "7d" },
+		{ llm: 100_000, per: "check" },
+	],
+}
+```
+
+Each entry gives the `decider`, the `llm` or both a number of tokens,
+`"nothing"` or `"unlimited"`, over a window: `per` a `"check"`, or a
+calendar `"day"`, `"week"` (from Monday) or `"month"` in local time, or
+`within` a rolling `"24h"`, `"7d"` or `"2w"`. Every entry holds at once, and
+a model no entry names spends nothing. What each check and `scry eval`
+spent is kept per user on the device, in
+`~/.local/state/wiz/<project>/scry-spent.json` (under `$XDG_STATE_HOME` when
+set), so every worktree of a project draws on one budget.
+
+With a number to stay under, a check first counts what it would ask, as
+`--cost` does, and when that would go over any window it refuses, saying
+which, and exits 3. A question it would still ask past a budget, like one to
+a model budgeted `"nothing"`, goes unasked and is reported as not checked.
+`--cost` prints each budget's line: what the check would use of it, and
+what would be left or how far over it would go. `--override-budget` checks
+anyway, spending without a limit, and with no budget declared. `scry eval`
+is held to the same budgets, and takes the same flag.
 
 `--effort` runs one check at another effort, over the config. `--model`
 and `--llm` ask another model for one run, over the effort's, so two models

@@ -119,9 +119,80 @@ export default defineConfig({
 Every answer is kept in `node_modules/.cache/webappwiz/scry`, so checking an
 unchanged file again asks nothing.
 
-When it refuses a config holding `agents`, `budget`, `batch` or `model`, or
+When it refuses a config holding `agents`, `batch` or `model`, or
 `WIZ_SCRY_MODEL`, those are from before: show the user the message, and with
-their yes, replace them with `effort` and the `models` it names.
+their yes, replace them with `effort` and the `models` it names. One holding
+`budget` is from before `budgets`: ask the user what to declare instead.
+
+## Budgets
+
+`wiz scry` and `wiz scry eval` run only with `scry.budgets` declared: how
+many input tokens each may spend on each model, the `decider` and the
+`llm`, over a window. What they spent is kept per user on the device, so
+every worktree of a project draws on one budget.
+
+When either says no budget is declared, declare `"nothing"` in the
+project's `.wiz/config.ts`, which asks no model, so only code decides and
+nothing is spent:
+
+```ts
+export default defineConfig({
+	scry: { budgets: "nothing" },
+});
+```
+
+Then tell the user you did, that every question a rule would ask a model
+now goes unasked and is reported as not checked, and that they can allow
+spending whenever they want. Raise a budget only when they ask, to what they
+ask for:
+
+```ts
+scry: { budgets: "unlimited" }  // spend without a limit
+scry: {
+	budgets: [
+		// every entry holds at once; a model no entry names spends nothing
+		{ decider: "unlimited", llm: 2_000_000, per: "month" },
+		{ llm: 300_000, within: "7d" },
+		{ llm: 100_000, per: "check" },
+	],
+}
+```
+
+- Each entry gives the `decider`, the `llm` or both a number of input
+  tokens, `"nothing"` or `"unlimited"`. A number needs a window: `per` a
+  `"check"` (one run of `wiz scry` or `wiz scry eval`), or a calendar
+  `"day"`, `"week"` (from Monday) or `"month"`, in local time; or `within`
+  a rolling `"24h"`, `"7d"` or `"2w"`.
+- Budgets are tokens, not money. When the user names an amount of money,
+  say so, and help them pick tokens: `--cost` on a typical check says what
+  it would spend, and the decider is far cheaper per token than the llm.
+- The last config to set `budgets` wins whole: `.wiz/config.ts` is the
+  project's, shared by everyone who checks it out, and
+  `~/.config/wiz/config.ts` is the user's own, over it. Ask which they mean
+  when they have not said.
+
+With a number to stay under, a run counts what it would ask first, and
+refuses when that would go over any window. Show the user its message as
+printed, and stop. **Never pass `--override-budget`, or raise a budget,
+without the user's yes for that run;** a yes for one run is not one for the
+next. Checking fewer files, by paths or `--since`, stays within what they
+declared. `--cost` says what a check would use of each budget and what it
+would leave; run it when the user asks whether a check fits.
+
+## Exit codes
+
+`wiz scry` exits:
+
+- **0**: no error found, though warnings may be.
+- **1**: a finding at `level: error`.
+- **2**: a rule went unchecked on a file: it threw, a model's credentials
+  were missing, or a budget left a question unasked, as `"nothing"` does.
+  The report names each under "not checked".
+- **3**: it did not run: no budget declared, or it would go over one.
+- **130**: quit with a second ctrl-c; the first stops the check and
+  reports what came back.
+
+`wiz scry eval` exits 3 for the same reasons, and 0 when it ran.
 
 ## When a style change could be a rule
 

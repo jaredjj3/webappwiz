@@ -7,10 +7,11 @@ import {
 } from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import { SystemTimer, type Timer } from "webappwiz/time";
+import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
 import type { Effort } from "../config";
 import { chooseModels, loadConfig } from "../load-config";
 import { table } from "../table";
+import { NONE_DECLARED, OVER_BUDGET, ProjectBudgets } from "./project-budgets";
 import { asked, ProjectTools, plural } from "./project-tools";
 import type { Providers } from "./providers";
 import type { Screen } from "./screen";
@@ -29,6 +30,11 @@ export interface EvaluateOptions {
 	llm?: string;
 	/** `json` for the scores as JSON; anything else is text. */
 	format: string;
+	/**
+	 * Scores whatever `scry.budgets` says, spending without a limit, and
+	 * without one declared. False by default.
+	 */
+	overrideBudget?: boolean;
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
@@ -40,12 +46,18 @@ export interface EvaluateOptions {
 	screen?: Screen;
 	/** What ticks that line. */
 	timer?: Timer;
+	/** When spending happens, as the ledger keeps it. */
+	clock?: WallClock;
 }
 
 /**
  * Scores each rule on its labeled cases, the way `wiz scry` would run it: a
  * bad case is right when the rule reports something in it, a good one when
  * it reports nothing. Names every case it got wrong, and what that cost.
+ *
+ * It is held to `scry.budgets` as a check is: it does not start with none
+ * declared, or when counting what it would ask first shows it would go
+ * over, and exits 3; and what it spends counts against them.
  */
 export async function evaluate(opts: EvaluateOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -54,30 +66,61 @@ export async function evaluate(opts: EvaluateOptions): Promise<void> {
 	const { root: dir } = await Git.locate(ps.cwd(), [], { ps });
 	const rules = await Rules.load(dir, { fs });
 	const settings = await loadConfig(dir, { fs, ps });
-	const asking = await ProjectTools.open(dir, {
-		models: chooseModels(settings, opts),
-		jobs: opts.jobs ?? settings.jobs,
-		providers: opts.providers,
+	const budgets = await ProjectBudgets.open(dir, settings, {
+		override: opts.overrideBudget,
+		clock: opts.clock,
 		fs,
 		ps,
 	});
-	const progress = new Progress();
-	const spinner =
-		opts.screen === undefined || opts.format === "json"
-			? undefined
-			: new Spinner({
-					screen: opts.screen,
-					timer: opts.timer ?? new SystemTimer(),
-					progress,
-					asking,
-					verb: "scoring",
-					noun: "case",
-				});
-	spinner?.start();
-	const evaluated = await rules
-		.evaluate({ ids: opts.ids, tools: asking.tools, progress })
-		.finally(() => spinner?.dispose());
-	await asking.save();
+	if (budgets.undeclared) {
+		log.error(NONE_DECLARED);
+		ps.exit(OVER_BUDGET);
+		return;
+	}
+
+	/** Scores the rules, counting what they ask or asking it. */
+	const pass = async (counting: boolean) => {
+		const asking = await ProjectTools.open(dir, {
+			models: chooseModels(settings, opts),
+			jobs: opts.jobs ?? settings.jobs,
+			providers: opts.providers,
+			counting,
+			budgets: counting ? undefined : budgets.allowances,
+			fs,
+			ps,
+		});
+		const progress = new Progress();
+		const spinner =
+			opts.screen === undefined || opts.format === "json"
+				? undefined
+				: new Spinner({
+						screen: opts.screen,
+						timer: opts.timer ?? new SystemTimer(),
+						progress,
+						asking,
+						verb: counting ? "counting" : "scoring",
+						noun: "case",
+					});
+		spinner?.start();
+		const evaluated = await rules
+			.evaluate({ ids: opts.ids, tools: asking.tools, progress })
+			.finally(() => spinner?.dispose());
+		await asking.save();
+		return { asking, evaluated };
+	};
+
+	if (budgets.countsFirst) {
+		// counted answers are never kept, so the scoring below still asks
+		const { asking: counted } = await pass(true);
+		const overrun = budgets.overrun((role) => counted.input(role), "eval");
+		if (overrun !== undefined) {
+			log.error(overrun);
+			ps.exit(OVER_BUDGET);
+			return;
+		}
+	}
+	const { asking, evaluated } = await pass(false);
+	await budgets.record(asking);
 	if (opts.format === "json") {
 		log.info(
 			JSON.stringify({ rules: evaluated, spent: asking.spent }, null, 2),

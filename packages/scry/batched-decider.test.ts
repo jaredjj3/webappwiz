@@ -212,6 +212,50 @@ describe("BatchedDecider", () => {
 		expect(decider.usage).toEqual({ requests: 2, questions: 3, input: 600 });
 	});
 
+	it("counts what a request spent when the judge does not say", async () => {
+		const judge = measuring();
+		judge.count = async () => 120;
+		const decider = new BatchedDecider(judge);
+
+		await decider.decide("Is it?", at(cart, 1));
+
+		expect(decider.usage.input).toEqual(120);
+	});
+
+	it("sends nothing once it has spent its budget, failing what waits with the reason", async () => {
+		const judge = new FakeJudge(0.5, { input: 300 });
+		const decider = new BatchedDecider(judge, {
+			jobs: 1,
+			budget: { input: 300, reason: "over the llm budget for today" },
+		});
+
+		const answers = await Promise.allSettled([
+			decider.decide("Is it?", at(cart, 1)),
+			decider.decide("Is it?", at(tax, 1)),
+		]);
+
+		expect([
+			answers.map((each) =>
+				each.status === "fulfilled" ? each.value : String(each.reason),
+			),
+			judge.judgments.length,
+		]).toEqual([[0.5, "Error: over the llm budget for today"], 1]);
+	});
+
+	it("asks nothing on a budget of 0", async () => {
+		const judge = new FakeJudge(0.5);
+		const decider = new BatchedDecider(judge, {
+			budget: { input: 0, reason: "scry.budgets spends nothing on the llm" },
+		});
+
+		const answer = decider.decide("Is it?", at(cart, 1));
+
+		expect([await answer.catch(String), judge.judgments.length]).toEqual([
+			"Error: scry.budgets spends nothing on the llm",
+			0,
+		]);
+	});
+
 	it("counts the questions answered apart from those asked, while a request is out", async () => {
 		let reply: ((verdict: Verdict) => void) | undefined;
 		const decider = new BatchedDecider({

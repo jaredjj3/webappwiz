@@ -7,7 +7,7 @@ import { FakeJudge, ruleSource } from "@webappwiz/scry/testing";
 import { color, MemoryLogger } from "webappwiz/log";
 import { NodeFs, NodePs } from "webappwiz/system";
 import { FakeProcess } from "webappwiz/system/testing";
-import { FakeTimer } from "webappwiz/time/testing";
+import { FakeTimer, FakeWallClock } from "webappwiz/time/testing";
 import { check } from "./check";
 import type { Screen } from "./screen";
 
@@ -19,6 +19,7 @@ describe("wiz scry", () => {
 	let log: MemoryLogger;
 	let screen: Screen | undefined;
 	let timer: FakeTimer;
+	let clock: FakeWallClock;
 	/** What the screen was given, and how much of the report was printed by then. */
 	let drawn: { text: string; printed: number }[];
 	/** A screen that records what it is given, live or not. */
@@ -97,6 +98,9 @@ describe("wiz scry", () => {
 		log = new MemoryLogger();
 		screen = undefined;
 		timer = new FakeTimer();
+		// noon on Wednesday 2026-10-14, local time
+		clock = new FakeWallClock(new Date(2026, 9, 14, 12).getTime());
+		await budget('"unlimited"');
 		drawn = [];
 		judge = new FakeJudge(0.9);
 		asked = [];
@@ -114,7 +118,33 @@ describe("wiz scry", () => {
 	});
 
 	const run = (format = "text", paths: string[] = ["a.ts"], model?: string) =>
-		check({ paths, format, model, log, fs, ps, providers, screen, timer });
+		check({
+			paths,
+			format,
+			model,
+			log,
+			fs,
+			ps,
+			providers,
+			screen,
+			timer,
+			clock,
+		});
+	/** Declares `budgets`, as source, in the user's config. */
+	async function budget(budgets: string) {
+		await fs.mkdir(`${root}/.config/wiz`, { recursive: true });
+		await fs.write(
+			`${root}/.config/wiz/config.ts`,
+			`export default { scry: { budgets: ${budgets} } };\n`,
+		);
+	}
+	/** What the ledger on this device holds for the project. */
+	const ledger = async () =>
+		JSON.parse(
+			await fs.read(
+				`${root}/.local/state/wiz/${root.split("/").pop()}/scry-spent.json`,
+			),
+		);
 
 	it("prints the problems under their file, how sure the check is, and exits 1 on an error", async () => {
 		await run();
@@ -466,6 +496,130 @@ describe("wiz scry", () => {
 		});
 
 		expect(warned()).toEqual(["nothing changed since HEAD in src"]);
+	});
+
+	describe("budgets", () => {
+		beforeEach(async () => {
+			await install("why-not-what", asking);
+			await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+			judge = new FakeJudge(0.9, { input: 300 });
+		});
+
+		it("refuses to check with no budget declared, and exits 3", async () => {
+			await fs.rm(`${root}/.config/wiz/config.ts`);
+
+			await run();
+
+			expect([warned(), asked, proc.exits]).toEqual([
+				[
+					'no budget declared: set scry.budgets in .wiz/config.ts or ~/.config/wiz/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
+				],
+				[],
+				[3],
+			]);
+		});
+
+		it("checks with no budget declared when told to override it", async () => {
+			await fs.rm(`${root}/.config/wiz/config.ts`);
+
+			await check({
+				paths: ["a.ts"],
+				format: "text",
+				overrideBudget: true,
+				log,
+				fs,
+				ps,
+				providers,
+				clock,
+			});
+
+			expect(printed()).toContain("restates the code");
+		});
+
+		it("asks a role budgeted nothing no question, leaving what it would ask unchecked", async () => {
+			await budget('"nothing"');
+
+			await run();
+
+			expect(printed()).toContain(
+				"  why-not-what on a.ts   scry.budgets spends nothing on the decider",
+			);
+			expect([(judge as FakeJudge).judgments, proc.exits]).toEqual([[], [2]]);
+		});
+
+		it("refuses up front a check that would go over a budget, saying which, and asks nothing", async () => {
+			await budget('[{ decider: 200, llm: "unlimited", per: "check" }]');
+
+			await run();
+
+			expect(warned().map((line) => color.strip(line))).toEqual([
+				[
+					"over budget: this check would spend more than scry.budgets allows",
+					"budgets",
+					"  decider   this check   would use 300 of 200, 0 spent   over by 100",
+					"  llm       unlimited    would use 0",
+					"raise scry.budgets, check fewer files, or run again with --override-budget",
+				].join("\n"),
+			]);
+			expect([(judge as FakeJudge).judgments, proc.exits]).toEqual([[], [3]]);
+		});
+
+		it("keeps what each check spent on the device, and holds the next to what is left of the window", async () => {
+			await budget('[{ decider: 500, llm: "unlimited", per: "day" }]');
+
+			await run();
+			await fs.write(`${root}/a.ts`, "// add two\nconst a = 2;\n");
+			await run();
+
+			expect(await ledger()).toEqual([
+				{ at: clock.now(), role: "decider", model: "clef", input: 300 },
+			]);
+			expect(proc.exits).toEqual([1, 3]);
+			expect(color.strip(warned().join("\n"))).toContain(
+				"  decider   today       would use 300 of 500, 300 spent   over by 100",
+			);
+		});
+
+		it("forgets what was spent before a rolling window", async () => {
+			await budget('[{ decider: 500, llm: "unlimited", within: "7d" }]');
+			await run();
+			clock.set(clock.now() + 8 * 24 * 60 * 60 * 1000);
+			await fs.write(`${root}/a.ts`, "// add two\nconst a = 2;\n");
+
+			await run();
+
+			expect([(judge as FakeJudge).judgments.length, proc.exits]).toEqual([
+				2,
+				[1, 1],
+			]);
+		});
+
+		it("says with --cost what a check would use of each budget, and leave", async () => {
+			await budget(
+				'[{ decider: 2_000_000, llm: "unlimited", per: "month" }, { decider: 1000, within: "7d" }]',
+			);
+
+			await check({
+				paths: ["a.ts"],
+				format: "text",
+				cost: true,
+				log,
+				fs,
+				ps,
+				providers,
+				clock,
+			});
+
+			expect(printed()).toEqual(
+				[
+					"estimated 300 input tokens to check 1 file: 1 question in 1 request",
+					"budgets",
+					"  decider   this month    would use 300 of 2m, 0 spent   2m left",
+					"  decider   the last 7d   would use 300 of 1k, 0 spent   700 left",
+					"  llm       unlimited     would use 0",
+				].join("\n"),
+			);
+		});
 	});
 
 	it("stops on the first ctrl-c, reports what came back, and quits on the next", async () => {

@@ -5,5 +5,6 @@ export { Environment, type EnvironmentOptions } from "./environment";
 export type { SecretStore } from "./secret-store";
 export {
 	type ForProjectOptions,
+	projectName,
 	SystemSecretStore,
 } from "./system-secret-store";
