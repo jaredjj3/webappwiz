@@ -119,6 +119,11 @@ then for each todo you add:
 
 `arbor todo update <id> --lane <n>` moves one that exists.
 
+The order of the lanes, the board's columns left to right, is the user's to
+set, like a todo's position: only when they ask ("put Licensing first"),
+`arbor lane update <n> --position <p>`, 1 the first column, then read
+`arbor lane list` to check the order is the one asked for.
+
 ### Positions
 
 Only the user's priorities decide a position, so a new todo goes to the
