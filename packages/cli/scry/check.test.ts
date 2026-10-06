@@ -113,7 +113,7 @@ describe("wiz scry", () => {
 		await rm(root, { recursive: true, force: true });
 	});
 
-	const run = (format = "text", paths: string[] = [], model?: string) =>
+	const run = (format = "text", paths: string[] = ["a.ts"], model?: string) =>
 		check({ paths, format, model, log, fs, ps, providers, screen, timer });
 
 	it("prints the problems under their file, how sure the check is, and exits 1 on an error", async () => {
@@ -124,7 +124,7 @@ describe("wiz scry", () => {
 				"a.ts",
 				"  1   error   100%   no foo   no-foo",
 				"",
-				"✖ 1 problem (1 error, 0 warnings) in 1 file since HEAD",
+				"✖ 1 problem (1 error, 0 warnings) in 1 file",
 			].join("\n"),
 		);
 		expect(proc.exits).toEqual([1]);
@@ -147,7 +147,6 @@ describe("wiz scry", () => {
 		await run("json");
 
 		expect(JSON.parse(printed())).toMatchObject({
-			since: "HEAD",
 			problems: [
 				{
 					path: "a.ts",
@@ -176,10 +175,7 @@ describe("wiz scry", () => {
 
 		expect(asked).toEqual(["clef"]);
 		expect(printed()).toEqual(
-			[
-				"✔ no problems in 1 file since HEAD",
-				"  asked 1 question in 1 request",
-			].join("\n"),
+			["✔ no problems in 1 file", "  asked 1 question in 1 request"].join("\n"),
 		);
 		expect(proc.exits).toEqual([]);
 	});
@@ -218,7 +214,7 @@ describe("wiz scry", () => {
 		judge = counting;
 
 		await check({
-			paths: [],
+			paths: ["a.ts"],
 			format: "text",
 			cost: true,
 			log,
@@ -239,7 +235,7 @@ describe("wiz scry", () => {
 		judge = new FakeJudge(0.2, { input: 300 });
 
 		await check({
-			paths: [],
+			paths: ["a.ts"],
 			format: "text",
 			cost: true,
 			log,
@@ -249,7 +245,7 @@ describe("wiz scry", () => {
 		});
 		await run();
 		await check({
-			paths: [],
+			paths: ["a.ts"],
 			format: "json",
 			cost: true,
 			log,
@@ -261,12 +257,11 @@ describe("wiz scry", () => {
 		const lines = printed().split("\n");
 		expect(lines.slice(0, 3)).toEqual([
 			"estimated 300 input tokens to check 1 file: 1 question in 1 request",
-			"✔ no problems in 1 file since HEAD",
+			"✔ no problems in 1 file",
 			"  asked 1 question in 1 request, 300 input tokens",
 		]);
 		// what the check was told costs nothing again
 		expect(JSON.parse(lines.slice(3).join("\n"))).toEqual({
-			since: "HEAD",
 			files: 1,
 			unchecked: [],
 			cancelled: false,
@@ -283,7 +278,7 @@ describe("wiz scry", () => {
 		};
 
 		await check({
-			paths: [],
+			paths: ["a.ts"],
 			format: "text",
 			cost: true,
 			log,
@@ -323,12 +318,32 @@ describe("wiz scry", () => {
 		expect(proc.exits).toEqual([2]);
 	});
 
-	it("says so when nothing changed", async () => {
+	it("checks every file under the working directory, changed or not, given no paths", async () => {
+		await fs.mkdir(`${root}/src`);
+		await fs.write(`${root}/src/b.ts`, "const foo = 2;\n");
+		await git("add", "src");
 		await git("commit", "-qam", "change");
+		proc.chdir(`${root}/src`);
 
-		await run();
+		await run("text", []);
 
-		expect(warned()).toEqual(["nothing changed since main"]);
+		expect(printed()).toEqual(
+			[
+				"src/b.ts",
+				"  1   error   100%   no foo   no-foo",
+				"",
+				"✖ 1 problem (1 error, 0 warnings) in 1 file",
+			].join("\n"),
+		);
+	});
+
+	it("says so when there is no file under the working directory", async () => {
+		await fs.mkdir(`${root}/empty`);
+		proc.chdir(`${root}/empty`);
+
+		await run("text", []);
+
+		expect(warned()).toEqual(["no files to check"]);
 	});
 
 	it("checks every file under the paths it is given, changed or not, from the working directory", async () => {
@@ -466,7 +481,7 @@ describe("wiz scry", () => {
 				"not checked",
 				"  why-not-what on a.ts   cancelled",
 				"",
-				"⚠ cancelled: no problems found in 1 file since HEAD, but 1 not checked",
+				"⚠ cancelled: no problems found in 1 file, but 1 not checked",
 				"  asked 1 question in 1 request",
 			].join("\n"),
 		);
@@ -498,10 +513,7 @@ describe("wiz scry", () => {
 			{ text: "\r\u001B[K", printed: 0 },
 		]);
 		expect(printed()).toEqual(
-			[
-				"✔ no problems in 1 file since HEAD",
-				"  asked 1 question in 1 request",
-			].join("\n"),
+			["✔ no problems in 1 file", "  asked 1 question in 1 request"].join("\n"),
 		);
 		expect(timer.intervals.every((entry) => entry.disposed)).toBe(true);
 	});

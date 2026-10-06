@@ -1,12 +1,12 @@
 ---
 name: scry
-description: "Write, update, and remove the scry rules in this project's .wiz/scry, which `wiz scry` checks a change against like a linter. Use when the user explicitly asks for a rule, or asks for a style or convention change across the codebase that a rule could enforce from now on (\"stop using default exports\", \"comments should say why\"). Also use when asked to scry a change or run `wiz scry`."
+description: "Write, update, and remove the scry rules in this project's .wiz/scry, which `wiz scry` checks code against like a linter. Use when the user explicitly asks for a rule, or asks for a style or convention change across the codebase that a rule could enforce from now on (\"stop using default exports\", \"comments should say why\"). Also use when asked to scry a change or run `wiz scry`."
 version: 0.0.36
 ---
 
 # Scry
 
-`wiz scry` checks a change against the project's rules. A rule is a
+`wiz scry` checks code against the project's rules. A rule is a
 directory under `.wiz/scry`, tracked with the code it governs:
 
 ```
@@ -54,13 +54,13 @@ Run the CLI with `bunx @webappwiz/cli scry`, which checks, or
 
 ## Checking a change
 
-`wiz scry` is a linter: it finds the change with git, runs each rule's
-`rule.ts` on the changed files it applies to, and prints one block of
-findings, each with how sure the check is: 100% where code decided it, a
-decision model's probability where the rule asked one. When the user names
+`wiz scry` is a linter: it runs each rule's `rule.ts` on every file it
+applies to under the working directory, and prints one block of findings,
+each with how sure the check is: 100% where code decided it, a decision
+model's probability where the rule asked one. When the user names
 directories or files, pass them, as in `bunx @webappwiz/cli scry
-packages/api`, and it checks every file under them, changed or not; add
-`--since <ref>` to check only the ones changed since it. When the user names
+packages/api`. To check a change, add `--since <ref>`: `--since main` for
+the branch's work, `--since HEAD` for what is not committed yet. When the user names
 rules, pass `--rule <id>,<id>` to check with only those.
 Show its report as it printed it, in one code block, and add nothing to it.
 Fixing what it found is a separate request; do not start unless asked.

@@ -74,14 +74,14 @@ export class Git {
 	}
 
 	/**
-	 * The files changed since `ref`, committed or not. With no ref, the
-	 * uncommitted work when there is any, and otherwise the branch since it
-	 * left trunk, so the usual cases need no flag. `paths`, from the root,
-	 * keep only the files at or under them; none keeps every file.
+	 * The files changed since the branch left `ref`, committed or not, so
+	 * `main` is the branch's own work and none of what landed on trunk
+	 * since. `paths`, from the root, keep only the files at or under them;
+	 * none keeps every file.
 	 */
-	async changes(ref?: string, paths: string[] = []): Promise<Changeset> {
+	async changes(ref: string, paths: string[] = []): Promise<Changeset> {
 		const pathspec = ["--", ...paths];
-		const [base, since] = await this.base(ref, pathspec);
+		const base = (await this.out("merge-base", ref, "HEAD")).trim();
 		const tracked = await this.lines(
 			"diff",
 			"--name-only",
@@ -110,7 +110,7 @@ export class Git {
 			);
 			files.push({ path, diff: stdout });
 		}
-		return { since, files };
+		return { since: ref, files };
 	}
 
 	/**
@@ -131,27 +131,6 @@ export class Git {
 		);
 		// a conflicted file is listed once per side
 		return [...new Set(files)].filter((path) => !deleted.has(path)).toSorted();
-	}
-
-	/** The commit to diff against, and what a report calls it. */
-	private async base(
-		ref: string | undefined,
-		pathspec: string[],
-	): Promise<[string, string]> {
-		if (ref !== undefined) {
-			return [ref, ref];
-		}
-		if ((await this.out("status", "--porcelain", ...pathspec)).trim() !== "") {
-			return ["HEAD", "HEAD"];
-		}
-		const { exitCode, stdout } = await this.git(
-			"symbolic-ref",
-			"--short",
-			"refs/remotes/origin/HEAD",
-		);
-		const trunk =
-			exitCode === 0 ? stdout.trim().replace(/^origin\//, "") : "main";
-		return [(await this.out("merge-base", "HEAD", trunk)).trim(), trunk];
 	}
 
 	private async lines(...args: string[]): Promise<string[]> {

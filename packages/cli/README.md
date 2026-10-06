@@ -8,7 +8,7 @@ bunx @webappwiz/cli update                 # pin webappwiz deps, like bun update
 bunx @webappwiz/cli skills list            # what there is, and what you have
 bunx @webappwiz/cli skills add scry        # install an agent skill
 bunx @webappwiz/cli skills update          # refresh the ones already installed
-bunx @webappwiz/cli scry                   # check a change against the rules
+bunx @webappwiz/cli scry                   # check the files here against the rules
 bunx @webappwiz/cli scry test              # run the tests beside each rule
 bunx @webappwiz/cli scry eval              # score the rules on their labeled cases
 bunx @webappwiz/cli scry why <path:line>   # what a model was asked about a line
@@ -37,7 +37,7 @@ written.
 ### Checking a change
 
 ```
-$ bunx @webappwiz/cli scry
+$ bunx @webappwiz/cli scry --since main
 src/list.ts
   32   warning   91%    Settings go in one named opts object, after the parameters a caller cannot leave out.   named-options-last
 
@@ -48,13 +48,13 @@ src/catalog.test.ts
   asked 3 questions in 1 request, 2.1k input tokens
 ```
 
-With no paths, `scry` asks git what changed: the uncommitted work when
-there is any, otherwise the branch since it left trunk, or whatever
-`--since <ref>` names. Paths, `scry packages/api src/app.ts`, check every
-file at or under them, changed or not: the tracked ones and the new ones git
-does not ignore, from wherever it runs; the project is the git repository
-around it. Paths with `--since <ref>` check only the files under them that
-changed since it. It matches each rule's `files` glob against those files
+Like any linter, `scry` checks every file under the working directory,
+or under the paths it is given, `scry packages/api src/app.ts`, changed or
+not: the tracked ones and the new ones git does not ignore. The project is
+the git repository around it. `--since <ref>` checks only the files under
+them that changed since the branch left the ref, committed or not:
+`--since main` for a branch's work, `--since HEAD` for what is not
+committed yet. It matches each rule's `files` glob against those files
 and runs the matching rules' checks, every rule on every file at once;
 `--rule <id>,<id>` runs only those rules.
 

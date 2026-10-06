@@ -26,13 +26,13 @@ import { Spinner } from "./spinner";
 export interface CheckOptions {
 	/**
 	 * Where to look, from the working directory: every file at or under
-	 * these is checked, changed or not. None checks the whole change. The
+	 * these is checked, changed or not; none is the working directory. The
 	 * project root, holding `.wiz/scry`, is the root of the git repository.
 	 */
 	paths: string[];
 	/**
-	 * Checks only the files changed since this ref, under `paths` when there
-	 * are any. With no paths and no ref, see `Git.changes` for the default.
+	 * Checks only the files under `paths` changed since this ref, committed
+	 * or not.
 	 */
 	since?: string;
 	/** Checks with only the rules these ids name; every rule when empty. */
@@ -68,7 +68,8 @@ export interface CheckOptions {
 }
 
 /**
- * Checks a change, or every file under some paths, against the project's rules, the way a linter checks code:
+ * Checks every file under some paths, or only the ones a change touched,
+ * against the project's rules, the way a linter checks code:
  * one block of problems, and a nonzero exit when any is an error. It exits 1
  * on an error, 2 when a rule went unchecked on a file, 0 otherwise.
  *
@@ -81,7 +82,12 @@ export async function check(opts: CheckOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
-	const { root: dir, paths } = await Git.locate(ps.cwd(), opts.paths, { ps });
+	// no paths is the working directory, as for any linter
+	const { root: dir, paths } = await Git.locate(
+		ps.cwd(),
+		opts.paths.length === 0 ? ["."] : opts.paths,
+		{ ps },
+	);
 	const rules = await Rules.load(dir, { fs });
 	if (rules.all.length === 0) {
 		log.error(`no rules in ${dir}/.wiz/scry: add one with \`wiz scry add\``);
@@ -90,11 +96,9 @@ export async function check(opts: CheckOptions): Promise<void> {
 	const settings = await loadConfig(dir, { fs, ps });
 	const glob = opts.glob ?? new NodeGlob();
 	const git = new Git(dir, { ps });
-	// paths alone check every file under them; a ref, or no paths, the change
+	// every file under the paths, or only the ones changed since a ref
 	const changes =
-		paths.length > 0 && opts.since === undefined
-			? undefined
-			: await git.changes(opts.since, paths);
+		opts.since === undefined ? undefined : await git.changes(opts.since, paths);
 	const since = changes?.since;
 	const found =
 		changes?.files.map((file) => file.path) ?? (await git.files(paths));
@@ -104,11 +108,11 @@ export async function check(opts: CheckOptions): Promise<void> {
 		(path) => !settings.exclude.some((pattern) => glob.matches(pattern, path)),
 	);
 	if (files.length === 0) {
-		const under = paths.length === 0 ? "" : ` in ${opts.paths.join(", ")}`;
+		const where = opts.paths.length === 0 ? "" : ` in ${opts.paths.join(", ")}`;
 		log.error(
 			since === undefined
-				? `no files to check${under}`
-				: `nothing changed since ${since}${under}`,
+				? `no files to check${where}`
+				: `nothing changed since ${since}${where}`,
 		);
 		return;
 	}
