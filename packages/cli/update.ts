@@ -1,4 +1,5 @@
 import { basename } from "node:path";
+import { lanesFromTags } from "@webappwiz/arbor/lanes-from-tags";
 import type { ShippedRule } from "@webappwiz/scry/catalog";
 import type { SecretStore } from "webappwiz/creds";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
@@ -53,7 +54,8 @@ export interface UpdateOptions {
  * Installed skills are copies of files those packages ship, so they are
  * refreshed too, and so are the rules copied in from the catalog. What a
  * rename left behind moves along: `@webappwiz/rules` becomes
- * `@webappwiz/scry`, and `.wiz/rules` becomes `.wiz/scry`. Last, it names
+ * `@webappwiz/scry`, `.wiz/rules` becomes `.wiz/scry`, and arbor todos
+ * saved with tags move into a lane a tag, since arbor reads neither. Last, it names
  * any credential the project uses that nothing has yet, and the command a
  * person runs to add it, since an upgrade is when a new one starts to matter.
  */
@@ -95,6 +97,7 @@ export async function update(opts: UpdateOptions): Promise<void> {
 	}
 	await updateSkills({ dir: opts.dir, log: log, fs: fs, skills: opts.skills });
 	await updateRules({ dir: opts.dir, log, fs, rules: opts.rules });
+	await lanesFromTags({ dir: opts.dir, log, fs, ps: opts.ps });
 	const credentials = await ProjectCredentials.open(opts.dir, {
 		fs,
 		ps: opts.ps ?? new NodePs(),

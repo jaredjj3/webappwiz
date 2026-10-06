@@ -270,7 +270,10 @@ combination nobody tested.
 The default version is this package's own, which is the point of `bunx`: the
 release you invoke is the release you get. `--version` pins something else.
 `workspace:` ranges are left alone; inside a monorepo they already track each
-other. Installed skills and copied rules are refreshed too. Last, it names
+other. Installed skills and copied rules are refreshed too, and arbor todos
+saved while arbor kept tags move into a lane a tag (named `Dark mode` for
+`dark-mode`; a todo with several goes to the one the most todos share), since
+arbor refuses to read them until then. Last, it names
 any credential the project uses that neither the environment nor the secret
 store has, with the `creds add` command a person runs for each.
 

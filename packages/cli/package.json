@@ -26,6 +26,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@webappwiz/arbor": "workspace:*",
 		"@webappwiz/scry": "workspace:*",
 		"webappwiz": "workspace:*",
 		"zod": "^4.4.3"

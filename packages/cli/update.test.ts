@@ -138,6 +138,33 @@ describe("update", () => {
 		);
 	});
 
+	it("moves arbor todos saved with tags into a lane a tag", async () => {
+		await fs.mkdir("/p/.git/arbor/todos");
+		await fs.write(
+			"/p/.git/arbor/todos/1.json",
+			JSON.stringify({
+				id: 1,
+				subject: "retry uploads",
+				text: "",
+				position: 1,
+				from: null,
+				createdAt: "2026-01-01T00:00:00.000Z",
+				takenBy: null,
+				files: [],
+				tags: ["uploads"],
+			}),
+		);
+
+		await update(updating());
+
+		expect(log.entries.map((entry) => String(entry.message))).toContain(
+			"moved #1 into lane 1 Uploads, from their tag",
+		);
+		const todo = JSON.parse(await fs.read("/p/.git/arbor/todos/1.json"));
+		expect(todo.lane).toBe(1);
+		expect(todo).not.toHaveProperty("tags");
+	});
+
 	it("names the credentials nothing has yet, and how a person adds each", async () => {
 		store.values.delete("CLOUDFLARE_API_TOKEN");
 		store.values.delete("TYPESAFE_API_KEY");

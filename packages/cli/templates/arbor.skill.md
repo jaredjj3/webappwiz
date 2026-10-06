@@ -1,6 +1,6 @@
 ---
 name: arbor
-description: Use the @webappwiz/arbor CLI to land your work on trunk, or a base branch given as an argument, from an isolated git worktree without pull requests. Read this before investigating anything that may lead to a code change in an arbor repository, since it decides where the work happens, and whenever you need to add, claim, merge, remove, list, show, locate, escalate, or defer a task, or add, pick up, or reorder a todo.
+description: Use the @webappwiz/arbor CLI to land your work on trunk, or a base branch given as an argument, from an isolated git worktree without pull requests. Read this before investigating anything that may lead to a code change in an arbor repository, since it decides where the work happens, and whenever you need to add, claim, merge, remove, list, show, locate, escalate, or defer a task, or add, pick up, link, or reorder a todo, or work down a lane of them.
 version: 0.0.38
 ---
 
@@ -28,7 +28,8 @@ stderr says.
    show N` prints what is asked; if it names another task that took it, tell
    the user rather than start on it. Otherwise take it now, so no other agent
    starts on it: `arbor add <task> --todo N`, or `arbor todo take N` from a
-   task under way. Pass `--base <branch>` only when invoked with a branch
+   task under way. `[ARBOR LANE N]` hands you a whole lane instead (see
+   Working a lane). Pass `--base <branch>` only when invoked with a branch
    (`/arbor feature/auth`) or the user names one; never guess a base from the
    checked-out branch.
 2. **Plan.** Once you know what done means, fill in `ARBOR.md` before
@@ -79,21 +80,43 @@ arbor todo add "Upload retries forever on a 413" 'The client retries on any 4xx 
 - [ ] tell the user the file is too big'
 ```
 
-Tag a todo with the part of the product or the goal it belongs to, like
-`uploads` or `dark-mode`, so related todos group together:
-
-- Reuse a tag from `arbor todo tags` whenever one fits.
-- Never name the kind of work (`bug`, `refactor`), a task, a person, a
-  priority, or a status: the subject, position, and taken-by already say
-  those.
-- One or two tags a todo, or none when nothing groups it.
-- A todo that comes up in your task gets the tags of the todos your task
-  holds when it belongs with them, so the next grooming finds it.
+Name the files and the feature in the detail, so whoever grooms the list
+later can tell the todo is about their area.
 
 `arbor todo update <id> '<detail>'` replaces the whole detail, so pass all of
 it: what still holds and what you learned. Merging removes every todo the task
 holds: update one you only partly did with what is left, then
 `arbor todo release` it, so it stays on the list.
+
+### Links
+
+When a todo cannot start before another merges, it is blocked by that one:
+say so with `--blocked-by` (`arbor todo add <subject> --blocked-by 12`, or
+`arbor todo update 14 --blocked-by 12`), rather than in its detail. arbor
+then warns whoever takes it early, drops the link when 12 merges or is
+removed, and shows it on the board. `--remove-blocked-by 12` undoes one.
+Link only for a real order (one needs the other's code or data), never for
+priority, which is the position's job.
+
+When `arbor add --todo` or `arbor todo take` warns that a todo is blocked,
+what blocks it has yet to merge: `arbor todo wait <id>` for it, or, when the
+user asked for this todo now, do only what does not need the blocker and say
+so in your report.
+
+### Lanes
+
+Groom lanes as you add todos: you know what each new one builds on, and
+nobody lays lanes out for you (see Working a lane for what a lane is). Read
+`arbor lane list`, then for each todo you add:
+
+- **An existing lane** when it builds on that lane's work, needing its code,
+  files, or context: `--lane <n>` puts it at the bottom.
+- **A new lane** when it starts a chain that more todos will follow:
+  `arbor lane add '<name>'`, named for what the chain adds up to, then
+  `--lane <n>`.
+- **Untriaged** otherwise, the default, for the user to place.
+
+`arbor todo update <id> --lane <n>` moves one that exists.
 
 ### Positions
 
@@ -113,17 +136,17 @@ asked for.
 
 ### Grooming related todos
 
-Todos sharing tags with yours are about the same area: your change can settle
-them, shrink them, move what they point at, or make them wrong, and you hold
-the context that makes each one cheap right now. Groom them once you have
-planned, and again just before merging:
+Todos about the same area as yours: your change can settle them, shrink
+them, move what they point at, or make them wrong, and you hold the context
+that makes each one cheap right now. Groom them once you have planned, and
+again just before merging:
 
-1. **Gather the tags** of every todo your task holds, or, when it holds none,
-   the ones from `arbor todo tags` that name the area of your Goal.
-2. **List the related todos**: `arbor todo list --tag <tag>,<tag>` with all of
-   them, leaving off `--open`, since a todo another task has taken can still
-   be affected by yours. `arbor todo show` each one your work might touch.
-3. **Act on each one**, in this order of preference:
+1. **Find the related todos**: read `arbor todo list`, leaving off `--open`,
+   since a todo another task has taken can still be affected by yours. Those
+   in your todos' lanes, those blocking or blocked by them, and those whose
+   subject names your files or feature are related. `arbor todo show` each
+   one your work might touch.
+2. **Act on each one**, in this order of preference:
    - **Claim it** when it is open and your change settles it, makes it moot,
      or would with a little more work in the same files: `arbor todo take
      <id>` and add it to your Goal. Claim every one you can, since the next
@@ -132,7 +155,7 @@ planned, and again just before merging:
    - **Update it** when your change alters it without settling it (a path
      moved, a step is done, the approach no longer fits), ticking off the
      `- [ ]` steps you did.
-   - **Retag it** when it belongs to another area.
+   - **Place it** when it is untriaged and belongs in a lane (see Lanes).
    - **Coordinate** when another task has taken it and your change affects
      it: never take it, compare files with `arbor list --files`, and note it
      in `ARBOR.md`.
@@ -143,11 +166,14 @@ Whenever a task ends, merged or removed, propose the next todo, so the
 context this conversation built up gets used before it is gone: from
 `arbor todo list --open`, the one most related to the work just done (the
 same files, feature, or problem; `arbor todo show` one to be sure), preferring
-one that came up in the task, then one sharing a tag with the todos it held;
-among equally related ones, or when none is related, the top of the list.
+one that came up in the task; among equally related ones, or when none is related, the top of the list.
 `merge` prints its pick by that order; `remove` prints none. After a merge,
 also propose the next one or two when they are as related, so the user can
 choose.
+
+A task whose todos ran in a lane is the exception: `merge` prints that
+lane's next todo, and that is the one to propose, even one another lane
+still blocks.
 
 ### Proposing a todo
 
@@ -166,6 +192,36 @@ fails. It touches the retry loop this task just rewrote.
 
 The 📝 belongs to the heading: leave it out of `arbor todo add` and
 `--subject`.
+
+## Working a lane
+
+A lane is a named, ordered queue of todos for one agent, worked top to
+bottom, one task per todo. It keeps a chain of todos that build on each other
+with one agent, so each step starts from the context the last one built, and
+runs beside other lanes without the agents stepping on each other. Lanes are
+the columns of the `arbor dev` board; a todo in none is untriaged. Agents
+place the todos they add (see Lanes), and the user rearranges them. Each has a number, which commands and the prompt use, and a name,
+which says what its todos are for: `arbor lane list` shows both.
+
+`[ARBOR LANE N]`, copied from the `arbor dev` page, asks you to work down
+lane N. The lane is arbor's, not the prompt's, so read it from arbor each
+time:
+
+1. `arbor lane show N` prints the steps and what to do next. When it says
+   the lane is done or gone, stop and say so.
+2. When its next todo is blocked by a todo in another lane, `arbor todo wait
+   <id>` for that one, again on `timeout`, rather than skip ahead: a lane is in
+   order for reasons the board knows and you do not. When the wait ends
+   because the other task is escalated, tell the user you are blocked on it
+   and stop.
+3. Take the next todo with `arbor add <task> --todo <id>`, and do it as any
+   other task (see Workflow), through `arbor merge`.
+4. After the merge, `cd` to the main tree and go back to step 1. Report each
+   merge as usual, but do not wait for the user between steps unless a task
+   escalates.
+
+Never take a todo from another lane, or one the lane has not reached; when
+the user moves todos while you work, the next `lane show` has them.
 
 ## Handing out part of your task
 
