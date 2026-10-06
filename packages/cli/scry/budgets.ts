@@ -77,9 +77,13 @@ export class Ledger {
 }
 
 async function read(fs: Fs, path: string): Promise<Spending[]> {
-	return (await fs.exists(path))
+	const entries = (await fs.exists(path))
 		? (JSON.parse(await fs.read(path)) as Spending[])
 		: [];
+	// som was once called decider, and what it spent then still counts
+	return entries.map((entry) =>
+		(entry.role as string) === "decider" ? { ...entry, role: "som" } : entry,
+	);
 }
 
 /** A role's numbered limit over one window. */

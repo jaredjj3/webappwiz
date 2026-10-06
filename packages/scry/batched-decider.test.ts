@@ -242,6 +242,26 @@ describe("BatchedDecider", () => {
 		]).toEqual([[0.5, "Error: over the llm budget for today"], 1]);
 	});
 
+	it("holds deciders sharing a tally to one budget, each keeping its own usage", async () => {
+		const tally = { requests: 0, questions: 0, input: 0 };
+		const budget = { input: 300, reason: "over the decider budget" };
+		const clef = new BatchedDecider(new FakeJudge(0.5, { input: 300 }), {
+			budget,
+			tally,
+		});
+		const jev = new BatchedDecider(new FakeJudge(0.5), { budget, tally });
+
+		await clef.decide("Is it?", at(cart, 1));
+		const answer = await jev.decide("Is it?", at(cart, 1)).catch(String);
+
+		expect([answer, clef.usage.input, jev.usage.input, tally.input]).toEqual([
+			"Error: over the decider budget",
+			300,
+			0,
+			300,
+		]);
+	});
+
 	it("asks nothing on a budget of 0", async () => {
 		const judge = new FakeJudge(0.5);
 		const decider = new BatchedDecider(judge, {

@@ -2,18 +2,20 @@ import {
 	BatchedDecider,
 	CachedDecider,
 	CountingJudge,
+	type Decider,
 	type DeciderUsage,
 	Decisions,
 	type Tools,
 } from "@webappwiz/scry";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import { type Models, ROLES, type Role } from "../config";
+import type { ByEffort, Models, Role } from "../config";
 import { ProjectCredentials } from "../creds/project-credentials";
 import type { Allowance, Spending } from "./budgets";
+import { EffortDecider } from "./effort-decider";
 import { OnDemandJudge } from "./on-demand-judge";
 import { HostedProviders, type Providers } from "./providers";
 
-/** Where a project keeps the answers its decider was given, between runs. */
+/** Where a project keeps the answers its models were given, between runs. */
 export const DECISIONS = "node_modules/.cache/webappwiz/scry/decisions.json";
 
 /** What a project's models were asked, and what it cost. */
@@ -42,19 +44,26 @@ export interface ProjectToolsOptions {
 	ps?: Ps;
 }
 
+/** One model a role asks, at one effort or more. */
+interface Asked {
+	role: Role;
+	model: string;
+	batched: BatchedDecider;
+	cached: CachedDecider;
+}
+
 /**
  * The tools a project's rules are built with: a decision model and a
- * language model, each asked only once a rule asks it and batched per file,
- * with every answer kept for the next run and for `wiz scry why`.
+ * language model, the one for the effort each question asks at, each asked
+ * only once a rule asks it and batched per file, with every answer kept for
+ * the next run and for `wiz scry why`.
  */
 export class ProjectTools {
 	private constructor(
 		/** What rules are built with. */
 		readonly tools: Tools,
-		private batched: Record<Role, BatchedDecider>,
-		private cached: CachedDecider[],
+		private asked: Asked[],
 		private decisions: Decisions,
-		private models: Models,
 		private counting: boolean,
 	) {}
 
@@ -70,63 +79,83 @@ export class ProjectTools {
 				(await ProjectCredentials.open(dir, { fs, ps })).credentials,
 			);
 		const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
-		const ask = (role: Role) => {
-			const model = opts.models[role];
-			const judge = new OnDemandJudge(providers, model);
-			const batched = new BatchedDecider(
-				opts.counting ? new CountingJudge(judge) : judge,
-				{
-					jobs: opts.jobs,
-					signal: opts.signal,
-					budget: opts.budgets?.[role],
-				},
-			);
-			return {
-				batched,
-				cached: new CachedDecider(batched, decisions, { model }),
+		const asked: Asked[] = [];
+		// one decider for each model a role asks, however many efforts ask
+		// it, so the questions to it share requests and a tally its budget holds
+		const ask = (role: Role): Decider => {
+			const tally: DeciderUsage = { requests: 0, questions: 0, input: 0 };
+			const chain = (model: string): Decider => {
+				const known = asked.find(
+					(each) => each.role === role && each.model === model,
+				);
+				if (known !== undefined) {
+					return known.cached;
+				}
+				const judge = new OnDemandJudge(providers, model);
+				const batched = new BatchedDecider(
+					opts.counting ? new CountingJudge(judge) : judge,
+					{
+						jobs: opts.jobs,
+						signal: opts.signal,
+						budget: opts.budgets?.[role],
+						tally,
+					},
+				);
+				const cached = new CachedDecider(batched, decisions, { model });
+				asked.push({ role, model, batched, cached });
+				return cached;
 			};
+			const models: ByEffort<string> = opts.models[role];
+			return new EffortDecider(
+				Object.fromEntries(
+					Object.entries(models).map(([effort, model]) => [
+						effort,
+						chain(model),
+					]),
+				) as ByEffort<Decider>,
+			);
 		};
-		const decider = ask("decider");
-		const llm = ask("llm");
 		return new ProjectTools(
-			{ decider: decider.cached, llm: llm.cached },
-			{ decider: decider.batched, llm: llm.batched },
-			[decider.cached, llm.cached],
+			{ som: ask("som"), llm: ask("llm") },
+			asked,
 			decisions,
-			opts.models,
 			opts.counting ?? false,
 		);
 	}
 
 	/** What both models were asked, and what it cost. */
 	get spent(): Spent {
-		const batched = Object.values(this.batched);
+		const usage = this.asked.map((each) => each.batched.usage);
 		return {
-			requests: sum(batched.map((each) => each.usage.requests)),
-			questions: sum(batched.map((each) => each.usage.questions)),
-			input: sum(batched.map((each) => each.usage.input)),
-			cached: sum(this.cached.map((each) => each.hits)),
+			requests: sum(usage.map((each) => each.requests)),
+			questions: sum(usage.map((each) => each.questions)),
+			input: sum(usage.map((each) => each.input)),
+			cached: sum(this.asked.map((each) => each.cached.hits)),
 		};
 	}
 
-	/** The input tokens `role` spent, or would have, when counting. */
+	/** The input tokens `role` spent, or would have, when counting, over every model it asks. */
 	input(role: Role): number {
-		return this.batched[role].usage.input;
+		return sum(
+			this.asked
+				.filter((each) => each.role === role)
+				.map((each) => each.batched.usage.input),
+		);
 	}
 
 	/** What each model spent, for the ledger, as of `at`. */
 	spending(at: number): Spending[] {
-		return ROLES.map((role) => ({
+		return this.asked.map(({ role, model, batched }) => ({
 			at,
 			role,
-			model: this.models[role],
-			input: this.input(role),
+			model,
+			input: batched.usage.input,
 		}));
 	}
 
 	/** Of the questions asked so far, how many the models have answered. */
 	get answered(): number {
-		return sum(Object.values(this.batched).map((each) => each.answered));
+		return sum(this.asked.map((each) => each.batched.answered));
 	}
 
 	/** Keeps the answers for the next run; none, when it only counted. */

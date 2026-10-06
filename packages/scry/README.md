@@ -2,7 +2,7 @@
 
 Rules checked by code, the engine that runs them against a change, and
 webappwiz's catalog of them. A rule is English a person reads and a class
-that checks it: code decides what it can, and asks a decision model only
+that checks it: code decides what it can, and asks a System One model only
 what code cannot. This package loads rules, runs them, and ships the rules
 webappwiz maintains. `@webappwiz/cli scry` is its
 command line. It was published as `@webappwiz/rules` until it took scry's
@@ -46,7 +46,7 @@ export default class CommentsSayWhy implements Rule {
 is a glob of the files the rule applies to, every file when absent. `level`
 is `error` or `warning`, `error` when absent. `threshold` is how sure a
 check has to be, from 0 to 1, before a finding is reported, 0.7 when absent;
-code is sure, so only a decider's findings ever fall under it.
+code is sure, so only a model's findings ever fall under it.
 `recommended: true` puts a rule in the set `scry add --recommended`
 installs, which is for a rule that reads on any project rather than one
 about a stack it may not have. `RuleClass` types them, and `DeclaredRule.of`
@@ -89,10 +89,10 @@ const RESTATES =
 
 /** Finds comments that say what the code does instead of why. */
 export default class CommentsSayWhy implements Rule {
-	private decider: Decider;
+	private som: Decider;
 
 	constructor(tools: Tools) {
-		this.decider = tools.decider;
+		this.som = tools.som;
 	}
 
 	async check(file: SourceFile): Promise<Finding[]> {
@@ -100,7 +100,7 @@ export default class CommentsSayWhy implements Rule {
 			this.lineComments(file).map(async (comment) =>
 				comment.flag(
 					"Say why, not what.",
-					await this.decider.decide(RESTATES, comment),
+					await this.som.decide(RESTATES, comment),
 					RESTATES,
 				),
 			),
@@ -117,21 +117,25 @@ export default class CommentsSayWhy implements Rule {
 
 Code first. Everything a program can settle, it settles: which nodes to
 look at, which are excused, what counts as a match. A finding code decides
-has confidence 1. Only what takes judgment goes to the decider, as a
+has confidence 1. Only what takes judgment goes to the som, as a
 yes-or-no question about a span, and its answer, the probability of yes, is
 the finding's confidence: `span.flag(message, confidence, question)`. The
 question rides along on the finding, so a report can say what decided it.
-Ask about the narrowest span that holds the answer; the decider reads the
+Ask about the narrowest span that holds the answer; the som reads the
 whole file around it either way.
 
-The llm is a last resort. A question the decider still gets wrong after
+The llm is a last resort. A question the som still gets wrong after
 narrowing its span and rewording it, because answering takes following the
 code rather than reading it, goes to `tools.llm` instead: the same
 `decide(question, span)`, answered by a language model that reasons first,
 slower and dearer. Only that question moves; the rest stay with the
-decider, and `wiz scry eval` is what shows one needs to. Which models
-answer is the caller's to say, by the effort it checks at; the rule only
-says which kind of question it is asking.
+som, and `wiz scry eval` is what shows one needs to.
+
+A question can also say how hard it is: `decide(question, span, { effort:
+"high" })`, or `low` or `medium`, where one naming none asks the default.
+Which model answers at each effort is the caller's to say, in its config or
+for one run; the rule only says which kind of question it is asking, and
+how hard.
 
 Name the private methods for the sentences of the rule, so `check` reads as
 the rule does: `stateKeptBetweenCalls`, `setupOnlyOneTestUses`,
@@ -206,18 +210,18 @@ describe("one-class-per-file", () => {
 });
 ```
 
-A rule that asks a decider is built with a fake one, from
+A rule that asks a som is built with a fake one, from
 `@webappwiz/scry/testing`:
 
 ```ts
 import { FakeDecider } from "@webappwiz/scry/testing";
 
 it("asks about line comments, and not doc comments", async () => {
-	const decider = new FakeDecider({ "add one": 0.95 });
+	const som = new FakeDecider({ "add one": 0.95 });
 	const file = new SourceFile("a.ts", "/** A counter. */\n// add one\ni++;\n");
 
 	const findings = await new CommentsSayWhy({
-		decider,
+		som,
 		llm: new FakeDecider(),
 	}).check(file);
 
@@ -251,13 +255,13 @@ missing.
 ## Evaluating
 
 `Rules.evaluate({ ids, tools })` runs each rule on its cases with a real
-decider, the way a check would: what a `scry-ignore` comment excuses and
+som, the way a check would: what a `scry-ignore` comment excuses and
 what falls under the threshold are not findings. A bad case is right when
 something is found in it, a good one when nothing is. `wiz scry eval
 [ids]` prints the score per rule, then each case a rule got wrong and why.
 It is how a question's wording, a threshold, or a model is tuned: evaluate,
 change one thing, evaluate again. Every case of every rule runs at once, so
-the decider batches them as it would a check.
+the som batches them as it would a check.
 
 ## A check
 
@@ -266,13 +270,13 @@ const { root, paths } = await Git.locate(process.cwd(), ["packages/api"]);
 const rules = await Rules.load(root);
 const changes = await new Git(root).changes("main", paths);
 const account = { id: accountId, token: apiToken };
-const decider = new BatchedDecider(new Clef("clef", account), { jobs: 8 });
+const som = new BatchedDecider(new Clef("clef", account), { jobs: 8 });
 const llm = new BatchedDecider(new Claude("claude-sonnet-5-5", apiKey), {
 	jobs: 8,
 });
 const report = await rules.check({
 	paths: changes.files.map((file) => file.path),
-	tools: { decider, llm },
+	tools: { som, llm },
 });
 ```
 
@@ -299,9 +303,9 @@ A `Decider` answers `decide(question, span)` with the probability of yes.
 sends the ones about each file in one request, up to 64, to a `Judge`:
 `Clef` (`clef` or `clef-flash` on Cloudflare Workers AI), `Jev` (on
 TypeSafe, or anything else serving `/v1/systemone`), or `Claude` (on the
-Anthropic API). The first two are decision models, and back a rule's
-`decider`; Claude is a language model that reasons before it answers,
-slower and dearer, and backs its `llm`, for the questions a decision model
+Anthropic API). The first two are System One models, and back a rule's
+`som`; Claude is a large language model that reasons before it answers,
+slower and dearer, and backs its `llm`, for the questions a System One model
 gets wrong. It states its probability rather than reading one off its
 tokens, so a rule that asks it sets its `threshold` by evaluating. A rule written as plain
 `await`s still shares a request with every other rule reading the file. A

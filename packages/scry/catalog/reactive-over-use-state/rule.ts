@@ -27,10 +27,10 @@ export default class ReactiveOverUseState implements Rule {
 	static readonly files = "**/*.{ts,tsx}";
 	static readonly level = "warning";
 
-	private decider: Decider;
+	private som: Decider;
 
 	constructor(tools: Tools) {
-		this.decider = tools.decider;
+		this.som = tools.som;
 	}
 
 	async check(file: SourceFile): Promise<Finding[]> {
@@ -48,11 +48,11 @@ export default class ReactiveOverUseState implements Rule {
 			.filter((component) => ownStates(component).length >= 2);
 	}
 
-	/** Whether those pieces of state have to agree is the decider's call. */
+	/** Whether those pieces of state have to agree is the som's call. */
 	private async stateKeptInStep(component: SyntaxNode): Promise<Finding> {
 		return component.flag(
 			`${name(component)} keeps ${ownStates(component).length} pieces of useState in step: move the logic into a class with a Dispatcher, and read it through useReactive.`,
-			await this.decider.decide(IN_STEP, component),
+			await this.som.decide(IN_STEP, component),
 			IN_STEP,
 		);
 	}

@@ -9,7 +9,7 @@ import {
 	type Ps,
 } from "webappwiz/system";
 import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
-import type { Effort, Role } from "../config";
+import type { Role } from "../config";
 import { chooseModels, loadConfig } from "../load-config";
 import { table } from "../table";
 import type { Allowance } from "./budgets";
@@ -41,12 +41,8 @@ export interface CheckOptions {
 	rules?: string[];
 	/** How many requests to the model are out at once, over the config's `jobs`. */
 	jobs?: number;
-	/** Which of the config's `models` to ask, over the config's `effort`. */
-	effort?: Effort;
-	/** The model a rule's `decider` asks, over the effort's. */
-	model?: string;
-	/** The model a rule's `llm` asks, over the effort's. */
-	llm?: string;
+	/** One of the config's `profiles`, whose models lay over its `models`. */
+	profile?: string;
 	/** `json` for the report as JSON; anything else is text. */
 	format: string;
 	/**

@@ -19,10 +19,10 @@ export default class LogicLivesInControllers implements Rule {
 	static readonly level = "warning";
 	static readonly recommended = true;
 
-	private decider: Decider;
+	private som: Decider;
 
 	constructor(tools: Tools) {
-		this.decider = tools.decider;
+		this.som = tools.som;
 	}
 
 	async check(file: SourceFile): Promise<Finding[]> {
@@ -82,7 +82,7 @@ export default class LogicLivesInControllers implements Rule {
 
 	/**
 	 * Components, hooks, route handlers and CLI actions that may decide or
-	 * compute, which the decider weighs one at a time. Code passes the rest:
+	 * compute, which the som weighs one at a time. Code passes the rest:
 	 * a component or hook holding no state whose handlers never branch, and a
 	 * handler or action that neither branches nor runs a function of its own,
 	 * only translates.
@@ -105,7 +105,7 @@ export default class LogicLivesInControllers implements Rule {
 			adapters.map(async (adapter) =>
 				adapter.at.flag(
 					adapter.message,
-					await this.decider.decide(DECIDES, adapter.body),
+					await this.som.decide(DECIDES, adapter.body),
 					DECIDES,
 				),
 			),
@@ -384,14 +384,14 @@ const DECIDES =
 
 /** A function a framework calls: a component, a hook, a route handler or a CLI action. */
 interface Adapter {
-	/** The function, which the decider reads. */
+	/** The function, which the som reads. */
 	body: SyntaxNode;
 	/**
 	 * Where its finding points: the function, or the method name that
 	 * registers it, like `.action`, which in a chain is on its own line.
 	 */
 	at: SyntaxNode;
-	/** Whether code cannot tell it only translates, so the decider is asked. */
+	/** Whether code cannot tell it only translates, so the som is asked. */
 	mayDecide: boolean;
 	/** What to do instead, when it decides. */
 	message: string;

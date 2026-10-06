@@ -61,9 +61,9 @@ and runs the matching rules' checks, every rule on every file at once;
 A check is code. What code can decide, it decides, and that finding is sure:
 100%. What takes judgment it asks a model, which reads the file and
 answers a yes-or-no question with the probability of yes, and writes
-nothing. A rule asks one of two: its `decider`, a decision model fast and
-cheap enough to ask about every span, or its `llm`, a language model that
-reasons before it answers, for the questions a decision model gets wrong.
+nothing. A rule asks one of two: its `som`, a System One model fast and
+cheap enough to ask about every span, or its `llm`, a large language model that
+reasons before it answers, for the questions a System One model gets wrong.
 The questions about one file go in one request to each, and every answer is
 kept in `node_modules/.cache/webappwiz/scry`, so checking an unchanged file
 again asks nothing, until a reply shows a model's name, like `jev-latest`,
@@ -76,15 +76,17 @@ person or agent, to act on.
 answered: why a finding there was reported, or dropped. When nothing was
 asked, code decided it.
 
-The effort a check runs at picks both models. The credentials come
+A rule asks each question of its som or its llm at an effort, `low`,
+`medium` or `high`, or at none, and `scry.models` names the model each
+effort asks, with a `default` for a question naming none or an effort left
+out. The credentials come
 from the environment, or else from the operating system's secret store,
 where `creds add` keeps them (see [creds](#creds)).
 
-| Effort | `decider` | `llm` |
-| --- | --- | --- |
-| `low` | `clef-flash` | `claude-haiku-4-5` |
-| `medium`, the default | `clef` | `claude-sonnet-5-5` |
-| `high` | `clef` | `claude-opus-5-5` |
+| Role | `default` | `low` | `medium` | `high` |
+| --- | --- | --- | --- | --- |
+| `som` | `clef` | `clef-flash` | the default's | the default's |
+| `llm` | `claude-sonnet-5-5` | `claude-haiku-4-5` | the default's | `claude-opus-5-5` |
 
 | Model | Provider | Credentials |
 | --- | --- | --- |
@@ -98,10 +100,11 @@ import { defineConfig } from "@webappwiz/cli/config";
 
 export default defineConfig({
 	scry: {
-		effort: "medium",
 		models: {
-			high: { decider: "jev-latest", llm: "claude-fable-5-1" },
+			som: "jev-latest", // at every effort
+			llm: { default: "claude-sonnet-5-5", high: "claude-fable-5-1" },
 		},
+		profiles: { "double-check": { som: "jev-preview" } },
 		jobs: 8,
 	},
 });
@@ -109,16 +112,21 @@ export default defineConfig({
 
 Each layer overrides the last: `.wiz/config.ts`, then the user's own
 `~/.config/wiz/config.ts` (under `$XDG_CONFIG_HOME` when set), then
-`WIZ_SCRY_EFFORT` and `WIZ_SCRY_JOBS`. `models` overrides only the models it
-names, so the config above keeps the defaults at `low` and `medium`.
+`WIZ_SCRY_JOBS`. `models` lays each model it names over the one under it,
+effort by effort, so `{ llm: { high: "claude-fable-5-1" } }` keeps every
+other default, and a bare name like `{ llm: "claude-fable-5-1" }` asks it
+at every effort. Each of `profiles` lays its models over `models` the same
+way when `--profile` picks it, and a later layer's profile of the same name
+lays its models over the earlier one's.
 `exclude` takes globs, from the
 project root, of files no rule checks, like `[".agents/**"]` for skills
 copied in from elsewhere; the user's are added to the project's. A config where `@webappwiz/cli` is not
 installed exports the same object without `defineConfig`. A config still
 holding `agents` or `batch`, from before a rule's check
-was code, `model`, from before effort picked the models, or `budget`, from
-before `budgets`, is refused rather than half read, and so is
-`WIZ_SCRY_MODEL`.
+was code, `model` or `effort`, from before `models` named the models by
+role, `decider`, from before it was called `som`, or `budget`, from
+before `budgets`, is refused rather than half read, and so are
+`WIZ_SCRY_MODEL` and `WIZ_SCRY_EFFORT`.
 
 ### Budgets
 
@@ -131,14 +139,14 @@ scry: { budgets: "nothing" }    // ask no model: only code decides
 scry: { budgets: "unlimited" }  // spend without a limit
 scry: {
 	budgets: [
-		{ decider: "unlimited", llm: 2_000_000, per: "month" },
+		{ som: "unlimited", llm: 2_000_000, per: "month" },
 		{ llm: 300_000, within: "7d" },
 		{ llm: 100_000, per: "check" },
 	],
 }
 ```
 
-Each entry gives the `decider`, the `llm` or both a number of tokens,
+Each entry gives the `som`, the `llm` or both a number of tokens,
 `"nothing"` or `"unlimited"`, over a window: `per` a `"check"`, or a
 calendar `"day"`, `"week"` (from Monday) or `"month"` in local time, or
 `within` a rolling `"24h"`, `"7d"` or `"2w"`. Every entry holds at once, and
@@ -156,10 +164,10 @@ what would be left or how far over it would go. `--override-budget` checks
 anyway, spending without a limit, and with no budget declared. `scry eval`
 is held to the same budgets, and takes the same flag.
 
-`--effort` runs one check at another effort, over the config. `--model`
-and `--llm` ask another model for one run, over the effort's, so two models
-can be compared on the same change: `scry --model clef` then
-`scry --model jev-latest`.
+`--profile <name>` checks with one of `scry.profiles` for one run, so two
+sets of models can be compared on the same change, or the files one
+flagged checked again by another: `scry` then
+`scry --profile double-check <files>`. The two runs report apart.
 
 `--cost` says what a check would spend before it spends it: it runs the
 rules, but counts each request's input tokens rather than sending it, and
@@ -212,7 +220,7 @@ it. `scry eval [ids]` runs each rule on its labeled cases with
 the real one: the files in its `evals/`, named `<name>.good.<ext>` and
 `<name>.bad.<ext>`. A bad case is right when the rule reports something in it, a good
 one when it reports nothing. Run it after changing a rule's question or
-`threshold` to see what moved, or once per `--model` to compare models.
+`threshold` to see what moved, or once per `--profile` to compare models.
 
 ### list, add, update, remove
 

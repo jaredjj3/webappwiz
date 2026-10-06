@@ -1,32 +1,53 @@
-/**
- * A decision model, by the name its provider gives it: `clef` or
- * `clef-flash` on Cloudflare Workers AI, which read `CLOUDFLARE_ACCOUNT_ID`
- * and `CLOUDFLARE_API_TOKEN`, or a Jev on TypeSafe, like `jev-latest`, which
- * reads `TYPESAFE_API_KEY`.
- */
-export type Model = "clef" | "clef-flash" | `jev-${string}`;
+import type { Effort } from "@webappwiz/scry";
 
 /**
- * A language model, by the name Anthropic gives it, like
- * `claude-sonnet-5-5`, which reads `ANTHROPIC_API_KEY`.
+ * A System One model (SOM), which answers a yes-or-no question with the
+ * probability of yes, writing no text, by the name its provider gives it:
+ * `clef` or `clef-flash` on Cloudflare Workers AI, which read
+ * `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, or a Jev on TypeSafe,
+ * like `jev-latest`, which reads `TYPESAFE_API_KEY`.
+ */
+export type SomModel = "clef" | "clef-flash" | `jev-${string}`;
+
+/**
+ * A large language model (LLM), which reasons in text before it answers,
+ * by the name Anthropic gives it, like `claude-sonnet-5-5`, which reads
+ * `ANTHROPIC_API_KEY`.
  */
 export type LlmModel = `claude-${string}`;
 
-/** How much a check spends to be right, which picks the models it asks. */
-export type Effort = "low" | "medium" | "high";
-export const EFFORTS = ["low", "medium", "high"] as const;
+/**
+ * A model for each effort a rule can ask a question at, and the default's
+ * for a question that names none, or names one left out.
+ */
+export type ByEffort<M> = { default: M } & { [effort in Effort]?: M };
 
-/** The models a check at one effort asks. */
+/** The models a check asks: each role's, for each effort. */
 export interface Models {
-	/** What a rule's `decider` asks. */
-	decider: Model;
-	/** What a rule's `llm` asks. */
-	llm: LlmModel;
+	/** The System One models a rule's `som` asks. */
+	som: ByEffort<SomModel>;
+	/** The large language models a rule's `llm` asks. */
+	llm: ByEffort<LlmModel>;
 }
 
-/** The roles a model plays for a rule, each with a budget of its own. */
+/**
+ * Models as a config names them, over the ones under them effort by
+ * effort: a bare name asks it at every effort, and an effort left out keeps
+ * the model under it.
+ */
+export interface ModelsConfig {
+	/** The System One models a rule's `som` asks, like `"jev-latest"` or `{ low: "clef-flash" }`. */
+	som?: SomModel | Partial<ByEffort<SomModel>>;
+	/** The large language models a rule's `llm` asks, like `{ high: "claude-opus-5-5" }`. */
+	llm?: LlmModel | Partial<ByEffort<LlmModel>>;
+}
+
+/**
+ * The roles a model plays for a rule, each with a budget of its own: `som`,
+ * a System One model, and `llm`, a large language model.
+ */
 export type Role = keyof Models;
-export const ROLES = ["decider", "llm"] as const;
+export const ROLES = ["som", "llm"] as const;
 
 /**
  * What a role may spend: input tokens, `"nothing"`, which asks it no
@@ -42,7 +63,9 @@ export type Period = "check" | "day" | "week" | "month";
 
 /** One limit on what scry spends, over one window. */
 export interface Budget {
-	decider?: Spend;
+	/** Input tokens the System One models may spend. */
+	som?: Spend;
+	/** Input tokens the large language models may spend. */
 	llm?: Spend;
 	/** The calendar window the limit holds over. A number needs it or `within`. */
 	per?: Period;
@@ -60,21 +83,34 @@ export interface ScryConfig {
 	 *
 	 * ```ts
 	 * budgets: [
-	 *   { decider: "unlimited", llm: 2_000_000, per: "month" },
+	 *   { som: "unlimited", llm: 2_000_000, per: "month" },
 	 *   { llm: 300_000, within: "7d" },
 	 * ]
 	 * ```
 	 */
 	budgets?: "nothing" | "unlimited" | Budget[];
-	/** Which of `models` a check asks. `medium` when not set. */
-	effort?: Effort;
 	/**
-	 * The models each effort asks, over the defaults: `clef-flash` and
-	 * `claude-haiku-4-5` at low, `clef` and `claude-sonnet-5-5` at medium,
-	 * `clef` and `claude-opus-5-5` at high. A layer sets only what it names,
-	 * so `{ high: { llm: "claude-fable-5-1" } }` keeps the rest.
+	 * The models a check asks, over the defaults: `clef` for the som,
+	 * `clef-flash` at low effort, and `claude-sonnet-5-5` for the llm,
+	 * `claude-haiku-4-5` at low and `claude-opus-5-5` at high. It lays each
+	 * model it names over the one under it, so an effort it leaves out keeps
+	 * its model, and a bare name replaces the role's at every effort.
+	 *
+	 * ```ts
+	 * models: {
+	 *   som: "jev-latest",
+	 *   llm: { default: "claude-sonnet-5-5", high: "claude-fable-5-1" },
+	 * }
+	 * ```
 	 */
-	models?: { [effort in Effort]?: Partial<Models> };
+	models?: ModelsConfig;
+	/**
+	 * Other models to check with, by name, which `--profile <name>` picks for
+	 * one run: each lays the models it names over `models` the same way, like
+	 * `{ "double-check": { som: "jev-latest" } }`. A config naming one
+	 * the last named lays its models over that one's.
+	 */
+	profiles?: Record<string, ModelsConfig>;
 	/** How many requests to the model are out at once. 8 when not set. */
 	jobs?: number;
 	/**

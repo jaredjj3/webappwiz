@@ -6,24 +6,24 @@ import ReactiveOverUseState from "./rule";
 const cases = await Cases.load(import.meta.dir);
 
 describe("reactive-over-use-state", () => {
-	let decider: FakeDecider;
+	let som: FakeDecider;
 	let rule: ReactiveOverUseState;
 
 	beforeEach(() => {
-		decider = new FakeDecider({}, 0.8);
-		rule = new ReactiveOverUseState({ decider, llm: new FakeDecider() });
+		som = new FakeDecider({}, 0.8);
+		rule = new ReactiveOverUseState({ som, llm: new FakeDecider() });
 	});
 
 	it.each(cases.bad)("asks about $name", async ({ file }) => {
 		await rule.check(file);
 
-		expect(decider.asked).not.toEqual([]);
+		expect(som.asked).not.toEqual([]);
 	});
 
 	it.each(cases.good)("asks nothing about $name", async ({ file }) => {
 		await rule.check(file);
 
-		expect(decider.asked).toEqual([]);
+		expect(som.asked).toEqual([]);
 	});
 
 	it("asks about the component holding several pieces of state, not a function inside it", async () => {

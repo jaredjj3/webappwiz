@@ -57,12 +57,11 @@ describe("wiz scry eval", () => {
 			);
 		}`);
 
-	/** Asks the decider about each case's first class. */
-	const asking =
-		ruleSource(`constructor(tools) { this.decider = tools.decider; }
+	/** Asks the som about each case's first class. */
+	const asking = ruleSource(`constructor(tools) { this.som = tools.som; }
 		async check(file) {
 			const [first] = file.ts.topLevelClasses();
-			return [first.flag("no", await this.decider.decide("Is it?", first))];
+			return [first.flag("no", await this.som.decide("Is it?", first))];
 		}`);
 
 	beforeEach(async () => {
@@ -143,7 +142,7 @@ describe("wiz scry eval", () => {
 
 	it("refuses up front to score past a budget, and asks nothing", async () => {
 		await install("asks", asking);
-		await budget('[{ decider: 50, llm: "unlimited", per: "check" }]');
+		await budget('[{ som: 50, llm: "unlimited", per: "check" }]');
 		const judge = new FakeJudge(0.9, { input: 40 });
 
 		await evaluate({
@@ -159,8 +158,8 @@ describe("wiz scry eval", () => {
 			[
 				"over budget: this eval would spend more than scry.budgets allows",
 				"budgets",
-				"  decider   this check   would use 80 of 50, 0 spent   over by 30",
-				"  llm       unlimited    would use 0",
+				"  som   this check   would use 80 of 50, 0 spent   over by 30",
+				"  llm   unlimited    would use 0",
 				"raise scry.budgets, evaluate fewer rules, or run again with --override-budget",
 			].join("\n"),
 			[],
@@ -188,7 +187,7 @@ describe("wiz scry eval", () => {
 					`${root}/.local/state/wiz/${root.split("/").pop()}/scry-spent.json`,
 				),
 			),
-		).toEqual([{ at: 1_000, role: "decider", model: "clef", input: 80 }]);
+		).toEqual([{ at: 1_000, role: "som", model: "clef", input: 80 }]);
 	});
 
 	it("draws how many cases are scored on a live screen, and erases it before the scores", async () => {

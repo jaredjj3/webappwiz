@@ -15,7 +15,12 @@ export {
 } from "./clef";
 export { Comment } from "./comment";
 export { CountingJudge } from "./counting-judge";
-export type { Decider } from "./decider";
+export {
+	type DecideOptions,
+	type Decider,
+	EFFORTS,
+	type Effort,
+} from "./decider";
 export {
 	type Decision,
 	Decisions,

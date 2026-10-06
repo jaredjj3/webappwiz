@@ -34,14 +34,17 @@ export interface Finding {
  */
 export interface Tools {
 	/**
-	 * Answers yes-or-no questions about code, with the probability of yes: a
-	 * decision model, fast and cheap enough to ask about every span.
+	 * A System One model (SOM), like Clef or Jev: it reads the file and
+	 * answers a yes-or-no question about a span of it with the probability
+	 * of yes, at once and writing no text. Fast and cheap enough to ask
+	 * about every candidate code finds, so it is what a rule asks first.
 	 */
-	decider: Decider;
+	som: Decider;
 	/**
-	 * Answers the same questions with a language model that reasons before
-	 * it answers: slower and dearer, for the questions a decision model gets
-	 * wrong because answering takes following the code.
+	 * A large language model (LLM), like Claude: it reasons in text before
+	 * it answers the same questions, so it is slower and dearer. Only for a
+	 * question `wiz scry eval` shows the som still gets wrong, because
+	 * answering takes following the code rather than reading it.
 	 */
 	llm: Decider;
 }

@@ -6,20 +6,17 @@ import LogicLivesInControllers from "./rule";
 const cases = await Cases.load(import.meta.dir);
 
 describe("logic-lives-in-controllers", () => {
-	let decider: FakeDecider;
+	let som: FakeDecider;
 	let rule: LogicLivesInControllers;
 
 	beforeEach(() => {
-		decider = new FakeDecider({}, 0.8);
-		rule = new LogicLivesInControllers({ decider, llm: new FakeDecider() });
+		som = new FakeDecider({}, 0.8);
+		rule = new LogicLivesInControllers({ som, llm: new FakeDecider() });
 	});
 
-	it.each(cases.bad)(
-		"flags $name when the decider says yes",
-		async ({ file }) => {
-			expect(await rule.check(file)).not.toEqual([]);
-		},
-	);
+	it.each(cases.bad)("flags $name when the som says yes", async ({ file }) => {
+		expect(await rule.check(file)).not.toEqual([]);
+	});
 
 	it.each(cases.good)(
 		"flags nothing in $name by code alone",
@@ -52,7 +49,7 @@ describe("logic-lives-in-controllers", () => {
 		const findings = await rule.check(file);
 
 		expect([
-			decider.asked,
+			som.asked,
 			findings.map(({ line, message }) => [line, message]),
 		]).toEqual([
 			[],
@@ -103,7 +100,7 @@ describe("logic-lives-in-controllers", () => {
 
 		await rule.check(file);
 
-		expect(decider.asked.map(({ about }) => about.line)).toEqual([4, 6]);
+		expect(som.asked.map(({ about }) => about.line)).toEqual([4, 6]);
 	});
 
 	it("points a chained route or action at the line that registers it, not where the chain starts", async () => {
@@ -164,6 +161,6 @@ describe("logic-lives-in-controllers", () => {
 
 		await rule.check(file);
 
-		expect(decider.asked).toEqual([]);
+		expect(som.asked).toEqual([]);
 	});
 });

@@ -39,6 +39,12 @@ export interface BatchedDeciderOptions {
 	 * may carry it past. No limit by default.
 	 */
 	budget?: { input: number; reason: string };
+	/**
+	 * A tally it adds what it spends to as well, which `budget` holds it to:
+	 * one several deciders share keeps them all to one budget. Its own
+	 * `usage` by default.
+	 */
+	tally?: DeciderUsage;
 }
 
 /**
@@ -161,7 +167,8 @@ export class BatchedDecider implements Decider {
 			return;
 		}
 		const budget = this.opts.budget;
-		if (budget !== undefined && this.usage.input >= budget.input) {
+		const tally = this.opts.tally ?? this.usage;
+		if (budget !== undefined && tally.input >= budget.input) {
 			for (const item of batch) {
 				item.reject(new Error(budget.reason));
 			}
@@ -173,8 +180,7 @@ export class BatchedDecider implements Decider {
 				{ type: "noul", instructions: pointing(item.question, item.about) },
 			]),
 		);
-		this.usage.requests++;
-		this.usage.questions += batch.length;
+		this.spend({ requests: 1, questions: batch.length, input: 0 });
 		try {
 			// a request still out when the check is stopped fails then, whether
 			// or not the judge gives up on it
@@ -184,7 +190,11 @@ export class BatchedDecider implements Decider {
 				aborted(this.opts.signal),
 			]);
 			// a request is never free: what the judge does not report, it counts
-			this.usage.input += verdict.input ?? (await this.judge.count(judgment));
+			this.spend({
+				requests: 0,
+				questions: 0,
+				input: verdict.input ?? (await this.judge.count(judgment)),
+			});
 			this.answeredBy = verdict.model ?? this.answeredBy;
 			batch.forEach((item, index) => {
 				const answer = verdict.answers.get(`q${index}`);
@@ -199,6 +209,14 @@ export class BatchedDecider implements Decider {
 			for (const item of batch) {
 				item.reject(error);
 			}
+		}
+	}
+
+	private spend(spent: DeciderUsage): void {
+		for (const usage of new Set([this.usage, this.opts.tally ?? this.usage])) {
+			usage.requests += spent.requests;
+			usage.questions += spent.questions;
+			usage.input += spent.input;
 		}
 	}
 }

@@ -9,7 +9,20 @@ import type { Span } from "./span";
  * view, so a model reads the code around it the way a reviewer would.
  */
 export interface Decider {
-	decide(question: string, about: Span): Promise<number>;
+	decide(question: string, about: Span, opts?: DecideOptions): Promise<number>;
+}
+
+/**
+ * How hard a question is to answer, which picks the model that answers it:
+ * the caller says which model each effort asks, and the default when a
+ * question names none.
+ */
+export type Effort = "low" | "medium" | "high";
+export const EFFORTS = ["low", "medium", "high"] as const;
+
+export interface DecideOptions {
+	/** How hard the question is; the default's model answers when not given. */
+	effort?: Effort;
 }
 
 /** What a decision model is told a question is about. */

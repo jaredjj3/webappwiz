@@ -1,31 +1,37 @@
+import { EFFORTS } from "@webappwiz/scry";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import {
 	type Budget,
+	type ByEffort,
 	type Config,
-	EFFORTS,
-	type Effort,
 	type Models,
+	type ModelsConfig,
 	ROLES,
+	type Role,
 	type ScryConfig,
 } from "./config";
 import { within } from "./scry/budgets";
 
 /** `scry` with every default filled in. */
 export interface Settings {
-	effort: Effort;
-	/** The models each effort asks, every one named. */
-	models: Record<Effort, Models>;
+	/** The models a check asks, every role named. */
+	models: Models;
+	/** Other models to check with, by name, each only what it lays over `models`. */
+	profiles: Record<string, ModelsConfig>;
 	jobs: number;
 	exclude: string[];
 	/** What a check may spend, the presets spelled out; none when nothing declares it. */
 	budgets?: Budget[];
 }
 
-/** The models each effort asks when no config names them. */
-export const DEFAULT_MODELS: Record<Effort, Models> = {
-	low: { decider: "clef-flash", llm: "claude-haiku-4-5" },
-	medium: { decider: "clef", llm: "claude-sonnet-5-5" },
-	high: { decider: "clef", llm: "claude-opus-5-5" },
+/** The models a check asks when no config names them. */
+export const DEFAULT_MODELS: Models = {
+	som: { default: "clef", low: "clef-flash" },
+	llm: {
+		default: "claude-sonnet-5-5",
+		low: "claude-haiku-4-5",
+		high: "claude-opus-5-5",
+	},
 };
 
 /** What `loadConfig` reads through; the real ones by default. */
@@ -39,8 +45,8 @@ export interface LoadConfigOptions {
  * The settings `wiz scry` runs with, each layer over the last: the
  * defaults, the project's `.wiz/config.ts`, the user's
  * `$XDG_CONFIG_HOME/wiz/config.ts` (`~/.config/wiz/config.ts`), then
- * `WIZ_SCRY_EFFORT` and `WIZ_SCRY_JOBS`. `models` lays each model of each
- * effort over the last layer's, `exclude` gathers every layer's, and
+ * `WIZ_SCRY_JOBS`. `models` and each of `profiles` lay each model they name
+ * over the last layer's, effort by effort, `exclude` gathers every layer's, and
  * `budgets` is the last layer's to set it, whole.
  */
 export async function loadConfig(
@@ -54,18 +60,15 @@ export async function loadConfig(
 		environment(ps),
 	];
 	const settings: Settings = {
-		effort: "medium",
-		models: structuredClone(DEFAULT_MODELS),
+		models: { ...DEFAULT_MODELS },
+		profiles: {},
 		jobs: 8,
 		exclude: [],
 	};
 	for (const layer of layers) {
-		settings.effort = layer.effort ?? settings.effort;
-		for (const effort of EFFORTS) {
-			settings.models[effort] = {
-				...settings.models[effort],
-				...layer.models?.[effort],
-			};
+		settings.models = lay(settings.models, layer.models);
+		for (const [name, models] of Object.entries(layer.profiles ?? {})) {
+			settings.profiles[name] = lay(settings.profiles[name] ?? {}, models);
 		}
 		settings.jobs = layer.jobs ?? settings.jobs;
 		settings.exclude = [...settings.exclude, ...(layer.exclude ?? [])];
@@ -121,38 +124,107 @@ function scry({ path, config }: { path: string; config: Config }): ScryConfig {
 			`${path}: scry.budget is gone: scry.budgets declares what a check may spend`,
 		);
 	}
-	const gone = ["agents", "batch", "model"].filter((key) => key in scry);
+	const gone = ["agents", "batch", "model", "effort"].filter(
+		(key) => key in scry,
+	);
 	if (gone.length > 0) {
 		throw new Error(
-			`${path}: scry.${gone.join(", scry.")} ${gone.length === 1 ? "is" : "are"} gone: scry.models names the models each effort asks, and scry.effort which effort a check runs at`,
+			`${path}: scry.${gone.join(", scry.")} ${gone.length === 1 ? "is" : "are"} gone: scry.models names the models a check asks, at each effort a rule's questions ask, and scry.profiles others that --profile picks for one run`,
 		);
-	}
-	if (scry.effort !== undefined) {
-		effort(`${path}: scry.effort`, scry.effort);
 	}
 	if (scry.budgets !== undefined) {
 		checkBudgets(`${path}: scry.budgets`, scry.budgets);
 	}
-	// a model name is checked where it is used, which knows every provider
-	for (const [key, models] of Object.entries(scry.models ?? {})) {
-		if (!(EFFORTS as readonly string[]).includes(key)) {
-			throw new Error(
-				`${path}: scry.models.${key}: expected an effort, one of ${EFFORTS.join(", ")}`,
-			);
-		}
-		if (typeof models !== "object" || models === null) {
-			throw new Error(
-				`${path}: scry.models.${key}: expected the models it asks, like { decider: "clef", llm: "claude-sonnet-5-5" }`,
-			);
-		}
+	checkModels(`${path}: scry.models`, scry.models ?? {});
+	const profiles: unknown = scry.profiles ?? {};
+	if (!isRecord(profiles)) {
+		throw new Error(
+			`${path}: scry.profiles: expected models by name, like { "double-check": { som: "jev-latest" } }`,
+		);
+	}
+	for (const [name, models] of Object.entries(profiles)) {
+		checkModels(`${path}: scry.profiles.${name}`, models);
 	}
 	return scry;
+}
+
+/**
+ * Throws, saying where, unless `value` names models by role, each one name
+ * or one per effort. A model's name is checked where it is used, which knows
+ * every provider.
+ */
+function checkModels(where: string, value: unknown): void {
+	if (!isRecord(value)) {
+		throw new Error(
+			`${where}: expected the models a check asks, like { som: "clef", llm: "claude-sonnet-5-5" }`,
+		);
+	}
+	for (const [role, models] of Object.entries(value)) {
+		renamed(`${where}.${role}`, role);
+		if (!(ROLES as readonly string[]).includes(role)) {
+			// models were once named per run-wide effort, as { high: { llm: ... } }
+			throw new Error(
+				`${where}.${role}: expected ${ROLES.join(" or ")}, each a model or one per effort`,
+			);
+		}
+		if (typeof models === "string") {
+			continue;
+		}
+		if (!isRecord(models)) {
+			throw new Error(
+				`${where}.${role}: expected a model, or one per effort, like { default: "clef", low: "clef-flash" }`,
+			);
+		}
+		for (const [effort, model] of Object.entries(models)) {
+			if (
+				!["default", ...EFFORTS].includes(effort) ||
+				typeof model !== "string"
+			) {
+				throw new Error(
+					`${where}.${role}.${effort}: expected a model at default, ${EFFORTS.join(", ")}`,
+				);
+			}
+		}
+	}
+}
+
+/**
+ * `over`'s models laid on `under`'s, effort by effort: a bare name is the
+ * model at every effort, and an effort `over` leaves out keeps `under`'s.
+ */
+function lay<M extends ModelsConfig>(under: M, over: ModelsConfig = {}): M {
+	const laid: ModelsConfig = { ...under };
+	for (const role of ROLES) {
+		if (over[role] !== undefined) {
+			laid[role] = { ...efforts(under[role]), ...efforts(over[role]) } as never;
+		}
+	}
+	return laid as M;
+}
+
+function efforts(models: ModelsConfig[Role]): Partial<ByEffort<string>> {
+	return typeof models === "string"
+		? Object.fromEntries(["default", ...EFFORTS].map((each) => [each, models]))
+		: (models ?? {});
+}
+
+/** Throws, saying where, when `key` is the role `som` was once called. */
+function renamed(where: string, key: string): void {
+	if (key === "decider") {
+		throw new Error(
+			`${where}: decider is now som, the System One model a rule asks first`,
+		);
+	}
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** The presets as the lists they stand for. */
 function budgets(value: ScryConfig["budgets"]): Budget[] | undefined {
 	return value === "nothing" || value === "unlimited"
-		? [{ decider: value, llm: value }]
+		? [{ som: value, llm: value }]
 		: value;
 }
 
@@ -173,16 +245,19 @@ function checkBudgets(where: string, value: unknown): void {
 			);
 		}
 		const entry = budget as Record<string, unknown>;
+		for (const key of Object.keys(entry)) {
+			renamed(`${at}.${key}`, key);
+		}
 		const unknown = Object.keys(entry).filter(
-			(key) => !["decider", "llm", "per", "within"].includes(key),
+			(key) => ![...ROLES, "per", "within"].includes(key),
 		);
 		if (unknown.length > 0) {
 			throw new Error(
-				`${at}: unknown ${unknown.join(", ")}: expected decider, llm, per or within`,
+				`${at}: unknown ${unknown.join(", ")}: expected som, llm, per or within`,
 			);
 		}
 		if (ROLES.every((role) => entry[role] === undefined)) {
-			throw new Error(`${at}: expected decider, llm, or both`);
+			throw new Error(`${at}: expected som, llm, or both`);
 		}
 		for (const role of ROLES) {
 			const spend = entry[role];
@@ -228,24 +303,15 @@ function checkBudgets(where: string, value: unknown): void {
 function environment(ps: Ps): ScryConfig {
 	if (ps.env("WIZ_SCRY_MODEL")) {
 		throw new Error(
-			"WIZ_SCRY_MODEL is gone: set WIZ_SCRY_EFFORT to low, medium or high, and scry.models for the models each asks",
+			"WIZ_SCRY_MODEL is gone: scry.models names the models a check asks, at each effort a rule's questions ask, and scry.profiles others that --profile picks for one run",
 		);
 	}
-	const raw = ps.env("WIZ_SCRY_EFFORT") || undefined;
-	return {
-		effort: raw === undefined ? undefined : effort("WIZ_SCRY_EFFORT", raw),
-		jobs: number(ps, "WIZ_SCRY_JOBS"),
-	};
-}
-
-/** `value` as an effort, or an error saying where it came from. */
-function effort(where: string, value: string): Effort {
-	if (!(EFFORTS as readonly string[]).includes(value)) {
+	if (ps.env("WIZ_SCRY_EFFORT")) {
 		throw new Error(
-			`${where}: expected one of ${EFFORTS.join(", ")}, got "${value}"`,
+			"WIZ_SCRY_EFFORT is gone: scry.models names the models a check asks, at each effort a rule's questions ask, and scry.profiles others that --profile picks for one run",
 		);
 	}
-	return value as Effort;
+	return { jobs: number(ps, "WIZ_SCRY_JOBS") };
 }
 
 function number(ps: Ps, name: string): number | undefined {
@@ -262,20 +328,21 @@ function number(ps: Ps, name: string): number | undefined {
 
 /** What a command line can say over the config about which models a check asks. */
 export interface ModelChoice {
-	/** Over `scry.effort`. */
-	effort?: Effort;
-	/** The decider's model, over the effort's. */
-	model?: string;
-	/** The llm's model, over the effort's. */
-	llm?: string;
+	/** One of `scry.profiles`, laid over `scry.models`. */
+	profile?: string;
 }
 
-/** The models a check asks: the effort's, less what the command line names. */
+/** The models a check asks: the config's, with the profile's laid over them. */
 export function chooseModels(settings: Settings, choice: ModelChoice): Models {
-	const models = settings.models[choice.effort ?? settings.effort];
-	// a model name is checked where it is used, which knows every provider
-	return {
-		decider: (choice.model ?? models.decider) as Models["decider"],
-		llm: (choice.llm ?? models.llm) as Models["llm"],
-	};
+	if (choice.profile === undefined) {
+		return settings.models;
+	}
+	const profile = settings.profiles[choice.profile];
+	if (profile === undefined) {
+		const known = Object.keys(settings.profiles);
+		throw new Error(
+			`no profile "${choice.profile}": ${known.length === 0 ? "scry.profiles names none" : `scry.profiles names ${known.join(", ")}`}`,
+		);
+	}
+	return lay(settings.models, profile);
 }

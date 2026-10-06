@@ -16,6 +16,13 @@ describe("loadConfig", () => {
 	let root: string;
 	let ps: FakePs;
 
+	/** A model at every effort, as a bare name in a config stands for. */
+	const every = <M extends string>(model: M) => ({
+		default: model,
+		low: model,
+		medium: model,
+		high: model,
+	});
 	const config = (rules: object) =>
 		`export default { scry: ${JSON.stringify(rules)} };\n`;
 
@@ -29,10 +36,10 @@ describe("loadConfig", () => {
 		await rm(root, { recursive: true, force: true });
 	});
 
-	it("defaults to medium effort and 8 jobs", async () => {
+	it("defaults to the default models, no profiles and 8 jobs", async () => {
 		expect(await loadConfig(`${root}/p`, { fs, ps })).toEqual({
-			effort: "medium",
 			models: DEFAULT_MODELS,
+			profiles: {},
 			jobs: 8,
 			exclude: [],
 		});
@@ -42,56 +49,120 @@ describe("loadConfig", () => {
 		await fs.mkdir(`${root}/p/.wiz`);
 		await fs.write(
 			`${root}/p/.wiz/config.ts`,
-			config({ effort: "low", jobs: 2 }),
+			config({ jobs: 2, exclude: ["vendor/**"] }),
 		);
 		await fs.mkdir(`${root}/home/.config/wiz`);
-		await fs.write(
-			`${root}/home/.config/wiz/config.ts`,
-			config({ effort: "high" }),
-		);
-		expect(await loadConfig(`${root}/p`, { fs, ps })).toMatchObject({
-			effort: "high",
-			jobs: 2,
-		});
+		await fs.write(`${root}/home/.config/wiz/config.ts`, config({ jobs: 4 }));
+		expect((await loadConfig(`${root}/p`, { fs, ps })).jobs).toEqual(4);
 
-		ps.setEnv({ WIZ_SCRY_EFFORT: "low", WIZ_SCRY_JOBS: "16" });
+		ps.setEnv({ WIZ_SCRY_JOBS: "16" });
 
-		expect(await loadConfig(`${root}/p`, { fs, ps })).toMatchObject({
-			effort: "low",
-			jobs: 16,
-		});
+		expect((await loadConfig(`${root}/p`, { fs, ps })).jobs).toEqual(16);
 	});
 
-	it("lays each model of each effort over the last layer's", async () => {
+	it("lays each model over the last layer's", async () => {
 		await fs.mkdir(`${root}/p/.wiz`);
 		await fs.write(
 			`${root}/p/.wiz/config.ts`,
-			config({ models: { high: { decider: "jev-latest" } } }),
+			config({ models: { som: "jev-latest" } }),
 		);
 		await fs.mkdir(`${root}/home/.config/wiz`);
 		await fs.write(
 			`${root}/home/.config/wiz/config.ts`,
-			config({ models: { high: { llm: "claude-fable-5-1" } } }),
+			config({ models: { llm: "claude-fable-5-1" } }),
 		);
 
 		const settings = await loadConfig(`${root}/p`, { fs, ps });
 
 		expect(settings.models).toEqual({
-			...DEFAULT_MODELS,
-			high: { decider: "jev-latest", llm: "claude-fable-5-1" },
+			som: every("jev-latest"),
+			llm: every("claude-fable-5-1"),
 		});
 	});
 
-	it("chooses the effort's models, less what the command line names", async () => {
+	it("lays each effort's model over the last layer's, keeping those it leaves out", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			config({ models: { llm: { default: "claude-fable-5-1" } } }),
+		);
+
 		const settings = await loadConfig(`${root}/p`, { fs, ps });
 
-		expect(chooseModels(settings, {})).toEqual(DEFAULT_MODELS.medium);
-		expect(chooseModels(settings, { effort: "high" })).toEqual(
-			DEFAULT_MODELS.high,
+		expect(settings.models).toEqual({
+			som: DEFAULT_MODELS.som,
+			llm: { ...DEFAULT_MODELS.llm, default: "claude-fable-5-1" },
+		});
+	});
+
+	it("lays a profile's models over the config's, and a later layer's over the profile", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			config({
+				models: { som: "clef" },
+				profiles: { "double-check": { som: { high: "jev-latest" } } },
+			}),
 		);
-		expect(
-			chooseModels(settings, { effort: "low", llm: "claude-opus-5-5" }),
-		).toEqual({ decider: "clef-flash", llm: "claude-opus-5-5" });
+		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.write(
+			`${root}/home/.config/wiz/config.ts`,
+			config({ profiles: { "double-check": { llm: "claude-opus-5-5" } } }),
+		);
+
+		const settings = await loadConfig(`${root}/p`, { fs, ps });
+
+		expect([
+			chooseModels(settings, {}),
+			chooseModels(settings, { profile: "double-check" }),
+		]).toEqual([
+			{ som: every("clef"), llm: DEFAULT_MODELS.llm },
+			{
+				som: { ...every("clef"), high: "jev-latest" },
+				llm: every("claude-opus-5-5"),
+			},
+		]);
+	});
+
+	it("refuses a profile no config names, saying which do", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			config({ profiles: { "double-check": { som: "jev-latest" } } }),
+		);
+		const settings = await loadConfig(`${root}/p`, { fs, ps });
+
+		expect(() => chooseModels(settings, { profile: "triple" })).toThrow(
+			'no profile "triple": scry.profiles names double-check',
+		);
+	});
+
+	it.each([
+		[
+			{ models: { som: 3 } },
+			"scry.models.som: expected a model, or one per effort",
+		],
+		[
+			{ models: { som: { default: "clef", max: "jev-latest" } } },
+			"scry.models.som.max: expected a model at default, low, medium, high",
+		],
+		[
+			{ profiles: { "double-check": { judge: "jev-latest" } } },
+			"scry.profiles.double-check.judge: expected som or llm",
+		],
+		[
+			{ models: { decider: "clef" } },
+			"scry.models.decider: decider is now som",
+		],
+		[
+			{ budgets: [{ decider: 1000, per: "day" }] },
+			"scry.budgets[0].decider: decider is now som",
+		],
+	])("refuses models it cannot ask: %j", async (scry, message) => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(`${root}/p/.wiz/config.ts`, config(scry));
+
+		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(message);
 	});
 
 	it("excludes what the project's config and the user's both exclude", async () => {
@@ -128,7 +199,7 @@ describe("loadConfig", () => {
 		);
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
-			"scry.agents, scry.model are gone: scry.models names the models each effort asks, and scry.effort which effort a check runs at",
+			"scry.agents, scry.model are gone: scry.models names the models a check asks, at each effort a rule's questions ask, and scry.profiles others that --profile picks for one run",
 		);
 	});
 
@@ -145,7 +216,7 @@ describe("loadConfig", () => {
 		);
 
 		expect((await loadConfig(`${root}/p`, { fs, ps })).budgets).toEqual([
-			{ decider: "unlimited", llm: "unlimited" },
+			{ som: "unlimited", llm: "unlimited" },
 		]);
 	});
 
@@ -160,7 +231,7 @@ describe("loadConfig", () => {
 		],
 		[
 			{ budgets: [{ per: "day" }] },
-			"scry.budgets[0]: expected decider, llm, or both",
+			"scry.budgets[0]: expected som, llm, or both",
 		],
 		[
 			{ budgets: [{ llm: -1, per: "day" }] },
@@ -184,7 +255,7 @@ describe("loadConfig", () => {
 		],
 		[
 			{ budgets: [{ llm: 1000, per: "day", tokens: 5 }] },
-			"scry.budgets[0]: unknown tokens: expected decider, llm, per or within",
+			"scry.budgets[0]: unknown tokens: expected som, llm, per or within",
 		],
 	])("refuses budgets a check cannot hold to: %j", async (scry, message) => {
 		await fs.mkdir(`${root}/p/.wiz`);
@@ -193,34 +264,37 @@ describe("loadConfig", () => {
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(message);
 	});
 
-	it("refuses an effort that is not one", async () => {
+	it("refuses scry.effort, which picked the models before scry.models named them", async () => {
 		await fs.mkdir(`${root}/p/.wiz`);
-		await fs.write(`${root}/p/.wiz/config.ts`, config({ effort: "max" }));
+		await fs.write(`${root}/p/.wiz/config.ts`, config({ effort: "high" }));
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
-			'scry.effort: expected one of low, medium, high, got "max"',
+			"scry.effort is gone",
 		);
 	});
 
-	it("refuses an effort's models given as a bare name, as scry.models once took them", async () => {
+	it("refuses models named per effort, as scry.models once took them", async () => {
 		await fs.mkdir(`${root}/p/.wiz`);
 		await fs.write(
 			`${root}/p/.wiz/config.ts`,
-			config({ models: { low: "clef" } }),
+			config({ models: { high: { llm: "claude-opus-5-5" } } }),
 		);
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
-			"scry.models.low: expected the models it asks",
+			"scry.models.high: expected som or llm",
 		);
 	});
 
-	it("refuses WIZ_SCRY_MODEL, which effort replaced", async () => {
-		ps.setEnv({ WIZ_SCRY_MODEL: "clef" });
+	it.each(["WIZ_SCRY_MODEL", "WIZ_SCRY_EFFORT"])(
+		"refuses %s, which scry.models replaced",
+		async (name) => {
+			ps.setEnv({ [name]: "clef" });
 
-		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
-			"WIZ_SCRY_MODEL is gone",
-		);
-	});
+			await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
+				`${name} is gone`,
+			);
+		},
+	);
 
 	it("refuses a number in the environment that is not one", async () => {
 		ps.setEnv({ WIZ_SCRY_JOBS: "lots" });

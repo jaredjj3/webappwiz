@@ -26,19 +26,19 @@ describe("Rules.check", () => {
 			await new Promise((resolve) => setTimeout(resolve, 1));
 		}
 	};
-	const run = async (paths: string[], decider: Decider = new FakeDecider()) =>
+	const run = async (paths: string[], som: Decider = new FakeDecider()) =>
 		(await Rules.load(root, { fs })).check({
 			paths,
-			tools: { decider, llm: new FakeDecider() },
+			tools: { som, llm: new FakeDecider() },
 			progress,
 		});
 
-	/** A rule asking the decider whether a file's first comment restates the code. */
+	/** A rule asking the som whether a file's first comment restates the code. */
 	const asking = ruleSource(
-		`constructor(tools) { this.decider = tools.decider; }
+		`constructor(tools) { this.som = tools.som; }
 		async check(file) {
 			const [comment] = file.ts.comments();
-			return comment === undefined ? [] : [comment.flag("restates", await this.decider.decide("Does it restate?", comment), "Does it restate?")];
+			return comment === undefined ? [] : [comment.flag("restates", await this.som.decide("Does it restate?", comment), "Does it restate?")];
 		}`,
 	);
 	/** A rule flagging each line holding `word`, as sure as it is told. */
@@ -91,7 +91,7 @@ describe("Rules.check", () => {
 		await install("no-bar", flagging("bar"));
 		await write("src/a.ts", "foo\nbar\n");
 		const rules = await Rules.load(root, { fs });
-		const tools = { decider: new FakeDecider(), llm: new FakeDecider() };
+		const tools = { som: new FakeDecider(), llm: new FakeDecider() };
 
 		const report = await rules.check({
 			paths: ["src/a.ts"],
@@ -131,19 +131,17 @@ describe("Rules.check", () => {
 		]);
 	});
 
-	it("builds each rule with the tools, so its check can ask the decider", async () => {
+	it("builds each rule with the tools, so its check can ask the som", async () => {
 		await install("asks", asking);
 		await write("src/a.ts", "// add one\nn += 1;\n");
-		const decider = new FakeDecider({ "add one": 0.9 });
+		const som = new FakeDecider({ "add one": 0.9 });
 
-		const report = await run(["src/a.ts"], decider);
+		const report = await run(["src/a.ts"], som);
 
 		expect(report.problems).toMatchObject([
 			{ line: 1, confidence: 0.9, decidedBy: "Does it restate?" },
 		]);
-		expect(decider.asked.map(({ about }) => about.text)).toEqual([
-			"// add one",
-		]);
+		expect(som.asked.map(({ about }) => about.text)).toEqual(["// add one"]);
 	});
 
 	it("reports a rule unchecked on a file its check threw on, and checks the rest", async () => {
@@ -182,15 +180,15 @@ describe("Rules.check", () => {
 		await write("src/a.ts", "foo\n");
 		await write("src/b.ts", "// add one\nn += 1;\n");
 		let answer: ((probability: number) => void) | undefined;
-		const decider = {
+		const som = {
 			decide: () =>
 				new Promise<number>((resolve) => {
 					answer = resolve;
 				}),
 		};
 
-		const checking = run(["src/a.ts", "src/b.ts"], decider);
-		// b.ts can reach the decider after a.ts is done, so answering as soon
+		const checking = run(["src/a.ts", "src/b.ts"], som);
+		// b.ts can reach the som after a.ts is done, so answering as soon
 		// as a.ts is done could answer nothing and leave b.ts waiting forever
 		await until(() => progress.done > 0 && answer !== undefined);
 
@@ -277,7 +275,7 @@ describe("Rules.check", () => {
 		await write(".wiz/scry/no-bar/evals/b.good.ts", "Bar\n");
 
 		const evaluated = await (await Rules.load(root, { fs })).evaluate({
-			tools: { decider: new FakeDecider(), llm: new FakeDecider() },
+			tools: { som: new FakeDecider(), llm: new FakeDecider() },
 			progress,
 		});
 
@@ -314,7 +312,7 @@ describe("Rules.check", () => {
 
 		const [evaluated] = await rules.evaluate({
 			ids: ["fragile"],
-			tools: { decider: new FakeDecider(), llm: new FakeDecider() },
+			tools: { som: new FakeDecider(), llm: new FakeDecider() },
 		});
 
 		expect(evaluated?.cases.map(({ error }) => error)).toEqual([
@@ -324,7 +322,7 @@ describe("Rules.check", () => {
 		await expect(
 			rules.evaluate({
 				ids: ["nope"],
-				tools: { decider: new FakeDecider(), llm: new FakeDecider() },
+				tools: { som: new FakeDecider(), llm: new FakeDecider() },
 			}),
 		).rejects.toThrow('no rule "nope" in .wiz/scry');
 	});

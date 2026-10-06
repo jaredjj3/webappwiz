@@ -76,13 +76,13 @@ describe("wiz scry", () => {
 			);
 		}
 	`;
-	/** Asks the decider about each comment. */
+	/** Asks the som about each comment. */
 	const asking = `
-		constructor(tools) { this.decider = tools.decider; }
+		constructor(tools) { this.som = tools.som; }
 		async check(file) {
 			return Promise.all(
 				file.ts.comments().map(async (comment) =>
-					comment.flag("restates the code", await this.decider.decide("Does it restate?", comment), "Does it restate?"),
+					comment.flag("restates the code", await this.som.decide("Does it restate?", comment), "Does it restate?"),
 				),
 			);
 		}
@@ -117,11 +117,11 @@ describe("wiz scry", () => {
 		await rm(root, { recursive: true, force: true });
 	});
 
-	const run = (format = "text", paths: string[] = ["a.ts"], model?: string) =>
+	const run = (format = "text", paths: string[] = ["a.ts"], profile?: string) =>
 		check({
 			paths,
 			format,
-			model,
+			profile,
 			log,
 			fs,
 			ps,
@@ -190,13 +190,13 @@ describe("wiz scry", () => {
 		});
 	});
 
-	it("asks no model, nor wants its credentials, when no rule asks the decider", async () => {
+	it("asks no model, nor wants its credentials, when no rule asks the som", async () => {
 		await run();
 
 		expect(asked).toEqual([]);
 	});
 
-	it("asks the configured model what a rule's decider asks, and drops what it thinks unlikely", async () => {
+	it("asks the configured model what a rule's som asks, and drops what it thinks unlikely", async () => {
 		await install("why-not-what", asking);
 		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
 		judge = new FakeJudge(0.2);
@@ -210,11 +210,41 @@ describe("wiz scry", () => {
 		expect(proc.exits).toEqual([]);
 	});
 
-	it("asks the model it is given over the config's", async () => {
-		await install("why-not-what", asking);
+	it("asks the model for the effort each question asks at, and the default's for one that names none", async () => {
+		await install(
+			"why-not-what",
+			`
+			constructor(tools) { this.som = tools.som; }
+			async check(file) {
+				const [comment] = file.ts.comments();
+				await this.som.decide("Is it short?", comment, { effort: "low" });
+				await this.som.decide("Does it restate?", comment, { effort: "high" });
+				return [];
+			}
+		`,
+		);
+		await fs.mkdir(`${root}/.wiz`);
+		await fs.write(
+			`${root}/.wiz/config.ts`,
+			'export default { scry: { models: { som: { default: "clef", low: "jev-latest" } } } };\n',
+		);
 		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
 
-		await run("text", [], "jev-latest");
+		await run();
+
+		expect(asked).toEqual(["jev-latest", "clef"]);
+	});
+
+	it("asks a profile's models over the config's with --profile", async () => {
+		await install("why-not-what", asking);
+		await fs.mkdir(`${root}/.wiz`);
+		await fs.write(
+			`${root}/.wiz/config.ts`,
+			'export default { scry: { profiles: { "double-check": { som: "jev-latest" } } } };\n',
+		);
+		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
+
+		await run("text", [], "double-check");
 
 		expect(asked).toEqual(["jev-latest"]);
 	});
@@ -542,13 +572,13 @@ describe("wiz scry", () => {
 			await run();
 
 			expect(printed()).toContain(
-				"  why-not-what on a.ts   scry.budgets spends nothing on the decider",
+				"  why-not-what on a.ts   scry.budgets spends nothing on the som",
 			);
 			expect([(judge as FakeJudge).judgments, proc.exits]).toEqual([[], [2]]);
 		});
 
 		it("refuses up front a check that would go over a budget, saying which, and asks nothing", async () => {
-			await budget('[{ decider: 200, llm: "unlimited", per: "check" }]');
+			await budget('[{ som: 200, llm: "unlimited", per: "check" }]');
 
 			await run();
 
@@ -556,8 +586,8 @@ describe("wiz scry", () => {
 				[
 					"over budget: this check would spend more than scry.budgets allows",
 					"budgets",
-					"  decider   this check   would use 300 of 200, 0 spent   over by 100",
-					"  llm       unlimited    would use 0",
+					"  som   this check   would use 300 of 200, 0 spent   over by 100",
+					"  llm   unlimited    would use 0",
 					"raise scry.budgets, check fewer files, or run again with --override-budget",
 				].join("\n"),
 			]);
@@ -565,23 +595,23 @@ describe("wiz scry", () => {
 		});
 
 		it("keeps what each check spent on the device, and holds the next to what is left of the window", async () => {
-			await budget('[{ decider: 500, llm: "unlimited", per: "day" }]');
+			await budget('[{ som: 500, llm: "unlimited", per: "day" }]');
 
 			await run();
 			await fs.write(`${root}/a.ts`, "// add two\nconst a = 2;\n");
 			await run();
 
 			expect(await ledger()).toEqual([
-				{ at: clock.now(), role: "decider", model: "clef", input: 300 },
+				{ at: clock.now(), role: "som", model: "clef", input: 300 },
 			]);
 			expect(proc.exits).toEqual([1, 3]);
 			expect(color.strip(warned().join("\n"))).toContain(
-				"  decider   today       would use 300 of 500, 300 spent   over by 100",
+				"  som   today       would use 300 of 500, 300 spent   over by 100",
 			);
 		});
 
 		it("forgets what was spent before a rolling window", async () => {
-			await budget('[{ decider: 500, llm: "unlimited", within: "7d" }]');
+			await budget('[{ som: 500, llm: "unlimited", within: "7d" }]');
 			await run();
 			clock.set(clock.now() + 8 * 24 * 60 * 60 * 1000);
 			await fs.write(`${root}/a.ts`, "// add two\nconst a = 2;\n");
@@ -596,7 +626,7 @@ describe("wiz scry", () => {
 
 		it("says with --cost what a check would use of each budget, and leave", async () => {
 			await budget(
-				'[{ decider: 2_000_000, llm: "unlimited", per: "month" }, { decider: 1000, within: "7d" }]',
+				'[{ som: 2_000_000, llm: "unlimited", per: "month" }, { som: 1000, within: "7d" }]',
 			);
 
 			await check({
@@ -614,9 +644,9 @@ describe("wiz scry", () => {
 				[
 					"estimated 300 input tokens to check 1 file: 1 question in 1 request",
 					"budgets",
-					"  decider   this month    would use 300 of 2m, 0 spent   2m left",
-					"  decider   the last 7d   would use 300 of 1k, 0 spent   700 left",
-					"  llm       unlimited     would use 0",
+					"  som   this month    would use 300 of 2m, 0 spent   2m left",
+					"  som   the last 7d   would use 300 of 1k, 0 spent   700 left",
+					"  llm   unlimited     would use 0",
 				].join("\n"),
 			);
 		});
