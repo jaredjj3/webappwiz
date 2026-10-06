@@ -105,9 +105,10 @@ so in your report.
 
 ### Lanes
 
-Groom lanes as you add todos: you know what each new one builds on, and
-nobody lays lanes out for you (see Working a lane for what a lane is). Read
-`arbor lane list`, then for each todo you add:
+A lane is one agent's queue of todos that build on each other, worked top to
+bottom (see Working a lane). Groom lanes as you add todos: you know what each
+new one builds on, and nobody lays lanes out for you. Read `arbor lane list`,
+then for each todo you add:
 
 - **An existing lane** when it builds on that lane's work, needing its code,
   files, or context: `--lane <n>` puts it at the bottom.
@@ -171,9 +172,12 @@ one that came up in the task; among equally related ones, or when none is relate
 also propose the next one or two when they are as related, so the user can
 choose.
 
-A task whose todos ran in a lane is the exception: `merge` prints that
-lane's next todo, and that is the one to propose, even one another lane
-still blocks.
+A task whose todos were in a lane is the exception: propose that lane's next
+todo, even one another lane still blocks, so the lane stays with the agent
+that has its context. `merge` prints it; after a `remove`, read it from
+`arbor lane show <n>`. When the todos were in more than one lane, propose each
+lane's next todo and let the user choose. Only when the lane is done, fall
+back to the most related todo.
 
 ### Proposing a todo
 
