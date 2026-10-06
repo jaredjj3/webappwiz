@@ -11,6 +11,11 @@ export interface Decision {
 	probability: number;
 	model: string;
 	/**
+	 * The model that answered, as its provider names it, when it said: the
+	 * version `model` stood for then. None from before it was kept.
+	 */
+	version?: string;
+	/**
 	 * The file it was asked about, by a hash of its whole text: an answer
 	 * holds only until the file changes.
 	 */
@@ -63,6 +68,19 @@ export class Decisions {
 	put(key: string, decision: Decision): void {
 		this.byKey.delete(key);
 		this.byKey.set(key, decision);
+	}
+
+	/**
+	 * Forgets every answer `model` gave as another version than `version`,
+	 * or as one not kept: a name like `jev-latest` now stands for a model
+	 * that might answer otherwise.
+	 */
+	moved(model: string, version: string): void {
+		for (const [key, decision] of this.byKey) {
+			if (decision.model === model && decision.version !== version) {
+				this.byKey.delete(key);
+			}
+		}
 	}
 
 	/** What was decided about `line` of the file at `path` as it reads now. */

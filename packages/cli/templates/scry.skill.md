@@ -117,7 +117,9 @@ export default defineConfig({
 ```
 
 Every answer is kept in `node_modules/.cache/webappwiz/scry`, so checking an
-unchanged file again asks nothing.
+unchanged file again asks nothing, until a reply shows a model's name, like
+`jev-latest`, stands for a new version: then what the old one answered is
+asked again.
 
 When it refuses a config holding `agents`, `batch` or `model`, or
 `WIZ_SCRY_MODEL`, those are from before: show the user the message, and with

@@ -87,6 +87,7 @@ describe("Claude", () => {
 				["q1", 1],
 			]),
 			input: 150,
+			model: "claude-sonnet-5-5",
 		});
 	});
 

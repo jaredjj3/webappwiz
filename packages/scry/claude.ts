@@ -66,6 +66,7 @@ export class Claude implements Judge {
 				usage.input_tokens +
 				(usage.cache_read_input_tokens ?? 0) +
 				(usage.cache_creation_input_tokens ?? 0),
+			model: response.model,
 		};
 	}
 

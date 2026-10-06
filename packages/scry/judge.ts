@@ -43,4 +43,9 @@ export interface Verdict {
 	answers: Map<string, number>;
 	/** The input tokens it spent, when the judge says. */
 	input?: number;
+	/**
+	 * The model that answered, as its provider names it, when it says: the
+	 * version a name like `jev-latest` stood for then.
+	 */
+	model?: string;
 }

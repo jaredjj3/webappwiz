@@ -41,6 +41,7 @@ const ANSWER = z.union([
 
 const REPLY = z.object({
 	answers: z.record(z.string(), ANSWER),
+	model: z.optional(z.string()),
 	usage: z.optional(
 		z.object({
 			input_tokens: z.optional(z.number()),
@@ -90,10 +91,8 @@ export class SystemOneEndpoint {
 			const whole = verdict.answers.get(WHOLE) ?? 0;
 			verdict.answers.delete(WHOLE);
 			if (whole >= 0.5) {
-				return {
-					answers: verdict.answers,
-					...(input === undefined ? {} : { input }),
-				};
+				// the input of every try, not only the last
+				return { ...verdict, ...(input === undefined ? {} : { input }) };
 			}
 		}
 		throw new Error(
@@ -146,11 +145,12 @@ export class SystemOneEndpoint {
 		if (!reply.success) {
 			throw new Error(`${this.name} answered with no answers in it`);
 		}
-		const { answers, usage } = reply.data;
+		const { answers, usage, model } = reply.data;
 		const input = usage?.input_tokens ?? usage?.prompt_tokens;
 		return {
 			answers: new Map(Object.entries(answers)),
 			...(input === undefined ? {} : { input }),
+			...(model === undefined ? {} : { model }),
 		};
 	}
 

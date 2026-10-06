@@ -103,7 +103,10 @@ describe("Clef and Jev", () => {
 				body: judgment,
 			},
 		]);
-		expect(verdict).toEqual({ answers: new Map([["q0", 0.87]]) });
+		expect(verdict).toEqual({
+			answers: new Map([["q0", 0.87]]),
+			model: "clef-flash",
+		});
 	});
 
 	it("asks Jev at /v1/systemone with its model, and reads typed answers and usage", async () => {
@@ -123,7 +126,11 @@ describe("Clef and Jev", () => {
 				body: { model: "jev-latest", ...judgment },
 			},
 		]);
-		expect(verdict).toEqual({ answers: new Map([["q0", 0.93]]), input: 412 });
+		expect(verdict).toEqual({
+			answers: new Map([["q0", 0.93]]),
+			input: 412,
+			model: "jev-1.13.0",
+		});
 	});
 
 	it("says what went wrong when the provider refuses", async () => {

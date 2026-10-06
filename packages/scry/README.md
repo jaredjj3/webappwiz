@@ -327,7 +327,10 @@ about comments never reads them. Before scry they were `rule-ignore` and
 keeps at `node_modules/.cache/webappwiz/scry/decisions.json`. An answer is
 reused for the same model, question, line and file to the byte, so checking
 an unchanged file again asks nothing, and an edit retires what was asked
-about it. The store doubles as the trace: `wiz scry why path:line` says what
+about it. Each answer also keeps the version of the model that gave it, as
+the provider's reply names it; once a reply shows a name like `jev-latest`
+stands for another version, every answer from the old one is retired too.
+Clef's replies name no version, so only an edit retires its answers. The store doubles as the trace: `wiz scry why path:line` says what
 a model was asked about that line and what it answered, which is why a
 finding was reported or dropped. When nothing was asked there, code decided
 it.

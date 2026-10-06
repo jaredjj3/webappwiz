@@ -66,7 +66,8 @@ cheap enough to ask about every span, or its `llm`, a language model that
 reasons before it answers, for the questions a decision model gets wrong.
 The questions about one file go in one request to each, and every answer is
 kept in `node_modules/.cache/webappwiz/scry`, so checking an unchanged file
-again asks nothing. A finding a model decided is reported at or above its
+again asks nothing, until a reply shows a model's name, like `jev-latest`,
+stands for a new version. A finding a model decided is reported at or above its
 rule's `threshold`, 0.7 by default. A change no rule asks about costs
 nothing and needs no credentials. The report is for whoever fixes the code,
 person or agent, to act on.

@@ -71,6 +71,31 @@ describe("CachedDecider", () => {
 		expect(inner.asked).toHaveLength(3);
 	});
 
+	it("asks again what another version of the model answered, once it sees the model moved", async () => {
+		const answering = Object.assign(new FakeDecider({ "add one": 0.9 }), {
+			answeredBy: "jev-1.13.0",
+		});
+		const other = new Span(file, 2, "n += 1;");
+		const run = async () =>
+			new CachedDecider(answering, await Decisions.open(path, { fs }), {
+				model: "jev-latest",
+			});
+		const kept = await Decisions.open(path, { fs });
+		const first = new CachedDecider(answering, kept, { model: "jev-latest" });
+		await first.decide("Does it restate?", comment);
+		await first.decide("Is it short?", other);
+		await kept.save();
+
+		const same = await run();
+		await same.decide("Does it restate?", comment);
+		answering.answeredBy = "jev-1.14.0";
+		const moved = await run();
+		await moved.decide("Is it new?", other);
+		await moved.decide("Does it restate?", comment);
+
+		expect([answering.asked.length, same.hits, moved.hits]).toEqual([4, 1, 0]);
+	});
+
 	it("says what was decided about a line of a file as it reads now", async () => {
 		const decisions = await Decisions.open(path, { fs });
 		await new CachedDecider(inner, decisions, { model: "clef" }).decide(

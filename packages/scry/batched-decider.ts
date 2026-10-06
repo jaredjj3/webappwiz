@@ -58,6 +58,11 @@ export class BatchedDecider implements Decider {
 	readonly usage: DeciderUsage = { requests: 0, questions: 0, input: 0 };
 	/** Questions the model has answered, of the `usage.questions` asked so far. */
 	answered = 0;
+	/**
+	 * The model that answered last, as its provider names it, when it says:
+	 * the version a name like `jev-latest` stands for now.
+	 */
+	answeredBy?: string;
 	private pending: Pending[] = [];
 	private scheduled = false;
 	/** Requests ready to go, waiting for one of `jobs` to come back. */
@@ -180,6 +185,7 @@ export class BatchedDecider implements Decider {
 			]);
 			// a request is never free: what the judge does not report, it counts
 			this.usage.input += verdict.input ?? (await this.judge.count(judgment));
+			this.answeredBy = verdict.model ?? this.answeredBy;
 			batch.forEach((item, index) => {
 				const answer = verdict.answers.get(`q${index}`);
 				if (answer === undefined) {
