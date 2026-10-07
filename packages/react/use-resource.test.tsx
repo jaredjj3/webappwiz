@@ -18,14 +18,15 @@ class Resource {
 describe("useResource", () => {
 	it("returns the instance the factory built", () => {
 		const resource = new Resource();
-		const { result } = renderHook(() => useResource(() => resource));
+		const { result } = renderHook(() => useResource(() => resource, []));
 
 		expect(result.current).toBe(resource);
 	});
 
-	it("keeps the same instance while the factory identity holds", () => {
-		const factory = () => new Resource();
-		const { result, rerender } = renderHook(() => useResource(factory));
+	it("keeps the same instance across renders of an inline factory", () => {
+		const { result, rerender } = renderHook(() =>
+			useResource(() => new Resource(), []),
+		);
 		const first = result.current;
 
 		rerender();
@@ -36,7 +37,7 @@ describe("useResource", () => {
 
 	it("disposes the instance on unmount", () => {
 		const resource = new Resource();
-		const { unmount } = renderHook(() => useResource(() => resource));
+		const { unmount } = renderHook(() => useResource(() => resource, []));
 
 		expect(resource.disposed).toBe(false);
 
@@ -44,16 +45,19 @@ describe("useResource", () => {
 		expect(resource.disposed).toBe(true);
 	});
 
-	it("rebuilds and disposes the old instance when the factory changes", () => {
+	it("rebuilds and disposes the old instance when a dep changes", () => {
 		const { result, rerender } = renderHook(
-			({ factory }) => useResource(factory),
+			({ source }) => useResource(() => new Resource(), [source]),
 			{
-				initialProps: { factory: () => new Resource() },
+				initialProps: { source: "a" },
 			},
 		);
 		const first = result.current;
 
-		rerender({ factory: () => new Resource() });
+		rerender({ source: "a" });
+		expect(result.current).toBe(first);
+
+		rerender({ source: "b" });
 
 		expect(result.current).not.toBe(first);
 		expect(first.disposed).toBe(true);
@@ -65,7 +69,7 @@ describe("useResource", () => {
 		// disposes the instance, so re-adopting it would leave the component
 		// holding a dead resource.
 		const factory = () => new Resource();
-		const { result } = renderHook(() => useResource(factory), {
+		const { result } = renderHook(() => useResource(factory, []), {
 			wrapper: StrictMode,
 		});
 
@@ -74,7 +78,7 @@ describe("useResource", () => {
 
 	it("disposes the surviving instance when a StrictMode mount unmounts", () => {
 		const factory = () => new Resource();
-		const { result, unmount } = renderHook(() => useResource(factory), {
+		const { result, unmount } = renderHook(() => useResource(factory, []), {
 			wrapper: StrictMode,
 		});
 		const instance = result.current;

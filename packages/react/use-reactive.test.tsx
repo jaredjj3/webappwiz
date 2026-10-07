@@ -134,10 +134,9 @@ describe("useReactive", () => {
 		// StrictMode disposes the first instance and useResource builds a
 		// fresh one; the hook used to stay subscribed to the retired one, so
 		// the component stopped updating.
-		const factory = () => new Counter();
 		const { result } = renderHook(
 			() => {
-				const source = useResource(factory);
+				const source = useResource(() => new Counter(), []);
 				const count = useReactive(source, (state) => state.count, ["change"]);
 				return { source, count };
 			},

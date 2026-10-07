@@ -1,12 +1,15 @@
-import { useRef, useState } from "react";
+import { type DependencyList, useRef, useState } from "react";
 import type { Resource } from "webappwiz/disposable";
 import { useDisposerEffect } from "./use-disposer-effect";
 
 /**
  * Owns a disposable for the lifetime of a single mount. The factory builds the
- * resource; it is disposed when the component unmounts or when the factory's
- * identity changes (a constructor argument changed), at which point a fresh
- * instance is built.
+ * resource; it is disposed when the component unmounts or when one of `deps`
+ * changes (compared with `Object.is`, as `useMemo` does), at which point a
+ * fresh instance is built. List every value the factory reads from render
+ * scope, so an inline arrow keeps its instance across renders:
+ *
+ *     const feed = useResource(() => new FeedController(source), [source]);
  *
  * Pass a factory, not a prebuilt instance: a factory is what lets the hook
  * rebuild rather than hand back one it has already disposed. The instance is
@@ -22,7 +25,10 @@ import { useDisposerEffect } from "./use-disposer-effect";
  * instance whose disposing effect never runs, and anything acquired there
  * leaks. Acquire such resources after commit, via `useDisposerEffect`.
  */
-export function useResource<T extends Resource>(factory: () => T): T {
+export function useResource<T extends Resource>(
+	factory: () => T,
+	deps: DependencyList,
+): T {
 	// Building in the effect instead and swapping the instance in afterwards
 	// would return a one-render-stale instance after a dependency change, so a
 	// downstream resource gets wired against the previous (disposed) upstream
@@ -36,20 +42,20 @@ export function useResource<T extends Resource>(factory: () => T): T {
 	const retiredRef = useRef<WeakSet<Resource>>(new WeakSet());
 
 	// A manual ref memo rather than useMemo, so the instance is never
-	// spuriously recomputed: it is rebuilt only when the factory changes, the
+	// spuriously recomputed: it is rebuilt only when a dep changes, the
 	// generation bumps, or the memoized instance has been retired.
 	const memo = useRef<{
-		factory: () => T;
+		deps: DependencyList;
 		generation: number;
 		instance: T;
 	} | null>(null);
 	if (
 		memo.current === null ||
-		memo.current.factory !== factory ||
+		!sameDeps(memo.current.deps, deps) ||
 		memo.current.generation !== generation ||
 		retiredRef.current.has(memo.current.instance)
 	) {
-		memo.current = { factory, generation, instance: factory() };
+		memo.current = { deps, generation, instance: factory() };
 	}
 	const instance = memo.current.instance;
 
@@ -71,4 +77,11 @@ export function useResource<T extends Resource>(factory: () => T): T {
 	);
 
 	return instance;
+}
+
+function sameDeps(previous: DependencyList, next: DependencyList): boolean {
+	return (
+		previous.length === next.length &&
+		previous.every((dep, index) => Object.is(dep, next[index]))
+	);
 }

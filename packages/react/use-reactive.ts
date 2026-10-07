@@ -9,7 +9,7 @@ import { useExternalStore } from "./use-external-store";
  *
  * The store is built once per source: when `source` changes identity (a
  * `useResource` instance rebuilt after StrictMode retired it, or after its
- * factory changed) the hook builds a fresh store and re-subscribes to the new
+ * deps changed) the hook builds a fresh store and re-subscribes to the new
  * source. `select` is read through a ref, so an inline arrow that closes over
  * fresh props still sees the latest values without re-subscribing. `events` is
  * read only when a store is built, so pass a fixed list.
