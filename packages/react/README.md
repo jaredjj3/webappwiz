@@ -37,6 +37,14 @@ event that changes nothing the component reads does not re-render it.
 `useExternalStore` and `ReactiveExternalStore` are the layer underneath, for
 when a store is wanted directly.
 
-The source is captured on the first render, so pass a stable one: a controller
-or a singleton, not an object built during render. Remount with a `key` if it
-has to change.
+The hook subscribes once per source and re-subscribes when the source changes
+identity, so it pairs with `useResource`, which hands back a fresh instance
+after StrictMode retires one or its factory changes:
+
+```ts
+const feed = useResource(() => new FeedController(source));
+const scores = useReactive(feed, (feed) => feed.scores(), ["changed"]);
+```
+
+Pass a stable source all the same: a controller or a singleton, not an object
+built during render, which would re-subscribe every render.

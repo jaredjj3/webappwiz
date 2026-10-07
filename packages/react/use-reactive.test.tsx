@@ -4,6 +4,7 @@ import { act, renderHook } from "@testing-library/react";
 import { StrictMode } from "react";
 import { Dispatcher } from "webappwiz/events";
 import { useReactive } from "./use-reactive";
+import { useResource } from "./use-resource";
 
 describe("useReactive", () => {
 	let counter: Counter;
@@ -106,6 +107,50 @@ describe("useReactive", () => {
 
 		expect(result.current).toBe(1);
 	});
+
+	it("re-subscribes when the source changes", () => {
+		const next = new Counter();
+		next.count = 10;
+		const { result, rerender } = renderHook(
+			({ source }) => useReactive(source, (state) => state.count, ["change"]),
+			{ initialProps: { source: counter } },
+		);
+
+		rerender({ source: next });
+		expect(result.current).toBe(10);
+
+		act(() => {
+			counter.bump();
+		});
+		expect(result.current).toBe(10);
+
+		act(() => {
+			next.bump();
+		});
+		expect(result.current).toBe(11);
+	});
+
+	it("follows a useResource instance rebuilt under StrictMode", () => {
+		// StrictMode disposes the first instance and useResource builds a
+		// fresh one; the hook used to stay subscribed to the retired one, so
+		// the component stopped updating.
+		const factory = () => new Counter();
+		const { result } = renderHook(
+			() => {
+				const source = useResource(factory);
+				const count = useReactive(source, (state) => state.count, ["change"]);
+				return { source, count };
+			},
+			{ wrapper: StrictMode },
+		);
+
+		expect(result.current.source.disposed).toBe(false);
+		act(() => {
+			result.current.source.bump();
+		});
+
+		expect(result.current.count).toBe(1);
+	});
 });
 
 type CounterEvents = { change: undefined };
@@ -116,6 +161,7 @@ class Counter {
 
 	count = 0;
 	subscriptions = 0;
+	disposed = false;
 
 	constructor() {
 		const on = this.dispatcher.events.on.bind(this.dispatcher.events);
@@ -128,5 +174,9 @@ class Counter {
 	bump(): void {
 		this.count++;
 		this.dispatcher.dispatch("change");
+	}
+
+	dispose(): void {
+		this.disposed = true;
 	}
 }
