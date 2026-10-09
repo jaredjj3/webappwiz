@@ -80,13 +80,39 @@ describe("FileLock", () => {
 		await lock.release();
 	});
 
-	it("steals a lock older than the staleness window even when the pid lives", async () => {
+	it("leaves a lock older than the staleness window to a live pid on this host", async () => {
+		const first = new FileLock(path, { fs, ps, log, stalenessMs: 50 });
+		const second = new FileLock(path, {
+			fs,
+			ps,
+			log,
+			stalenessMs: 50,
+			pollMs: 10,
+		});
+		await first.acquire();
+
+		let acquired = false;
+		const waiting = second.acquire().then(() => {
+			acquired = true;
+		});
+		await sleep(Duration.ms(150)); // three staleness windows: a long test run
+		expect(acquired).toBe(false);
+
+		await first.release();
+		await waiting;
+		expect(
+			log.entries.map((entry) => String(entry.message)).join("\n"),
+		).not.toContain("stealing stale lock");
+		await second.release();
+	});
+
+	it("steals a lock older than the staleness window from another host", async () => {
 		await fs.mkdir(path, { recursive: false });
 		await fs.write(
 			`${path}/holder.json`,
 			JSON.stringify({
 				pid: ps.pid,
-				hostname: ps.hostname,
+				hostname: "elsewhere",
 				at: new Date(Date.now() - 10_000).toISOString(),
 			}),
 		);

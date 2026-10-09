@@ -15,7 +15,7 @@ interface Holder {
 }
 
 export interface FileLockOptions {
-	/** How long a holder may go quiet before its lock can be stolen. */
+	/** How long a holder on another host may hold the lock before it can be stolen. */
 	stalenessMs?: number;
 	/** How often to re-check a lock that is already taken. */
 	pollMs?: number;
@@ -132,10 +132,14 @@ export class FileLock implements Lock {
 	}
 
 	private isStale(holder: Holder): boolean {
-		if (Date.now() - Date.parse(holder.at) > this.stalenessMs) {
-			return true;
+		// On this host the pid alone decides: nothing refreshes `at` while the
+		// lock is held, so judged by age a holder in a long test run would lose
+		// its lock to the next waiter. `at` only judges a holder on another host,
+		// whose pid cannot be checked.
+		if (holder.hostname === this.ps.hostname) {
+			return !this.ps.alive(holder.pid);
 		}
-		return holder.hostname === this.ps.hostname && !this.ps.alive(holder.pid);
+		return Date.now() - Date.parse(holder.at) > this.stalenessMs;
 	}
 
 	private steal(why: string): void {
