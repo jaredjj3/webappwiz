@@ -401,6 +401,11 @@ screenshot or file by absolute path. Inline a screenshot as
 link it as `[what](/abs/path.png)`. A review's lines say what to look at and
 where. Leave an item bare when its subject says it all.
 
+Number questions the same way wherever you ask them: a mid-task reply, a
+merge report, or a message outside any task. The user answers by number, so
+two or more questions always go in a list numbered from 1, never a bulleted
+one, never several in one item, and never one tucked into a sentence.
+
 ## ARBOR.md
 
 Your session can die at any moment; `ARBOR.md` is what lets a stranger
