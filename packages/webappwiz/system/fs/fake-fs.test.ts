@@ -74,4 +74,28 @@ describe("FakeFs", () => {
 		expect(await fs.exists("/app/old")).toBe(false);
 		expect(await fs.read("/app/older.txt")).toBe("kept");
 	});
+
+	it("tells a watch of the changes in its directory, and under it when recursive", async () => {
+		await fs.mkdir("/app/deep/er");
+		const near: string[] = [];
+		const all: string[] = [];
+		const shallow = fs.watch("/app", (changed) => near.push(changed));
+		fs.watch("/app", (changed) => all.push(changed), { recursive: true });
+
+		await fs.write("/app/a.txt", "a");
+		await fs.write("/app/deep/er/b.txt", "b");
+		await fs.rename("/app/a.txt", "/app/c.txt");
+		shallow.dispose();
+		await fs.rm("/app/c.txt");
+
+		expect(near).toEqual(["/app/a.txt", "/app/a.txt", "/app/c.txt"]);
+		expect(all).toEqual([
+			"/app/a.txt",
+			"/app/deep/er/b.txt",
+			"/app/a.txt",
+			"/app/c.txt",
+			"/app/c.txt",
+		]);
+		expect(() => fs.watch("/missing", () => {})).toThrow();
+	});
 });

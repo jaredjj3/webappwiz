@@ -16,6 +16,10 @@ await fs.writeBytes("/tmp/y", new Uint8Array([1, 2, 3]));
 await ps.spawn(["echo", "hi"]);
 ```
 
+`fs.watch(path, onChange, { recursive })` calls back with each path that
+changes in `path` until its `dispose()`; `FakeFs` calls its watches on its own
+writes, renames and removals.
+
 In tests, swap in the fakes:
 
 ```ts

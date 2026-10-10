@@ -1,6 +1,14 @@
+import { watch } from "node:fs";
 import fs from "node:fs/promises";
-import { normalize } from "node:path";
-import type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs";
+import { join, normalize } from "node:path";
+import type { Resource } from "webappwiz/disposable";
+import type {
+	Fs,
+	MkdirOptions,
+	RmOptions,
+	StatResult,
+	WatchOptions,
+} from "./fs";
 
 export class NodeFs implements Fs {
 	async exists(path: string): Promise<boolean> {
@@ -47,5 +55,22 @@ export class NodeFs implements Fs {
 
 	rm(path: string, opts?: RmOptions): Promise<void> {
 		return fs.rm(normalize(path), opts);
+	}
+
+	watch(
+		path: string,
+		onChange: (changed: string) => void,
+		opts?: WatchOptions,
+	): Resource {
+		const root = normalize(path);
+		const watcher = watch(
+			root,
+			{ recursive: opts?.recursive ?? false },
+			(_event, name) => onChange(name ? join(root, String(name)) : root),
+		);
+		// A watched directory that goes away ends the watch rather than the
+		// process.
+		watcher.on("error", () => watcher.close());
+		return { dispose: () => watcher.close() };
 	}
 }

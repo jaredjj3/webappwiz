@@ -1,4 +1,10 @@
-export type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs/fs";
+export type {
+	Fs,
+	MkdirOptions,
+	RmOptions,
+	StatResult,
+	WatchOptions,
+} from "./fs/fs";
 export { NodeFs } from "./fs/node-fs";
 export type { Glob } from "./glob/glob";
 export { NodeGlob } from "./glob/node-glob";

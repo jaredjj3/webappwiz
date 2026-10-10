@@ -1,11 +1,23 @@
 import { dirname, normalize } from "node:path";
-import type { Fs, MkdirOptions, RmOptions, StatResult } from "./fs";
+import type { Resource } from "webappwiz/disposable";
+import type {
+	Fs,
+	MkdirOptions,
+	RmOptions,
+	StatResult,
+	WatchOptions,
+} from "./fs";
 
 const DIRECTORY = Symbol("directory");
 
 /** An in-memory {@link Fs} for tests. */
 export class FakeFs implements Fs {
 	readonly store = new Map<string, string | Uint8Array | typeof DIRECTORY>();
+	private readonly watches = new Set<{
+		root: string;
+		recursive: boolean;
+		onChange: (changed: string) => void;
+	}>();
 
 	async exists(path: string): Promise<boolean> {
 		return this.store.has(normalize(path));
@@ -17,6 +29,7 @@ export class FakeFs implements Fs {
 			throw new Error(`Path already exists: ${path}`);
 		}
 		this.store.set(target, DIRECTORY);
+		this.changed(target);
 		if (opts?.recursive !== false) {
 			// every missing ancestor too, as `mkdir -p` makes them
 			for (
@@ -41,6 +54,7 @@ export class FakeFs implements Fs {
 
 	async write(path: string, data: string): Promise<void> {
 		this.store.set(normalize(path), data);
+		this.changed(normalize(path));
 	}
 
 	async readBytes(path: string): Promise<Uint8Array> {
@@ -52,6 +66,7 @@ export class FakeFs implements Fs {
 
 	async writeBytes(path: string, data: Uint8Array): Promise<void> {
 		this.store.set(normalize(path), data.slice());
+		this.changed(normalize(path));
 	}
 
 	async rename(from: string, to: string): Promise<void> {
@@ -68,6 +83,8 @@ export class FakeFs implements Fs {
 				this.store.set(target + key.slice(source.length), value);
 			}
 		}
+		this.changed(source);
+		this.changed(target);
 	}
 
 	async readdir(path: string): Promise<string[]> {
@@ -99,6 +116,34 @@ export class FakeFs implements Fs {
 				if (key.startsWith(`${target}/`)) {
 					this.store.delete(key);
 				}
+			}
+		}
+		this.changed(target);
+	}
+
+	watch(
+		path: string,
+		onChange: (changed: string) => void,
+		opts?: WatchOptions,
+	): Resource {
+		const root = normalize(path);
+		if (!this.store.has(root)) {
+			throw new Error(`Path does not exist: ${path}`);
+		}
+		const watch = { root, recursive: opts?.recursive ?? false, onChange };
+		this.watches.add(watch);
+		return { dispose: () => this.watches.delete(watch) };
+	}
+
+	/** Tells each watch whose reach `path` is in, as a real one would. */
+	private changed(path: string): void {
+		for (const { root, recursive, onChange } of this.watches) {
+			if (
+				path === root ||
+				dirname(path) === root ||
+				(recursive && path.startsWith(`${root}/`))
+			) {
+				onChange(path);
 			}
 		}
 	}
