@@ -410,7 +410,7 @@ function Mark({ need }: { need: Need }): JSX.Element | null {
 			<span
 				role="status"
 				aria-label="working"
-				className="size-1.5 animate-pulse rounded-full bg-foreground/60"
+				className="size-2 animate-pulse rounded-full bg-foreground/60"
 			/>
 		);
 	}
