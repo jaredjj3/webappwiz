@@ -7,3 +7,5 @@ After making code changes:
 - `bin/wiz dev test` test each package.
 
 Don't use em dashes.
+
+Git stash is not used in this repo, so you don't have to check the stash.
