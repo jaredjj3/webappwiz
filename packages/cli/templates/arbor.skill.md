@@ -355,7 +355,9 @@ one that is not. Whether the user looks first is yours to decide:
   look at (step 1 of Escalation), `arbor escalate --review "<what to look
   at>"`, report it (see Reporting), and end your turn.
 
-When the user approves, `arbor claim <task>` and merge. When they ask for
+When the user approves, `arbor claim <task>` and merge. When that merge
+stops on a conflict, name each file you resolved in the merge report, since
+that code changed after the user looked. When they ask for
 changes, `arbor claim <task>`, add each as a step under `## Next`, and work
 through them as before.
 
