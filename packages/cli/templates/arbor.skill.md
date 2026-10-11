@@ -362,6 +362,11 @@ one that is not. Whether the user looks first is yours to decide:
   look at (step 1 of Escalation), `arbor escalate --review "<what to look
   at>"`, report it (see Reporting), and end your turn.
 
+When the user has to see a change to judge it, make that cheap: run it for
+them where they can open it (a dev server on throwaway data that shows each
+case, never their own), and list what to do and what they should see, a line
+each. A screenshot or short recording of each case beats a description of it.
+
 When the user approves, `arbor claim <task>` and merge. When that merge
 stops on a conflict, name each file you resolved in the merge report, since
 that code changed after the user looked. When they ask for
@@ -438,15 +443,19 @@ it all.
 
 One sentence on what changed.
 
-Drag a todo at http://localhost:4269 and check it lands where you drop it.
+Open http://localhost:4310 (a demo repo, nothing of yours):
+
+1. Drag a todo to another lane: it lands where you drop it.
+2. Reload: it stays there.
+
 ![the board after a drag](/abs/path/board.png)
 
 Reply "merge", or say what to change.
 ```
 
-A review asks no numbered question: it says what to look at and where, each
-screenshot or file by absolute path, then ends with that last line exactly,
-so every review reads the same.
+A review asks no numbered question: it says where to look and what to
+check, each screenshot or file by absolute path, then ends with that last
+line exactly, so every review reads the same.
 
 Number questions the same way wherever you ask them: a mid-task reply, a
 merge report, or a message outside any task. The user answers by number, so
