@@ -35,9 +35,9 @@ stderr says.
 2. **Plan.** Once you know what done means, fill in `ARBOR.md` before
    touching code (see ARBOR.md below), then groom the todos your work touches
    (see Grooming related todos).
-3. **Check for overlap.** Compare your `## Files` with `arbor list --files`.
-   Some overlap is normal: work alongside, accept the rebase, and note it in
-   `ARBOR.md`. Only when conflicts would be hard to resolve, `arbor wait
+3. **Check for overlap.** Read `arbor list --files`: each task's Goal and
+   the files it has changed so far. Some overlap is normal: work alongside,
+   accept the rebase, and note it in `ARBOR.md`. Only when conflicts would be hard to resolve, `arbor wait
    <task>` for the other task to land first. If it is doing the opposite of
    what you were asked, escalate instead.
 4. **Work.** Commit each step with git as you go, and move it to `## Done`
@@ -167,7 +167,7 @@ again just before merging:
      `- [ ]` steps you did.
    - **Place it** when it is untriaged and belongs in a lane (see Lanes).
    - **Coordinate** when another task has taken it and your change affects
-     it: never take it, compare files with `arbor list --files`, and note it
+     it: never take it, read its Goal in `arbor list --files`, and note it
      in `ARBOR.md`.
 
 ### The next todo
@@ -459,10 +459,6 @@ small change, a full record for a long one.
 
 One or two lines on what done means.
 
-## Files
-
-- every/path/you/plan/to/touch.ts
-
 ## Done
 
 - [x] finished steps: the only progress the task reports
@@ -476,9 +472,9 @@ One or two lines on what done means.
 Decisions, dead ends, and how to verify.
 ````
 
-Keep it current as you go, not at the end: move steps to `## Done` as they
-land and keep `## Files` matching what you touch, since `arbor list --files`
-shows it to other agents. Run `arbor show <task>` after writing it to check
+The Goal's first line is what other agents see of your task in `arbor list
+--files`, so make it say what you are changing. Keep the rest current as you
+go, not at the end: move steps to `## Done` as they land. Run `arbor show <task>` after writing it to check
 the shape. It is excluded from git: never mention it in a commit message.
 
 ## Committing
