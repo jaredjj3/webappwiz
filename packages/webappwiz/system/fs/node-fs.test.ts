@@ -15,11 +15,14 @@ describe("NodeFs", () => {
 				recursive: true,
 			});
 
-			await fs.write(join(root, "a", "b", "c.txt"), "c");
-			for (let i = 0; i < 100 && changed.length === 0; i++) {
-				await Bun.sleep(10);
+			const written = join(root, "a", "b", "c.txt");
+			// The OS takes a moment to start watching, and a write made before
+			// then goes untold, so this writes until one is told.
+			for (let i = 0; i < 50 && !changed.includes(written); i++) {
+				await fs.write(written, "c");
+				await Bun.sleep(50);
 			}
-			expect(changed).toContain(join(root, "a", "b", "c.txt"));
+			expect(changed).toContain(written);
 
 			watch.dispose();
 			changed.length = 0;
