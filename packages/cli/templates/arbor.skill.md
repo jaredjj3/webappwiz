@@ -270,6 +270,12 @@ never mentioned, one reading of an ambiguous ask), write a question under
 could have done, and carry on: the user can answer in chat while you work.
 When an answer overturns a choice, redo that part.
 
+An answer can reach you mid-turn, as a message that arrives while you work.
+Read it at the next step rather than at the end: record it (see Keeping
+Blocked current), and redo at once what it overturns, before building more on
+the choice. While a question is open, do the work it touches last where your
+plan allows, so an answer that overturns it costs little.
+
 Number questions 1, 2, … in the order you ask them; numbers never change, and
 new ones continue from the highest. A question's line is its subject, short
 enough to scan and ending in the question; everything else goes in markdown
