@@ -1,5 +1,13 @@
 import { disposables, type Resource } from "webappwiz/disposable";
-import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
+import { FakeChild, FakeTerminalChild } from "./fake-child";
+import type {
+	Ps,
+	SpawnCaptureResult,
+	SpawnOptions,
+	SpawnResult,
+	StartOptions,
+	TerminalOptions,
+} from "./ps";
 
 export class FakePs implements Ps {
 	platform: NodeJS.Platform = "darwin";
@@ -18,6 +26,8 @@ export class FakePs implements Ps {
 	private exited = false;
 	private captureOutput = { stdout: "", stderr: "" };
 	private simulation = () => Promise.resolve(0);
+	private children: FakeChild[] = [];
+	private terminals: FakeTerminalChild[] = [];
 
 	alive(pid: number): boolean {
 		return !this.dead.has(pid);
@@ -46,6 +56,22 @@ export class FakePs implements Ps {
 			opts?.watcher?.stderr(stderr);
 		}
 		return { exitCode, stdout, stderr };
+	}
+
+	/** A child for the test to play, found again in `getChildren()`. */
+	start(argv: string[], opts?: StartOptions): FakeChild {
+		this.record(argv, opts);
+		const child = new FakeChild();
+		this.children.push(child);
+		return child;
+	}
+
+	/** A terminal child for the test to play, found in `getTerminals()`. */
+	startOnTerminal(argv: string[], opts: TerminalOptions): FakeTerminalChild {
+		this.record(argv, opts);
+		const child = new FakeTerminalChild(opts.cols, opts.rows);
+		this.terminals.push(child);
+		return child;
 	}
 
 	cwd(): string {
@@ -113,6 +139,16 @@ export class FakePs implements Ps {
 		return this.calls;
 	}
 
+	/** What `start` started, in order. */
+	getChildren(): FakeChild[] {
+		return this.children;
+	}
+
+	/** What `startOnTerminal` started, in order. */
+	getTerminals(): FakeTerminalChild[] {
+		return this.terminals;
+	}
+
 	/** Positionally matched to `getCalls()`. */
 	getCallDirs(): string[] {
 		return this.dirs;
@@ -154,7 +190,7 @@ export class FakePs implements Ps {
 		return this.simulation();
 	}
 
-	private record(argv: string[], opts?: SpawnOptions): void {
+	private record(argv: string[], opts?: StartOptions): void {
 		this.calls.push(argv.join(" "));
 		this.dirs.push(opts?.cwd ?? this.path);
 	}

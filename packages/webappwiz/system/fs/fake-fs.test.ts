@@ -98,4 +98,14 @@ describe("FakeFs", () => {
 		]);
 		expect(() => fs.watch("/missing", () => {})).toThrow();
 	});
+
+	it("appends to a file, making it when it is missing", async () => {
+		await fs.mkdir("/app");
+
+		await fs.append("/app/log", "one\n");
+		await fs.append("/app/log", "two\n");
+
+		expect(await fs.read("/app/log")).toBe("one\ntwo\n");
+		expect(fs.append("/app", "x")).rejects.toThrow("is a directory");
+	});
 });

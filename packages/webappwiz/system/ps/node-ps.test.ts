@@ -142,6 +142,67 @@ describe("NodePs", () => {
 
 		expect(seen).toEqual({ stdout: "out\n", stderr: "err\n" });
 	});
+
+	it("starts a child with its stdio open, to speak to while it runs", async () => {
+		const child = new NodePs().start([
+			"sh",
+			"-c",
+			'read line; echo "got $line"; echo oops >&2; cat',
+		]);
+		const writer = child.stdin.getWriter();
+		await writer.write(new TextEncoder().encode("hi\n"));
+
+		const reader = child.stdout.getReader();
+		const { value } = await reader.read();
+		expect(new TextDecoder().decode(value)).toBe("got hi\n");
+
+		await writer.close();
+		expect(await child.exited).toBe(0);
+		expect(await new Response(child.stderr).text()).toBe("oops\n");
+	});
+
+	it("kills a started child, which exits as a shell would report it", async () => {
+		const child = new NodePs().start(["sleep", "30"]);
+
+		child.kill();
+
+		expect(await child.exited).toBe(143);
+		child.kill();
+	});
+
+	it.skipIf(process.platform === "win32")(
+		"starts a child on a terminal it controls",
+		async () => {
+			const child = new NodePs().startOnTerminal(["/bin/sh"], {
+				cols: 80,
+				rows: 24,
+				env: { PS1: "$ " },
+			});
+			let screen = "";
+			const read = (async () => {
+				const decoder = new TextDecoder();
+				for await (const bytes of child.output) {
+					screen += decoder.decode(bytes, { stream: true });
+				}
+			})();
+			const shows = async (text: string) => {
+				for (let i = 0; i < 300 && !screen.includes(text); i++) {
+					await Bun.sleep(10);
+				}
+				expect(screen).toContain(text);
+			};
+
+			child.resize(120, 40);
+			child.write("stty size\n");
+			await shows("40 120");
+
+			child.kill("SIGHUP");
+			expect(await child.exited).toBe(129);
+			child.close();
+			await read;
+			child.write("ignored\n");
+		},
+	);
 });
 
 /** Holds the event loop for `ms`, longer than a reap poll, so the poll takes the exit before the runtime does. */

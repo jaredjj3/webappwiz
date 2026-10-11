@@ -32,6 +32,10 @@ export class NodeFs implements Fs {
 		return fs.writeFile(normalize(path), data);
 	}
 
+	append(path: string, data: string): Promise<void> {
+		return fs.appendFile(normalize(path), data);
+	}
+
 	async readBytes(path: string): Promise<Uint8Array> {
 		const buffer = await fs.readFile(normalize(path));
 		return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);

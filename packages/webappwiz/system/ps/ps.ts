@@ -24,6 +24,17 @@ export interface Ps {
 		argv: string[],
 		opts?: SpawnOptions,
 	): Promise<SpawnCaptureResult>;
+	/**
+	 * Starts `argv` with its stdin, stdout and stderr left open as streams, for
+	 * a child spoken to while it runs, as over a protocol on its stdio.
+	 */
+	start(argv: string[], opts?: StartOptions): Child;
+	/**
+	 * Starts `argv` on a pseudo-terminal of its own, the way a terminal window
+	 * runs a shell, as its controlling terminal so ^C and resizes reach the
+	 * job in front. POSIX on Bun only, since `Bun.Terminal` is.
+	 */
+	startOnTerminal(argv: string[], opts: TerminalOptions): TerminalChild;
 	/** The working directory, as `cd` last left it. */
 	cwd(): string;
 	env(name: string): string | undefined;
@@ -72,4 +83,40 @@ export interface SpawnResult {
 export interface SpawnCaptureResult extends SpawnResult {
 	stdout: string;
 	stderr: string;
+}
+
+/** What `start` honors of a spawn's options: none that wait for the end. */
+export type StartOptions = Omit<SpawnOptions, "stdin" | "watcher">;
+
+/** Where and how big a terminal starts. */
+export interface TerminalOptions extends StartOptions {
+	cols: number;
+	rows: number;
+}
+
+/** A child still running, its stdio open: bytes in, bytes out. */
+export interface Child {
+	stdin: WritableStream<Uint8Array>;
+	stdout: ReadableStream<Uint8Array>;
+	stderr: ReadableStream<Uint8Array>;
+	/** Its exit code once it is gone, 128 + the signal for one killed. */
+	exited: Promise<number>;
+	/** Sends it `signal`, SIGTERM by default; nothing once it has exited. */
+	kill(signal?: NodeJS.Signals): void;
+}
+
+/** A child on a terminal: what it writes, and keys typed at it. */
+export interface TerminalChild {
+	/** What the child writes to its terminal; ends once the terminal closes. */
+	output: ReadableStream<Uint8Array>;
+	/** Types `data` at the child, keys and pastes alike. */
+	write(data: string | Uint8Array): void;
+	/** What a window resize does: the child hears of it as SIGWINCH. */
+	resize(cols: number, rows: number): void;
+	/** Its exit code once it is gone, 128 + the signal for one killed. */
+	exited: Promise<number>;
+	/** Sends it `signal`, SIGTERM by default; nothing once it has exited. */
+	kill(signal?: NodeJS.Signals): void;
+	/** Closes the terminal, after which writes and resizes do nothing. */
+	close(): void;
 }

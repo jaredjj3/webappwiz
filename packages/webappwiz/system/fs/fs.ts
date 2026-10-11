@@ -7,6 +7,11 @@ export interface Fs {
 	mkdir(path: string, opts?: MkdirOptions): Promise<void>;
 	read(path: string): Promise<string>;
 	write(path: string, data: string): Promise<void>;
+	/**
+	 * Adds `data` to the end of the file, making it when it is missing, so a log
+	 * grows without being rewritten whole.
+	 */
+	append(path: string, data: string): Promise<void>;
 	readBytes(path: string): Promise<Uint8Array>;
 	writeBytes(path: string, data: Uint8Array): Promise<void>;
 	rename(from: string, to: string): Promise<void>;

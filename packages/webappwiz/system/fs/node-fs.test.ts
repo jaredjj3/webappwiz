@@ -34,4 +34,17 @@ describe("NodeFs", () => {
 			await rm(root, { recursive: true, force: true });
 		}
 	});
+
+	it("appends to a file, making it when it is missing", async () => {
+		const fs = new NodeFs();
+		const root = await mkdtemp(join(tmpdir(), "node-fs-"));
+		try {
+			await fs.append(join(root, "log"), "one\n");
+			await fs.append(join(root, "log"), "two\n");
+
+			expect(await fs.read(join(root, "log"))).toBe("one\ntwo\n");
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
 });

@@ -37,10 +37,14 @@ export type { PortProvider } from "./port-provider/port-provider";
 export type { ProcessLike } from "./process-like/process-like";
 export { NodePs, type NodePsOptions } from "./ps/node-ps";
 export type {
+	Child,
 	OutputWatcher,
 	Ps,
 	SpawnCaptureResult,
 	SpawnOptions,
 	SpawnResult,
+	StartOptions,
+	TerminalChild,
+	TerminalOptions,
 } from "./ps/ps";
 export { type WalkOptions, walk } from "./walk";

@@ -57,6 +57,23 @@ export class FakeFs implements Fs {
 		this.changed(normalize(path));
 	}
 
+	async append(path: string, data: string): Promise<void> {
+		const target = normalize(path);
+		const content = this.store.get(target);
+		if (content === DIRECTORY) {
+			throw new Error(`Path is a directory: ${path}`);
+		}
+		this.store.set(
+			target,
+			content === undefined
+				? data
+				: typeof content === "string"
+					? content + data
+					: new TextDecoder().decode(content) + data,
+		);
+		this.changed(target);
+	}
+
 	async readBytes(path: string): Promise<Uint8Array> {
 		const content = this.file(path);
 		return typeof content === "string"

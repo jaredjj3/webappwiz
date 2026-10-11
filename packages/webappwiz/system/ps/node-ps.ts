@@ -1,8 +1,18 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { constants, hostname } from "node:os";
+import { Readable, Writable } from "node:stream";
 import { disposables, type Resource } from "webappwiz/disposable";
 import type { ProcessLike } from "../process-like/process-like";
-import type { Ps, SpawnCaptureResult, SpawnOptions, SpawnResult } from "./ps";
+import type {
+	Child,
+	Ps,
+	SpawnCaptureResult,
+	SpawnOptions,
+	SpawnResult,
+	StartOptions,
+	TerminalChild,
+	TerminalOptions,
+} from "./ps";
 import { decode, reap } from "./reap";
 
 /** What a `NodePs` speaks to; the running process by default. */
@@ -77,6 +87,99 @@ export class NodePs implements Ps {
 		return { exitCode: await exitCode(child), stdout, stderr };
 	}
 
+	start(argv: string[], opts?: StartOptions): Child {
+		const [cmd, args] = parse(argv);
+		const child = spawn(cmd, args, {
+			...this.options(opts),
+			stdio: "pipe",
+		});
+		// a child that exits before reading all of it is not an error here
+		child.stdin.on("error", () => {});
+		const exited = exitCode(child);
+		return {
+			stdin: Writable.toWeb(child.stdin),
+			stdout: web(child.stdout),
+			stderr: web(child.stderr),
+			exited,
+			kill: (signal = "SIGTERM") => {
+				if (child.exitCode === null && child.signalCode === null) {
+					child.kill(signal);
+				}
+			},
+		};
+	}
+
+	startOnTerminal(argv: string[], opts: TerminalOptions): TerminalChild {
+		parse(argv);
+		if (!process.versions.bun || this.platform === "win32") {
+			throw new Error("startOnTerminal needs Bun on a POSIX system");
+		}
+		let closed = false;
+		let reader: ReadableStreamDefaultController<Uint8Array> | undefined;
+		const output = new ReadableStream<Uint8Array>({
+			start: (controller) => {
+				reader = controller;
+			},
+		});
+		const end = (): void => {
+			if (!closed) {
+				closed = true;
+				reader?.close();
+			}
+		};
+		const terminal = new Bun.Terminal({
+			cols: opts.cols,
+			rows: opts.rows,
+			data: (_, bytes) => {
+				if (!closed) {
+					// copied, since the terminal reuses its buffer
+					reader?.enqueue(bytes.slice());
+				}
+			},
+			exit: end,
+		});
+		const { cwd, env, timeout, signal } = this.options(opts);
+		// In a session of its own, so the terminal can be its controlling one:
+		// see CLAIM.
+		const child = Bun.spawn([process.execPath, "-e", CLAIM, "--", ...argv], {
+			terminal,
+			cwd,
+			env,
+			timeout,
+			signal,
+			detached: true,
+		});
+		const running = (): boolean =>
+			child.exitCode === null && child.signalCode === null;
+		return {
+			output,
+			write: (data) => {
+				if (!terminal.closed) {
+					terminal.write(data);
+				}
+			},
+			resize: (cols, rows) => {
+				if (!terminal.closed) {
+					terminal.resize(cols, rows);
+				}
+			},
+			// The exit code, not the terminal's own `exit`, which only says the
+			// stream closed and on Linux may never fire at all (Bun issue 40289).
+			exited: child.exited.then(() =>
+				shellCode(child.exitCode, child.signalCode),
+			),
+			kill: (signal = "SIGTERM") => {
+				if (running()) {
+					child.kill(signal);
+				}
+			},
+			close: () => {
+				terminal.close();
+				end();
+			},
+		};
+	}
+
 	/**
 	 * Node replaces the whole environment when `env` is given, so a command
 	 * launched with the caller's two or three variables would have no PATH and
@@ -136,6 +239,15 @@ function parse(argv: string[]): [string, string[]] {
 		throw new Error("spawn requires a command");
 	}
 	return [cmd, args];
+}
+
+/**
+ * A child's output as a web stream. Node types its own web streams apart from
+ * the global ones, though they are the same at runtime, and its pipes carry
+ * bytes unless given an encoding, which these never are.
+ */
+function web(readable: Readable): ReadableStream<Uint8Array> {
+	return Readable.toWeb(readable) as unknown as ReadableStream<Uint8Array>;
 }
 
 /** How often to check on a child the runtime may have lost track of. */
@@ -204,3 +316,30 @@ function exitCode(child: ChildProcess): Promise<number> {
 function shellCode(code: number | null, signal: NodeJS.Signals | null): number {
 	return code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0);
 }
+
+/**
+ * Run by `bun -e` as the terminal's child, ahead of the program it is handed:
+ * makes the terminal its controlling one, then becomes that program. Without
+ * it, ^C never interrupts the job in front and a resize never reaches
+ * full-screen programs, since `Bun.Terminal` leaves the child with no
+ * controlling terminal (Bun issue 33237). Drop it once Bun does this itself.
+ */
+const CLAIM = `
+import { dlopen, FFIType, ptr } from "bun:ffi";
+const darwin = process.platform === "darwin";
+const libc = dlopen(darwin ? "libc.dylib" : "libc.so.6", {
+	ioctl: { args: [FFIType.i32, FFIType.u64, FFIType.i32], returns: FFIType.i32 },
+	execvp: { args: [FFIType.ptr, FFIType.ptr], returns: FFIType.i32 },
+});
+const TIOCSCTTY = darwin ? 0x20007461 : 0x540e;
+if (libc.symbols.ioctl(0, TIOCSCTTY, 0) !== 0) {
+	console.error("^C and resizes will not reach programs in this terminal");
+}
+const argv = process.argv.slice(1);
+const strings = argv.map((arg) => Buffer.from(arg + "\\0"));
+const pointers = new BigUint64Array(argv.length + 1);
+strings.forEach((each, i) => { pointers[i] = BigInt(ptr(each)); });
+libc.symbols.execvp(ptr(strings[0]), ptr(pointers));
+console.error("could not run " + argv[0]);
+process.exit(127);
+`;

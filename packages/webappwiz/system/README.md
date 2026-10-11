@@ -16,6 +16,26 @@ await fs.writeBytes("/tmp/y", new Uint8Array([1, 2, 3]));
 await ps.spawn(["echo", "hi"]);
 ```
 
+`spawn` and `spawnCapture` run a command to its end. `ps.start(argv)` leaves
+the child's stdio open instead, as web streams, for one spoken to while it
+runs, and `ps.startOnTerminal(argv, { cols, rows })` runs one on a terminal
+of its own, as a terminal window runs a shell:
+
+```ts
+const agent = ps.start(["bunx", "some-acp-agent"], { cwd: "/repo" });
+await agent.stdin.getWriter().write(new TextEncoder().encode("hi\n"));
+for await (const bytes of agent.stdout) {
+	// ...
+}
+
+const shell = ps.startOnTerminal(["/bin/sh"], { cols: 80, rows: 24 });
+shell.write("ls\n");
+shell.resize(120, 40);
+```
+
+`fs.append(path, data)` adds to the end of a file, so a log grows without being
+rewritten whole.
+
 `fs.watch(path, onChange, { recursive })` calls back with each path that
 changes in `path` until its `dispose()`; `FakeFs` calls its watches on its own
 writes, renames and removals.
