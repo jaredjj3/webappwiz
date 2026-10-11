@@ -245,6 +245,19 @@ time:
 Never take a todo from another lane, or one the lane has not reached; when
 the user moves todos while you work, the next `lane show` has them.
 
+## Checkpoint
+
+`[ARBOR CHECKPOINT]`, sent by the `arbor dev` page, means your process is
+about to stop, as for a restart, and the next prompt picks the work up. Stop
+where you are and start nothing new:
+
+1. Leave a step you are in the middle of as it is, unless it is an `arbor
+   merge`: finish that first.
+2. Bring `ARBOR.md` up to date: `## Done` and `## Next` as they stand, each
+   open question under `## Blocked`, and under `## Notes` what you were doing
+   when stopped and what comes next. With no task, there is no `ARBOR.md`.
+3. Reply with one line on where you stand, and end your turn.
+
 ## Handing out part of your task
 
 `arbor add <part> --base task/<your task>` from inside your tree makes a task
