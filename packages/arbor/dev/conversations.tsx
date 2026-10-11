@@ -14,7 +14,7 @@ import {
 	LinkIcon,
 	PencilIcon,
 	PlusIcon,
-	TerminalIcon,
+	SquareArrowOutUpRightIcon,
 } from "lucide-react";
 import { type JSX, useEffect, useMemo, useRef, useState } from "react";
 import { PermissionGrant } from "#dev/components/assistant-ui/elements/permission-grant.tsx";
@@ -168,7 +168,7 @@ export function ConversationList({
 							))}
 							{held.length === 0 && details !== null && (
 								<li>
-									<Terminal task={details} />
+									<External task={details} />
 								</li>
 							)}
 						</ul>
@@ -371,18 +371,19 @@ function Rename({
 }
 
 /**
- * A task whose agent runs outside the page, in a terminal: a peer of a
- * conversation, marked the same way from the task alone. Opens the task.
+ * A task whose agent runs outside the page (an external session, such as
+ * Claude Code in a terminal): a peer of a conversation, marked the same way
+ * from the task alone. Opens the task.
  */
-function Terminal({ task }: { task: Details }): JSX.Element {
+function External({ task }: { task: Details }): JSX.Element {
 	return (
 		<a
 			href="#tasks"
 			className="flex min-w-0 items-center gap-2 rounded-md py-1.5 pr-3 pl-3 text-foreground hover:bg-foreground/[0.05]"
 		>
-			<TerminalIcon className="size-3.5 shrink-0 text-foreground/70" />
+			<SquareArrowOutUpRightIcon className="size-3.5 shrink-0 text-foreground/70" />
 			<span className="min-w-0 flex-1 truncate text-muted-foreground text-sm">
-				in a terminal
+				external
 			</span>
 			<Mark need={need(task, null)} />
 		</a>
