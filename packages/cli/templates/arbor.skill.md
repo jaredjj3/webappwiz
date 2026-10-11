@@ -56,6 +56,15 @@ stderr says.
    merge deletes your worktree: `cd` to the main tree it prints before
    running anything else.
 
+   Each `conflict`, `tests_failed` or `merge_failed` spends one of the
+   task's merge attempts, so write under `## Notes` what each one failed
+   on. When `merge` stops on `budget_exhausted`, escalate (see Escalation)
+   and tell the user why merging keeps failing: what each attempt failed
+   on (the files that conflicted, the check that broke and its error, the
+   tree in the way), whether it is the same cause each time, and what you
+   think would get it through, so they can choose between `arbor retry`
+   and a remove and redo.
+
 **Clean up every task you start.** A task ends in a merge or a remove, never
 left behind; one escalated and waiting on the user is not done, so leave it
 for `arbor claim`. When investigating shows there is nothing to change, the
