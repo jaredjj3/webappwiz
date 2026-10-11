@@ -9,10 +9,14 @@ export interface Ps {
 	hostname: string;
 	/**
 	 * What the program was invoked with, past the runtime and the script: the
-	 * arguments a cli parses. Never the executable or the entry point, which
-	 * nothing here has ever wanted.
+	 * arguments a cli parses.
 	 */
 	args: string[];
+	/**
+	 * The runtime and the entry point this program runs as, ahead of `args`:
+	 * what starts it again, as a supervisor restarting its child does.
+	 */
+	self: string[];
 	/** Whether a pid on *this* host is still running. */
 	alive(pid: number): boolean;
 	spawn(argv: string[], opts?: SpawnOptions): Promise<SpawnResult>;

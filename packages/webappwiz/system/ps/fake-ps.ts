@@ -6,6 +6,7 @@ export class FakePs implements Ps {
 	pid = 4242;
 	hostname = "fake-host";
 	args: string[] = [];
+	self: string[] = ["bun", "/fake/entry.ts"];
 
 	private dead = new Set<number>();
 	private path = "/";

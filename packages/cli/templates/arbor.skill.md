@@ -258,6 +258,10 @@ where you are and start nothing new:
    when stopped and what comes next. With no task, there is no `ARBOR.md`.
 3. Reply with one line on where you stand, and end your turn.
 
+`[ARBOR RESUME]`, sent after a checkpoint, means carry on: read `ARBOR.md`
+again and go on from where `## Notes` says you stopped. With no task, carry on
+with what you were asked.
+
 ## Handing out part of your task
 
 `arbor add <part> --base task/<your task>` from inside your tree makes a task
@@ -303,7 +307,9 @@ new ones continue from the highest. A question's line is its subject, short
 enough to scan and ending in the question; everything else goes in markdown
 lines indented under it, code blocks included. Ask for what is wrong rather
 than a bare yes or no. When the answer is one of a few, end with `- (a) ...`
-lines (pick one, or none), or `- [a] ...` lines for all that apply.
+lines (pick one, or none), or `- [a] ...` lines for all that apply. Describe
+every choice, the one you went with too, and mark that one `(chosen)`: never
+a bare "That".
 
 ```markdown
 ## Blocked
@@ -314,7 +320,7 @@ lines (pick one, or none), or `- [a] ...` lines for all that apply.
 - [ ] 3. How should existing sessions move to the new tokens?
   Sessions are keyed by the old cookie.
   - (a) Sign everyone out once
-  - (b) Migrate each session on its next request
+  - (b) Migrate each session on its next request (chosen)
 ```
 
 Show what a question is about whenever it is something to see: a screenshot,

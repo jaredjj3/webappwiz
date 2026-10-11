@@ -15,6 +15,7 @@ export class NodePs implements Ps {
 	pid: number;
 	hostname = hostname();
 	args: string[];
+	self: string[];
 	private readonly proc: ProcessLike;
 
 	constructor(opts: NodePsOptions = {}) {
@@ -23,6 +24,7 @@ export class NodePs implements Ps {
 		this.pid = this.proc.pid;
 		// argv[0] is the runtime and argv[1] the entry point; a cli parses neither
 		this.args = this.proc.argv.slice(2);
+		this.self = this.proc.argv.slice(0, 2);
 	}
 
 	alive(pid: number): boolean {
