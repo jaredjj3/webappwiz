@@ -14,6 +14,7 @@ import {
 	LinkIcon,
 	PencilIcon,
 	PlusIcon,
+	TerminalIcon,
 } from "lucide-react";
 import { type JSX, useEffect, useMemo, useRef, useState } from "react";
 import { PermissionGrant } from "#dev/components/assistant-ui/elements/permission-grant.tsx";
@@ -44,6 +45,7 @@ import type {
 	Setting,
 	Status,
 } from "../conversations";
+import { type Need, need } from "../needs";
 import type { Details } from "../show";
 import { AgentIcon } from "./agent-icons";
 import {
@@ -140,6 +142,7 @@ export function ConversationList({
 			</button>
 			{groups.map((task) => {
 				const held = listed.filter((each) => each.task === task);
+				const details = tasks.find((each) => each.task === task) ?? null;
 				const name = task ?? "Main tree";
 				return (
 					<div key={task ?? ""} className="flex flex-col">
@@ -156,12 +159,18 @@ export function ConversationList({
 								<li key={each.id}>
 									<Item
 										conversation={each}
+										task={details}
 										agent={agentName(agents, each.agent)}
 										current={each.id === open}
 										onOpen={() => onOpen(each.id)}
 									/>
 								</li>
 							))}
+							{held.length === 0 && details !== null && (
+								<li>
+									<Terminal task={details} />
+								</li>
+							)}
 						</ul>
 					</div>
 				);
@@ -189,12 +198,15 @@ export function ConversationList({
  */
 function Item({
 	conversation,
+	task = null,
 	agent,
 	current,
 	onOpen,
 	where = false,
 }: {
 	conversation: ConversationState;
+	/** The live task it runs in, which says whether it waits on the person. */
+	task?: Details | null;
 	agent: string;
 	current: boolean;
 	onOpen: () => void;
@@ -233,12 +245,9 @@ function Item({
 					renaming && "hidden",
 					menu
 						? "pr-14"
-						: conversation.ask !== null || conversation.status === "failed"
-							? "pr-16"
-							: conversation.status === "running" ||
-									conversation.status === "starting"
-								? "pr-6"
-								: "pr-3",
+						: need(task, conversation).kind === "idle"
+							? "pr-3"
+							: "pr-6",
 				)}
 			>
 				<AgentIcon
@@ -264,7 +273,7 @@ function Item({
 						: "group-focus-within/item:hidden group-hover/item:hidden",
 				)}
 			>
-				<Mark conversation={conversation} />
+				<Mark need={need(task, conversation)} />
 			</span>
 			<span
 				className={cn(
@@ -361,23 +370,45 @@ function Rename({
 	);
 }
 
-/** What a list shows of where a conversation is: only what needs a look. */
-function Mark({
-	conversation,
-}: {
-	conversation: ConversationState;
-}): JSX.Element | null {
-	if (conversation.ask !== null) {
-		return <Badge>asking</Badge>;
-	}
-	if (conversation.status === "failed") {
-		return <Badge variant="destructive">failed</Badge>;
-	}
-	if (conversation.status === "running" || conversation.status === "starting") {
+/**
+ * A task whose agent runs outside the page, in a terminal: a peer of a
+ * conversation, marked the same way from the task alone. Opens the task.
+ */
+function Terminal({ task }: { task: Details }): JSX.Element {
+	return (
+		<a
+			href="#tasks"
+			className="flex min-w-0 items-center gap-2 rounded-md py-1.5 pr-3 pl-3 text-foreground hover:bg-foreground/[0.05]"
+		>
+			<TerminalIcon className="size-3.5 shrink-0 text-foreground/70" />
+			<span className="min-w-0 flex-1 truncate text-muted-foreground text-sm">
+				in a terminal
+			</span>
+			<Mark need={need(task, null)} />
+		</a>
+	);
+}
+
+/**
+ * What a list shows of an agent: a dot while it waits on the person, a pulse
+ * while it works (on a guess or not), and nothing while it is idle.
+ */
+function Mark({ need }: { need: Need }): JSX.Element | null {
+	if (need.kind === "waiting") {
 		return (
 			<span
 				role="status"
-				aria-label={conversation.status}
+				aria-label="waiting on you"
+				title={need.subject}
+				className="size-2 rounded-full bg-amber-500"
+			/>
+		);
+	}
+	if (need.kind === "working" || need.kind === "assuming") {
+		return (
+			<span
+				role="status"
+				aria-label="working"
 				className="size-1.5 animate-pulse rounded-full bg-foreground/60"
 			/>
 		);
@@ -734,7 +765,7 @@ function Recent({
 			<span className="shrink-0 truncate text-muted-foreground text-xs">
 				{conversation.task ?? "main tree"}
 			</span>
-			<Mark conversation={conversation} />
+			<Mark need={need(null, conversation)} />
 		</button>
 	);
 }

@@ -15,6 +15,7 @@ import {
 import { Toaster } from "#dev/components/ui/toast.tsx";
 import { TooltipProvider } from "#dev/components/ui/tooltip.tsx";
 import { cn } from "#dev/lib/utils.ts";
+import { needs } from "../needs";
 import { ConversationFeed } from "./conversation-feed";
 import {
 	ConversationList,
@@ -107,11 +108,21 @@ export function App(): JSX.Element {
 		},
 		[talk],
 	);
-	const { available } = useReactive(
+	const { available, conversations } = useReactive(
 		talk,
-		(talk) => ({ available: talk.available }),
+		(talk) => ({
+			available: talk.available,
+			conversations: talk.conversations,
+		}),
 		["changed"],
 	);
+	// How many agents wait on the person, on the tab and in the window's title.
+	const waiting =
+		snapshot === null
+			? 0
+			: needs({ tasks: snapshot.tasks, conversations }).filter(
+					(each) => each.need.kind === "waiting",
+				).length;
 	// Kept in the address, so a reload or a link lands on the same page.
 	const [page, setPage] = useState<Page>(() => pageIn(location.hash));
 	const [open, setOpen] = useState(() => conversationIn(location.hash));
@@ -137,8 +148,9 @@ export function App(): JSX.Element {
 	);
 
 	useEffect(() => {
-		document.title = snapshot?.repo ?? "arbor";
-	}, [snapshot?.repo]);
+		const name = snapshot?.repo ?? "arbor";
+		document.title = waiting > 0 ? `(${waiting}) ${name}` : name;
+	}, [snapshot?.repo, waiting]);
 
 	const wide = useWide();
 	// On a phone, an open conversation takes the whole screen: no header, and
@@ -146,7 +158,9 @@ export function App(): JSX.Element {
 	const reading = !wide && page === "conversations" && open !== null;
 	const count = (page: Page) =>
 		page === "conversations"
-			? null
+			? waiting > 0
+				? waiting
+				: null
 			: snapshot && (page === "todos" ? snapshot.todos : snapshot.tasks).length;
 
 	return (
