@@ -289,6 +289,12 @@ lines (pick one, or none), or `- [a] ...` lines for all that apply.
   - (b) Migrate each session on its next request
 ```
 
+Show what a question is about whenever it is something to see: a screenshot,
+or a short recording when it moves or takes steps. Save it outside the
+worktree, `arbor attach` it, and name the path it prints. Only attached files
+show on the `arbor dev` page, and they go when the task does, so never point
+a question at a file anywhere else.
+
 ## Keeping Blocked current
 
 `## Blocked` is where every question the user sees comes from, so it must say
@@ -303,7 +309,8 @@ replies, after `arbor claim` returns, and between steps), bring it up to date:
 - check off any question that no longer applies, with why after `→`
   (`→ moot: the header was removed`), rather than deleting it;
 - retake each screenshot an open question shows once your work has changed
-  what it shows, and point the question at the new one;
+  what it shows, attach it in place of the old one (`arbor attach new.png
+  --remove <old path>`), and point the question at the new one;
 - add each question you now need.
 
 The user answers in chat, usually as a list matching your latest report:
@@ -327,8 +334,8 @@ you cannot go on without the user (access, a decision, a test only they can
 run).
 
 1. Leave something to look at, by **absolute path** (start from
-   `arbor path <task>`): a screenshot for anything visual. Ask first if
-   producing it is expensive.
+   `arbor path <task>`): for anything visual, a screenshot or recording you
+   `arbor attach`. Ask first if producing it is expensive.
 2. Write each question not already there under `## Blocked`.
 3. `arbor escalate <reason>`.
 4. Report, end your turn, and wait for the user to answer in chat. Do not run
