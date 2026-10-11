@@ -413,6 +413,12 @@ the colon, with no ending punctuation. Anything else worth saying goes
 between the sentence and the proposed todos or questions, which end the
 report.
 
+When the user has answered questions since your last report, say right
+after that sentence what became of each answer, a `- ` line each in the
+order asked: what you did with it, or why you did not. Skip one only when
+the sentence already says it. Above all before a review, which otherwise
+reads as if the answers went unheard.
+
 ```markdown
 ## ✅ Merged <task> onto <base>
 
@@ -470,6 +476,9 @@ it all.
 ## 🔍 Ready to merge <task> onto <base>
 
 One sentence on what changed.
+
+- A todo dropped between two others lands between them, as you picked.
+- A drag on a phone starts on press and hold, so the board still scrolls.
 
 Open http://localhost:4310 (a demo repo, nothing of yours):
 
