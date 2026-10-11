@@ -47,10 +47,14 @@ stderr says.
    so the task stays one coherent change. Ask about each call the request
    does not settle as you make it, and keep going (see Asking as you go),
    bringing `## Blocked` up to date before each step.
-5. **Land.** Groom again, release each todo you only partly did (see Todos),
-   squash to one commit (see Committing), and `arbor merge`. On failure, do
-   what stderr says and merge again. A successful merge deletes your
-   worktree: `cd` to the main tree it prints before running anything else.
+5. **Land.** Once every step under `## Next` and every question under
+   `## Blocked` is checked, the task is ready to merge: `arbor todo add`
+   any step you will not do, then check it off. Groom again, release each
+   todo you only partly did (see Todos), squash to one commit (see
+   Committing), and `arbor merge`, or ask for a review first (see Merge or
+   review). On failure, do what stderr says and merge again. A successful
+   merge deletes your worktree: `cd` to the main tree it prints before
+   running anything else.
 
 **Clean up every task you start.** A task ends in a merge or a remove, never
 left behind; one escalated and waiting on the user is not done, so leave it
@@ -310,29 +314,50 @@ without naming it, write that answer after `→` and check it off, so it is not
 asked again. Check an item off only when its answer is one you can act on;
 anything else stays open and leads your next report. A reply about something
 you did is an instruction. When the user defers or skips a question, check it
-off and carry on without it (for a defer, `arbor todo add` it first). An
-approval answers a review: check it off and merge. Only the user answers
-questions, yours or another agent's.
+off and carry on without it (for a defer, `arbor todo add` it first). Only
+the user answers questions, yours or another agent's.
+
+When the user asks to see the work before it lands, write `Review:
+requested` under `## Notes` at once, so the request outlives your session.
 
 ## Escalation
 
-Merge only work you verified yourself. Escalate when verification needs the
-user (external services, destructive migrations, visual changes), when the
-user asked to see the work first, when questions are still open once
-everything else is done, or, absent instructions, when the change is complex
-enough that correctness needs a reader rather than a test.
+Escalate when questions are still open once everything else is done, or when
+you cannot go on without the user (access, a decision, a test only they can
+run).
 
 1. Leave something to look at, by **absolute path** (start from
    `arbor path <task>`): a screenshot for anything visual. Ask first if
    producing it is expensive.
 2. Write each question not already there under `## Blocked`.
-3. `arbor escalate <reason>`, or, when the only thing left is the user's
-   approval, `arbor escalate --review "<what to look at>"`, which asks
-   `Ready to merge?` for you.
+3. `arbor escalate <reason>`.
 4. Report, end your turn, and wait for the user to answer in chat. Do not run
    `arbor wait` or poll `ARBOR.md`: answers only come in chat. Then
    `arbor claim <task>` to carry on. `arbor retry`, for `budget_exhausted`, is
    the user's to run, before you claim.
+
+Never ask whether the work is ready to merge among other questions, or as a
+question at all: once they are answered and the work is done, merge or ask
+for a review (see Merge or review).
+
+## Merge or review
+
+A task ready to merge has every step under `## Next` and every question under
+`## Blocked` checked; `arbor merge` and `arbor escalate --review` both refuse
+one that is not. Whether the user looks first is yours to decide:
+
+- **Merge** work you verified yourself. This is the default, and the usual
+  end of a small change.
+- **Ask for a review** when verification needs the user (external services,
+  destructive migrations, visual changes), when `## Notes` says `Review:
+  requested`, or, absent instructions, when the change is complex enough
+  that correctness needs a reader rather than a test. Leave something to
+  look at (step 1 of Escalation), `arbor escalate --review "<what to look
+  at>"`, report it (see Reporting), and end your turn.
+
+When the user approves, `arbor claim <task>` and merge. When they ask for
+changes, `arbor claim <task>`, add each as a step under `## Next`, and work
+through them as before.
 
 ## Reporting
 
@@ -376,7 +401,7 @@ A merge or remove report ends with the proposed todos, the best one first;
 leave them out only when no todo is open.
 
 ```markdown
-## ⚠️ Escalated <task>: waiting on your review of the todo board
+## ⚠️ Escalated <task>: needs two calls on the todo board
 
 One sentence on what changed.
 
@@ -386,8 +411,6 @@ One sentence on what changed.
 2. How should a stale todo be shown?
    - (a) A muted card
    - (b) A "stale" badge
-3. Ready to merge?
-   Drag a todo at http://localhost:4269
 ```
 
 An escalation ends with every open question, those left open from earlier
@@ -398,8 +421,23 @@ answer it: its subject, and under it the body cut to a line or two, the
 choices exactly as in `ARBOR.md` (so a reply of `2. b` names one), and each
 screenshot or file by absolute path. Inline a screenshot as
 `![what](/abs/path.png)` when your harness shows images in chat; otherwise
-link it as `[what](/abs/path.png)`. A review's lines say what to look at and
-where. Leave an item bare when its subject says it all.
+link it as `[what](/abs/path.png)`. Leave an item bare when its subject says
+it all.
+
+```markdown
+## 🔍 Ready to merge <task> onto <base>
+
+One sentence on what changed.
+
+Drag a todo at http://localhost:4269 and check it lands where you drop it.
+![the board after a drag](/abs/path/board.png)
+
+Reply "merge", or say what to change.
+```
+
+A review asks no numbered question: it says what to look at and where, each
+screenshot or file by absolute path, then ends with that last line exactly,
+so every review reads the same.
 
 Number questions the same way wherever you ask them: a mid-task reply, a
 merge report, or a message outside any task. The user answers by number, so
