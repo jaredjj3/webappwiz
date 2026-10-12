@@ -655,8 +655,14 @@ describe("wiz scry", () => {
 	it("stops on the first ctrl-c, reports what came back, and quits on the next", async () => {
 		await install("why-not-what", asking);
 		await fs.write(`${root}/a.ts`, "// add one\nconst a = 1;\n");
-		judge = { judge: () => new Promise(() => undefined), count: async () => 0 };
-		setTimeout(() => proc.dispatch("SIGINT"), 200);
+		judge = {
+			judge: () => {
+				// once asked, so the check is listening, however long it took to start
+				setTimeout(() => proc.dispatch("SIGINT"));
+				return new Promise(() => undefined);
+			},
+			count: async () => 0,
+		};
 
 		await run();
 

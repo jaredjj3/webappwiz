@@ -21,7 +21,7 @@ describe("test", () => {
 		await test({ ...{ package: "", workers: 4 }, fs, ps });
 
 		expect(ps.getCalls()).toEqual([
-			"bun test --pass-with-no-tests --parallel=4",
+			"bun test --pass-with-no-tests --parallel=4 --timeout 30000",
 		]);
 		expect(ps.getCallDirs()).toEqual(["/tree"]);
 	});
@@ -31,7 +31,7 @@ describe("test", () => {
 
 		const half = Math.max(1, Math.floor(availableParallelism() / 2));
 		expect(ps.getCalls()).toEqual([
-			`bun test --pass-with-no-tests --parallel=${half}`,
+			`bun test --pass-with-no-tests --parallel=${half} --timeout 30000`,
 		]);
 	});
 
@@ -39,7 +39,7 @@ describe("test", () => {
 		await test({ ...{ package: "log", workers: 4 }, fs, ps });
 
 		expect(ps.getCalls()).toEqual([
-			"bun test --pass-with-no-tests --parallel=4 packages/log/",
+			"bun test --pass-with-no-tests --parallel=4 --timeout 30000 packages/log/",
 		]);
 	});
 

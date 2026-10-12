@@ -35,10 +35,20 @@ export async function test(opts: TestOptions): Promise<void> {
 	// each starves their git-spawning suites past the 5s timeout. Three
 	// overlapping runs on 16 cores failed 20 to 30 tests each at 16 workers and
 	// 0 to 2 at 8, finishing sooner too; one run alone is about 1.5s slower.
+	// Even so, those suites run many times slower under load than alone, so
+	// each test gets 30s rather than 5s.
 	const workers =
 		opts.workers ?? Math.max(1, Math.floor(availableParallelism() / 2));
 	const { exitCode } = await ps.spawn(
-		["bun", "test", "--pass-with-no-tests", `--parallel=${workers}`, ...filter],
+		[
+			"bun",
+			"test",
+			"--pass-with-no-tests",
+			`--parallel=${workers}`,
+			"--timeout",
+			"30000",
+			...filter,
+		],
 		{ cwd: root },
 	);
 	if (exitCode !== 0) {
