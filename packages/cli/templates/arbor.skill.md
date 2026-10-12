@@ -282,6 +282,20 @@ Add the part yourself, then tell the subagent:
   `## Blocked`, which would stop `arbor merge`;
 - to squash and `arbor merge` the part when done, landing it on your branch.
 
+When the user asks for the part to go to another agent, such as one of
+another model family, run by `arbor dev`, hand it over as you add it:
+`arbor add <part> --base task/<your task> --agent <id> --prompt '<what to
+do, and the rules above>'`, with `--model <m>`. Read `arbor agents` first:
+it lists each agent you can name and its models, with what each is good at
+and what it costs. Take the agent and model the user names, else the
+assignee `arbor todo show` gives for the part's todo, else the model whose
+strengths fit the part at the lowest cost it is worth, a cheap one for a
+mechanical part, and ask about that choice under `## Blocked`.
+`arbor dev` starts that agent in the part's tree, told to claim it and then
+your prompt. Its replies never reach you, so have the prompt ask it to list
+its calls in the part's commit message, `arbor wait <part>` for it to land,
+and read them in `git log`.
+
 Write each call it lists under your own `## Blocked`, and redo the part when
 an answer overturns one. A subagent that only reads needs no part. When the
 user asks for the subagents' work to land on its own, give each one a task of
