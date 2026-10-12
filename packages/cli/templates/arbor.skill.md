@@ -369,7 +369,8 @@ replies, after `arbor claim` returns, and between steps), bring it up to date:
 
 The user answers in chat, usually as a list matching your latest report:
 `2.` is its second question, whatever its number in `ARBOR.md`, and items
-left out stay open. When a reply does not fit your latest report, ask rather
+left out stay open. A reply that opens with "Answers to `## Blocked`", sent
+from the `arbor dev` page, goes by the numbers in `ARBOR.md` instead. When a reply does not fit your latest report, ask rather
 than guess. Whenever anything the user says settles an open question, even
 without naming it, write that answer after `→` and check it off, so it is not
 asked again. Check an item off only when its answer is one you can act on;
