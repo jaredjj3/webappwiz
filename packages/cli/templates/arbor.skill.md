@@ -323,7 +323,9 @@ lines indented under it, code blocks included. Ask for what is wrong rather
 than a bare yes or no. When the answer is one of a few, end with `- (a) ...`
 lines (pick one, or none), or `- [a] ...` lines for all that apply. Describe
 every choice, the one you went with too, and mark that one `(chosen)`: never
-a bare "That".
+a bare "That". When the answer is an order (what lands first, which todo
+matters most), end with `- a. ...` lines in the order you would go with: the
+reply lists every letter in the order picked, `4. b, a, c`.
 
 ```markdown
 ## Blocked
@@ -335,6 +337,10 @@ a bare "That".
   Sessions are keyed by the old cookie.
   - (a) Sign everyone out once
   - (b) Migrate each session on its next request (chosen)
+- [ ] 4. In what order should the settings pages land?
+  - a. Profile
+  - b. Billing
+  - c. Notifications
 ```
 
 Show what a question is about whenever it is something to see: a screenshot,
