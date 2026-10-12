@@ -1,7 +1,7 @@
+import { skill as arbor } from "@webappwiz/arbor/skill";
 import type { Logger } from "webappwiz/log";
 import type { Fs } from "webappwiz/system";
 import type { Bundle, Layout } from "../documents";
-import arbor from "../templates/arbor.skill.md" with { type: "text" };
 import scry from "../templates/scry.skill.md" with { type: "text" };
 import webappwiz from "../templates/webappwiz.skill.md" with { type: "text" };
 
@@ -14,7 +14,8 @@ export const bundled: Skills = {
 	// inside the build: what publishes is the compiled JavaScript, and a
 	// document sitting beside the source would not be part of it. Naming each
 	// one also means adding a skill is a line here rather than a file that a
-	// directory listing may or may not happen to pick up.
+	// directory listing may or may not happen to pick up. arbor's is arbor's
+	// own, which installs it with `arbor init` too.
 	arbor: { "SKILL.md": arbor },
 	scry: { "SKILL.md": scry },
 	webappwiz: { "SKILL.md": webappwiz },

@@ -1,1 +1,1 @@
-../../../packages/cli/templates/arbor.skill.md
+../../../packages/arbor/arbor.skill.md

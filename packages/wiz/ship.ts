@@ -7,12 +7,13 @@ import { fix } from "./fix";
 /**
  * Every agent skill this workspace ships, listed rather than discovered so
  * that adding one is a line here. Each is the document `@webappwiz/cli`
- * bundles; this repo's own `.agents/skills` copies are symlinks to them, so
+ * bundles (arbor's from `@webappwiz/arbor`, which installs it too); this
+ * repo's own `.agents/skills` copies are symlinks to them, so
  * stamping the template is what keeps `skills list` from calling them stale the
  * moment a release lands.
  */
 const SKILLS = [
-	"packages/cli/templates/arbor.skill.md",
+	"packages/arbor/arbor.skill.md",
 	"packages/cli/templates/scry.skill.md",
 	"packages/cli/templates/webappwiz.skill.md",
 ];
