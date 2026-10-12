@@ -23,7 +23,9 @@ stderr says.
    `arbor add <task>` before reading any code, and investigate in its
    worktree: the main tree changes under you as other tasks land, a worktree
    does not. A question that only needs an answer stays in the main tree.
-   `arbor claim <task>` resumes a task instead. When the request is a todo,
+   `arbor claim <task>` resumes a task instead, as `[ARBOR TASK <task>]`
+   from the `arbor dev` page asks: claim it, read its `ARBOR.md`, and carry
+   on from where it stands. When the request is a todo,
    such as `[ARBOR TODO #N]` copied from the `arbor dev` page, `arbor todo
    show N` prints what is asked; if it names another task that took it, tell
    the user rather than start on it. Otherwise take it now, so no other agent
@@ -291,8 +293,8 @@ and what it costs. Take the agent and model the user names, else the
 assignee `arbor todo show` gives for the part's todo, else the model whose
 strengths fit the part at the lowest cost it is worth, a cheap one for a
 mechanical part, and ask about that choice under `## Blocked`.
-`arbor dev` starts that agent in the part's tree, told to claim it and then
-your prompt. Its replies never reach you, so have the prompt ask it to list
+`arbor dev` starts that agent in the part's tree, sent `[ARBOR TASK
+<part>]` and then your prompt. Its replies never reach you, so have the prompt ask it to list
 its calls in the part's commit message, `arbor wait <part>` for it to land,
 and read them in `git log`.
 
