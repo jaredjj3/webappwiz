@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import { availableParallelism } from "node:os";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 
 import { test } from "./test";
@@ -17,17 +18,28 @@ describe("test", () => {
 	});
 
 	it("runs bun test once, from the workspace root", async () => {
-		await test({ ...{ package: "" }, fs, ps });
+		await test({ ...{ package: "", workers: 4 }, fs, ps });
 
-		expect(ps.getCalls()).toEqual(["bun test --pass-with-no-tests --parallel"]);
+		expect(ps.getCalls()).toEqual([
+			"bun test --pass-with-no-tests --parallel=4",
+		]);
 		expect(ps.getCallDirs()).toEqual(["/tree"]);
 	});
 
+	it("runs half the cores' worth of test files at once by default", async () => {
+		await test({ ...{ package: "" }, fs, ps });
+
+		const half = Math.max(1, Math.floor(availableParallelism() / 2));
+		expect(ps.getCalls()).toEqual([
+			`bun test --pass-with-no-tests --parallel=${half}`,
+		]);
+	});
+
 	it("filters to the named package", async () => {
-		await test({ ...{ package: "log" }, fs, ps });
+		await test({ ...{ package: "log", workers: 4 }, fs, ps });
 
 		expect(ps.getCalls()).toEqual([
-			"bun test --pass-with-no-tests --parallel packages/log/",
+			"bun test --pass-with-no-tests --parallel=4 packages/log/",
 		]);
 	});
 

@@ -22,7 +22,11 @@ describe("timer", () => {
 		const interval = new SystemTimer().setInterval(() => {
 			ticks += 1;
 		}, Duration.ms(1));
-		await sleep(Duration.ms(20));
+		// until it has ticked twice, not a fixed 20ms: a loaded machine can
+		// starve the event loop past that before the first tick
+		for (let i = 0; i < 1000 && ticks < 2; i++) {
+			await sleep(Duration.ms(5));
+		}
 		interval.dispose();
 		const settled = ticks;
 		await sleep(Duration.ms(10));

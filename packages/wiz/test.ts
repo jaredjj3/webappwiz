@@ -1,9 +1,12 @@
+import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 
 export interface TestOptions {
 	/** One package to test, by name; empty runs the whole workspace. */
 	package: string;
+	/** Test files run at once; half the cores when left out. */
+	workers?: number;
 	fs?: Fs;
 	ps?: Ps;
 }
@@ -27,9 +30,15 @@ export async function test(opts: TestOptions): Promise<void> {
 	}
 
 	// a worker per file; suites opt into within-file concurrency themselves,
-	// since most still share a fixture built in beforeEach
+	// since most still share a fixture built in beforeEach. Half the cores, not
+	// bun's one per core: several agents test at once, and a worker per core
+	// each starves their git-spawning suites past the 5s timeout. Three
+	// overlapping runs on 16 cores failed 20 to 30 tests each at 16 workers and
+	// 0 to 2 at 8, finishing sooner too; one run alone is about 1.5s slower.
+	const workers =
+		opts.workers ?? Math.max(1, Math.floor(availableParallelism() / 2));
 	const { exitCode } = await ps.spawn(
-		["bun", "test", "--pass-with-no-tests", "--parallel", ...filter],
+		["bun", "test", "--pass-with-no-tests", `--parallel=${workers}`, ...filter],
 		{ cwd: root },
 	);
 	if (exitCode !== 0) {
