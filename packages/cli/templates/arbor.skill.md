@@ -351,6 +351,20 @@ worktree, `arbor attach` it, and name the path it prints. Only attached files
 show on the `arbor dev` page, and they go when the task does, so never point
 a question at a file anywhere else.
 
+Put each screenshot in the question it is for, under what it shows: under the
+question's line for what it asks about, or indented under a choice for what
+that choice looks like, which the `arbor dev` page shows with the choice.
+Never gather them above the questions, or ask about them apart from the
+question they are for.
+
+```markdown
+- [ ] 5. Which style should the action list take?
+  - (a) A rail beside the thread (chosen)
+    ![rail](/abs/path/rail.png)
+  - (b) A bordered panel
+    ![panel](/abs/path/panel.png)
+```
+
 ## Keeping Blocked current
 
 `## Blocked` is where every question the user sees comes from, so it must say
@@ -489,7 +503,9 @@ One sentence on what changed.
    ![dragging a card](/abs/path/drag.png)
 2. How should a stale todo be shown?
    - (a) A muted card
+     ![muted card](/abs/path/muted.png)
    - (b) A "stale" badge
+     ![stale badge](/abs/path/badge.png)
 ```
 
 An escalation ends with every open question, those left open from earlier
@@ -498,7 +514,8 @@ reports first, as a list numbered from 1 whatever their numbers in
 user answers from the report, so each item carries everything needed to
 answer it: its subject, and under it the body cut to a line or two, the
 choices exactly as in `ARBOR.md` (so a reply of `2. b` names one), and each
-screenshot or file by absolute path. Inline a screenshot as
+screenshot or file by absolute path, under the question or choice it shows as
+in `ARBOR.md`. Inline a screenshot as
 `![what](/abs/path.png)` when your harness shows images in chat; otherwise
 link it as `[what](/abs/path.png)`. Leave an item bare when its subject says
 it all.
