@@ -5,6 +5,7 @@ import { disposables, type Resource } from "webappwiz/disposable";
 import type { ProcessLike } from "../process-like/process-like";
 import type {
 	Child,
+	ProcessEntry,
 	Ps,
 	SpawnCaptureResult,
 	SpawnOptions,
@@ -97,6 +98,7 @@ export class NodePs implements Ps {
 		child.stdin.on("error", () => {});
 		const exited = exitCode(child);
 		return {
+			pid: child.pid ?? null,
 			stdin: Writable.toWeb(child.stdin),
 			stdout: web(child.stdout),
 			stderr: web(child.stderr),
@@ -152,6 +154,8 @@ export class NodePs implements Ps {
 		const running = (): boolean =>
 			child.exitCode === null && child.signalCode === null;
 		return {
+			// The wrapper execs the program, so its pid is the program's.
+			pid: child.pid,
 			output,
 			write: (data) => {
 				if (!terminal.closed) {
@@ -178,6 +182,30 @@ export class NodePs implements Ps {
 				end();
 			},
 		};
+	}
+
+	async processes(): Promise<ProcessEntry[]> {
+		if (this.platform === "win32") {
+			return [];
+		}
+		const { stdout } = await this.spawnCapture(
+			["ps", "-A", "-o", "pid=,ppid=,pgid=,tpgid=,command="],
+			{ stdin: "" },
+		);
+		return stdout.split("\n").flatMap((line) => {
+			const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(-?\d+)\s+(.*)$/.exec(line);
+			return match === null
+				? []
+				: [
+						{
+							pid: Number(match[1]),
+							ppid: Number(match[2]),
+							pgid: Number(match[3]),
+							tpgid: Number(match[4]),
+							command: match[5] ?? "",
+						},
+					];
+		});
 	}
 
 	/**

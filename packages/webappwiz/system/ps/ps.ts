@@ -35,6 +35,11 @@ export interface Ps {
 	 * job in front. POSIX on Bun only, since `Bun.Terminal` is.
 	 */
 	startOnTerminal(argv: string[], opts: TerminalOptions): TerminalChild;
+	/**
+	 * Every process on this host, as `ps` lists them; none on Windows. For
+	 * what runs under a child: its descendants, and its terminal's job.
+	 */
+	processes(): Promise<ProcessEntry[]>;
 	/** The working directory, as `cd` last left it. */
 	cwd(): string;
 	env(name: string): string | undefined;
@@ -94,8 +99,26 @@ export interface TerminalOptions extends StartOptions {
 	rows: number;
 }
 
+/** A process `processes` lists. */
+export interface ProcessEntry {
+	pid: number;
+	/** Its parent's pid. */
+	ppid: number;
+	/** Its process group. */
+	pgid: number;
+	/**
+	 * The process group in front on its controlling terminal, the job that
+	 * keys reach; 0 or less for one without a terminal.
+	 */
+	tpgid: number;
+	/** What it runs, its arguments joined by spaces. */
+	command: string;
+}
+
 /** A child still running, its stdio open: bytes in, bytes out. */
 export interface Child {
+	/** Its pid; null for one that never started. */
+	pid: number | null;
 	stdin: WritableStream<Uint8Array>;
 	stdout: ReadableStream<Uint8Array>;
 	stderr: ReadableStream<Uint8Array>;
@@ -107,6 +130,8 @@ export interface Child {
 
 /** A child on a terminal: what it writes, and keys typed at it. */
 export interface TerminalChild {
+	/** The pid of the program it runs. */
+	pid: number;
 	/** What the child writes to its terminal; ends once the terminal closes. */
 	output: ReadableStream<Uint8Array>;
 	/** Types `data` at the child, keys and pastes alike. */

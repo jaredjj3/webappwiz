@@ -1,6 +1,7 @@
 import { disposables, type Resource } from "webappwiz/disposable";
 import { FakeChild, FakeTerminalChild } from "./fake-child";
 import type {
+	ProcessEntry,
 	Ps,
 	SpawnCaptureResult,
 	SpawnOptions,
@@ -28,6 +29,9 @@ export class FakePs implements Ps {
 	private simulation = () => Promise.resolve(0);
 	private children: FakeChild[] = [];
 	private terminals: FakeTerminalChild[] = [];
+	private table: ProcessEntry[] = [];
+	/** The pid the next child started gets. */
+	private nextPid = 5000;
 
 	alive(pid: number): boolean {
 		return !this.dead.has(pid);
@@ -61,7 +65,7 @@ export class FakePs implements Ps {
 	/** A child for the test to play, found again in `getChildren()`. */
 	start(argv: string[], opts?: StartOptions): FakeChild {
 		this.record(argv, opts);
-		const child = new FakeChild();
+		const child = new FakeChild(this.nextPid++);
 		this.children.push(child);
 		return child;
 	}
@@ -69,9 +73,18 @@ export class FakePs implements Ps {
 	/** A terminal child for the test to play, found in `getTerminals()`. */
 	startOnTerminal(argv: string[], opts: TerminalOptions): FakeTerminalChild {
 		this.record(argv, opts);
-		const child = new FakeTerminalChild(opts.cols, opts.rows);
+		const child = new FakeTerminalChild(opts.cols, opts.rows, this.nextPid++);
 		this.terminals.push(child);
 		return child;
+	}
+
+	async processes(): Promise<ProcessEntry[]> {
+		return this.table;
+	}
+
+	/** What `processes` lists from now on. */
+	setProcesses(table: ProcessEntry[]): void {
+		this.table = table;
 	}
 
 	cwd(): string {

@@ -19,7 +19,7 @@ export class FakeChild implements Child {
 	private settle: (code: number) => void = () => {};
 	private done = false;
 
-	constructor() {
+	constructor(readonly pid: number | null = null) {
 		const pipe = new TransformStream<Uint8Array, Uint8Array>();
 		this.stdin = pipe.writable;
 		this.received = pipe.readable;
@@ -79,7 +79,11 @@ export class FakeTerminalChild implements TerminalChild {
 	private settle: (code: number) => void = () => {};
 	private done = false;
 
-	constructor(cols: number, rows: number) {
+	constructor(
+		cols: number,
+		rows: number,
+		readonly pid = 0,
+	) {
 		this.size = { cols, rows };
 		this.output = this.out.stream;
 		this.exited = new Promise((resolve) => {

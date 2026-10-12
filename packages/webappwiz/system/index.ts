@@ -39,6 +39,7 @@ export { NodePs, type NodePsOptions } from "./ps/node-ps";
 export type {
 	Child,
 	OutputWatcher,
+	ProcessEntry,
 	Ps,
 	SpawnCaptureResult,
 	SpawnOptions,

@@ -203,6 +203,52 @@ describe("NodePs", () => {
 			child.write("ignored\n");
 		},
 	);
+
+	it.skipIf(process.platform === "win32")(
+		"lists a started child under this process",
+		async () => {
+			const ps = new NodePs();
+			const child = ps.start(["sleep", "30"]);
+
+			const listed = (await ps.processes()).find(
+				(each) => each.pid === child.pid,
+			);
+
+			expect(listed).toMatchObject({ ppid: process.pid, command: "sleep 30" });
+			child.kill();
+			await child.exited;
+		},
+	);
+
+	it.skipIf(process.platform === "win32")(
+		"lists the job in front on a terminal",
+		async () => {
+			const ps = new NodePs();
+			const child = ps.startOnTerminal(["/bin/sh"], { cols: 80, rows: 24 });
+			void (async () => {
+				for await (const _ of child.output) {
+				}
+			})();
+			const shell = async () =>
+				(await ps.processes()).find((each) => each.pid === child.pid);
+			for (let i = 0; i < 300 && (await shell()) === undefined; i++) {
+				await Bun.sleep(10);
+			}
+			expect((await shell())?.tpgid).toBe((await shell())?.pgid);
+
+			child.write("sleep 30\n");
+			let front = await shell();
+			for (let i = 0; i < 300 && front?.tpgid === front?.pgid; i++) {
+				await Bun.sleep(10);
+				front = await shell();
+			}
+
+			expect(front?.tpgid).not.toBe(front?.pgid);
+			child.kill("SIGHUP");
+			await child.exited;
+			child.close();
+		},
+	);
 });
 
 /** Holds the event loop for `ms`, longer than a reap poll, so the poll takes the exit before the runtime does. */
