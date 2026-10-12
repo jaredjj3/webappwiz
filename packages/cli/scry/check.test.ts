@@ -1,5 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+} from "bun:test";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Judge } from "@webappwiz/scry";
@@ -88,22 +96,35 @@ describe("wiz scry", () => {
 		}
 	`;
 
-	beforeEach(async () => {
-		root = await mkdtemp(join(tmpdir(), "rules-check-"));
+	/**
+	 * Holds the repo every test starts from, made once and copied for each
+	 * test: its six git spawns were most of what a test spent.
+	 */
+	let base: string;
+	/** Points the sandbox at `dir`, a git repo that holds the user's config and state too. */
+	const enter = (dir: string) => {
+		root = dir;
 		proc = new FakeProcess();
-		// HOME points into the sandbox so no real user config is read
-		proc.env = { PATH: process.env.PATH, HOME: root };
+		// config and state in the sandbox so no real user config is read. HOME
+		// stays the same for every test, since the `git` shim on macOS spends
+		// some 80ms on its first call under each HOME it has not seen; the repo
+		// does not, since a config at a path already imported is not read again
+		proc.env = {
+			PATH: process.env.PATH,
+			HOME: `${base}/home`,
+			XDG_CONFIG_HOME: `${root}/.config`,
+			XDG_STATE_HOME: `${root}/.local/state`,
+		};
 		ps = new NodePs({ proc });
 		proc.chdir(root);
-		log = new MemoryLogger();
-		screen = undefined;
-		timer = new FakeTimer();
-		// noon on Wednesday 2026-10-14, local time
-		clock = new FakeWallClock(new Date(2026, 9, 14, 12).getTime());
+	};
+
+	beforeAll(async () => {
+		base = await mkdtemp(join(tmpdir(), "rules-check-"));
+		await fs.mkdir(`${base}/home`);
+		enter(`${base}/seed`);
+		await fs.mkdir(root);
 		await budget('"unlimited"');
-		drawn = [];
-		judge = new FakeJudge(0.9);
-		asked = [];
 		await git("init", "-q", "-b", "main");
 		await git("config", "user.email", "t@example.com");
 		await git("config", "user.name", "T");
@@ -111,6 +132,23 @@ describe("wiz scry", () => {
 		await git("add", "a.ts");
 		await install("no-foo", flagging("foo"));
 		await fs.write(`${root}/a.ts`, "const foo = 1;\n");
+	});
+
+	afterAll(async () => {
+		await rm(base, { recursive: true, force: true });
+	});
+
+	beforeEach(async () => {
+		enter(await mkdtemp(`${base}/repo-`));
+		await cp(`${base}/seed`, root, { recursive: true });
+		log = new MemoryLogger();
+		screen = undefined;
+		timer = new FakeTimer();
+		// noon on Wednesday 2026-10-14, local time
+		clock = new FakeWallClock(new Date(2026, 9, 14, 12).getTime());
+		drawn = [];
+		judge = new FakeJudge(0.9);
+		asked = [];
 	});
 
 	afterEach(async () => {
