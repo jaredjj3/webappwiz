@@ -420,6 +420,8 @@ When the user has to see a change to judge it, make that cheap: run it for
 them where they can open it (a dev server on throwaway data that shows each
 case, never their own), and list what to do and what they should see, a line
 each. A screenshot or short recording of each case beats a description of it.
+Run arbor in a throwaway repository with `ARBOR_HOME` set to a throwaway
+directory, so it stays out of the user's `arbor dev` project list.
 
 When the user approves, `arbor claim <task>` and merge. When that merge
 stops on a conflict, name each file you resolved in the merge report, since
