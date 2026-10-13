@@ -1,7 +1,5 @@
 # webappwiz
 
-🌲 [arbor](packages/arbor/README.md): a harness for running many coding agents on one repository at once.
-
 To install dependencies:
 
 ```bash
@@ -36,3 +34,9 @@ WEBAPPWIZ_ROOT="$(arbor path)" arbor merge
 `WEBAPPWIZ_ROOT` pins one checkout instead. Use it for a command that must not
 run the tree it is about to rewrite, and when the pin holds no such command it
 fails rather than quietly falling back.
+
+## Looking for arbor? 🌲
+
+arbor runs many coding agents on one repository at once, each in its own
+worktree. It lives in [`packages/arbor`](packages/arbor/README.md), and its
+README shows it at work.
