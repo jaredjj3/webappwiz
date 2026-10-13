@@ -1,6 +1,6 @@
 # webappwiz
 
-🌳 [arbor](packages/arbor/README.md): a harness for running many coding agents on one repository at once.
+🌲 [arbor](packages/arbor/README.md): a harness for running many coding agents on one repository at once.
 
 To install dependencies:
 
