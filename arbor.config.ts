@@ -43,6 +43,13 @@ export default defineConfig({
 				"packages/arbor/dev/app-lanes.test.tsx",
 			],
 		},
+		annotation: {
+			globs: [
+				"packages/arbor/dev/annotation.ts",
+				"packages/arbor/dev/annotation.test.ts",
+				"packages/arbor/dev/annotate.tsx",
+			],
+		},
 		scry: {
 			globs: ["packages/scry/**"],
 		},
