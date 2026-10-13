@@ -11,7 +11,7 @@ export default defineConfig({
 				"packages/arbor/conversations*.ts",
 				"packages/arbor/dev/conversation*.ts*",
 				"packages/arbor/dev/work*.ts*",
-				"packages/arbor/dev/app-conversations.test.tsx",
+				"packages/arbor/dev/app-conversation*.test.tsx",
 			],
 		},
 		composer: {
