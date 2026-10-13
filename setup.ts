@@ -29,3 +29,19 @@ for (const [name, descriptor] of runtime) {
 		Object.defineProperty(globalThis, name, descriptor);
 	}
 }
+
+// A failed matcher prints what it received, and Bun prints a happy-dom node by
+// walking every field it holds: its parent, its document, the whole tree. On a
+// page-sized tree that takes seconds and gigabytes, and can end in the matcher
+// not throwing at all, so `expect(dialog).toBeNull()` passed on an open dialog.
+// Print a node as its markup instead.
+const limit = 300;
+Object.defineProperty(Node.prototype, Bun.inspect.custom, {
+	value(this: Node) {
+		const text =
+			this instanceof Element
+				? this.outerHTML
+				: `${this.nodeName} ${JSON.stringify(this.textContent)}`;
+		return text.length > limit ? `${text.slice(0, limit)}…` : text;
+	},
+});
