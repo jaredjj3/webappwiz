@@ -4,7 +4,6 @@ export default defineConfig({
 	postCheckout: "bun install",
 	postRewrite: "bun install",
 	preMerge: "./bin/wiz dev test",
-	postMerge: "bun install",
 	systems: {
 		conversations: {
 			aliases: ["conversation view"],
