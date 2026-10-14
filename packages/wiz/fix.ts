@@ -8,7 +8,11 @@ export interface FixOptions {
 	ps?: Ps;
 }
 
-/** Runs biome and the type checker, in that order. */
+/**
+ * Runs biome, the type checker, then scry on what changed since main, in
+ * that order. Scry leaves off each model its budget no longer covers, so a
+ * spent budget narrows the check rather than fail it.
+ */
 export async function fix(opts: FixOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const ps = opts.ps ?? new NodePs();
@@ -29,4 +33,14 @@ export async function fix(opts: FixOptions): Promise<void> {
 	// One root tsconfig covers every workspace, so a single tsc run is enough here.
 	const typecheck = await ps.spawn(["bunx", "tsc", "--noEmit"]);
 	step("typecheck", typecheck.exitCode === 0, "Typechecking failed");
+
+	const scry = await ps.spawn([
+		"bin/wiz",
+		"scry",
+		"check",
+		"--since",
+		"main",
+		"--disable-over-budget",
+	]);
+	step("scry", scry.exitCode === 0, "Scry check failed");
 }

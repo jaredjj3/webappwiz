@@ -89,6 +89,37 @@ export class ProjectBudgets {
 		);
 	}
 
+	/**
+	 * Why each role cannot do its part of a run that would `use` this much:
+	 * no budget declared, nothing to spend, nothing left of a window, or less
+	 * than the run would use. A role that can is left out.
+	 */
+	shortfalls(use: Use): Partial<Record<Role, string>> {
+		const budgets = this.budgets;
+		if (this.override) {
+			return {};
+		}
+		if (budgets === undefined) {
+			return Object.fromEntries(
+				ROLES.map((role) => [role, "no budget declared"]),
+			);
+		}
+		const short = this.standing.filter(
+			(each) => each.left === 0 || use(each.role) > each.left,
+		);
+		return Object.fromEntries(
+			ROLES.flatMap((role) => {
+				const limit = short.find((each) => each.role === role);
+				if (budgets.spendsNothing(role)) {
+					return [[role, `scry.budgets spends nothing on the ${role}`]];
+				}
+				return limit === undefined
+					? []
+					: [[role, `over the ${role} budget for ${limit.window}`]];
+			}),
+		);
+	}
+
 	/** Why a run that would `use` this much does not start; none when it fits. */
 	overrun(use: Use, run: string): string | undefined {
 		const over = this.standing.some((each) => use(each.role) > each.left);

@@ -203,6 +203,13 @@ needs a model that is off
 ✔ no problems in 95 files, by code alone
 ```
 
+`--disable-over-budget` turns off, the same way, each model the budgets no
+longer cover rather than refuse the run: one with no budget declared, one
+budgeted `"nothing"`, and one with nothing left of a window or less than
+the check would use. The reason says which, like `over the som budget for
+today`. A script that runs scry on every change, like a fix command, passes
+it so a spent budget narrows the check rather than fail it.
+
 While it runs on a terminal, one line on stderr counts the files done and
 the questions asked, answered and found in the cache, and is erased before
 the report. It draws nothing in a pipe, under CI, or with `--format json`.

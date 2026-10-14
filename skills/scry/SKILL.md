@@ -108,6 +108,11 @@ it twice to turn both off. Add `=<reason>` to say why, as in
   for a free pass, such as when a run would go over a budget or no budget
   is declared, and the user has not said yes to spending. It is not a way
   round a budget: say what it left unchecked.
+- **Over budget.** `--disable-over-budget` turns off each model the
+  budgets no longer cover (none declared, budgeted `"nothing"`, or too
+  little left for the run) instead of refusing, so the run fits what the
+  user declared. A project's fix command may pass it; say what it left
+  unchecked as for any model that is off.
 - **One off** still asks the other, so a budget must be declared, and the
   run is held to it as ever, counting first and refusing past it. Credentials
   are needed only for the model left on.

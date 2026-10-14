@@ -36,54 +36,6 @@ import type { Providers } from "./providers";
 import type { Screen } from "./screen";
 import { Spinner } from "./spinner";
 
-export interface CheckOptions {
-	/**
-	 * Where to look, from the working directory: every file at or under
-	 * these is checked, changed or not; none is the working directory. The
-	 * project root, holding `.wiz/scry`, is the root of the git repository.
-	 */
-	paths: string[];
-	/** Checks only the files under `paths` changed since this ref, committed or not. */
-	since?: string;
-	/** Checks with only the rules these ids name; every rule when empty. */
-	rules?: string[];
-	/** Rule options for this run, like `compact-files.limit=400`, over what the configs set. */
-	options?: string[];
-	/** How many requests to the model are out at once, over the config's `jobs`. */
-	jobs?: number;
-	/** One of the config's `profiles`, whose models lay over its `models`. */
-	profile?: string;
-	/** `json` for the report as JSON; anything else is text. */
-	format: string;
-	/**
-	 * Says what the check would cost instead of running it: every question it
-	 * would ask, counted rather than sent, and no report. False by default.
-	 */
-	cost?: boolean;
-	/** Why each model this run leaves off is off; both off needs no budget. */
-	disabled?: Partial<Record<Role, string>>;
-	/**
-	 * Checks whatever `scry.budgets` says, spending without a limit, and
-	 * without one declared. False by default.
-	 */
-	overrideBudget?: boolean;
-	log?: Logger;
-	fs?: Fs;
-	ps?: Ps;
-	glob?: Glob;
-	/** What makes the judge for a model; Workers AI, TypeSafe and Anthropic by default. */
-	providers?: Providers;
-	/**
-	 * Where a line of progress is drawn while the check runs, when it is
-	 * live and the report is text. None draws nothing.
-	 */
-	screen?: Screen;
-	/** What ticks that line. */
-	timer?: Timer;
-	/** When spending happens, for the budgets' windows. */
-	clock?: WallClock;
-}
-
 /**
  * Checks every file under some paths, or only the ones a change touched,
  * against the project's rules, the way a linter checks code:
@@ -92,7 +44,8 @@ export interface CheckOptions {
  * spend more than `scry.budgets` allows or none is declared, 0 otherwise.
  * A rule that asks a model `disabled` turns off goes unchecked where it
  * asks, listed with why but never exiting 2; with both off, no budget is
- * read.
+ * read. `disableOverBudget` turns off the same way each model the budgets
+ * no longer cover, so the check runs on what is left rather than exit 3.
  *
  * With a number to stay under, it counts what it would ask first, as
  * `cost` does, and refuses to run when that would go over. A question it
@@ -144,15 +97,24 @@ export async function check(opts: CheckOptions): Promise<void> {
 		return;
 	}
 
-	const disabled = opts.disabled ?? {};
-	const codeOnly = ROLES.every((role) => disabled[role] !== undefined);
+	const disabled = { ...opts.disabled };
+	const codeOnly = () => ROLES.every((role) => disabled[role] !== undefined);
 	const budgets = await ProjectBudgets.open(dir, settings, {
 		override: opts.overrideBudget,
 		clock: opts.clock,
 		fs,
 		ps,
 	});
-	if (budgets.undeclared && !opts.cost && !codeOnly) {
+	/** Turns off each model the budgets cannot cover a run of `use`. */
+	const disableShort = (use: (role: Role) => number) => {
+		for (const [role, reason] of Object.entries(budgets.shortfalls(use))) {
+			disabled[role as Role] ??= reason;
+		}
+	};
+	if (opts.disableOverBudget && !opts.cost) {
+		disableShort(() => 0);
+	}
+	if (budgets.undeclared && !opts.cost && !codeOnly()) {
 		log.error(NONE_DECLARED);
 		ps.exit(OVER_BUDGET);
 		return;
@@ -253,15 +215,19 @@ export async function check(opts: CheckOptions): Promise<void> {
 		return;
 	}
 
-	if (budgets.countsFirst && !codeOnly) {
+	if (budgets.countsFirst && !codeOnly()) {
 		// counted answers are never kept, so the check below still asks
 		const { asking: counted, report } = await pass(true);
 		if (report.cancelled) {
 			ps.exit(130);
 			return;
 		}
-		const overrun = budgets.overrun((role) => counted.input(role), "check");
-		if (overrun !== undefined) {
+		const use = (role: Role) => counted.input(role);
+		if (opts.disableOverBudget) {
+			disableShort(use);
+		}
+		const overrun = budgets.overrun(use, "check");
+		if (overrun !== undefined && !opts.disableOverBudget) {
 			log.error(overrun);
 			ps.exit(OVER_BUDGET);
 			return;
@@ -269,7 +235,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 	}
 
 	const { asking, report } = await pass(false, budgets.allowances);
-	if (!codeOnly) {
+	if (!codeOnly()) {
 		await budgets.record(asking);
 	}
 	const spent = asking.spent;
@@ -298,6 +264,60 @@ export async function check(opts: CheckOptions): Promise<void> {
 	} else if (unchecked.length > 0) {
 		ps.exit(2);
 	}
+}
+
+export interface CheckOptions {
+	/**
+	 * Where to look, from the working directory: every file at or under
+	 * these is checked, changed or not; none is the working directory. The
+	 * project root, holding `.wiz/scry`, is the root of the git repository.
+	 */
+	paths: string[];
+	/** Checks only the files under `paths` changed since this ref, committed or not. */
+	since?: string;
+	/** Checks with only the rules these ids name; every rule when empty. */
+	rules?: string[];
+	/** Rule options for this run, like `compact-files.limit=400`, over what the configs set. */
+	options?: string[];
+	/** How many requests to the model are out at once, over the config's `jobs`. */
+	jobs?: number;
+	/** One of the config's `profiles`, whose models lay over its `models`. */
+	profile?: string;
+	/** `json` for the report as JSON; anything else is text. */
+	format: string;
+	/**
+	 * Says what the check would cost instead of running it: every question it
+	 * would ask, counted rather than sent, and no report. False by default.
+	 */
+	cost?: boolean;
+	/** Why each model this run leaves off is off; both off needs no budget. */
+	disabled?: Partial<Record<Role, string>>;
+	/**
+	 * Checks whatever `scry.budgets` says, spending without a limit, and
+	 * without one declared. False by default.
+	 */
+	overrideBudget?: boolean;
+	/**
+	 * Turns off each model the budgets no longer cover, as `disabled` would,
+	 * rather than refuse to run: one with no budget declared, nothing to
+	 * spend, or less left than the check would use. False by default.
+	 */
+	disableOverBudget?: boolean;
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+	glob?: Glob;
+	/** What makes the judge for a model; Workers AI, TypeSafe and Anthropic by default. */
+	providers?: Providers;
+	/**
+	 * Where a line of progress is drawn while the check runs, when it is
+	 * live and the report is text. None draws nothing.
+	 */
+	screen?: Screen;
+	/** What ticks that line. */
+	timer?: Timer;
+	/** When spending happens, for the budgets' windows. */
+	clock?: WallClock;
 }
 
 /** What a text report adds to the report itself. */

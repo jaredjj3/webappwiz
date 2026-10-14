@@ -104,6 +104,11 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description:
 				"check even past scry.budgets, or with none declared, spending without a limit",
 		})
+		.option("disable-over-budget", z.boolean(), {
+			default: false,
+			description:
+				"turn off each model scry.budgets no longer covers, as --disable would, rather than refuse to run: one with no budget declared, nothing to spend, or less left than the check would use",
+		})
 		.repeated(
 			"disable",
 			z
@@ -120,12 +125,20 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.use(timed())
 		.action(
 			(
-				{ rule, option, "override-budget": overrideBudget, disable, ...opts },
+				{
+					rule,
+					option,
+					"override-budget": overrideBudget,
+					"disable-over-budget": disableOverBudget,
+					disable,
+					...opts
+				},
 				{ log, fs, ps },
 			) =>
 				check({
 					...opts,
 					overrideBudget,
+					disableOverBudget,
 					disabled: Object.fromEntries(
 						disable.map((flag) => {
 							const [role, ...reason] = flag.split("=");

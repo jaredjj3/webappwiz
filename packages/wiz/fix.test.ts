@@ -15,19 +15,24 @@ describe("fix", () => {
 
 	const run = (check: boolean) => fix({ check, log, ps });
 
-	it("writes fixes by default, then typechecks", async () => {
+	it("writes fixes by default, then typechecks and scries what changed", async () => {
 		await run(false);
 
 		expect(ps.getCalls()).toEqual([
 			"bunx biome check --write --unsafe .",
 			"bunx tsc --noEmit",
+			"bin/wiz scry check --since main --disable-over-budget",
 		]);
 	});
 
 	it("leaves the tree alone when given --check", async () => {
 		await run(true);
 
-		expect(ps.getCalls()).toEqual(["bunx biome check .", "bunx tsc --noEmit"]);
+		expect(ps.getCalls()).toEqual([
+			"bunx biome check .",
+			"bunx tsc --noEmit",
+			"bin/wiz scry check --since main --disable-over-budget",
+		]);
 	});
 
 	it("throws when biome fails, without typechecking", async () => {

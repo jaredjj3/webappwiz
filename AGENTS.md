@@ -3,7 +3,7 @@ Use the arbor skill for any work that may change code: start a task with
 
 After making code changes:
 
-- `bin/wiz dev fix` typecheck, format, and check the project.
+- `bin/wiz dev fix` typecheck, format, and check the project, scry included.
 - `bin/wiz dev test` test each package.
 
 Don't use em dashes.
