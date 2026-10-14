@@ -1,7 +1,7 @@
-import { defineConfig } from "@webappwiz/arbor/config";
+import type { ConfigFile } from "@webappwiz/arbor/config";
 
-export default defineConfig({
+export default {
 	postCheckout: "bun install",
 	postRewrite: "bun install",
 	preMerge: "./bin/wiz dev test",
-});
+} satisfies ConfigFile;
