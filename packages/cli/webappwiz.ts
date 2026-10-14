@@ -75,6 +75,10 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description:
 				"check with only these rules, comma separated, as `scry list` names them (default: every rule)",
 		})
+		.repeated("option", z.string(), {
+			description:
+				"set a rule's option for this run, as <rule>.<option>=<value>, like compact-files.limit=400, over scry.rules; give it again for another",
+		})
 		.option("jobs", z.coerce.number(), {
 			default: undefined,
 			description: "requests to the model at once (default: scry.jobs, else 8)",
@@ -100,11 +104,15 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		})
 		.use(timed())
 		.action(
-			({ rule, "override-budget": overrideBudget, ...opts }, { log, fs, ps }) =>
+			(
+				{ rule, option, "override-budget": overrideBudget, ...opts },
+				{ log, fs, ps },
+			) =>
 				check({
 					...opts,
 					overrideBudget,
 					rules: rule.split(",").filter((id) => id !== ""),
+					options: option,
 					log,
 					fs,
 					ps,
@@ -128,6 +136,10 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.rest("ids", z.string(), {
 			description: "rule ids, as `scry list` names them (default: every rule)",
 		})
+		.repeated("option", z.string(), {
+			description:
+				"set a rule's option for this run, as <rule>.<option>=<value>, like compact-files.limit=400, over scry.rules; give it again for another",
+		})
 		.option("jobs", z.coerce.number(), {
 			default: undefined,
 			description: "requests to the model at once (default: scry.jobs, else 8)",
@@ -147,15 +159,20 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 				"score even past scry.budgets, or with none declared, spending without a limit",
 		})
 		.use(timed())
-		.action(({ "override-budget": overrideBudget, ...opts }, { log, fs, ps }) =>
-			evaluate({
-				...opts,
-				overrideBudget,
-				log,
-				fs,
-				ps,
-				screen: new StderrScreen(ps),
-			}),
+		.action(
+			(
+				{ option, "override-budget": overrideBudget, ...opts },
+				{ log, fs, ps },
+			) =>
+				evaluate({
+					...opts,
+					overrideBudget,
+					options: option,
+					log,
+					fs,
+					ps,
+					screen: new StderrScreen(ps),
+				}),
 		);
 
 	scry

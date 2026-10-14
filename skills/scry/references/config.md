@@ -52,6 +52,11 @@ or an option its rule does not take, is an error. The user's config lays
 its own over the project's, option by option. Tuning a rule here, rather
 than editing its `rule.ts`, survives `wiz scry update`.
 
+For one run, `--option <rule>.<option>=<value>` on `wiz scry` or `wiz scry
+eval` lays an option over both configs, like `--option
+compact-files.limit=400`, given again for each other option. The value is
+read as its default's type.
+
 ## Budgets
 
 ```ts

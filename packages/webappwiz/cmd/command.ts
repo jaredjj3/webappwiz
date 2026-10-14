@@ -38,6 +38,8 @@ type OptionMeta = {
 	default?: unknown;
 	/** A switch: present or not, it never takes the next token as its value. */
 	isSwitch: boolean;
+	/** Given any number of times, each value collected in order. */
+	repeated?: boolean;
 };
 
 export class Command<O, C extends object = object> {
@@ -80,6 +82,28 @@ export class Command<O, C extends object = object> {
 			isSwitch: takesBooleans(schema as Arg<unknown>),
 		});
 		return this as unknown as Command<O & { [P in K]: T }, C>;
+	}
+
+	/**
+	 * An option given any number of times, collecting each value in order as
+	 * an array. The schema describes one of them, so
+	 * `repeated("tag", z.string())` arrives as `string[]`, empty when it was
+	 * never given.
+	 */
+	repeated<K extends string, T>(
+		name: K,
+		schema: Arg<T>,
+		meta?: RestMeta,
+	): Command<O & { [P in K]: T[] }, C> {
+		this.options.push({
+			name,
+			schema: schema as Arg<unknown>,
+			description: meta?.description,
+			hasDefault: false,
+			isSwitch: false,
+			repeated: true,
+		});
+		return this as unknown as Command<O & { [P in K]: T[] }, C>;
 	}
 
 	arg<K extends string, T>(
@@ -247,6 +271,12 @@ export class Command<O, C extends object = object> {
 
 	private parse(argv: string[]): O {
 		const raw = new Map<string, string>();
+		const repeats = new Map<string, string[]>();
+		// a repeated option keeps every value it is given; the rest keep the last
+		const give = (option: OptionMeta, value: string) =>
+			option.repeated
+				? repeats.set(option.name, [...(repeats.get(option.name) ?? []), value])
+				: raw.set(option.name, value);
 		const positional: string[] = [];
 		for (let i = 0; i < argv.length; i++) {
 			const token = argv[i];
@@ -281,14 +311,14 @@ export class Command<O, C extends object = object> {
 				continue;
 			}
 			if (eq !== -1) {
-				raw.set(name, token.slice(eq + 1));
+				give(option, token.slice(eq + 1));
 			} else {
 				const next = argv[i + 1];
 				if (!option.isSwitch && next !== undefined && !next.startsWith("--")) {
-					raw.set(name, next);
+					give(option, next);
 					i++;
 				} else {
-					raw.set(name, "true"); // bare switch
+					give(option, "true"); // bare switch
 				}
 			}
 		}
@@ -324,6 +354,12 @@ export class Command<O, C extends object = object> {
 				.map((value) => read(rest.schema, value));
 		}
 		for (const opt of this.options) {
+			if (opt.repeated) {
+				out[opt.name] = (repeats.get(opt.name) ?? []).map((value) =>
+					read(opt.schema, value),
+				);
+				continue;
+			}
 			const value = raw.get(opt.name);
 			if (value === undefined) {
 				if (opt.hasDefault) {

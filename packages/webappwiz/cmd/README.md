@@ -61,6 +61,20 @@ app
 app run build --watch    # help shows: app run <script> [args...] [options]
 ```
 
+An option given any number of times is `repeated()`, which collects each
+value in order, as an array, empty when it was never given:
+
+```ts
+app
+	.command("tag")
+	.repeated("label", z.string(), { description: "a label to add" })
+	.action((opts) => opts.label); // string[]
+```
+
+```bash
+app tag --label bug --label=urgent   # { label: ["bug", "urgent"] }
+```
+
 ## Forwarding
 
 Three per-command flags relax the parsing, for a command that wraps another

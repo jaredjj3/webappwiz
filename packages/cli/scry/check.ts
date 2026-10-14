@@ -10,7 +10,12 @@ import {
 } from "webappwiz/system";
 import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
 import type { Role } from "../config";
-import { checkRuleOptions, chooseModels, loadConfig } from "../load-config";
+import {
+	checkRuleOptions,
+	chooseModels,
+	layRuleOptions,
+	loadConfig,
+} from "../load-config";
 import { table } from "../table";
 import type { Allowance } from "./budgets";
 import { NONE_DECLARED, OVER_BUDGET, ProjectBudgets } from "./project-budgets";
@@ -39,6 +44,8 @@ export interface CheckOptions {
 	since?: string;
 	/** Checks with only the rules these ids name; every rule when empty. */
 	rules?: string[];
+	/** Rule options for this run, like `compact-files.limit=400`, over what the configs set. */
+	options?: string[];
 	/** How many requests to the model are out at once, over the config's `jobs`. */
 	jobs?: number;
 	/** One of the config's `profiles`, whose models lay over its `models`. */
@@ -104,6 +111,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 		return;
 	}
 	const settings = await loadConfig(dir, { fs, ps });
+	layRuleOptions(settings, rules, opts.options ?? []);
 	checkRuleOptions(settings, rules);
 	const glob = opts.glob ?? new NodeGlob();
 	const git = new Git(dir, { ps });

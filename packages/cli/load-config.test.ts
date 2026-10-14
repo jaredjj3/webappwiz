@@ -10,6 +10,7 @@ import {
 	checkRuleOptions,
 	chooseModels,
 	DEFAULT_MODELS,
+	layRuleOptions,
 	loadConfig,
 	loadCredentialsConfig,
 } from "./load-config";
@@ -254,6 +255,62 @@ describe("loadConfig", () => {
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
 			"scry.rules.compact-files.limit: expected a string, number or boolean",
 		);
+	});
+
+	it("lays --option over both configs, read as its default's type", async () => {
+		const dir = `${root}/flagged`;
+		await fs.mkdir(`${dir}/.wiz/scry/compact-files`);
+		await fs.write(
+			`${dir}/.wiz/scry/compact-files/rule.ts`,
+			ruleSource(undefined, {
+				options: { limit: 500, tests: false, name: "x" },
+			}),
+		);
+		await fs.write(
+			`${dir}/.wiz/config.ts`,
+			config({ rules: { "compact-files": { limit: 300, name: "y" } } }),
+		);
+		const settings = await loadConfig(dir, { fs, ps });
+
+		layRuleOptions(settings, await Rules.load(dir, { fs }), [
+			"compact-files.limit=400",
+			"compact-files.tests=true",
+		]);
+
+		expect(settings.rules).toEqual({
+			"compact-files": { limit: 400, tests: true, name: "y" },
+		});
+	});
+
+	it("refuses an --option its rule does not take, naming the flag", async () => {
+		const dir = `${root}/refused`;
+		await fs.mkdir(`${dir}/.wiz/scry/compact-files`);
+		await fs.write(
+			`${dir}/.wiz/scry/compact-files/rule.ts`,
+			ruleSource(undefined, { options: { limit: 500 } }),
+		);
+		const rules = await Rules.load(dir, { fs });
+		const refusal = async (assignment: string) => {
+			const settings = await loadConfig(dir, { fs, ps });
+			try {
+				layRuleOptions(settings, rules, [assignment]);
+				checkRuleOptions(settings, rules);
+			} catch (error) {
+				return (error as Error).message;
+			}
+		};
+
+		expect([
+			await refusal("compact-files.lines=400"),
+			await refusal("compact-files.limit=abc"),
+			await refusal("nope.limit=400"),
+			await refusal("limit=400"),
+		]).toEqual([
+			"--option compact-files.lines: compact-files takes only limit",
+			"--option compact-files.limit: expected a number",
+			'--option nope: no rule "nope" in .wiz/scry',
+			"--option limit=400: expected <rule>.<option>=<value>, like compact-files.limit=400",
+		]);
 	});
 
 	it("reads the user's config from XDG_CONFIG_HOME when it is set", async () => {

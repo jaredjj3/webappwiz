@@ -340,6 +340,22 @@ describe("Command", () => {
 		expect(got).toEqual({ ports: [80, 443] });
 	});
 
+	it("collects each value of a repeated() option, in order", () => {
+		let got: { tag: string[]; port: number[] } | undefined;
+		const cmd = new Command("tag")
+			.repeated("tag", z.string())
+			.repeated("port", z.coerce.number())
+			.action((opts) => {
+				got = opts;
+			});
+
+		cmd.exec([], { log });
+		expect(got).toEqual({ tag: [], port: [] });
+
+		cmd.exec(["--tag", "a", "--port=80", "--tag=b", "--port", "443"], { log });
+		expect(got).toEqual({ tag: ["a", "b"], port: [80, 443] });
+	});
+
 	it("throws when anything is declared after rest(), at declaration time", () => {
 		expect(() =>
 			new Command("test").rest("args", z.string()).arg("pkg", z.string()),

@@ -103,14 +103,63 @@ export function checkRuleOptions(settings: Settings, rules: Rules): void {
 			try {
 				rules.options({ [id]: { [name]: value } });
 			} catch (cause) {
-				const path = settings.rulesFrom[id]?.[name];
+				const message = cause instanceof Error ? cause.message : String(cause);
+				const from = settings.rulesFrom[id]?.[name];
 				throw new Error(
-					`${path}: ${cause instanceof Error ? cause.message : cause}`,
+					from === OPTION_FLAG
+						? `${OPTION_FLAG} ${message.replace(/^scry\.rules\./, "")}`
+						: `${from}: ${message}`,
 					{ cause },
 				);
 			}
 		}
 	}
+}
+
+/** The flag that sets a rule's option for one run, as `rulesFrom` names it. */
+export const OPTION_FLAG = "--option";
+
+/**
+ * `settings` with each of `assignments`, like `compact-files.limit=400`, laid
+ * over what the configs set, for one run. A value is read as its default's
+ * type when it can be; one that cannot, like `limit=abc`, stays text, for
+ * `checkRuleOptions` to refuse.
+ */
+export function layRuleOptions(
+	settings: Settings,
+	rules: Rules,
+	assignments: readonly string[],
+): void {
+	for (const assignment of assignments) {
+		const match = /^([^.=]+)\.([^=]+)=(.*)$/.exec(assignment);
+		if (match === null) {
+			throw new Error(
+				`${OPTION_FLAG} ${assignment}: expected <rule>.<option>=<value>, like compact-files.limit=400`,
+			);
+		}
+		const [, id = "", name = "", text = ""] = match;
+		const fallback = rules.get(id)?.options[name];
+		settings.rules[id] = {
+			...settings.rules[id],
+			[name]: typed(text, fallback),
+		};
+		settings.rulesFrom[id] = { ...settings.rulesFrom[id], [name]: OPTION_FLAG };
+	}
+}
+
+/** `text` as the type of `like`, when it reads as one; else `text`. */
+function typed(text: string, like: unknown): unknown {
+	if (
+		typeof like === "number" &&
+		text.trim() !== "" &&
+		Number.isFinite(Number(text))
+	) {
+		return Number(text);
+	}
+	if (typeof like === "boolean" && (text === "true" || text === "false")) {
+		return text === "true";
+	}
+	return text;
 }
 
 /**

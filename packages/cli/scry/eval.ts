@@ -8,7 +8,12 @@ import {
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
-import { checkRuleOptions, chooseModels, loadConfig } from "../load-config";
+import {
+	checkRuleOptions,
+	chooseModels,
+	layRuleOptions,
+	loadConfig,
+} from "../load-config";
 import { table } from "../table";
 import { NONE_DECLARED, OVER_BUDGET, ProjectBudgets } from "./project-budgets";
 import { asked, ProjectTools, plural } from "./project-tools";
@@ -19,6 +24,8 @@ import { Spinner } from "./spinner";
 export interface EvaluateOptions {
 	/** Rule ids; every rule when empty. */
 	ids: string[];
+	/** Rule options for this run, like `compact-files.limit=400`, over what the configs set. */
+	options?: string[];
 	/** How many requests to the model are out at once, over the config's `jobs`. */
 	jobs?: number;
 	/** One of the config's `profiles`, whose models lay over its `models`. */
@@ -61,6 +68,7 @@ export async function evaluate(opts: EvaluateOptions): Promise<void> {
 	const { root: dir } = await Git.locate(ps.cwd(), [], { ps });
 	const rules = await Rules.load(dir, { fs });
 	const settings = await loadConfig(dir, { fs, ps });
+	layRuleOptions(settings, rules, opts.options ?? []);
 	checkRuleOptions(settings, rules);
 	const budgets = await ProjectBudgets.open(dir, settings, {
 		override: opts.overrideBudget,
