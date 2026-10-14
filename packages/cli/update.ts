@@ -6,7 +6,6 @@ import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps, walk } from "webappwiz/system";
 import { ProjectCredentials } from "./creds/project-credentials";
 import { update as updateRules } from "./scry/update";
-import type { Skills } from "./skills/skill";
 import { update as updateSkills } from "./skills/update";
 
 /**
@@ -41,8 +40,8 @@ export interface UpdateOptions {
 	store?: SecretStore;
 	/** The device's credential store; the system's by default. */
 	deviceStore?: SecretStore;
-	/** The skills to refresh with; the ones this package ships by default. */
-	skills?: Skills;
+	/** The skills to refresh; the ones webappwiz ships by default. */
+	skills?: string[];
 	/** The rules to refresh with; the catalog by default. */
 	rules?: Record<string, ShippedRule>;
 }
@@ -51,8 +50,8 @@ export interface UpdateOptions {
  * Pins every webappwiz dependency under `dir` to one version, so a project
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
- * Installed skills are copies of files those packages ship, so they are
- * refreshed too, and so are the rules copied in from the catalog. What a
+ * Installed skills are refreshed too, from that version's tag through
+ * `bunx skills add`, and so are the rules copied in from the catalog. What a
  * rename left behind moves along: `@webappwiz/rules` becomes
  * `@webappwiz/scry`, `.wiz/rules` becomes `.wiz/scry`, and arbor todos
  * saved with tags move into a lane a tag, since arbor reads neither. Last, it names
@@ -95,7 +94,14 @@ export async function update(opts: UpdateOptions): Promise<void> {
 			`${old} and ${now} both exist: move what you still want from ${old} by hand`,
 		);
 	}
-	await updateSkills({ dir: opts.dir, log: log, fs: fs, skills: opts.skills });
+	await updateSkills({
+		dir: opts.dir,
+		log,
+		fs,
+		ps: opts.ps,
+		version: opts.version,
+		skills: opts.skills,
+	});
 	await updateRules({ dir: opts.dir, log, fs, rules: opts.rules });
 	await lanesFromTags({ dir: opts.dir, log, fs, ps: opts.ps });
 	const credentials = await ProjectCredentials.open(opts.dir, {

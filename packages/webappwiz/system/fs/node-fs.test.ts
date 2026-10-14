@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeFs } from "./node-fs";
@@ -43,6 +43,21 @@ describe("NodeFs", () => {
 			await fs.append(join(root, "log"), "two\n");
 
 			expect(await fs.read(join(root, "log"))).toBe("one\ntwo\n");
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("tells a symbolic link from the file it points at", async () => {
+		const fs = new NodeFs();
+		const root = await mkdtemp(join(tmpdir(), "node-fs-"));
+		try {
+			await fs.write(join(root, "real"), "x");
+			await symlink("real", join(root, "link"));
+
+			expect(await fs.isSymlink(join(root, "link"))).toBe(true);
+			expect(await fs.isSymlink(join(root, "real"))).toBe(false);
+			expect(await fs.isSymlink(join(root, "missing"))).toBe(false);
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}

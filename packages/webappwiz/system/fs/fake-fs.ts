@@ -1,4 +1,4 @@
-import { dirname, normalize } from "node:path";
+import { dirname, normalize, resolve } from "node:path";
 import type { Resource } from "webappwiz/disposable";
 import type {
 	Fs,
@@ -13,6 +13,8 @@ const DIRECTORY = Symbol("directory");
 /** An in-memory {@link Fs} for tests. */
 export class FakeFs implements Fs {
 	readonly store = new Map<string, string | Uint8Array | typeof DIRECTORY>();
+	/** Each symbolic link, to the path it points at, as `symlink` was given it. */
+	private readonly links = new Map<string, string>();
 	private readonly watches = new Set<{
 		root: string;
 		recursive: boolean;
@@ -20,7 +22,22 @@ export class FakeFs implements Fs {
 	}>();
 
 	async exists(path: string): Promise<boolean> {
-		return this.store.has(normalize(path));
+		return this.store.has(this.follow(path));
+	}
+
+	/**
+	 * Makes `path` a symbolic link to `target`, which is taken from `path`'s
+	 * directory when relative, as a real one is. Reading through it reads the
+	 * target.
+	 */
+	async symlink(target: string, path: string): Promise<void> {
+		const link = normalize(path);
+		this.links.set(link, target);
+		await this.mkdir(dirname(link));
+	}
+
+	async isSymlink(path: string): Promise<boolean> {
+		return this.links.has(normalize(path));
 	}
 
 	async mkdir(path: string, opts?: MkdirOptions): Promise<void> {
@@ -105,14 +122,14 @@ export class FakeFs implements Fs {
 	}
 
 	async readdir(path: string): Promise<string[]> {
-		const dir = normalize(path);
-		return [...this.store.keys()]
+		const dir = this.follow(path);
+		return [...this.store.keys(), ...this.links.keys()]
 			.filter((key) => key !== dir && dirname(key) === dir)
 			.map((key) => key.slice(dir.endsWith("/") ? dir.length : dir.length + 1));
 	}
 
 	async stat(path: string): Promise<StatResult> {
-		const entry = this.store.get(normalize(path));
+		const entry = this.store.get(this.follow(path));
 		if (entry === undefined) {
 			throw new Error(`Path does not exist: ${path}`);
 		}
@@ -124,6 +141,11 @@ export class FakeFs implements Fs {
 
 	async rm(path: string, opts?: RmOptions): Promise<void> {
 		const target = normalize(path);
+		if (this.links.delete(target)) {
+			// the link goes, never what it points at, as a real rm does
+			this.changed(target);
+			return;
+		}
 		if (!opts?.force && !this.store.has(target)) {
 			throw new Error(`Path does not exist: ${path}`);
 		}
@@ -165,8 +187,24 @@ export class FakeFs implements Fs {
 		}
 	}
 
+	/** `path` with every link along it swapped for where it points. */
+	private follow(path: string): string {
+		let at = normalize(path);
+		for (let hops = 0; hops < 40; hops++) {
+			const link = [...this.links.keys()].find(
+				(each) => at === each || at.startsWith(`${each}/`),
+			);
+			if (link === undefined) {
+				return at;
+			}
+			const target = resolve(dirname(link), this.links.get(link) as string);
+			at = target + at.slice(link.length);
+		}
+		throw new Error(`Too many levels of symbolic links: ${path}`);
+	}
+
 	private file(path: string): string | Uint8Array {
-		const content = this.store.get(normalize(path));
+		const content = this.store.get(this.follow(path));
 		if (content === undefined || content === DIRECTORY) {
 			throw new Error(`File does not exist: ${path}`);
 		}

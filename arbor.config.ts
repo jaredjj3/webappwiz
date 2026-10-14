@@ -54,7 +54,7 @@ export default defineConfig({
 			globs: ["packages/scry/**"],
 		},
 		skills: {
-			globs: ["packages/cli/templates/*.skill.md", "packages/arbor/*.skill.md"],
+			globs: ["skills/**"],
 		},
 	},
 });

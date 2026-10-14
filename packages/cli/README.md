@@ -352,9 +352,22 @@ project's.
 
 ## skills
 
-Puts the agent skills bundled with this package into `<dir>/.agents/skills/`.
-Each skill's frontmatter carries the version it came from, so a stale copy is
-visible rather than merely wrong.
+Installs webappwiz's agent skills into `<dir>/.agents/skills/` through
+[`skills`](https://skills.sh), from this release's tag of the webappwiz
+repository, where each is `skills/<name>/SKILL.md`. `skills` links the
+directories of agents that read elsewhere, such as Claude Code's
+`.claude/skills`, to that copy, and records it in `skills-lock.json`: commit
+both. Each skill's frontmatter carries the version it came from, so a stale
+copy is visible rather than merely wrong.
+
+The same skills install without this package:
+
+```bash
+bunx skills add jaredjj3/webappwiz#v1.4.0 --skill scry
+```
+
+`bunx skills update` keeps a copy at the tag it came from; this package's
+`update` and `skills update` are what move it to a newer release.
 
 ```bash
 bunx @webappwiz/cli skills list ./project
@@ -383,4 +396,8 @@ replaces our copy under the old name, such as `review`, with the new one.
 holding.
 
 Both replace what is there; local edits to a synced skill do not survive, and
-are not meant to.
+are not meant to. The exception is a copy that is a symbolic link, which is
+one kept by hand, as the webappwiz repository links its own to the skills it
+edits: `add` and `update` leave it, saying so, and `list` marks it `(linked)`.
+A copy already at the release is left too, so running either again needs no
+network.

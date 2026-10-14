@@ -50,7 +50,7 @@ somebody installed months ago has nothing else to give its age away.
 ```ts
 await releases.lockstep(
 	releases.npm("@scope/cli"),
-	releases.skill("templates/arbor.skill.md"),
+	releases.skill("skills/arbor/SKILL.md"),
 	releases.git(),
 ).release();
 ```

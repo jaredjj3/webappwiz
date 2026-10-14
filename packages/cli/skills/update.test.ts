@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "webappwiz/log";
-import { FakeFs } from "webappwiz/system/testing";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
 
 import { retired as defaultRetired } from "./skill";
 import { update } from "./update";
@@ -10,51 +10,54 @@ const md = (name: string, version = "1.0.0") =>
 
 describe("skills update", () => {
 	let fs: FakeFs;
+	let ps: FakePs;
 	let log: MemoryLogger;
-	const skills = {
-		arbor: { "SKILL.md": md("arbor") },
-		other: { "SKILL.md": md("other") },
-	};
 
 	const retired = {
 		old: { now: "other", description: /^Old words/ },
 	};
 
-	const updating = () => ({ dir: "/p", log, fs, skills, retired });
+	const updating = () => ({
+		dir: "/p",
+		version: "1.0.0",
+		skills: ["arbor", "other"],
+		log,
+		fs,
+		ps,
+		retired,
+	});
+	const installing = (...names: string[]) =>
+		`bunx skills@1 add jaredjj3/webappwiz#v1.0.0 --yes --skill ${names.join(" ")}`;
 
 	beforeEach(() => {
 		fs = new FakeFs();
+		ps = new FakePs();
 		log = new MemoryLogger();
 	});
 
-	it("refreshes the skills the project has", async () => {
+	it("refreshes only the skills the project has, from the release's tag", async () => {
 		await fs.mkdir("/p/.agents/skills/arbor");
-		await fs.write("/p/.agents/skills/arbor/SKILL.md", "stale");
-
-		await update(updating());
-
-		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
-			md("arbor"),
-		);
-	});
-
-	it("does not add a skill the project chose not to install", async () => {
-		await fs.mkdir("/p/.agents/skills/arbor");
-		await fs.write("/p/.agents/skills/arbor/SKILL.md", "stale");
-
-		await update(updating());
-
-		expect(await fs.exists("/p/.agents/skills/other/SKILL.md")).toBe(false);
-	});
-
-	it("ignores skills that are not ours", async () => {
+		await fs.write("/p/.agents/skills/arbor/SKILL.md", md("arbor", "0.9.0"));
 		await fs.mkdir("/p/.agents/skills/theirs");
 		await fs.write("/p/.agents/skills/theirs/SKILL.md", "theirs");
 
 		await update(updating());
 
-		expect(await fs.read("/p/.agents/skills/theirs/SKILL.md")).toEqual(
-			"theirs",
+		expect(ps.getCalls()).toEqual([installing("arbor")]);
+	});
+
+	it("leaves a skill linked to one kept by hand", async () => {
+		await fs.write("/p/skills/arbor/SKILL.md", md("arbor", "0.9.0"));
+		await fs.symlink(
+			"../../../skills/arbor/SKILL.md",
+			"/p/.agents/skills/arbor/SKILL.md",
+		);
+
+		await update(updating());
+
+		expect(ps.getCalls()).toEqual([]);
+		expect(log.entries.map((entry) => entry.message)).toContain(
+			".agents/skills/arbor links to your own copy; leaving it",
 		);
 	});
 
@@ -76,13 +79,10 @@ describe("skills update", () => {
 		await update(updating());
 
 		expect(await fs.exists("/p/.agents/skills/old")).toBe(false);
-		expect(await fs.read("/p/.agents/skills/other/SKILL.md")).toEqual(
-			md("other"),
-		);
-		expect(log.entries.map((entry) => entry.message)).toEqual([
+		expect(ps.getCalls()).toEqual([installing("other")]);
+		expect(log.entries.map((entry) => entry.message)).toContain(
 			"removed /p/.agents/skills/old: old is now other",
-			"wrote /p/.agents/skills/other/SKILL.md",
-		]);
+		);
 	});
 
 	it("leaves a project's own skill alone when it only shares a retired name", async () => {
@@ -95,7 +95,7 @@ describe("skills update", () => {
 		await update(updating());
 
 		expect(await fs.exists("/p/.agents/skills/old/SKILL.md")).toBe(true);
-		expect(await fs.exists("/p/.agents/skills/other/SKILL.md")).toBe(false);
+		expect(ps.getCalls()).toEqual([]);
 	});
 
 	it("retires review in favor of scry", () => {

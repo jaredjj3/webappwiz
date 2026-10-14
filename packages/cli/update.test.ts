@@ -26,7 +26,7 @@ describe("update", () => {
 		ps,
 		store,
 		deviceStore: device,
-		skills: { arbor: { "SKILL.md": skill("1.0.0") } },
+		skills: ["arbor"],
 	});
 
 	beforeEach(async () => {
@@ -85,8 +85,8 @@ describe("update", () => {
 
 		await update(updating());
 
-		expect(await fs.read("/p/.agents/skills/arbor/SKILL.md")).toEqual(
-			skill("1.0.0"),
+		expect(ps.getCalls()).toContain(
+			"bunx skills@1 add jaredjj3/webappwiz#v1.0.0 --yes --skill arbor",
 		);
 	});
 

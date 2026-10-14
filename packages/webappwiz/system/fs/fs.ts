@@ -19,6 +19,11 @@ export interface Fs {
 	stat(path: string): Promise<StatResult>;
 	rm(path: string, opts?: RmOptions): Promise<void>;
 	/**
+	 * Whether `path` is itself a symbolic link, rather than what one points
+	 * at; false when nothing is there.
+	 */
+	isSymlink(path: string): Promise<boolean>;
+	/**
 	 * Calls `onChange` with the path that changed, whenever something in
 	 * `path` does, until the watch is disposed: a write, a rename, a removal.
 	 * Throws when `path` cannot be watched, as when it does not exist.

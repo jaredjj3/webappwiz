@@ -275,7 +275,9 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 
 	const skills = program
 		.group("skills")
-		.description("manage webappwiz agent skills in .agents/skills");
+		.description(
+			"manage webappwiz agent skills in .agents/skills, installed with `bunx skills add` from this release's tag",
+		);
 
 	skills
 		.command("list")
@@ -284,7 +286,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: ".",
 			description: "project to inspect (default: .)",
 		})
-		.action((opts, { log, fs }) => list({ ...opts, log, fs }));
+		.action((opts, { log, fs, ps }) => list({ ...opts, log, fs, ps }));
 
 	skills
 		.command("add")
@@ -294,7 +296,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: ".",
 			description: "project to add it to (default: .)",
 		})
-		.action((opts, { log, fs }) => add({ ...opts, log, fs }));
+		.action((opts, { log, fs, ps }) => add({ ...opts, log, fs, ps }));
 
 	skills
 		.command("update")
@@ -303,7 +305,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			default: ".",
 			description: "project to refresh (default: .)",
 		})
-		.action((opts, { log, fs }) => updateSkills({ ...opts, log, fs }));
+		.action((opts, { log, fs, ps }) => updateSkills({ ...opts, log, fs, ps }));
 
 	return program;
 }

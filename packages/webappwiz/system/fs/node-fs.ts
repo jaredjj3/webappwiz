@@ -61,6 +61,13 @@ export class NodeFs implements Fs {
 		return fs.rm(normalize(path), opts);
 	}
 
+	isSymlink(path: string): Promise<boolean> {
+		return fs.lstat(normalize(path)).then(
+			(stat) => stat.isSymbolicLink(),
+			() => false,
+		);
+	}
+
 	watch(
 		path: string,
 		onChange: (changed: string) => void,

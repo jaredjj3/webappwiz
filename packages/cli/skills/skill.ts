@@ -1,25 +1,15 @@
-import { skill as arbor } from "@webappwiz/arbor/skill";
-import type { Logger } from "webappwiz/log";
-import type { Fs } from "webappwiz/system";
-import type { Bundle, Layout } from "../documents";
-import scry from "../templates/scry.skill.md" with { type: "text" };
-import webappwiz from "../templates/webappwiz.skill.md" with { type: "text" };
+import { ProjectSkills } from "@webappwiz/arbor/skills";
+import { ConsoleLogger, type Logger } from "webappwiz/log";
+import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
+import { version as RELEASE } from "../package.json";
 
-/** Skill name to what a project installs under that name. */
-export type Skills = Record<string, Bundle>;
-
-/** The skills this package ships, by the name a project installs each under. */
-export const bundled: Skills = {
-	// They are imported rather than read out of a directory so they travel
-	// inside the build: what publishes is the compiled JavaScript, and a
-	// document sitting beside the source would not be part of it. Naming each
-	// one also means adding a skill is a line here rather than a file that a
-	// directory listing may or may not happen to pick up. arbor's is arbor's
-	// own, which installs it with `arbor init` too.
-	arbor: { "SKILL.md": arbor },
-	scry: { "SKILL.md": scry },
-	webappwiz: { "SKILL.md": webappwiz },
-};
+/**
+ * The skills webappwiz ships, each a `skills/<name>/SKILL.md` in its
+ * repository, which projects install from a release's tag through
+ * `bunx skills add`. Listed rather than discovered, so adding a skill is a
+ * line here.
+ */
+export const SHIPPED = ["arbor", "scry", "webappwiz"];
 
 /** A skill this package used to ship under another name. */
 export interface Retired {
@@ -40,21 +30,37 @@ export const retired: Record<string, Retired> = {
 	},
 };
 
-/** Where a project keeps its skills, the way every agent harness reads them. */
-export const SKILLS: Layout = {
-	root: ".agents/skills",
-	file: "SKILL.md",
-	noun: "skill",
-};
-
 /** The project a skills command works on. */
 export interface ProjectOptions {
 	/** Its root: the directory holding `.agents/skills`. */
 	dir: string;
 	log?: Logger;
 	fs?: Fs;
-	/** The skills on offer; the ones this package ships by default. */
-	skills?: Skills;
+	ps?: Ps;
+	/** The release to install skills from; this package's by default. */
+	version?: string;
+	/** The skills on offer; the ones webappwiz ships by default. */
+	skills?: string[];
 	/** The names skills used to go by; the ones this package retired by default. */
 	retired?: Record<string, Retired>;
+}
+
+/** What a skills command works with, its defaults filled in. */
+export function project(opts: ProjectOptions): {
+	skills: ProjectSkills;
+	log: Logger;
+	fs: Fs;
+	version: string;
+	shipped: string[];
+} {
+	const log = opts.log ?? new ConsoleLogger();
+	const fs = opts.fs ?? new NodeFs();
+	const ps = opts.ps ?? new NodePs();
+	return {
+		skills: new ProjectSkills(opts.dir, { fs, ps, log }),
+		log,
+		fs,
+		version: opts.version ?? RELEASE,
+		shipped: opts.skills ?? SHIPPED,
+	};
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { color, MemoryLogger } from "webappwiz/log";
-import { FakeFs } from "webappwiz/system/testing";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
 
 import { list } from "./list";
 
@@ -10,15 +10,18 @@ const md = (name: string, version = "1.0.0") =>
 describe("skills list", () => {
 	let fs: FakeFs;
 	let log: MemoryLogger;
-	const skills = {
-		other: { "SKILL.md": md("other") },
-		arbor: { "SKILL.md": md("arbor") },
-	};
 
 	const printed = () =>
 		color.strip(log.entries.map((entry) => String(entry.message)).join("\n"));
 
-	const listing = () => ({ dir: "/p", log, fs, skills });
+	const listing = () => ({
+		dir: "/p",
+		version: "1.0.0",
+		skills: ["other", "arbor"],
+		log,
+		fs,
+		ps: new FakePs(),
+	});
 
 	beforeEach(() => {
 		fs = new FakeFs();
@@ -57,14 +60,16 @@ describe("skills list", () => {
 		expect(printed()).not.toContain("out of date");
 	});
 
-	it("says so when a skill ships without a version in its frontmatter", async () => {
-		await list({
-			dir: "/p",
-			log,
-			fs,
-			skills: { arbor: { "SKILL.md": "# no frontmatter" } },
-		});
+	it("marks a copy linked to one kept by hand, and never calls it out of date", async () => {
+		await fs.write("/p/skills/arbor/SKILL.md", md("arbor", "0.9.0"));
+		await fs.symlink(
+			"../../../skills/arbor/SKILL.md",
+			"/p/.agents/skills/arbor/SKILL.md",
+		);
 
-		expect(printed()).toContain("arbor   ?       -");
+		await list(listing());
+
+		expect(printed()).toContain("arbor   1.0.0   0.9.0 (linked)");
+		expect(printed()).not.toContain("out of date");
 	});
 });

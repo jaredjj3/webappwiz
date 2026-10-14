@@ -1,1 +1,1 @@
-../../../packages/arbor/arbor.skill.md
+../../../skills/arbor/SKILL.md

@@ -108,4 +108,25 @@ describe("FakeFs", () => {
 		expect(await fs.read("/app/log")).toBe("one\ntwo\n");
 		expect(fs.append("/app", "x")).rejects.toThrow("is a directory");
 	});
+
+	it("reads through a symbolic link, and removes the link rather than its target", async () => {
+		await fs.write("/repo/skills/arbor/SKILL.md", "arbor");
+		await fs.symlink(
+			"../../../skills/arbor/SKILL.md",
+			"/repo/.agents/skills/arbor/SKILL.md",
+		);
+
+		expect(await fs.read("/repo/.agents/skills/arbor/SKILL.md")).toBe("arbor");
+		expect(await fs.readdir("/repo/.agents/skills/arbor")).toEqual([
+			"SKILL.md",
+		]);
+		expect(await fs.isSymlink("/repo/.agents/skills/arbor/SKILL.md")).toBe(
+			true,
+		);
+		expect(await fs.isSymlink("/repo/skills/arbor/SKILL.md")).toBe(false);
+
+		await fs.rm("/repo/.agents/skills/arbor/SKILL.md");
+		expect(await fs.exists("/repo/.agents/skills/arbor/SKILL.md")).toBe(false);
+		expect(await fs.read("/repo/skills/arbor/SKILL.md")).toBe("arbor");
+	});
 });

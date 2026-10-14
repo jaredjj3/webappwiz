@@ -14,8 +14,7 @@ export interface Layout {
 
 /**
  * One document and the files that travel with it, by path under its
- * directory: `SKILL.md` or `RULE.md`, and any `scripts/` or `references/`
- * beside it.
+ * directory: `RULE.md`, and any scripts beside it.
  */
 export type Bundle = Record<string, string>;
 
@@ -41,8 +40,8 @@ export function versionOf(md: string): string | null {
 }
 
 /**
- * Documents a package bundles and a project installs copies of: skills under
- * `.agents/skills`, rules under `.wiz/scry`. Each copy's frontmatter carries
+ * Documents a package bundles and a project installs copies of, as rules
+ * under `.wiz/scry`. Each copy's frontmatter carries
  * the version it came from, so a stale copy is visible rather than merely
  * wrong, and refreshing is copying again.
  */

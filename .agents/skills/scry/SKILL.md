@@ -1,1 +1,1 @@
-../../../packages/cli/templates/scry.skill.md
+../../../skills/scry/SKILL.md
