@@ -22,6 +22,7 @@ export class FakePs implements Ps {
 	private vars: Record<string, string> = {};
 	private calls: string[] = [];
 	private dirs: string[] = [];
+	private envs: Record<string, string>[] = [];
 	private handlers = new Map<string, Array<() => void>>();
 	private exitCode = 0;
 	private exited = false;
@@ -167,6 +168,11 @@ export class FakePs implements Ps {
 		return this.dirs;
 	}
 
+	/** What each call added to the environment, positionally matched to `getCalls()`. */
+	getCallEnvs(): Record<string, string>[] {
+		return this.envs;
+	}
+
 	getExitCode(): number {
 		return this.exitCode;
 	}
@@ -206,5 +212,6 @@ export class FakePs implements Ps {
 	private record(argv: string[], opts?: StartOptions): void {
 		this.calls.push(argv.join(" "));
 		this.dirs.push(opts?.cwd ?? this.path);
+		this.envs.push(opts?.env ?? {});
 	}
 }
