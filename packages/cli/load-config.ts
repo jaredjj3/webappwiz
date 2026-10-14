@@ -368,7 +368,7 @@ function budgets(value: ScryConfig["budgets"]): Budget[] | undefined {
 
 /** Throws, saying where, unless `value` is budgets a check can hold to. */
 function checkBudgets(where: string, value: unknown): void {
-	const example = `"nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]`;
+	const example = `"nothing", "unlimited", or limits like [{ som: "unlimited", llm: 2_000_000, per: "month" }]`;
 	if (value === "nothing" || value === "unlimited") {
 		return;
 	}
@@ -379,7 +379,7 @@ function checkBudgets(where: string, value: unknown): void {
 		const at = `${where}[${index}]`;
 		if (typeof budget !== "object" || budget === null) {
 			throw new Error(
-				`${at}: expected a limit like { llm: 2_000_000, per: "month" }`,
+				`${at}: expected a limit like { som: "unlimited", llm: 2_000_000, per: "month" }`,
 			);
 		}
 		const entry = budget as Record<string, unknown>;
@@ -435,6 +435,17 @@ function checkBudgets(where: string, value: unknown): void {
 				`${at}: a number of tokens needs a window: per "check", "day", "week" or "month", or within, like "7d"`,
 			);
 		}
+	}
+	// what a role may spend is never left to a default, even "nothing"
+	const unnamed = ROLES.filter((role) =>
+		value.every(
+			(budget) => (budget as Record<string, unknown>)[role] === undefined,
+		),
+	);
+	if (unnamed.length > 0) {
+		throw new Error(
+			`${where}: no entry names the ${unnamed.join(" or the ")}: say what it may spend, like ${unnamed[0]}: "nothing"`,
+		);
 	}
 }
 

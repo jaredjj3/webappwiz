@@ -61,15 +61,17 @@ read as its default's type.
 ```ts
 budgets: "unlimited"  // spend without a limit
 budgets: [
-	// every entry holds at once; a model no entry names spends nothing
+	// every entry holds at once, and names both models
 	{ som: "unlimited", llm: 2_000_000, per: "month" },
-	{ llm: 300_000, within: "7d" },
-	{ llm: 100_000, per: "check" },
+	{ som: "unlimited", llm: 300_000, within: "7d" },
+	{ som: "unlimited", llm: 100_000, per: "check" },
 ]
 ```
 
-- Each entry gives the `som`, the `llm` or both a number of input
-  tokens, `"nothing"` or `"unlimited"`. A number needs a window: `per` a
+- Each entry gives both the `som` and the `llm` a number of input
+  tokens, `"nothing"` or `"unlimited"`, so neither is left to a default.
+  `"unlimited"` leaves the model to the other entries; `"nothing"` in any
+  entry spends nothing on it. A number needs a window: `per` a
   `"check"` (one run of `wiz scry` or `wiz scry eval`), or a calendar
   `"day"`, `"week"` (from Monday) or `"month"`, in local time; or `within`
   a rolling `"24h"`, `"7d"` or `"2w"`.

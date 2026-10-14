@@ -140,16 +140,20 @@ budgets: "nothing"    // ask no model: only code decides
 budgets: "unlimited"  // spend without a limit
 budgets: [
 	{ som: "unlimited", llm: 2_000_000, per: "month" },
-	{ llm: 300_000, within: "7d" },
-	{ llm: 100_000, per: "check" },
+	{ som: "unlimited", llm: 300_000, within: "7d" },
+	{ som: "unlimited", llm: 100_000, per: "check" },
 ]
 ```
 
-Each entry gives the `som`, the `llm` or both a number of tokens,
+Each entry gives both the `som` and the `llm` a number of tokens,
 `"nothing"` or `"unlimited"`, over a window: `per` a `"check"`, or a
 calendar `"day"`, `"week"` (from Monday) or `"month"` in local time, or
-`within` a rolling `"24h"`, `"7d"` or `"2w"`. Every entry holds at once, and
-a model no entry names spends nothing. What each check and `scry eval`
+`within` a rolling `"24h"`, `"7d"` or `"2w"`. Every entry holds at once:
+`"unlimited"` leaves the model to the other entries, and `"nothing"` in any
+entry spends nothing on it. `ScryConfig` holds every entry to naming both,
+so no model's budget is left to a default; a config that is not
+typechecked must still name each model in some entry, or the check
+refuses it. What each check and `scry eval`
 spent is kept per user on the device, in
 `~/.local/state/wiz/<project>/scry-spent.json` (under `$XDG_STATE_HOME` when
 set), so every worktree of a project draws on one budget.

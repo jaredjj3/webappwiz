@@ -11,8 +11,9 @@ import {
 import type { ByEffort, Models, Role } from "@webappwiz/scry/config";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { ProjectCredentials } from "../creds/project-credentials";
-import type { Allowance, Spending } from "./budgets";
+import type { Allowance } from "./budgets";
 import { EffortDecider } from "./effort-decider";
+import type { Spending } from "./ledger";
 import { OnDemandJudge } from "./on-demand-judge";
 import { HostedProviders, type Providers } from "./providers";
 

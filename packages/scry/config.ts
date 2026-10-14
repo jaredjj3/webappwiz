@@ -1,6 +1,19 @@
 import type { Effort } from "./decider";
 
 /**
+ * Identity, for the types: what configs called before they were typed by
+ * `import type { ScryConfig } from "@webappwiz/scry/config"` and
+ * `export default { ... } satisfies ScryConfig`, which runs where
+ * `@webappwiz/scry` is not installed. Kept so they still load for
+ * `scry update` to rewrite.
+ *
+ * @deprecated `satisfies ScryConfig` instead.
+ */
+export function defineConfig(config: ScryConfig): ScryConfig {
+	return config;
+}
+
+/**
  * A System One model (SOM), which answers a yes-or-no question with the
  * probability of yes, writing no text, by the name its provider gives it:
  * `clef` or `clef-flash` on Cloudflare Workers AI, which read
@@ -61,12 +74,15 @@ export type Spend = number | "nothing" | "unlimited";
  */
 export type Period = "check" | "day" | "week" | "month";
 
-/** One limit on what scry spends, over one window. */
+/**
+ * One limit on what scry spends, over one window, naming what each role may
+ * spend in it, so no role's budget is left to a default.
+ */
 export interface Budget {
 	/** Input tokens the System One models may spend. */
-	som?: Spend;
+	som: Spend;
 	/** Input tokens the large language models may spend. */
-	llm?: Spend;
+	llm: Spend;
 	/** The calendar window the limit holds over. A number needs it or `within`. */
 	per?: Period;
 	/** A rolling window ending now, in hours, days or weeks, like `"7d"`. */
@@ -78,13 +94,14 @@ export interface ScryConfig {
 	/**
 	 * What a check or an eval may spend, which every one needs declared. `"nothing"`
 	 * asks no model, `"unlimited"` caps neither; a list holds every limit in
-	 * it at once, and a role no entry names spends nothing. The last config
-	 * that sets it wins whole. Spending is kept per user on the device.
+	 * it at once, each entry naming both roles, where `"unlimited"` leaves
+	 * the role to the other entries. The last config that sets it wins
+	 * whole. Spending is kept per user on the device.
 	 *
 	 * ```ts
 	 * budgets: [
 	 *   { som: "unlimited", llm: 2_000_000, per: "month" },
-	 *   { llm: 300_000, within: "7d" },
+	 *   { som: "unlimited", llm: 300_000, within: "7d" },
 	 * ]
 	 * ```
 	 */
@@ -127,17 +144,4 @@ export interface ScryConfig {
 	 * user's config lays its own over the project's, option by option.
 	 */
 	rules?: Record<string, Record<string, string | number | boolean>>;
-}
-
-/**
- * Identity, for the types: what configs called before they were typed by
- * `import type { ScryConfig } from "@webappwiz/scry/config"` and
- * `export default { ... } satisfies ScryConfig`, which runs where
- * `@webappwiz/scry` is not installed. Kept so they still load for
- * `scry update` to rewrite.
- *
- * @deprecated `satisfies ScryConfig` instead.
- */
-export function defineConfig(config: ScryConfig): ScryConfig {
-	return config;
 }

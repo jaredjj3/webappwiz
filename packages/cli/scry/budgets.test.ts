@@ -3,7 +3,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeFs } from "webappwiz/system";
-import { Budgets, Ledger } from "./budgets";
+import { Budgets } from "./budgets";
+import { Ledger } from "./ledger";
 
 describe("Budgets", () => {
 	const fs = new NodeFs();
@@ -45,11 +46,11 @@ describe("Budgets", () => {
 
 	it("sums each window from its start in local time: the day, the week from Monday, the month, or a rolling one", () => {
 		const budgets = Budgets.from([
-			{ llm: 5000, per: "day" },
-			{ llm: 5000, per: "week" },
-			{ llm: 5000, per: "month" },
-			{ llm: 5000, within: "2d" },
-			{ llm: 5000, per: "check" },
+			{ som: "unlimited", llm: 5000, per: "day" },
+			{ som: "unlimited", llm: 5000, per: "week" },
+			{ som: "unlimited", llm: 5000, per: "month" },
+			{ som: "unlimited", llm: 5000, within: "2d" },
+			{ som: "unlimited", llm: 5000, per: "check" },
 		]);
 
 		expect(
@@ -66,7 +67,7 @@ describe("Budgets", () => {
 	it("allows a role what is left of its tightest limit, and why it stops there", () => {
 		const budgets = Budgets.from([
 			{ som: "unlimited", llm: 2000, per: "month" },
-			{ llm: 1500, per: "day" },
+			{ som: "unlimited", llm: 1500, per: "day" },
 		]);
 
 		expect([
@@ -78,17 +79,16 @@ describe("Budgets", () => {
 		]);
 	});
 
-	it("allows nothing to a role an entry calls nothing, or that no entry names", () => {
-		const budgets = Budgets.from([{ llm: 2000, som: "nothing", per: "day" }]);
-		const only = Budgets.from([{ som: "unlimited" }]);
-
-		expect([
-			budgets.allowance("som", ledger, now),
-			only.allowance("llm", ledger, now),
-		]).toEqual([
-			{ input: 0, reason: "scry.budgets spends nothing on the som" },
-			{ input: 0, reason: "scry.budgets spends nothing on the llm" },
+	it("allows nothing to a role an entry calls nothing, whatever another entry allows it", () => {
+		const budgets = Budgets.from([
+			{ som: "nothing", llm: 2000, per: "day" },
+			{ som: 5000, llm: "unlimited", per: "month" },
 		]);
+
+		expect(budgets.allowance("som", ledger, now)).toEqual({
+			input: 0,
+			reason: "scry.budgets spends nothing on the som",
+		});
 	});
 
 	it("keeps what another check recorded meanwhile", async () => {

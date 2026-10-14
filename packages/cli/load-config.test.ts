@@ -336,7 +336,7 @@ describe("loadConfig", () => {
 		await fs.mkdir(`${root}/p`);
 		await fs.write(
 			`${root}/p/scry.config.ts`,
-			config({ budgets: [{ llm: 1000, per: "day" }] }),
+			config({ budgets: [{ som: "nothing", llm: 1000, per: "day" }] }),
 		);
 		await fs.mkdir(`${root}/home/.config/scry`);
 		await fs.write(
@@ -356,7 +356,7 @@ describe("loadConfig", () => {
 		],
 		[
 			{ budgets: "some" },
-			'scry.budgets: expected "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]',
+			'scry.budgets: expected "nothing", "unlimited", or limits like [{ som: "unlimited", llm: 2_000_000, per: "month" }]',
 		],
 		[
 			{ budgets: [{ per: "day" }] },
@@ -385,6 +385,15 @@ describe("loadConfig", () => {
 		[
 			{ budgets: [{ llm: 1000, per: "day", tokens: 5 }] },
 			"scry.budgets[0]: unknown tokens: expected som, llm, per or within",
+		],
+		[
+			{
+				budgets: [
+					{ llm: 1000, per: "day" },
+					{ llm: 500, within: "7d" },
+				],
+			},
+			'scry.budgets: no entry names the som: say what it may spend, like som: "nothing"',
 		],
 	])("refuses budgets a check cannot hold to: %j", async (scry, message) => {
 		await fs.mkdir(`${root}/p`);

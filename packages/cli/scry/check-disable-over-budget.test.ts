@@ -61,7 +61,7 @@ describe("wiz scry --disable-over-budget", () => {
 	});
 
 	it("turns off a model budgeted nothing rather than leave its rules unchecked", async () => {
-		await sandbox.budget('[{ llm: "unlimited" }]');
+		await sandbox.budget('[{ som: "nothing", llm: "unlimited" }]');
 
 		await run();
 

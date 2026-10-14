@@ -44,7 +44,7 @@ describe("wiz scry", () => {
 
 		expect([sandbox.warned(), sandbox.asked, sandbox.proc.exits]).toEqual([
 			[
-				'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
+				'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or limits like [{ som: "unlimited", llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
 			],
 			[],
 			[3],
