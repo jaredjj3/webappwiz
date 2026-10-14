@@ -68,10 +68,10 @@ describe("moveConfig", () => {
 
 		expect(await fs.read(paths.scry)).toEqual(
 			[
-				'import { defineConfig } from "@webappwiz/scry/config";',
+				'import type { ScryConfig } from "@webappwiz/scry/config";',
 				"",
 				"// every rule, every time",
-				'export default defineConfig({ budgets: "unlimited" });',
+				'export default { budgets: "unlimited" } satisfies ScryConfig;',
 				"",
 			].join("\n"),
 		);

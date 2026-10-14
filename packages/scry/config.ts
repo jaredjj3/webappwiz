@@ -130,10 +130,13 @@ export interface ScryConfig {
 }
 
 /**
- * Identity, for the types. `export default defineConfig({ ... })` in
- * `scry.config.ts` gets its keys checked and completed. A config somewhere
- * `@webappwiz/scry` is not installed, like `~/.config/scry/config.ts`,
- * exports the same object without it.
+ * Identity, for the types: what configs called before they were typed by
+ * `import type { ScryConfig } from "@webappwiz/scry/config"` and
+ * `export default { ... } satisfies ScryConfig`, which runs where
+ * `@webappwiz/scry` is not installed. Kept so they still load for
+ * `scry update` to rewrite.
+ *
+ * @deprecated `satisfies ScryConfig` instead.
  */
 export function defineConfig(config: ScryConfig): ScryConfig {
 	return config;

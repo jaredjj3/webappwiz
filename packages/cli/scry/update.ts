@@ -10,6 +10,7 @@ import {
 	type RulesProjectOptions,
 	warnOfCode,
 } from "./rule-set";
+import { typeConfig } from "./type-config";
 
 /** The project `update` brings up to this release of scry. */
 export interface UpdateOptions extends RulesProjectOptions {
@@ -24,7 +25,8 @@ export interface UpdateOptions extends RulesProjectOptions {
  * releases left behind moves first: rules in `.wiz/rules` to `.wiz/scry`,
  * and the `scry` key of `.wiz/config.ts` and of the user's
  * `~/.config/wiz/config.ts` to `scry.config.ts` and
- * `~/.config/scry/config.ts`. Then it refreshes the shipped rules the
+ * `~/.config/scry/config.ts`, and a scry config calling `defineConfig` to
+ * `satisfies ScryConfig`. Then it refreshes the shipped rules the
  * project has copies of, flagging every script that changed, and the scry
  * skill when the project has it, leaving the rules it wrote itself alone.
  * Never adds one: a rule someone chose not to install should not arrive by
@@ -46,6 +48,7 @@ export async function update(opts: UpdateOptions): Promise<void> {
 	}
 	for (const paths of configPaths(opts.dir, ps)) {
 		await moveConfig(paths, { fs, log });
+		await typeConfig(paths.scry, { fs, log });
 	}
 	const documents = new Documents(offered(opts), RULES, { ...opts, log, fs });
 	const { names, changed } = await documents.update(opts.dir);

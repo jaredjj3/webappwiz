@@ -77,7 +77,9 @@ says no budget is declared, declare `"nothing"` in the project's
 `scry.config.ts`, which asks no model, so only code decides:
 
 ```ts
-export default defineConfig({ budgets: "nothing" });
+import type { ScryConfig } from "@webappwiz/scry/config";
+
+export default { budgets: "nothing" } satisfies ScryConfig;
 ```
 
 Then tell the user you did, that every question a rule would ask a model

@@ -15,9 +15,9 @@ and the default models.
 ## Models
 
 ```ts
-import { defineConfig } from "@webappwiz/scry/config";
+import type { ScryConfig } from "@webappwiz/scry/config";
 
-export default defineConfig({
+export default {
 	// over the defaults, effort by effort: what it leaves out keeps the default
 	models: {
 		som: "jev-latest", // at every effort
@@ -28,7 +28,7 @@ export default defineConfig({
 	jobs: 8, // requests at once, to each model
 	exclude: ["vendor/**"], // files no rule checks, from the project root
 	rules: { "compact-files": { limit: 400 } }, // over the options a rule declares
-});
+} satisfies ScryConfig;
 ```
 
 A rule's question asks at the effort it names, `low`, `medium` or `high`, or

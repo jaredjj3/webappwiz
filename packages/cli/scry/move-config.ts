@@ -71,11 +71,11 @@ export async function moveConfig(
 		paths.scry,
 		[
 			...(typed
-				? ['import { defineConfig } from "@webappwiz/scry/config";', ""]
+				? ['import type { ScryConfig } from "@webappwiz/scry/config";', ""]
 				: []),
 			...comments,
 			typed
-				? `export default defineConfig(${body});`
+				? `export default ${body} satisfies ScryConfig;`
 				: `export default ${body};`,
 			"",
 		].join("\n"),

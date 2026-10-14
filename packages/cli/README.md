@@ -96,16 +96,16 @@ where `creds add` keeps them (see [creds](#creds)).
 
 ```ts
 // scry.config.ts
-import { defineConfig } from "@webappwiz/scry/config";
+import type { ScryConfig } from "@webappwiz/scry/config";
 
-export default defineConfig({
+export default {
 	models: {
 		som: "jev-latest", // at every effort
 		llm: { default: "claude-sonnet-5-5", high: "claude-fable-5-1" },
 	},
 	profiles: { "double-check": { som: "jev-preview" } },
 	jobs: 8,
-});
+} satisfies ScryConfig;
 ```
 
 Each layer overrides the last: the project's `scry.config.ts`, then the
@@ -118,8 +118,9 @@ way when `--profile` picks it, and a later layer's profile of the same name
 lays its models over the earlier one's.
 `exclude` takes globs, from the
 project root, of files no rule checks, like `[".agents/**"]` for skills
-copied in from elsewhere; the user's are added to the project's. A config where `@webappwiz/scry` is not
-installed exports the same object without `defineConfig`. scry's settings
+copied in from elsewhere; the user's are added to the project's. The import is only a type, so a config
+loads where `@webappwiz/scry` is not installed; one still calling
+`defineConfig` loads too, and `scry update` rewrites it. scry's settings
 were once the `scry` key of `.wiz/config.ts` and `~/.config/wiz/config.ts`:
 `scry update` moves them, and a check refuses them until it has. A config still
 holding `agents` or `batch`, from before a rule's check
