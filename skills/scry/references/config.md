@@ -60,21 +60,23 @@ read as its default's type.
 
 ```ts
 budgets: "unlimited"  // spend without a limit
-budgets: [
-	// every entry holds at once, and names both models
-	{ som: "unlimited", llm: 2_000_000, per: "month" },
-	{ som: "unlimited", llm: 300_000, within: "7d" },
-	{ som: "unlimited", llm: 100_000, per: "check" },
-]
+budgets: {
+	som: { tokens: 5_000_000, per: "day" },
+	llm: [
+		// every limit in a list holds at once
+		{ tokens: 2_000_000, per: "month" },
+		{ tokens: 300_000, within: "7d" },
+	],
+}
 ```
 
-- Each entry gives both the `som` and the `llm` a number of input
-  tokens, `"nothing"` or `"unlimited"`, so neither is left to a default.
-  `"unlimited"` leaves the model to the other entries; `"nothing"` in any
-  entry spends nothing on it. A number needs a window: `per` a
-  `"check"` (one run of `wiz scry` or `wiz scry eval`), or a calendar
-  `"day"`, `"week"` (from Monday) or `"month"`, in local time; or `within`
-  a rolling `"24h"`, `"7d"` or `"2w"`.
+- Name both `som` and `llm`, each `"nothing"`, `"unlimited"`, a limit, or a
+  list of limits, so neither is left to a default. A limit is `tokens`
+  input tokens over one window: `per` a `"check"` (one run of `wiz scry`
+  or `wiz scry eval`), or a calendar `"day"`, `"week"` (from Monday) or
+  `"month"`, in local time; or `within` a rolling `"24h"`, `"7d"` or `"2w"`.
+- A config with `budgets` as a list of windows is the old shape, which the
+  check refuses: `wiz scry update` rewrites it.
 - Budgets are tokens, not money. When the user names an amount of money,
   say so, and help them pick tokens: `--cost` on a typical check says what
   it would spend, and the som is far cheaper per token than the llm.

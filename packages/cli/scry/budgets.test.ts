@@ -45,13 +45,16 @@ describe("Budgets", () => {
 	});
 
 	it("sums each window from its start in local time: the day, the week from Monday, the month, or a rolling one", () => {
-		const budgets = Budgets.from([
-			{ som: "unlimited", llm: 5000, per: "day" },
-			{ som: "unlimited", llm: 5000, per: "week" },
-			{ som: "unlimited", llm: 5000, per: "month" },
-			{ som: "unlimited", llm: 5000, within: "2d" },
-			{ som: "unlimited", llm: 5000, per: "check" },
-		]);
+		const budgets = Budgets.from({
+			som: "unlimited",
+			llm: [
+				{ tokens: 5000, per: "day" },
+				{ tokens: 5000, per: "week" },
+				{ tokens: 5000, per: "month" },
+				{ tokens: 5000, within: "2d" },
+				{ tokens: 5000, per: "check" },
+			],
+		});
 
 		expect(
 			budgets.standing(ledger, now).map((each) => [each.window, each.spent]),
@@ -65,10 +68,13 @@ describe("Budgets", () => {
 	});
 
 	it("allows a role what is left of its tightest limit, and why it stops there", () => {
-		const budgets = Budgets.from([
-			{ som: "unlimited", llm: 2000, per: "month" },
-			{ som: "unlimited", llm: 1500, per: "day" },
-		]);
+		const budgets = Budgets.from({
+			som: "unlimited",
+			llm: [
+				{ tokens: 2000, per: "month" },
+				{ tokens: 1500, per: "day" },
+			],
+		});
 
 		expect([
 			budgets.allowance("llm", ledger, now),
@@ -79,16 +85,80 @@ describe("Budgets", () => {
 		]);
 	});
 
-	it("allows nothing to a role an entry calls nothing, whatever another entry allows it", () => {
-		const budgets = Budgets.from([
-			{ som: "nothing", llm: 2000, per: "day" },
-			{ som: 5000, llm: "unlimited", per: "month" },
-		]);
+	it("allows nothing to a role that spends nothing", () => {
+		const budgets = Budgets.from({
+			som: "nothing",
+			llm: { tokens: 2000, per: "day" },
+		});
 
 		expect(budgets.allowance("som", ledger, now)).toEqual({
 			input: 0,
 			reason: "scry.budgets spends nothing on the som",
 		});
+	});
+
+	it("spells the presets out for both roles", () => {
+		expect([
+			Budgets.from("unlimited").unlimited,
+			Budgets.from("nothing").spendsNothing("llm"),
+		]).toEqual([true, true]);
+	});
+
+	it.each([
+		[
+			"some",
+			'scry.budgets: expected "nothing", "unlimited", or what each model may spend, like { som: { tokens: 5_000_000, per: "day" }, llm: "nothing" }',
+		],
+		[
+			[{ som: 1000, llm: "nothing", per: "day" }],
+			"scry.budgets: a list of limits is the old shape: run `wiz scry update` to give each model its own",
+		],
+		[
+			{ som: "unlimited" },
+			'scry.budgets: say what the llm may spend, like llm: "nothing"',
+		],
+		[
+			{ decider: "nothing", llm: "nothing" },
+			"scry.budgets.decider: decider is now som",
+		],
+		[
+			{ som: "nothing", llm: "nothing", per: "day" },
+			"scry.budgets: unknown per: expected som and llm",
+		],
+		[
+			{ som: "nothing", llm: 1000 },
+			'scry.budgets.llm: expected "nothing", "unlimited", or a limit like { tokens: 2_000_000, per: "month" }',
+		],
+		[
+			{ som: "nothing", llm: [] },
+			"scry.budgets.llm: expected a limit, not an empty list",
+		],
+		[
+			{ som: "nothing", llm: { tokens: -1, per: "day" } },
+			"scry.budgets.llm.tokens: expected input tokens, got -1",
+		],
+		[
+			{ som: "nothing", llm: { tokens: 1000 } },
+			'scry.budgets.llm: expected one window: per "check", "day", "week" or "month", or within, like "7d"',
+		],
+		[
+			{ som: "nothing", llm: { tokens: 1000, per: "day", within: "7d" } },
+			'scry.budgets.llm: expected one window: per "check", "day", "week" or "month", or within, like "7d"',
+		],
+		[
+			{ som: "nothing", llm: { tokens: 1000, per: "year" } },
+			'scry.budgets.llm.per: expected one of check, day, week, month, got "year"',
+		],
+		[
+			{ som: "nothing", llm: [{ tokens: 1000, within: "7 days" }] },
+			'scry.budgets.llm[0].within: expected hours, days or weeks, like "24h", "7d" or "2w", got "7 days"',
+		],
+		[
+			{ som: "nothing", llm: { tokens: 1000, per: "day", cap: 5 } },
+			"scry.budgets.llm: unknown cap: expected tokens, then per or within",
+		],
+	])("refuses budgets a check cannot hold to: %j", (value, message) => {
+		expect(() => Budgets.from(value)).toThrow(message);
 	});
 
 	it("keeps what another check recorded meanwhile", async () => {

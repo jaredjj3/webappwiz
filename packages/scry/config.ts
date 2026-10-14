@@ -63,49 +63,55 @@ export type Role = keyof Models;
 export const ROLES = ["som", "llm"] as const;
 
 /**
- * What a role may spend: input tokens, `"nothing"`, which asks it no
- * question, or `"unlimited"`.
- */
-export type Spend = number | "nothing" | "unlimited";
-
-/**
  * A calendar day, week (from Monday) or month in local time, or a single
  * run of a check or an eval.
  */
 export type Period = "check" | "day" | "week" | "month";
 
+/** A rolling window ending now, in hours, days or weeks, like `"7d"`. */
+export type Within = `${number}${"h" | "d" | "w"}`;
+
 /**
- * One limit on what scry spends, over one window, naming what each role may
- * spend in it, so no role's budget is left to a default.
+ * At most `tokens` input tokens over one window: `per` a calendar one, or
+ * `within` a rolling one, never both.
  */
+export type Limit =
+	| { tokens: number; per: Period; within?: never }
+	| { tokens: number; within: Within; per?: never };
+
+/**
+ * What one role may spend: `"nothing"`, which asks it no question,
+ * `"unlimited"`, or a limit, or a list of them that all hold at once.
+ */
+export type Spend = "nothing" | "unlimited" | Limit | Limit[];
+
+/** What each role may spend, every one named, so none is left to a default. */
 export interface Budget {
-	/** Input tokens the System One models may spend. */
+	/** What the System One models may spend. */
 	som: Spend;
-	/** Input tokens the large language models may spend. */
+	/** What the large language models may spend. */
 	llm: Spend;
-	/** The calendar window the limit holds over. A number needs it or `within`. */
-	per?: Period;
-	/** A rolling window ending now, in hours, days or weeks, like `"7d"`. */
-	within?: `${number}${"h" | "d" | "w"}`;
 }
 
 /** How `wiz scry` runs: what `scry.config.ts` exports. */
 export interface ScryConfig {
 	/**
-	 * What a check or an eval may spend, which every one needs declared. `"nothing"`
-	 * asks no model, `"unlimited"` caps neither; a list holds every limit in
-	 * it at once, each entry naming both roles, where `"unlimited"` leaves
-	 * the role to the other entries. The last config that sets it wins
+	 * What a check or an eval may spend, which every one needs declared:
+	 * `"nothing"` asks no model, `"unlimited"` caps neither, and otherwise
+	 * each role says what it may spend. The last config that sets it wins
 	 * whole. Spending is kept per user on the device.
 	 *
 	 * ```ts
-	 * budgets: [
-	 *   { som: "unlimited", llm: 2_000_000, per: "month" },
-	 *   { som: "unlimited", llm: 300_000, within: "7d" },
-	 * ]
+	 * budgets: {
+	 *   som: { tokens: 5_000_000, per: "day" },
+	 *   llm: [
+	 *     { tokens: 2_000_000, per: "month" },
+	 *     { tokens: 300_000, within: "7d" },
+	 *   ],
+	 * }
 	 * ```
 	 */
-	budgets?: "nothing" | "unlimited" | Budget[];
+	budgets?: "nothing" | "unlimited" | Budget;
 	/**
 	 * The models a check asks, over the defaults: `clef` for the som,
 	 * `clef-flash` at low effort, and `claude-sonnet-5-5` for the llm,

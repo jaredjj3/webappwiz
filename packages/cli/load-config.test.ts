@@ -159,10 +159,6 @@ describe("loadConfig", () => {
 			{ models: { decider: "clef" } },
 			"scry.models.decider: decider is now som",
 		],
-		[
-			{ budgets: [{ decider: 1000, per: "day" }] },
-			"scry.budgets[0].decider: decider is now som",
-		],
 	])("refuses models it cannot ask: %j", async (scry, message) => {
 		await fs.mkdir(`${root}/p`);
 		await fs.write(`${root}/p/scry.config.ts`, config(scry));
@@ -332,11 +328,13 @@ describe("loadConfig", () => {
 		);
 	});
 
-	it("spells the budget presets out, and takes the last layer's budgets whole", async () => {
+	it("takes the last layer's budgets whole", async () => {
 		await fs.mkdir(`${root}/p`);
 		await fs.write(
 			`${root}/p/scry.config.ts`,
-			config({ budgets: [{ som: "nothing", llm: 1000, per: "day" }] }),
+			config({
+				budgets: { som: "nothing", llm: { tokens: 1000, per: "day" } },
+			}),
 		);
 		await fs.mkdir(`${root}/home/.config/scry`);
 		await fs.write(
@@ -344,9 +342,9 @@ describe("loadConfig", () => {
 			config({ budgets: "unlimited" }),
 		);
 
-		expect((await loadConfig(`${root}/p`, { fs, ps })).budgets).toEqual([
-			{ som: "unlimited", llm: "unlimited" },
-		]);
+		expect(
+			(await loadConfig(`${root}/p`, { fs, ps })).budgets?.unlimited,
+		).toEqual(true);
 	});
 
 	it.each([
@@ -355,52 +353,20 @@ describe("loadConfig", () => {
 			"scry.budget is gone: scry.budgets declares what a check may spend",
 		],
 		[
-			{ budgets: "some" },
-			'scry.budgets: expected "nothing", "unlimited", or limits like [{ som: "unlimited", llm: 2_000_000, per: "month" }]',
+			{ budgets: { som: "nothing" } },
+			`${"/p/scry.config.ts"}: scry.budgets: say what the llm may spend, like llm: "nothing"`,
 		],
-		[
-			{ budgets: [{ per: "day" }] },
-			"scry.budgets[0]: expected som, llm, or both",
-		],
-		[
-			{ budgets: [{ llm: -1, per: "day" }] },
-			'scry.budgets[0].llm: expected input tokens, "nothing" or "unlimited", got -1',
-		],
-		[
-			{ budgets: [{ llm: 1000 }] },
-			'scry.budgets[0]: a number of tokens needs a window: per "check", "day", "week" or "month", or within, like "7d"',
-		],
-		[
-			{ budgets: [{ llm: 1000, per: "year" }] },
-			'scry.budgets[0].per: expected one of check, day, week, month, got "year"',
-		],
-		[
-			{ budgets: [{ llm: 1000, within: "7 days" }] },
-			'scry.budgets[0].within: expected hours, days or weeks, like "24h", "7d" or "2w", got "7 days"',
-		],
-		[
-			{ budgets: [{ llm: 1000, per: "day", within: "7d" }] },
-			"scry.budgets[0]: expected per or within, not both",
-		],
-		[
-			{ budgets: [{ llm: 1000, per: "day", tokens: 5 }] },
-			"scry.budgets[0]: unknown tokens: expected som, llm, per or within",
-		],
-		[
-			{
-				budgets: [
-					{ llm: 1000, per: "day" },
-					{ llm: 500, within: "7d" },
-				],
-			},
-			'scry.budgets: no entry names the som: say what it may spend, like som: "nothing"',
-		],
-	])("refuses budgets a check cannot hold to: %j", async (scry, message) => {
-		await fs.mkdir(`${root}/p`);
-		await fs.write(`${root}/p/scry.config.ts`, config(scry));
+	])(
+		"refuses budgets a check cannot hold to, naming the config: %j",
+		async (scry, message) => {
+			await fs.mkdir(`${root}/p`);
+			await fs.write(`${root}/p/scry.config.ts`, config(scry));
 
-		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(message);
-	});
+			await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
+				message,
+			);
+		},
+	);
 
 	it("refuses scry.effort, which picked the models before scry.models named them", async () => {
 		await fs.mkdir(`${root}/p`);

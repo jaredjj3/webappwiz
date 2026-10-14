@@ -44,7 +44,7 @@ describe("wiz scry", () => {
 
 		expect([sandbox.warned(), sandbox.asked, sandbox.proc.exits]).toEqual([
 			[
-				'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or limits like [{ som: "unlimited", llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
+				'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or what each model may spend, like { som: { tokens: 5_000_000, per: "day" }, llm: "nothing" }; --cost says what a check would spend',
 			],
 			[],
 			[3],
@@ -80,7 +80,9 @@ describe("wiz scry", () => {
 	});
 
 	it("refuses up front a check that would go over a budget, saying which, and asks nothing", async () => {
-		await sandbox.budget('[{ som: 200, llm: "unlimited", per: "check" }]');
+		await sandbox.budget(
+			'{ som: { tokens: 200, per: "check" }, llm: "unlimited" }',
+		);
 
 		await sandbox.run();
 
@@ -100,7 +102,9 @@ describe("wiz scry", () => {
 	});
 
 	it("keeps what each check spent on the device, and holds the next to what is left of the window", async () => {
-		await sandbox.budget('[{ som: 500, llm: "unlimited", per: "day" }]');
+		await sandbox.budget(
+			'{ som: { tokens: 500, per: "day" }, llm: "unlimited" }',
+		);
 
 		await sandbox.run();
 		await sandbox.fs.write(
@@ -119,7 +123,9 @@ describe("wiz scry", () => {
 	});
 
 	it("forgets what was spent before a rolling window", async () => {
-		await sandbox.budget('[{ som: 500, llm: "unlimited", within: "7d" }]');
+		await sandbox.budget(
+			'{ som: { tokens: 500, within: "7d" }, llm: "unlimited" }',
+		);
 		await sandbox.run();
 		sandbox.clock.set(sandbox.clock.now() + 8 * 24 * 60 * 60 * 1000);
 		await sandbox.fs.write(
@@ -137,7 +143,7 @@ describe("wiz scry", () => {
 
 	it("says with --cost what a check would use of each budget, and leave", async () => {
 		await sandbox.budget(
-			'[{ som: 2_000_000, llm: "unlimited", per: "month" }, { som: 1000, within: "7d" }]',
+			'{ som: [{ tokens: 2_000_000, per: "month" }, { tokens: 1000, within: "7d" }], llm: "unlimited" }',
 		);
 
 		await check({

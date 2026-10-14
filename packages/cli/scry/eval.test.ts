@@ -135,14 +135,14 @@ describe("wiz scry eval", () => {
 		await run();
 
 		expect([printed(), proc.exits]).toEqual([
-			'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or limits like [{ som: "unlimited", llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
+			'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or what each model may spend, like { som: { tokens: 5_000_000, per: "day" }, llm: "nothing" }; --cost says what a check would spend',
 			[3],
 		]);
 	});
 
 	it("refuses up front to score past a budget, and asks nothing", async () => {
 		await install("asks", asking);
-		await budget('[{ som: 50, llm: "unlimited", per: "check" }]');
+		await budget('{ som: { tokens: 50, per: "check" }, llm: "unlimited" }');
 		const judge = new FakeJudge(0.9, { input: 40 });
 
 		await evaluate({

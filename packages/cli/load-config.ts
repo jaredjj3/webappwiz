@@ -1,6 +1,5 @@
 import { EFFORTS, type Rules } from "@webappwiz/scry";
 import {
-	type Budget,
 	type ByEffort,
 	type Models,
 	type ModelsConfig,
@@ -10,7 +9,7 @@ import {
 } from "@webappwiz/scry/config";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import type { Config } from "./config";
-import { within } from "./scry/budgets";
+import { Budgets } from "./scry/budgets";
 
 /** `scry` with every default filled in. */
 export interface Settings {
@@ -24,8 +23,8 @@ export interface Settings {
 	rules: Record<string, Record<string, unknown>>;
 	/** The config file that set each of `rules`, by rule id, then option. */
 	rulesFrom: Record<string, Record<string, string>>;
-	/** What a check may spend, the presets spelled out; none when nothing declares it. */
-	budgets?: Budget[];
+	/** What a check may spend; none when nothing declares it. */
+	budgets?: Budgets;
 }
 
 /** The models a check asks when no config names them. */
@@ -92,9 +91,11 @@ export async function loadConfig(
 		for (const [id, options] of Object.entries(layer.rules ?? {})) {
 			settings.rules[id] = { ...settings.rules[id], ...options };
 		}
-		settings.budgets = budgets(layer.budgets) ?? settings.budgets;
 	}
 	for (const { path, config } of found) {
+		if (config.budgets !== undefined) {
+			settings.budgets = Budgets.from(config.budgets, `${path}: scry.budgets`);
+		}
 		for (const [id, options] of Object.entries(config.rules ?? {})) {
 			for (const name of Object.keys(options)) {
 				settings.rulesFrom[id] = { ...settings.rulesFrom[id], [name]: path };
@@ -245,9 +246,6 @@ function scry({
 			`${path}: scry.${gone.join(", scry.")} ${gone.length === 1 ? "is" : "are"} gone: scry.models names the models a check asks, at each effort a rule's questions ask, and scry.profiles others that --profile picks for one run`,
 		);
 	}
-	if (scry.budgets !== undefined) {
-		checkBudgets(`${path}: scry.budgets`, scry.budgets);
-	}
 	checkModels(`${path}: scry.models`, scry.models ?? {});
 	const profiles: unknown = scry.profiles ?? {};
 	if (!isRecord(profiles)) {
@@ -357,96 +355,6 @@ function renamed(where: string, key: string): void {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** The presets as the lists they stand for. */
-function budgets(value: ScryConfig["budgets"]): Budget[] | undefined {
-	return value === "nothing" || value === "unlimited"
-		? [{ som: value, llm: value }]
-		: value;
-}
-
-/** Throws, saying where, unless `value` is budgets a check can hold to. */
-function checkBudgets(where: string, value: unknown): void {
-	const example = `"nothing", "unlimited", or limits like [{ som: "unlimited", llm: 2_000_000, per: "month" }]`;
-	if (value === "nothing" || value === "unlimited") {
-		return;
-	}
-	if (!Array.isArray(value)) {
-		throw new Error(`${where}: expected ${example}`);
-	}
-	for (const [index, budget] of value.entries()) {
-		const at = `${where}[${index}]`;
-		if (typeof budget !== "object" || budget === null) {
-			throw new Error(
-				`${at}: expected a limit like { som: "unlimited", llm: 2_000_000, per: "month" }`,
-			);
-		}
-		const entry = budget as Record<string, unknown>;
-		for (const key of Object.keys(entry)) {
-			renamed(`${at}.${key}`, key);
-		}
-		const unknown = Object.keys(entry).filter(
-			(key) => ![...ROLES, "per", "within"].includes(key),
-		);
-		if (unknown.length > 0) {
-			throw new Error(
-				`${at}: unknown ${unknown.join(", ")}: expected som, llm, per or within`,
-			);
-		}
-		if (ROLES.every((role) => entry[role] === undefined)) {
-			throw new Error(`${at}: expected som, llm, or both`);
-		}
-		for (const role of ROLES) {
-			const spend = entry[role];
-			if (
-				spend !== undefined &&
-				spend !== "nothing" &&
-				spend !== "unlimited" &&
-				!(typeof spend === "number" && Number.isFinite(spend) && spend >= 0)
-			) {
-				throw new Error(
-					`${at}.${role}: expected input tokens, "nothing" or "unlimited", got ${JSON.stringify(spend)}`,
-				);
-			}
-		}
-		if (entry.per !== undefined && entry.within !== undefined) {
-			throw new Error(`${at}: expected per or within, not both`);
-		}
-		const periods = ["check", "day", "week", "month"];
-		if (entry.per !== undefined && !periods.includes(entry.per as string)) {
-			throw new Error(
-				`${at}.per: expected one of ${periods.join(", ")}, got ${JSON.stringify(entry.per)}`,
-			);
-		}
-		if (entry.within !== undefined) {
-			try {
-				within(String(entry.within));
-			} catch (error) {
-				throw new Error(`${at}.within: ${(error as Error).message}`);
-			}
-		}
-		if (
-			ROLES.some((role) => typeof entry[role] === "number") &&
-			entry.per === undefined &&
-			entry.within === undefined
-		) {
-			throw new Error(
-				`${at}: a number of tokens needs a window: per "check", "day", "week" or "month", or within, like "7d"`,
-			);
-		}
-	}
-	// what a role may spend is never left to a default, even "nothing"
-	const unnamed = ROLES.filter((role) =>
-		value.every(
-			(budget) => (budget as Record<string, unknown>)[role] === undefined,
-		),
-	);
-	if (unnamed.length > 0) {
-		throw new Error(
-			`${where}: no entry names the ${unnamed.join(" or the ")}: say what it may spend, like ${unnamed[0]}: "nothing"`,
-		);
-	}
 }
 
 function environment(ps: Ps): ScryConfig {

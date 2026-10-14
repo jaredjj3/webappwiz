@@ -4,6 +4,7 @@ import { Documents } from "../documents";
 import { configPaths } from "../load-config";
 import { refresh } from "../skills/update";
 import { moveConfig } from "./move-config";
+import { reshapeBudgets } from "./reshape-budgets";
 import {
 	offered,
 	RULES,
@@ -26,7 +27,8 @@ export interface UpdateOptions extends RulesProjectOptions {
  * and the `scry` key of `.wiz/config.ts` and of the user's
  * `~/.config/wiz/config.ts` to `scry.config.ts` and
  * `~/.config/scry/config.ts`, and a scry config calling `defineConfig` to
- * `satisfies ScryConfig`. Then it refreshes the shipped rules the
+ * `satisfies ScryConfig`, and `budgets` from a list of windows to what
+ * each model may spend. Then it refreshes the shipped rules the
  * project has copies of, flagging every script that changed, and the scry
  * skill when the project has it, leaving the rules it wrote itself alone.
  * Never adds one: a rule someone chose not to install should not arrive by
@@ -49,6 +51,7 @@ export async function update(opts: UpdateOptions): Promise<void> {
 	for (const paths of configPaths(opts.dir, ps)) {
 		await moveConfig(paths, { fs, log });
 		await typeConfig(paths.scry, { fs, log });
+		await reshapeBudgets(paths.scry, { fs, log });
 	}
 	const documents = new Documents(offered(opts), RULES, { ...opts, log, fs });
 	const { names, changed } = await documents.update(opts.dir);

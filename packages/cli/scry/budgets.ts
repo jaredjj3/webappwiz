@@ -1,37 +1,70 @@
-import {
-	type Budget,
-	type Period,
-	ROLES,
-	type Role,
-} from "@webappwiz/scry/config";
+import { type Period, ROLES, type Role } from "@webappwiz/scry/config";
 import { Duration } from "webappwiz/time";
 import type { Ledger } from "./ledger";
 
 /**
  * The limits `scry.budgets` declares, as checked against what the ledger
- * holds. A role an entry calls `"nothing"` spends nothing; one with no
- * number is unlimited; one with numbers is held to every one of them.
+ * holds. A role that spends `"nothing"` asks no question; one with no limit
+ * is unlimited; one with limits is held to every one of them.
  */
 export class Budgets {
 	private constructor(
-		private limits: Limit[],
+		private limits: RoleLimit[],
 		private nothing: Set<Role>,
 	) {}
 
-	static from(budgets: Budget[]): Budgets {
-		const limits: Limit[] = [];
+	/**
+	 * The budgets `value` declares, as a config sets `scry.budgets`. Throws,
+	 * saying `where` and what to write instead, unless every role is named
+	 * and each limit is one a check can hold to, since a config read at run
+	 * time was never typechecked.
+	 */
+	static from(value: unknown, where = "scry.budgets"): Budgets {
+		if (value === "nothing" || value === "unlimited") {
+			return Budgets.from({ som: value, llm: value }, where);
+		}
+		if (Array.isArray(value)) {
+			throw new Error(
+				`${where}: a list of limits is the old shape: run \`wiz scry update\` to give each model its own, like { som: { tokens: 5_000_000, per: "day" }, llm: "nothing" }`,
+			);
+		}
+		if (!isRecord(value)) {
+			throw new Error(`${where}: expected ${EXAMPLE}`);
+		}
+		const unknown = Object.keys(value).filter(
+			(key) => !(ROLES as readonly string[]).includes(key),
+		);
+		if (unknown.includes("decider")) {
+			throw new Error(
+				`${where}.decider: decider is now som, the System One model a rule asks first`,
+			);
+		}
+		if (unknown.length > 0) {
+			throw new Error(
+				`${where}: unknown ${unknown.join(", ")}: expected som and llm`,
+			);
+		}
+		const limits: RoleLimit[] = [];
 		const nothing = new Set<Role>();
-		for (const budget of budgets) {
-			for (const role of ROLES) {
-				const spend = budget[role];
-				if (spend === "nothing") {
-					nothing.add(role);
-				} else if (typeof spend === "number") {
+		for (const role of ROLES) {
+			const spend = value[role];
+			const at = `${where}.${role}`;
+			if (spend === undefined) {
+				throw new Error(
+					`${where}: say what the ${role} may spend, like ${role}: "nothing"`,
+				);
+			}
+			if (spend === "nothing") {
+				nothing.add(role);
+			} else if (spend !== "unlimited") {
+				const each = Array.isArray(spend) ? spend : [spend];
+				if (each.length === 0) {
+					throw new Error(`${at}: expected a limit, not an empty list`);
+				}
+				for (const [index, limit] of each.entries()) {
 					limits.push({
 						role,
-						tokens: spend,
-						per: budget.per,
-						within: budget.within,
+						...checkLimit(Array.isArray(spend) ? `${at}[${index}]` : at, limit),
 					});
 				}
 			}
@@ -95,7 +128,7 @@ export class Budgets {
 }
 
 /** A role's numbered limit over one window. */
-interface Limit {
+interface RoleLimit {
 	role: Role;
 	tokens: number;
 	per?: Period;
@@ -123,7 +156,7 @@ export interface Allowance {
 }
 
 /** When a limit's window began, as Unix epoch milliseconds in local time. */
-function start(limit: Limit, now: number): number {
+function start(limit: RoleLimit, now: number): number {
 	if (limit.within !== undefined) {
 		return now - within(limit.within).ms;
 	}
@@ -152,7 +185,7 @@ export function within(window: string): Duration {
 		: Duration.days(match[2] === "d" ? count : count * 7);
 }
 
-function windowName(limit: Limit): string {
+function windowName(limit: RoleLimit): string {
 	if (limit.within !== undefined) {
 		return `the last ${limit.within}`;
 	}
@@ -162,4 +195,60 @@ function windowName(limit: Limit): string {
 		week: "this week",
 		month: "this month",
 	}[limit.per ?? "check"];
+}
+
+const EXAMPLE = `"nothing", "unlimited", or what each model may spend, like { som: { tokens: 5_000_000, per: "day" }, llm: "nothing" }`;
+
+const PERIODS = ["check", "day", "week", "month"];
+
+/** `value` as a limit, or throws, saying `where`, why it is not one. */
+function checkLimit(
+	where: string,
+	value: unknown,
+): Pick<RoleLimit, "tokens" | "per" | "within"> {
+	if (!isRecord(value)) {
+		throw new Error(
+			`${where}: expected "nothing", "unlimited", or a limit like { tokens: 2_000_000, per: "month" }`,
+		);
+	}
+	const unknown = Object.keys(value).filter(
+		(key) => !["tokens", "per", "within"].includes(key),
+	);
+	if (unknown.length > 0) {
+		throw new Error(
+			`${where}: unknown ${unknown.join(", ")}: expected tokens, then per or within`,
+		);
+	}
+	const { tokens, per, within: rolling } = value;
+	if (!(typeof tokens === "number" && Number.isFinite(tokens) && tokens >= 0)) {
+		throw new Error(
+			`${where}.tokens: expected input tokens, got ${JSON.stringify(tokens)}`,
+		);
+	}
+	if ((per === undefined) === (rolling === undefined)) {
+		throw new Error(
+			`${where}: expected one window: per "check", "day", "week" or "month", or within, like "7d"`,
+		);
+	}
+	if (per !== undefined && !PERIODS.includes(per as string)) {
+		throw new Error(
+			`${where}.per: expected one of ${PERIODS.join(", ")}, got ${JSON.stringify(per)}`,
+		);
+	}
+	if (rolling !== undefined) {
+		try {
+			within(String(rolling));
+		} catch (error) {
+			throw new Error(`${where}.within: ${(error as Error).message}`);
+		}
+	}
+	return {
+		tokens,
+		per: per as Period | undefined,
+		within: rolling as string | undefined,
+	};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

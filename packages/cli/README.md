@@ -138,22 +138,24 @@ whole, so a user's own config can loosen or tighten the project's.
 ```ts
 budgets: "nothing"    // ask no model: only code decides
 budgets: "unlimited"  // spend without a limit
-budgets: [
-	{ som: "unlimited", llm: 2_000_000, per: "month" },
-	{ som: "unlimited", llm: 300_000, within: "7d" },
-	{ som: "unlimited", llm: 100_000, per: "check" },
-]
+budgets: {
+	som: { tokens: 5_000_000, per: "day" },
+	llm: [
+		{ tokens: 2_000_000, per: "month" },
+		{ tokens: 300_000, within: "7d" },
+	],
+}
 ```
 
-Each entry gives both the `som` and the `llm` a number of tokens,
-`"nothing"` or `"unlimited"`, over a window: `per` a `"check"`, or a
-calendar `"day"`, `"week"` (from Monday) or `"month"` in local time, or
-`within` a rolling `"24h"`, `"7d"` or `"2w"`. Every entry holds at once:
-`"unlimited"` leaves the model to the other entries, and `"nothing"` in any
-entry spends nothing on it. `ScryConfig` holds every entry to naming both,
-so no model's budget is left to a default; a config that is not
-typechecked must still name each model in some entry, or the check
-refuses it. What each check and `scry eval`
+Each model says what it may spend: `"nothing"`, `"unlimited"`, a limit, or
+a list of limits that all hold at once. A limit is `tokens` over one
+window: `per` a `"check"`, or a calendar `"day"`, `"week"` (from Monday) or
+`"month"` in local time, or `within` a rolling `"24h"`, `"7d"` or `"2w"`.
+Both models must be named, so neither's budget is left to a default:
+`ScryConfig` makes leaving one out a type error, and the check refuses a
+config that does, since a config is read without being typechecked. A
+config still holding the old list of windows is refused too, until `scry
+update` rewrites it. What each check and `scry eval`
 spent is kept per user on the device, in
 `~/.local/state/wiz/<project>/scry-spent.json` (under `$XDG_STATE_HOME` when
 set), so every worktree of a project draws on one budget.

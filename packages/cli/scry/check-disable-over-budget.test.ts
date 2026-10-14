@@ -47,7 +47,9 @@ describe("wiz scry --disable-over-budget", () => {
 		});
 
 	it("turns off a model the check would go over, checking the rest, and asks it nothing", async () => {
-		await sandbox.budget('[{ som: 200, llm: "unlimited", per: "check" }]');
+		await sandbox.budget(
+			'{ som: { tokens: 200, per: "check" }, llm: "unlimited" }',
+		);
 
 		await run();
 
@@ -61,7 +63,7 @@ describe("wiz scry --disable-over-budget", () => {
 	});
 
 	it("turns off a model budgeted nothing rather than leave its rules unchecked", async () => {
-		await sandbox.budget('[{ som: "nothing", llm: "unlimited" }]');
+		await sandbox.budget('{ som: "nothing", llm: "unlimited" }');
 
 		await run();
 
@@ -84,7 +86,9 @@ describe("wiz scry --disable-over-budget", () => {
 	});
 
 	it("asks a model the check fits in", async () => {
-		await sandbox.budget('[{ som: 500, llm: "unlimited", per: "day" }]');
+		await sandbox.budget(
+			'{ som: { tokens: 500, per: "day" }, llm: "unlimited" }',
+		);
 
 		await run();
 
