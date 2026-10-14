@@ -119,6 +119,14 @@ export interface ScryConfig {
 	 * user's config adds to the project's.
 	 */
 	exclude?: string[];
+	/**
+	 * Options for the project's rules, by rule id, over the defaults each
+	 * rule's class declares, like `{ "compact-files": { limit: 400 } }`.
+	 * Each is set to a value of its default's type, and naming a rule the
+	 * project lacks, or an option its rule does not take, is an error. The
+	 * user's config lays its own over the project's, option by option.
+	 */
+	rules?: Record<string, Record<string, string | number | boolean>>;
 }
 
 /** Which credentials a project keeps, and where. */

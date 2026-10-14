@@ -30,7 +30,7 @@ Read further only for the work in front of you:
 
 - **Adding or updating a rule**: [references/authoring.md](references/authoring.md)
   first, every time.
-- **Changing the models, profiles or budgets a config sets**:
+- **Changing the models, profiles, budgets or rule options a config sets**:
   [references/config.md](references/config.md).
 
 ## Checking a change

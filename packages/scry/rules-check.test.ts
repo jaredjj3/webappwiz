@@ -131,6 +131,52 @@ describe("Rules.check", () => {
 		]);
 	});
 
+	/** A rule flagging each line holding the word its options name. */
+	const tunable = ruleSource(
+		`constructor(tools, options) { this.options = options; }
+		async check(file) {
+			return file.lines.flatMap((line, index) =>
+				line.includes(this.options.word) ? [{ line: index + 1, message: "no " + this.options.word, confidence: 1 }] : [],
+			);
+		}`,
+		{ options: { word: "foo", loud: true } },
+	);
+
+	it("builds each rule with its options, the project's laid over its defaults", async () => {
+		await install("no-word", tunable);
+		await write("src/a.ts", "foo\nbar\n");
+		const rules = await Rules.load(root, { fs });
+		const tools = { som: new FakeDecider(), llm: new FakeDecider() };
+
+		const found = async (options = {}) =>
+			(await rules.check({ paths: ["src/a.ts"], tools, options })).problems.map(
+				({ message }) => message,
+			);
+
+		expect([
+			await found(),
+			await found({ "no-word": { word: "bar" } }),
+		]).toEqual([["no foo"], ["no bar"]]);
+	});
+
+	it("refuses options for a rule the project lacks, or that its rule does not take", async () => {
+		await install("no-word", tunable);
+		const rules = await Rules.load(root, { fs });
+		const tools = { som: new FakeDecider(), llm: new FakeDecider() };
+		const check = (options: Record<string, Record<string, unknown>>) =>
+			rules.check({ paths: [], tools, options });
+
+		await expect(check({ nope: { word: "bar" } })).rejects.toThrow(
+			'scry.rules.nope: no rule "nope" in .wiz/scry',
+		);
+		await expect(check({ "no-word": { limit: 3 } })).rejects.toThrow(
+			"scry.rules.no-word.limit: no-word takes only word, loud",
+		);
+		await expect(check({ "no-word": { word: 3 } })).rejects.toThrow(
+			"scry.rules.no-word.word: expected a string",
+		);
+	});
+
 	it("builds each rule with the tools, so its check can ask the som", async () => {
 		await install("asks", asking);
 		await write("src/a.ts", "// add one\nn += 1;\n");

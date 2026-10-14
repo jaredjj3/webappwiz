@@ -1,4 +1,4 @@
-import type { Level } from "./rule";
+import type { Level, Options } from "./rule";
 
 /** The settings a test wants its rule's class to declare. */
 export interface RuleSourceOptions {
@@ -7,6 +7,7 @@ export interface RuleSourceOptions {
 	level?: Level;
 	threshold?: number;
 	recommended?: boolean;
+	options?: Options;
 }
 
 /**
@@ -31,6 +32,9 @@ export const ruleSource = (
 		...(opts.recommended === undefined
 			? []
 			: [`\tstatic recommended = ${opts.recommended};`]),
+		...(opts.options === undefined
+			? []
+			: [`\tstatic options = ${JSON.stringify(opts.options)};`]),
 		`\t${members}`,
 		"}",
 		"",

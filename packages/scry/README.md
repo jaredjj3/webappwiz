@@ -49,7 +49,24 @@ check has to be, from 0 to 1, before a finding is reported, 0.7 when absent;
 code is sure, so only a model's findings ever fall under it.
 `recommended: true` puts a rule in the set `scry add --recommended`
 installs, which is for a rule that reads on any project rather than one
-about a stack it may not have. `RuleClass` types them, and `DeclaredRule.of`
+about a stack it may not have. `options` names what a project can tune,
+each with its default, like `{ limit: 500 }`: a string, number or boolean. A
+project sets them in its config under `scry.rules.<id>`, each to a value of
+its default's type, and the rule's constructor gets them, with the defaults
+under what the project set, after its tools:
+
+```ts
+static readonly options = { limit: 500 };
+
+constructor(
+	_tools: Tools,
+	private options = CompactFiles.options,
+) {}
+```
+
+`Rules.check` and `Rules.evaluate` take what a project sets as `options`, by
+rule id, and refuse a rule id no rule has, an option its rule does not take,
+and a value of the wrong type. `RuleClass` types them, and `DeclaredRule.of`
 is how the engine reads them: holding a `DeclaredRule` means the class
 passed, with the defaults filled in. Anything else fails with `path: why`.
 

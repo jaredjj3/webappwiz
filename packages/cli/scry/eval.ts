@@ -8,7 +8,7 @@ import {
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
-import { chooseModels, loadConfig } from "../load-config";
+import { checkRuleOptions, chooseModels, loadConfig } from "../load-config";
 import { table } from "../table";
 import { NONE_DECLARED, OVER_BUDGET, ProjectBudgets } from "./project-budgets";
 import { asked, ProjectTools, plural } from "./project-tools";
@@ -61,6 +61,7 @@ export async function evaluate(opts: EvaluateOptions): Promise<void> {
 	const { root: dir } = await Git.locate(ps.cwd(), [], { ps });
 	const rules = await Rules.load(dir, { fs });
 	const settings = await loadConfig(dir, { fs, ps });
+	checkRuleOptions(settings, rules);
 	const budgets = await ProjectBudgets.open(dir, settings, {
 		override: opts.overrideBudget,
 		clock: opts.clock,
@@ -98,7 +99,12 @@ export async function evaluate(opts: EvaluateOptions): Promise<void> {
 					});
 		spinner?.start();
 		const evaluated = await rules
-			.evaluate({ ids: opts.ids, tools: asking.tools, progress })
+			.evaluate({
+				ids: opts.ids,
+				tools: asking.tools,
+				options: settings.rules,
+				progress,
+			})
 			.finally(() => spinner?.dispose());
 		await asking.save();
 		return { asking, evaluated };

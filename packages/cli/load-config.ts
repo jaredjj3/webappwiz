@@ -1,4 +1,4 @@
-import { EFFORTS } from "@webappwiz/scry";
+import { EFFORTS, type Rules } from "@webappwiz/scry";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import {
 	type Budget,
@@ -20,6 +20,10 @@ export interface Settings {
 	profiles: Record<string, ModelsConfig>;
 	jobs: number;
 	exclude: string[];
+	/** Options for the project's rules, by rule id, each layer's laid over the last's. */
+	rules: Record<string, Record<string, unknown>>;
+	/** The config file that set each of `rules`, by rule id, then option. */
+	rulesFrom: Record<string, Record<string, string>>;
 	/** What a check may spend, the presets spelled out; none when nothing declares it. */
 	budgets?: Budget[];
 }
@@ -46,7 +50,8 @@ export interface LoadConfigOptions {
  * defaults, the project's `.wiz/config.ts`, the user's
  * `$XDG_CONFIG_HOME/wiz/config.ts` (`~/.config/wiz/config.ts`), then
  * `WIZ_SCRY_JOBS`. `models` and each of `profiles` lay each model they name
- * over the last layer's, effort by effort, `exclude` gathers every layer's, and
+ * over the last layer's, effort by effort, `exclude` gathers every layer's,
+ * `rules` lays each rule's options over the last layer's, and
  * `budgets` is the last layer's to set it, whole.
  */
 export async function loadConfig(
@@ -55,15 +60,15 @@ export async function loadConfig(
 ): Promise<Settings> {
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
-	const layers = [
-		...(await files(dir, fs, ps)).map((config) => scry(config)),
-		environment(ps),
-	];
+	const found = await files(dir, fs, ps);
+	const layers = [...found.map((config) => scry(config)), environment(ps)];
 	const settings: Settings = {
 		models: { ...DEFAULT_MODELS },
 		profiles: {},
 		jobs: 8,
 		exclude: [],
+		rules: {},
+		rulesFrom: {},
 	};
 	for (const layer of layers) {
 		settings.models = lay(settings.models, layer.models);
@@ -72,9 +77,40 @@ export async function loadConfig(
 		}
 		settings.jobs = layer.jobs ?? settings.jobs;
 		settings.exclude = [...settings.exclude, ...(layer.exclude ?? [])];
+		for (const [id, options] of Object.entries(layer.rules ?? {})) {
+			settings.rules[id] = { ...settings.rules[id], ...options };
+		}
 		settings.budgets = budgets(layer.budgets) ?? settings.budgets;
 	}
+	for (const { path, config } of found) {
+		for (const [id, options] of Object.entries(config.scry?.rules ?? {})) {
+			for (const name of Object.keys(options)) {
+				settings.rulesFrom[id] = { ...settings.rulesFrom[id], [name]: path };
+			}
+		}
+	}
 	return settings;
+}
+
+/**
+ * Throws, naming the config file and the key, when `scry.rules` names a rule
+ * the project lacks, an option its rule does not take, or a value of another
+ * type than its default's.
+ */
+export function checkRuleOptions(settings: Settings, rules: Rules): void {
+	for (const [id, options] of Object.entries(settings.rules)) {
+		for (const [name, value] of Object.entries(options)) {
+			try {
+				rules.options({ [id]: { [name]: value } });
+			} catch (cause) {
+				const path = settings.rulesFrom[id]?.[name];
+				throw new Error(
+					`${path}: ${cause instanceof Error ? cause.message : cause}`,
+					{ cause },
+				);
+			}
+		}
+	}
 }
 
 /**
@@ -145,7 +181,32 @@ function scry({ path, config }: { path: string; config: Config }): ScryConfig {
 	for (const [name, models] of Object.entries(profiles)) {
 		checkModels(`${path}: scry.profiles.${name}`, models);
 	}
+	checkRules(`${path}: scry.rules`, scry.rules ?? {});
 	return scry;
+}
+
+/**
+ * Throws, saying where, unless `value` sets options by rule id, each a
+ * string, number or boolean. Whether a rule takes them is checked where the
+ * rules are loaded.
+ */
+function checkRules(where: string, value: unknown): void {
+	const example = `options by rule id, like { "compact-files": { limit: 400 } }`;
+	if (!isRecord(value)) {
+		throw new Error(`${where}: expected ${example}`);
+	}
+	for (const [id, options] of Object.entries(value)) {
+		if (!isRecord(options)) {
+			throw new Error(`${where}.${id}: expected ${example}`);
+		}
+		for (const [name, option] of Object.entries(options)) {
+			if (!["string", "number", "boolean"].includes(typeof option)) {
+				throw new Error(
+					`${where}.${id}.${name}: expected a string, number or boolean`,
+				);
+			}
+		}
+	}
 }
 
 /**

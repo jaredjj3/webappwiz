@@ -1,7 +1,8 @@
 # Configuring scry
 
-How to set the models a check asks and what it may spend. The skill's
-`SKILL.md` covers when to touch a budget at all: only when the user asks.
+How to set the models a check asks, what it may spend, and the options a
+rule takes. The skill's `SKILL.md` covers when to touch a budget at all:
+only when the user asks.
 
 ## Where it is set
 
@@ -26,6 +27,7 @@ export default defineConfig({
 		profiles: { "double-check": { som: "jev-preview" } },
 		jobs: 8, // requests at once, to each model
 		exclude: ["vendor/**"], // files no rule checks, from the project root
+		rules: { "compact-files": { limit: 400 } }, // over the options a rule declares
 	},
 });
 ```
@@ -41,6 +43,14 @@ caller's.
 runs on TypeSafe and needs `TYPESAFE_API_KEY`; a Claude like
 `claude-sonnet-5-5` runs on Anthropic and needs `ANTHROPIC_API_KEY`. A model
 no rule asks needs none.
+
+## Rule options
+
+`rules` sets the options a rule declares as its `static options`, by rule
+id, each to a value of its default's type. Naming a rule the project lacks,
+or an option its rule does not take, is an error. The user's config lays
+its own over the project's, option by option. Tuning a rule here, rather
+than editing its `rule.ts`, survives `wiz scry update`.
 
 ## Budgets
 

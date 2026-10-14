@@ -5,7 +5,7 @@ import { DeclaredRule } from "./declared-rule";
 import { ignored, legacy } from "./ignores";
 import { CASES_DIR, CHECK_FILE, RULES_ROOT } from "./layout";
 import { Progress } from "./progress";
-import type { Finding, Level, Rule, Tools } from "./rule";
+import type { Finding, Level, Options, Rule, Tools } from "./rule";
 import { RuleError } from "./rule-error";
 import { SourceFile } from "./source-file";
 
@@ -70,6 +70,27 @@ export class Rules {
 		return this.all.find((rule) => rule.id === id);
 	}
 
+	/**
+	 * Every rule's options, with what a project sets for it laid over its
+	 * defaults; a rule id no rule has, or an option its rule does not take,
+	 * is an error.
+	 */
+	options(set: OptionsByRule = {}): Map<string, Options> {
+		for (const id of Object.keys(set)) {
+			if (this.get(id) === undefined) {
+				throw new RuleError(
+					`scry.rules.${id}: no rule "${id}" in ${RULES_ROOT}`,
+				);
+			}
+		}
+		return new Map(
+			this.all.map((declared) => [
+				declared.id,
+				declared.optionsWith(set[declared.id] ?? {}),
+			]),
+		);
+	}
+
 	/** The rules with these ids, or every rule when there are none; an id with no rule is an error. */
 	private chosen(ids: readonly string[] = []): readonly DeclaredRule[] {
 		for (const id of ids) {
@@ -91,6 +112,7 @@ export class Rules {
 	 * unchecked rather than ending the check.
 	 */
 	async check(opts: CheckOptions): Promise<Report> {
+		const options = this.options(opts.options);
 		const glob = opts.glob ?? new NodeGlob();
 		const report: Report = {
 			problems: [],
@@ -150,7 +172,7 @@ export class Rules {
 		const checks = matched.map(async ({ declared, paths }) => {
 			let rule: Rule;
 			try {
-				rule = declared.build(opts.tools);
+				rule = declared.build(opts.tools, options.get(declared.id));
 			} catch (error) {
 				report.unchecked.push({ subject: declared.id, reason: reason(error) });
 				paths.forEach(finish);
@@ -210,12 +232,13 @@ export class Rules {
 	 * so a decider batches them as it would a check.
 	 */
 	async evaluate(opts: EvaluateOptions): Promise<Evaluation[]> {
+		const options = this.options(opts.options);
 		const evaluated = this.chosen(opts.ids);
 		// every case is loaded before any is scored, so the total is known
 		const loaded = await Promise.all(
 			evaluated.map(async (declared) => ({
 				declared,
-				rule: declared.build(opts.tools),
+				rule: declared.build(opts.tools, options.get(declared.id)),
 				cases: await Cases.load(`${this.dir}/${RULES_ROOT}/${declared.id}`, {
 					fs: this.fs,
 				}),
@@ -355,11 +378,21 @@ export interface Evaluation {
 	cases: Scored[];
 }
 
+/**
+ * Options a project sets, by rule id, then by option name, as
+ * `scry.rules` in its config has them; each rule's defaults hold for the rest.
+ */
+export type OptionsByRule = Readonly<
+	Record<string, Readonly<Record<string, unknown>>>
+>;
+
 /** Which rules to evaluate, and what to build them with. */
 export interface EvaluateOptions {
 	/** Rule ids; every rule when empty. */
 	ids?: readonly string[];
 	tools: Tools;
+	/** What the project sets each rule's options to. */
+	options?: OptionsByRule;
 	signal?: AbortSignal;
 	/** Counts the cases as each is scored, for showing as it goes. */
 	progress?: Progress;
@@ -373,6 +406,8 @@ export interface CheckOptions {
 	ids?: readonly string[];
 	/** What every rule is built with. */
 	tools: Tools;
+	/** What the project sets each rule's options to. */
+	options?: OptionsByRule;
 	glob?: Glob;
 	/** Stops the check: what came back by then is the report. */
 	signal?: AbortSignal;

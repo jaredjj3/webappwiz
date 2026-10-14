@@ -10,7 +10,7 @@ import {
 } from "webappwiz/system";
 import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
 import type { Role } from "../config";
-import { chooseModels, loadConfig } from "../load-config";
+import { checkRuleOptions, chooseModels, loadConfig } from "../load-config";
 import { table } from "../table";
 import type { Allowance } from "./budgets";
 import { NONE_DECLARED, OVER_BUDGET, ProjectBudgets } from "./project-budgets";
@@ -104,6 +104,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 		return;
 	}
 	const settings = await loadConfig(dir, { fs, ps });
+	checkRuleOptions(settings, rules);
 	const glob = opts.glob ?? new NodeGlob();
 	const git = new Git(dir, { ps });
 	// every file under the paths, or only the ones changed since a ref
@@ -186,6 +187,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 				paths: files,
 				ids: opts.rules,
 				tools: asking.tools,
+				options: settings.rules,
 				glob,
 				signal: cancel.signal,
 				progress,

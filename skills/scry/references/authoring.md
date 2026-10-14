@@ -15,6 +15,12 @@ static members of the class `rule.ts` default-exports (see The check):
   from 0 to 1. 0.7 when absent. Code is sure, so only what a model decided
   is ever under it; raise it for a rule that reports too much, lower it for
   one that misses.
+- `options`: what a project can tune, by name, each with its default, like
+  `{ limit: 500 }`, a string, number or boolean. The constructor gets them
+  after its tools, with what the project sets under `scry.rules.<id>` laid
+  over the defaults. Give a rule one only for a number or choice projects
+  reasonably differ on, and keep its id, `description` and messages free of
+  the default, which a project may change.
 
 `wiz scry list` loads every rule's class and names each one missing a
 `rule.ts` or a `description`, or giving a bad setting.

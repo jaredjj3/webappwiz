@@ -3,6 +3,7 @@ import { CHECK_FILE } from "./layout";
 import {
 	LEVELS,
 	type Level,
+	type Options,
 	type Rule,
 	type RuleClass,
 	type Tools,
@@ -35,6 +36,12 @@ const SETTINGS = z.object({
 			.max(1, { error: "expected a number from 0 to 1" }),
 	),
 	recommended: z.optional(z.boolean({ error: "expected true or false" })),
+	options: z.optional(
+		z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]), {
+			error:
+				"expected options by name, each a string, number or boolean default",
+		}),
+	),
 });
 
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -61,6 +68,8 @@ export class DeclaredRule {
 		readonly threshold: number,
 		/** Whether a catalog offers it as one to start with. */
 		readonly recommended: boolean,
+		/** What a project can tune, by name, each with its default. */
+		readonly options: Options,
 		private type: RuleClass,
 	) {}
 
@@ -87,6 +96,7 @@ export class DeclaredRule {
 			level: type.level,
 			threshold: type.threshold,
 			recommended: type.recommended,
+			options: type.options,
 		});
 		if (!parsed.success) {
 			const issue = parsed.error.issues[0];
@@ -102,12 +112,35 @@ export class DeclaredRule {
 			settings.level ?? "error",
 			settings.threshold ?? 0.7,
 			settings.recommended ?? false,
+			settings.options ?? {},
 			type,
 		);
 	}
 
-	/** The rule's check, built with the tools. */
-	build(tools: Tools): Rule {
-		return new this.type(tools);
+	/** The rule's check, built with the tools and its options. */
+	build(tools: Tools, options: Options = this.options): Rule {
+		return new this.type(tools, options);
+	}
+
+	/**
+	 * Its options with a project's laid over the defaults; or throws a
+	 * `RuleError` naming one the rule does not take, or one set to a value
+	 * of another type than its default's.
+	 */
+	optionsWith(overrides: Readonly<Record<string, unknown>>): Options {
+		for (const [name, value] of Object.entries(overrides)) {
+			const where = `scry.rules.${this.id}.${name}`;
+			if (!Object.hasOwn(this.options, name)) {
+				const taken = Object.keys(this.options);
+				throw new RuleError(
+					`${where}: ${this.id} takes ${taken.length === 0 ? "no options" : `only ${taken.join(", ")}`}`,
+				);
+			}
+			const expected = typeof this.options[name];
+			if (typeof value !== expected) {
+				throw new RuleError(`${where}: expected a ${expected}`);
+			}
+		}
+		return { ...this.options, ...overrides } as Options;
 	}
 }

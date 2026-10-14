@@ -2,9 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Rules } from "@webappwiz/scry";
+import { ruleSource } from "@webappwiz/scry/testing";
 import { NodeFs } from "webappwiz/system";
 import { FakePs } from "webappwiz/system/testing";
 import {
+	checkRuleOptions,
 	chooseModels,
 	DEFAULT_MODELS,
 	loadConfig,
@@ -42,6 +45,8 @@ describe("loadConfig", () => {
 			profiles: {},
 			jobs: 8,
 			exclude: [],
+			rules: {},
+			rulesFrom: {},
 		});
 	});
 
@@ -181,6 +186,74 @@ describe("loadConfig", () => {
 			"vendor/**",
 			"scratch/**",
 		]);
+	});
+
+	it("lays the user's rule options over the project's, option by option", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			config({ rules: { "compact-files": { limit: 400, tests: false } } }),
+		);
+		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.write(
+			`${root}/home/.config/wiz/config.ts`,
+			config({ rules: { "compact-files": { limit: 300 } } }),
+		);
+
+		const settings = await loadConfig(`${root}/p`, { fs, ps });
+
+		expect([settings.rules, settings.rulesFrom]).toEqual([
+			{ "compact-files": { limit: 300, tests: false } },
+			{
+				"compact-files": {
+					limit: `${root}/home/.config/wiz/config.ts`,
+					tests: `${root}/p/.wiz/config.ts`,
+				},
+			},
+		]);
+	});
+
+	it("refuses options the project's rules do not take, naming the config file that set them", async () => {
+		// each its own project, since a config file is imported once
+		const refusal = async (project: string, options: object) => {
+			const dir = `${root}/${project}`;
+			await fs.mkdir(`${dir}/.wiz/scry/compact-files`);
+			await fs.write(
+				`${dir}/.wiz/scry/compact-files/rule.ts`,
+				ruleSource(undefined, { options: { limit: 500 } }),
+			);
+			await fs.write(`${dir}/.wiz/config.ts`, config({ rules: options }));
+			const settings = await loadConfig(dir, { fs, ps });
+			try {
+				checkRuleOptions(settings, await Rules.load(dir, { fs }));
+			} catch (error) {
+				return (error as Error).message.replace(dir, "<project>");
+			}
+		};
+
+		expect([
+			await refusal("a", { "compact-files": { limit: 400 } }),
+			await refusal("b", { nope: { limit: 400 } }),
+			await refusal("c", { "compact-files": { lines: 400 } }),
+			await refusal("d", { "compact-files": { limit: "400" } }),
+		]).toEqual([
+			undefined,
+			'<project>/.wiz/config.ts: scry.rules.nope: no rule "nope" in .wiz/scry',
+			"<project>/.wiz/config.ts: scry.rules.compact-files.lines: compact-files takes only limit",
+			"<project>/.wiz/config.ts: scry.rules.compact-files.limit: expected a number",
+		]);
+	});
+
+	it("refuses a rule option that is not a string, number or boolean", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			config({ rules: { "compact-files": { limit: [400] } } }),
+		);
+
+		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
+			"scry.rules.compact-files.limit: expected a string, number or boolean",
+		);
 	});
 
 	it("reads the user's config from XDG_CONFIG_HOME when it is set", async () => {

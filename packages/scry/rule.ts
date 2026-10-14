@@ -53,12 +53,22 @@ export interface Tools {
 export type Level = "error" | "warning";
 export const LEVELS = ["error", "warning"] as const;
 
+/** What one of a rule's options can be set to. */
+export type OptionValue = string | number | boolean;
+
+/** A rule's options by name. */
+export type Options = Readonly<Record<string, OptionValue>>;
+
 /**
  * What a rule's `rule.ts` default-exports: a class implementing `Rule`, built
- * with the tools, whose static members say what the rule expects and which
- * files it reads.
+ * with the tools and its options, whose static members say what the rule
+ * expects and which files it reads.
  */
-export type RuleClass = (new (tools: Tools) => Rule) & RuleSettings;
+export type RuleClass = (new (
+	tools: Tools,
+	options: Options,
+) => Rule) &
+	RuleSettings;
 
 /** A rule's settings, the static members of its class. */
 export interface RuleSettings {
@@ -80,4 +90,11 @@ export interface RuleSettings {
 	 * rule needs no say: it is already installed.
 	 */
 	readonly recommended?: boolean;
+	/**
+	 * What a project can tune, by name, each with its default, like
+	 * `{ limit: 500 }`; none when not given. A project's config sets them
+	 * under `scry.rules.<id>`, each to a value of its default's type, and the
+	 * rule's constructor gets the defaults with those laid over them.
+	 */
+	readonly options?: Options;
 }
