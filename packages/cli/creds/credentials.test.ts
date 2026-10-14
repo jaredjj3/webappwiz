@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FakeSecretStore } from "webappwiz/creds/testing";
@@ -12,6 +12,17 @@ import { ProjectCredentials } from "./project-credentials";
 import { remove } from "./remove";
 import { run } from "./run";
 import type { SecretInput } from "./secret-input";
+
+/** Every file under `dir` whose text matches `pattern`, by path. */
+async function holding(dir: string, pattern: RegExp): Promise<string[]> {
+	const files = (await readdir(dir, { recursive: true, withFileTypes: true }))
+		.filter((entry) => entry.isFile())
+		.map((entry) => join(entry.parentPath, entry.name));
+	const texts = await Promise.all(
+		files.map((file) => readFile(file, "latin1")),
+	);
+	return files.filter((_, index) => pattern.test(texts[index] ?? ""));
+}
 
 describe("wiz creds", () => {
 	const fs = new NodeFs();
@@ -112,6 +123,21 @@ describe("wiz creds", () => {
 		});
 
 		expect(store.values.get("STRIPE_SECRET_KEY")).toEqual("piped-value");
+	});
+
+	it("leaves a typed or piped value in no file and nothing it says", async () => {
+		typed = "typed-secret";
+		const options = { log, ps, store, deviceStore: device, input };
+
+		await add({ ...options, name: "STRIPE_SECRET_KEY", stdin: false });
+		await add({ ...options, name: "OTHER_KEY", stdin: true, device: true });
+
+		expect([...store.values, ...device.values]).toEqual([
+			["STRIPE_SECRET_KEY", "typed-secret"],
+			["OTHER_KEY", "piped-value"],
+		]);
+		expect(JSON.stringify(log.entries)).not.toMatch(/typed-secret|piped-value/);
+		expect(await holding(root, /typed-secret|piped-value/)).toEqual([]);
 	});
 
 	it("refuses with no terminal to ask on, and says a person has to run it", async () => {
