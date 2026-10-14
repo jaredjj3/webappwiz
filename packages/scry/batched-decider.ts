@@ -2,6 +2,7 @@ import { type Decider, pointing, state } from "./decider";
 import type { Judge, Noul } from "./judge";
 import type { SourceFile } from "./source-file";
 import type { Span } from "./span";
+import { Unasked } from "./unasked";
 
 /**
  * The most questions one request asks: Clef's limit of 64, less the one a
@@ -35,7 +36,7 @@ export interface BatchedDeciderOptions {
 	signal?: AbortSignal;
 	/**
 	 * The input tokens it may spend: once it has, nothing more goes out, and
-	 * every question still waiting fails with `reason`. Requests already out
+	 * every question still waiting fails with `Unasked` and `reason`. Requests already out
 	 * may carry it past. No limit by default.
 	 */
 	budget?: { input: number; reason: string };
@@ -170,7 +171,7 @@ export class BatchedDecider implements Decider {
 		const tally = this.opts.tally ?? this.usage;
 		if (budget !== undefined && tally.input >= budget.input) {
 			for (const item of batch) {
-				item.reject(new Error(budget.reason));
+				item.reject(new Unasked(budget.reason, "budget"));
 			}
 			return;
 		}

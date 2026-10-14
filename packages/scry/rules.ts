@@ -8,6 +8,7 @@ import { Progress } from "./progress";
 import type { Finding, Level, Options, Rule, Tools } from "./rule";
 import { RuleError } from "./rule-error";
 import { SourceFile } from "./source-file";
+import { Unasked } from "./unasked";
 
 /**
  * The rules in a project's `.wiz/scry`. A rule is a directory: its `rule.ts`
@@ -174,7 +175,11 @@ export class Rules {
 			try {
 				rule = declared.build(opts.tools, options.get(declared.id));
 			} catch (error) {
-				report.unchecked.push({ subject: declared.id, reason: reason(error) });
+				report.unchecked.push({
+					subject: declared.id,
+					reason: reason(error),
+					rule: declared.id,
+				});
 				paths.forEach(finish);
 				return;
 			}
@@ -190,6 +195,8 @@ export class Rules {
 						report.unchecked.push({
 							subject: `${declared.id} on ${path}`,
 							reason: reason(error),
+							rule: declared.id,
+							...(error instanceof Unasked && { unasked: error.kind }),
 						});
 						return [];
 					});
@@ -337,6 +344,13 @@ export interface Unchecked {
 	/** What was not checked: a rule, or a rule on one file. */
 	subject: string;
 	reason: string;
+	/** The rule that went unchecked. */
+	rule: string;
+	/**
+	 * When a model the rule would have asked was not, as `Unasked` says,
+	 * rather than the rule breaking: disabled, or out of budget.
+	 */
+	unasked?: Unasked["kind"];
 }
 
 /** What a check found, and what it could not look at. */

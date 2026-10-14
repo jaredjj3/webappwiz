@@ -1,4 +1,10 @@
-import { Git, Progress, type Report, Rules } from "@webappwiz/scry";
+import {
+	Git,
+	Progress,
+	type Report,
+	Rules,
+	type Unchecked,
+} from "@webappwiz/scry";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import {
 	type Fs,
@@ -9,7 +15,7 @@ import {
 	type Ps,
 } from "webappwiz/system";
 import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
-import type { Role } from "../config";
+import { ROLES, type Role } from "../config";
 import {
 	checkRuleOptions,
 	chooseModels,
@@ -37,10 +43,7 @@ export interface CheckOptions {
 	 * project root, holding `.wiz/scry`, is the root of the git repository.
 	 */
 	paths: string[];
-	/**
-	 * Checks only the files under `paths` changed since this ref, committed
-	 * or not.
-	 */
+	/** Checks only the files under `paths` changed since this ref, committed or not. */
 	since?: string;
 	/** Checks with only the rules these ids name; every rule when empty. */
 	rules?: string[];
@@ -57,6 +60,8 @@ export interface CheckOptions {
 	 * would ask, counted rather than sent, and no report. False by default.
 	 */
 	cost?: boolean;
+	/** Why each model this run leaves off is off; both off needs no budget. */
+	disabled?: Partial<Record<Role, string>>;
 	/**
 	 * Checks whatever `scry.budgets` says, spending without a limit, and
 	 * without one declared. False by default.
@@ -85,6 +90,9 @@ export interface CheckOptions {
  * one block of problems, and a nonzero exit when any is an error. It exits 1
  * on an error, 2 when a rule went unchecked on a file, 3 when it would
  * spend more than `scry.budgets` allows or none is declared, 0 otherwise.
+ * A rule that asks a model `disabled` turns off goes unchecked where it
+ * asks, listed with why but never exiting 2; with both off, no budget is
+ * read.
  *
  * With a number to stay under, it counts what it would ask first, as
  * `cost` does, and refuses to run when that would go over. A question it
@@ -136,13 +144,15 @@ export async function check(opts: CheckOptions): Promise<void> {
 		return;
 	}
 
+	const disabled = opts.disabled ?? {};
+	const codeOnly = ROLES.every((role) => disabled[role] !== undefined);
 	const budgets = await ProjectBudgets.open(dir, settings, {
 		override: opts.overrideBudget,
 		clock: opts.clock,
 		fs,
 		ps,
 	});
-	if (budgets.undeclared && !opts.cost) {
+	if (budgets.undeclared && !opts.cost && !codeOnly) {
 		log.error(NONE_DECLARED);
 		ps.exit(OVER_BUDGET);
 		return;
@@ -173,6 +183,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 			signal: cancel.signal,
 			providers: opts.providers,
 			counting,
+			disabled,
 			budgets: allowances,
 			fs,
 			ps,
@@ -212,6 +223,8 @@ export async function check(opts: CheckOptions): Promise<void> {
 		const { asking, report } = await pass(true);
 		const spent = asking.spent;
 		const use = (role: Role) => asking.input(role);
+		const off = report.unchecked.filter(isDisabled);
+		const unchecked = report.unchecked.filter((item) => !isDisabled(item));
 		log.info(
 			opts.format === "json"
 				? JSON.stringify(
@@ -226,15 +239,21 @@ export async function check(opts: CheckOptions): Promise<void> {
 						null,
 						2,
 					)
-				: [...costed(report, spent), ...budgets.lines(use)].join("\n"),
+				: [
+						...offModels(off).flatMap((line, index, all) =>
+							index === all.length - 1 ? [line, ""] : [line],
+						),
+						...costed({ ...report, unchecked }, spent),
+						...budgets.lines(use),
+					].join("\n"),
 		);
-		if (report.cancelled || report.unchecked.length > 0) {
+		if (report.cancelled || unchecked.length > 0) {
 			ps.exit(2);
 		}
 		return;
 	}
 
-	if (budgets.countsFirst) {
+	if (budgets.countsFirst && !codeOnly) {
 		// counted answers are never kept, so the check below still asks
 		const { asking: counted, report } = await pass(true);
 		if (report.cancelled) {
@@ -250,8 +269,12 @@ export async function check(opts: CheckOptions): Promise<void> {
 	}
 
 	const { asking, report } = await pass(false, budgets.allowances);
-	await budgets.record(asking);
+	if (!codeOnly) {
+		await budgets.record(asking);
+	}
 	const spent = asking.spent;
+	const off = report.unchecked.filter(isDisabled);
+	const unchecked = report.unchecked.filter((item) => !isDisabled(item));
 
 	if (report.legacy.length > 0) {
 		log.error(
@@ -264,20 +287,34 @@ export async function check(opts: CheckOptions): Promise<void> {
 	log.info(
 		opts.format === "json"
 			? JSON.stringify({ since, ...report, spent }, null, 2)
-			: text(report, since, spent).join("\n"),
+			: text({ ...report, unchecked }, since, {
+					spent,
+					off,
+					without: ROLES.filter((role) => disabled[role] !== undefined),
+				}).join("\n"),
 	);
 	if (report.problems.some((problem) => problem.level === "error")) {
 		ps.exit(1);
-	} else if (report.unchecked.length > 0) {
+	} else if (unchecked.length > 0) {
 		ps.exit(2);
 	}
+}
+
+/** What a text report adds to the report itself. */
+interface TextOptions {
+	/** What the models were asked; nothing is said of them when not given. */
+	spent?: Spent;
+	/** What went unchecked where a rule asked a model this run turned off. */
+	off?: Unchecked[];
+	/** The models this run turned off. */
+	without?: Role[];
 }
 
 /** The report as a linter prints one: problems under each file, then a tally. */
 function text(
 	report: Report,
 	since: string | undefined,
-	spent: Spent,
+	{ spent, off = [], without = [] }: TextOptions,
 ): string[] {
 	const rows = report.problems.map((problem) => [
 		`  ${color.dim(String(problem.line))}`,
@@ -305,11 +342,52 @@ function text(
 			),
 		);
 	}
-	lines.push(...(lines.length === 0 ? [] : [""]), tally(report, since));
-	if (spent.questions + spent.cached > 0) {
+	const offs = offModels(off);
+	if (offs.length > 0) {
+		lines.push(...(lines.length === 0 ? [] : [""]), ...offs);
+	}
+	lines.push(
+		...(lines.length === 0 ? [] : [""]),
+		tally(report, since, without),
+	);
+	if (spent !== undefined && spent.questions + spent.cached > 0) {
 		lines.push(color.dim(asked(spent)));
 	}
 	return lines;
+}
+
+/** Whether a rule went unchecked for asking a model the run turned off. */
+function isDisabled(item: Unchecked): boolean {
+	return item.unasked === "disabled";
+}
+
+/**
+ * The rules left unchecked where they asked a model the run turned off,
+ * each with how many files and why the model was off; nothing when there
+ * are none.
+ */
+function offModels(off: Unchecked[]): string[] {
+	const groups = new Map<
+		string,
+		{ rule: string; reason: string; files: number }
+	>();
+	for (const { rule, reason } of off) {
+		const key = `${rule}\n${reason}`;
+		const group = groups.get(key) ?? { rule, reason, files: 0 };
+		group.files++;
+		groups.set(key, group);
+	}
+	if (groups.size === 0) {
+		return [];
+	}
+	const rows = [...groups.values()]
+		.sort((left, right) => left.rule.localeCompare(right.rule))
+		.map(({ rule, reason, files }) => [
+			`  ${rule}`,
+			`${files} ${plural(files, "file")}`,
+			reason,
+		]);
+	return [color.bold("needs a model that is off"), ...table(rows)];
 }
 
 /** What a check would cost, then what it could not count. */
@@ -334,13 +412,18 @@ function costed(report: Report, spent: Spent): string[] {
  * The last line: what was found, where, and what the check could not vouch
  * for. It never says `no problems` of files it did not check. `since` is
  * what a change was measured from; a check of whole paths has none.
+ * `without` names the models the run turned off.
  */
-function tally(report: Report, since: string | undefined): string {
+function tally(
+	report: Report,
+	since: string | undefined,
+	without: Role[],
+): string {
 	const errors = report.problems.filter(
 		(problem) => problem.level === "error",
 	).length;
 	const warnings = report.problems.length - errors;
-	const scope = `${report.files} ${plural(report.files, "file")}${since === undefined ? "" : ` since ${since}`}`;
+	const scope = `${report.files} ${plural(report.files, "file")}${since === undefined ? "" : ` since ${since}`}${withoutModels(without)}`;
 	const missed = report.unchecked.length;
 	const stopped = report.cancelled ? "cancelled: " : "";
 	const but = missed === 0 ? "" : `, but ${missed} not checked`;
@@ -352,4 +435,14 @@ function tally(report: Report, since: string | undefined): string {
 	return missed === 0 && !report.cancelled
 		? color.green(`✔ no problems in ${scope}`)
 		: color.yellow(`⚠ ${stopped}no problems found in ${scope}${but}`);
+}
+
+/** How the tally says which models were off: ", by code alone" when both. */
+function withoutModels(without: Role[]): string {
+	if (without.length === 0) {
+		return "";
+	}
+	return without.length === ROLES.length
+		? ", by code alone"
+		: `, without the ${without.join(" or ")}`;
 }

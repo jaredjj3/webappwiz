@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NodeFs } from "webappwiz/system";
 import type { Decider } from "./decider";
+import { DisabledDecider } from "./disabled-decider";
 import { Progress } from "./progress";
 import { Rules } from "./rules";
 import { FakeDecider, type RuleSourceOptions, ruleSource } from "./testing";
@@ -203,9 +204,36 @@ describe("Rules.check", () => {
 		const report = await run(["src/a.ts"]);
 
 		expect(report.unchecked).toEqual([
-			{ subject: "fragile on src/a.ts", reason: "boom" },
+			{ subject: "fragile on src/a.ts", reason: "boom", rule: "fragile" },
 		]);
 		expect(report.problems.map((problem) => problem.rule)).toEqual(["no-foo"]);
+	});
+
+	it("marks a rule unchecked as unasked where its model was disabled, keeping what code decided", async () => {
+		await install("asks", asking);
+		await install("no-foo", flagging("foo"));
+		await write("src/a.ts", "// add one\nfoo += 1;\n");
+		await write("src/b.ts", "bar += 1;\n");
+
+		const report = await run(
+			["src/a.ts", "src/b.ts"],
+			new DisabledDecider("no som today"),
+		);
+
+		expect([
+			report.unchecked,
+			report.problems.map((problem) => problem.rule),
+		]).toEqual([
+			[
+				{
+					subject: "asks on src/a.ts",
+					reason: "no som today",
+					rule: "asks",
+					unasked: "disabled",
+				},
+			],
+			["no-foo"],
+		]);
 	});
 
 	it("reports a rule unchecked whose class throws on being built", async () => {
@@ -216,7 +244,7 @@ describe("Rules.check", () => {
 		await write("src/a.ts", "x\n");
 
 		expect((await run(["src/a.ts"])).unchecked).toEqual([
-			{ subject: "broken", reason: "no tools" },
+			{ subject: "broken", reason: "no tools", rule: "broken" },
 		]);
 	});
 

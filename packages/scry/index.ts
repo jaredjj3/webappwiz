@@ -28,6 +28,7 @@ export {
 } from "./decisions";
 export { Declaration } from "./declaration";
 export { DeclaredRule, type DeclareOptions } from "./declared-rule";
+export { DisabledDecider } from "./disabled-decider";
 export { type ChangedFile, type Changeset, Git, type GitOptions } from "./git";
 export { Jev, type JevOptions } from "./jev";
 export type {
@@ -73,3 +74,4 @@ export { SourceFile } from "./source-file";
 export { Span } from "./span";
 export { type Matcher, SyntaxNode } from "./syntax-node";
 export { TypeScriptSyntax } from "./typescript-syntax";
+export { Unasked } from "./unasked";

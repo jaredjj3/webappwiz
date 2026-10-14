@@ -102,15 +102,39 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description:
 				"check even past scry.budgets, or with none declared, spending without a limit",
 		})
+		.repeated(
+			"disable",
+			z
+				.string()
+				.regex(
+					/^(som|llm)(=.+)?$/,
+					"expected som or llm, then =<reason> if you like",
+				),
+			{
+				description:
+					"turn off a model for this run, as som or llm, with =<reason> to say why, like llm=saving tokens; give it again for the other, which checks only what code decides and needs no budget; rules that would ask it are listed with the reason, not checked",
+			},
+		)
 		.use(timed())
 		.action(
 			(
-				{ rule, option, "override-budget": overrideBudget, ...opts },
+				{ rule, option, "override-budget": overrideBudget, disable, ...opts },
 				{ log, fs, ps },
 			) =>
 				check({
 					...opts,
 					overrideBudget,
+					disabled: Object.fromEntries(
+						disable.map((flag) => {
+							const [role, ...reason] = flag.split("=");
+							return [
+								role,
+								reason.length === 0
+									? `${role} disabled with --disable`
+									: reason.join("="),
+							];
+						}),
+					),
 					rules: rule.split(",").filter((id) => id !== ""),
 					options: option,
 					log,

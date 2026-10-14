@@ -5,6 +5,7 @@ import {
 	type Decider,
 	type DeciderUsage,
 	Decisions,
+	DisabledDecider,
 	type Tools,
 } from "@webappwiz/scry";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
@@ -36,6 +37,12 @@ export interface ProjectToolsOptions {
 	 * every question no, and keeps none of those answers. False by default.
 	 */
 	counting?: boolean;
+	/**
+	 * Why each role is off, for those that are: every question a rule asks
+	 * it throws `Unasked` with that reason, and its credentials are never
+	 * read. Both off checks only what code decides. None by default.
+	 */
+	disabled?: Partial<Record<Role, string>>;
 	/** What each role may spend; no limit on one left out. */
 	budgets?: Partial<Record<Role, Allowance>>;
 	/** What makes the judge for a model; Workers AI, TypeSafe and Anthropic by default. */
@@ -73,16 +80,20 @@ export class ProjectTools {
 	): Promise<ProjectTools> {
 		const fs = opts.fs ?? new NodeFs();
 		const ps = opts.ps ?? new NodePs();
+		const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
 		const providers =
 			opts.providers ??
 			new HostedProviders(
 				(await ProjectCredentials.open(dir, { fs, ps })).credentials,
 			);
-		const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
 		const asked: Asked[] = [];
 		// one decider for each model a role asks, however many efforts ask
 		// it, so the questions to it share requests and a tally its budget holds
 		const ask = (role: Role): Decider => {
+			const disabled = opts.disabled?.[role];
+			if (disabled !== undefined) {
+				return new DisabledDecider(disabled);
+			}
 			const tally: DeciderUsage = { requests: 0, questions: 0, input: 0 };
 			const chain = (model: string): Decider => {
 				const known = asked.find(

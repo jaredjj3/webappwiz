@@ -147,6 +147,11 @@ export default class CommentsSayWhy implements Rule {
   asks it says so in its `rule.ts`, with the eval that showed the som
   missing. Its probability is one it states, not one read off its tokens,
   so evaluate before trusting the default `threshold`.
+- **Let a model's errors through.** Never catch what `decide` throws:
+  when a model is turned off with `--disable` or its budget runs out, it
+  throws `Unasked`, which the engine reports as that rule unchecked on
+  that file, with why. A rule that catches it and returns no findings
+  reports the file clean when nothing was asked.
 - **An effort for how hard a question is.**
   `decide(question, span, { effort: "high" })` asks the model the config
   names for `low`, `medium` or `high`; a question that names none asks the

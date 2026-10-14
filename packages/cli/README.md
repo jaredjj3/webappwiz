@@ -184,6 +184,26 @@ $ bunx @webappwiz/cli scry --cost
 estimated 31k input tokens to check 14 files: 40 questions in 9 requests
 ```
 
+`--disable som` or `--disable llm` turns a model off for one run, and
+`--disable llm=<reason>` says why. A question a rule asks a model that is
+off throws `Unasked` and leaves that rule unchecked on that file. The
+report lists each such rule with how many files and the reason, and the
+tally says which model was off; those rules do not make it exit 2. The model
+left on still asks, held to the budget as ever. Turning both off checks
+only what code decides, for free: it reads no budget and needs no
+credentials. In `--format json`, each is in `unchecked` with
+`unasked: "disabled"`, and a question a budget left unasked has
+`unasked: "budget"`.
+
+```
+$ bunx @webappwiz/cli scry --disable som --disable "llm=saving tokens"
+needs a model that is off
+  comments-say-why-not-what   15 files   som disabled with --disable
+  simple-test-setup           4 files    saving tokens
+
+✔ no problems in 95 files, by code alone
+```
+
 While it runs on a terminal, one line on stderr counts the files done and
 the questions asked, answered and found in the cache, and is erased before
 the report. It draws nothing in a pipe, under CI, or with `--format json`.

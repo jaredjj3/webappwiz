@@ -4,6 +4,7 @@ import type { Judge, Judgment, Verdict } from "./judge";
 import { SourceFile } from "./source-file";
 import { Span } from "./span";
 import { FakeJudge } from "./testing";
+import { Unasked } from "./unasked";
 
 describe("BatchedDecider", () => {
 	/** Answers each question by the line it is about, so every answer is told apart. */
@@ -262,7 +263,7 @@ describe("BatchedDecider", () => {
 		]);
 	});
 
-	it("asks nothing on a budget of 0", async () => {
+	it("asks nothing on a budget of 0, failing with Unasked", async () => {
 		const judge = new FakeJudge(0.5);
 		const decider = new BatchedDecider(judge, {
 			budget: { input: 0, reason: "scry.budgets spends nothing on the llm" },
@@ -270,8 +271,14 @@ describe("BatchedDecider", () => {
 
 		const answer = decider.decide("Is it?", at(cart, 1));
 
-		expect([await answer.catch(String), judge.judgments.length]).toEqual([
-			"Error: scry.budgets spends nothing on the llm",
+		expect([
+			await answer.catch((error) => [
+				error instanceof Unasked && error.kind,
+				String(error),
+			]),
+			judge.judgments.length,
+		]).toEqual([
+			["budget", "Error: scry.budgets spends nothing on the llm"],
 			0,
 		]);
 	});

@@ -71,7 +71,8 @@ showing any.
 ## Budgets
 
 `wiz scry` and `wiz scry eval` run only with `scry.budgets` declared: how
-many input tokens each may spend on the `som` and the `llm`. When either
+many input tokens each may spend on the `som` and the `llm`; only a check
+with both models turned off needs none (see Turning a model off). When either
 says no budget is declared, declare `"nothing"` in the project's
 `.wiz/config.ts`, which asks no model, so only code decides:
 
@@ -83,8 +84,9 @@ export default defineConfig({
 
 Then tell the user you did, that every question a rule would ask a model
 now goes unasked and is reported as not checked, and that they can allow
-spending whenever they want. Raise a budget only when they ask, to what they
-ask for (see [references/config.md](references/config.md)).
+spending whenever they want. For one free run without touching the config,
+turn both models off instead (see Turning a model off). Raise a budget only
+when they ask, to what they ask for (see [references/config.md](references/config.md)).
 
 When a run would go over a budget, it refuses. Show the user its message as
 printed, and stop. **Never pass `--override-budget`, or raise a budget,
@@ -94,6 +96,42 @@ declared. `--cost` says what a check would spend of each budget, without
 asking a model; run it when the user asks what a check costs or whether it
 fits.
 
+## Turning a model off
+
+`--disable som` or `--disable llm` turns that model off for one run; give
+it twice to turn both off. Add `=<reason>` to say why, as in
+`--disable "llm=saving tokens"`; without one the reason is
+`<model> disabled with --disable`. Any other value is refused.
+
+- **Both off** checks only what code decides, for free: it needs no
+  `scry.budgets` declared and no credentials, and spends nothing. Run it
+  for a free pass, such as when a run would go over a budget or no budget
+  is declared, and the user has not said yes to spending. It is not a way
+  round a budget: say what it left unchecked.
+- **One off** still asks the other, so a budget must be declared, and the
+  run is held to it as ever, counting first and refusing past it. Credentials
+  are needed only for the model left on.
+- **What is unchecked.** A rule that asks a model that is off goes
+  unchecked on that file; whatever code decides in it on files where it
+  asks nothing still reports. The report lists each such rule under
+  "needs a model that is off", with how many files and the reason, and
+  the tally ends with `without the llm`, `without the som`, or
+  `by code alone`. Pass that section on with the report: those rules were
+  not checked, so never call the change clean of them.
+- **`--cost`** with one off counts only what the other would ask, and
+  lists the same section above the estimate.
+- **`--format json`** keeps each in `unchecked`, with `rule`, `reason`,
+  and `unasked: "disabled"`. A question a budget left unasked has
+  `unasked: "budget"`; anything else in `unchecked` is a rule that broke.
+- **`wiz scry eval`** does not take it: it scores rules against their
+  cases, and a rule whose model is off would score nothing.
+
+Under the hood each model that is off is a `DisabledDecider(reason)`, which
+throws `Unasked` with that reason and a `kind` of `disabled`; a budget that
+runs out throws `Unasked` with a `kind` of `budget`. Both reach the report
+only when a rule lets them through (see
+[references/authoring.md](references/authoring.md)).
+
 ## Exit codes
 
 `wiz scry` exits:
@@ -102,7 +140,9 @@ fits.
 - **1**: a finding at `level: error`.
 - **2**: a rule went unchecked on a file: it threw, a model's credentials
   were missing, or a budget left a question unasked, as `"nothing"` does.
-  The report names each under "not checked".
+  The report names each under "not checked". Never for a rule
+  that asked a model `--disable` turned off, which is listed under
+  "needs a model that is off" instead.
 - **3**: it did not run: no budget declared, or it would go over one.
 - **130**: quit with a second ctrl-c; the first stops the check and
   reports what came back.
