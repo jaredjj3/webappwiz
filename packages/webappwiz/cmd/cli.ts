@@ -86,7 +86,7 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 	 * every command by the path it was reached through, not the name the
 	 * mounted cli was built with.
 	 */
-	mount(name: string, sub: Cli<D>): this {
+	mount<Sub extends object>(name: string, sub: Cli<D, Sub>): this {
 		this.cmds.set(name, sub as Node<D>);
 		return this;
 	}
