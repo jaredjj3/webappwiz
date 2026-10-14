@@ -1,12 +1,13 @@
 import { basename } from "node:path";
-import { lanesFromTags } from "@webappwiz/arbor/lanes-from-tags";
+import { ProjectSkills } from "@webappwiz/arbor/skills";
+import { update as updateArbor } from "@webappwiz/arbor/update";
 import type { ShippedRule } from "@webappwiz/scry/catalog";
 import type { SecretStore } from "webappwiz/creds";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps, walk } from "webappwiz/system";
 import { ProjectCredentials } from "./creds/project-credentials";
-import { update as updateRules } from "./scry/update";
-import { update as updateSkills } from "./skills/update";
+import { update as updateScry } from "./scry/update";
+import { refresh as refreshSkills } from "./skills/update";
 
 /**
  * A `"webappwiz": "1.2.3"` or `"@webappwiz/x": "1.2.3"` dependency entry,
@@ -40,7 +41,7 @@ export interface UpdateOptions {
 	store?: SecretStore;
 	/** The device's credential store; the system's by default. */
 	deviceStore?: SecretStore;
-	/** The skills to refresh; the ones webappwiz ships by default. */
+	/** The skills of its own to refresh; `webappwiz` by default. */
 	skills?: string[];
 	/** The rules to refresh with; the catalog by default. */
 	rules?: Record<string, ShippedRule>;
@@ -50,13 +51,13 @@ export interface UpdateOptions {
  * Pins every webappwiz dependency under `dir` to one version, so a project
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
- * Installed skills are refreshed too, from that version's tag through
- * `bunx skills add`, and so are the rules copied in from the catalog. What a
- * rename left behind moves along: `@webappwiz/rules` becomes
- * `@webappwiz/scry`, `.wiz/rules` becomes `.wiz/scry`, and arbor todos
- * saved with tags move into a lane a tag, since arbor reads neither. Last, it names
- * any credential the project uses that nothing has yet, and the command a
- * person runs to add it, since an upgrade is when a new one starts to matter.
+ * A manifest still naming `@webappwiz/rules` gets `@webappwiz/scry`. Then it
+ * refreshes the webappwiz skill, when the project has it, and hands the
+ * rest to each package's own updater at that version: `arbor update`, when
+ * the project has the arbor skill, and `scry update`, which bring along what
+ * older releases of them left behind. Last, it names any credential the
+ * project uses that nothing has yet, and the command a person runs to add
+ * it, since an upgrade is when a new one starts to matter.
  */
 export async function update(opts: UpdateOptions): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
@@ -83,30 +84,34 @@ export async function update(opts: UpdateOptions): Promise<void> {
 		count++;
 	}
 	log.info(`${count} package.json pinned to ${opts.version}`);
-	// rules lived in .wiz/rules before scry; moved first so the refresh
-	// below finds them where they now belong
-	const [old, now] = [`${opts.dir}/.wiz/rules`, `${opts.dir}/.wiz/scry`];
-	if ((await fs.exists(old)) && !(await fs.exists(now))) {
-		await fs.rename(old, now);
-		log.info(`moved ${old} to ${now}`);
-	} else if (await fs.exists(old)) {
-		log.info(
-			`${old} and ${now} both exist: move what you still want from ${old} by hand`,
-		);
-	}
-	await updateSkills({
+	const ps = opts.ps ?? new NodePs();
+	await refreshSkills({
 		dir: opts.dir,
 		log,
 		fs,
-		ps: opts.ps,
+		ps,
 		version: opts.version,
-		skills: opts.skills,
+		skills: opts.skills ?? ["webappwiz"],
+		retired: {},
 	});
-	await updateRules({ dir: opts.dir, log, fs, rules: opts.rules });
-	await lanesFromTags({ dir: opts.dir, log, fs, ps: opts.ps });
+	if (
+		(await new ProjectSkills(opts.dir, { fs, ps, log }).installed()).includes(
+			"arbor",
+		)
+	) {
+		await updateArbor({ root: opts.dir, fs, ps, log, release: opts.version });
+	}
+	await updateScry({
+		dir: opts.dir,
+		log,
+		fs,
+		ps,
+		version: opts.version,
+		rules: opts.rules,
+	});
 	const credentials = await ProjectCredentials.open(opts.dir, {
 		fs,
-		ps: opts.ps ?? new NodePs(),
+		ps,
 		store: opts.store,
 		deviceStore: opts.deviceStore,
 	});

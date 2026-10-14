@@ -5,6 +5,7 @@ import {
 	Rules,
 	type Unchecked,
 } from "@webappwiz/scry";
+import { ROLES, type Role } from "@webappwiz/scry/config";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import {
 	type Fs,
@@ -15,7 +16,6 @@ import {
 	type Ps,
 } from "webappwiz/system";
 import { SystemTimer, type Timer, type WallClock } from "webappwiz/time";
-import { ROLES, type Role } from "../config";
 import {
 	checkRuleOptions,
 	chooseModels,

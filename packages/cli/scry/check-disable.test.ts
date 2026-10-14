@@ -7,8 +7,8 @@ import {
 	expect,
 	it,
 } from "bun:test";
+import type { Role } from "@webappwiz/scry/config";
 import { FakeJudge } from "@webappwiz/scry/testing";
-import type { Role } from "../config";
 import { check } from "./check";
 import { Testing } from "./testing";
 
@@ -62,7 +62,7 @@ describe("wiz scry --disable", () => {
 		});
 
 	it("checks only what code decides with both off, with no budget declared, saying why each rule went unchecked", async () => {
-		await sandbox.fs.rm(`${sandbox.root}/.config/wiz/config.ts`);
+		await sandbox.fs.rm(`${sandbox.root}/.config/scry/config.ts`);
 
 		await run({ som: "som disabled with --disable", llm: "saving tokens" });
 
@@ -107,7 +107,7 @@ describe("wiz scry --disable", () => {
 	});
 
 	it("still needs a budget declared while a model is on", async () => {
-		await sandbox.fs.rm(`${sandbox.root}/.config/wiz/config.ts`);
+		await sandbox.fs.rm(`${sandbox.root}/.config/scry/config.ts`);
 
 		await run({ llm: "saving tokens" });
 

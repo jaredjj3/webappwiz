@@ -40,7 +40,9 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 
 	program
 		.command("update")
-		.description("pin every webappwiz dependency in a tree to one version")
+		.description(
+			"pin every webappwiz dependency in a tree to one version, then run `arbor update` and `scry update` at it",
+		)
 		.arg("dir", z.string(), {
 			default: ".",
 			description: "directory to scan recursively (default: .)",
@@ -238,12 +240,14 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 
 	scry
 		.command("update")
-		.description("refresh the shipped rules the project has copies of")
+		.description(
+			"bring the project up to this release of scry: move what older ones left behind, like the scry key of .wiz/config.ts into scry.config.ts, then refresh the shipped rules it has copies of, and the scry skill",
+		)
 		.arg("dir", z.string(), {
 			default: ".",
-			description: "project to refresh (default: .)",
+			description: "project to update (default: .)",
 		})
-		.action((opts, { log, fs }) => updateRules({ ...opts, log, fs }));
+		.action((opts, { log, fs, ps }) => updateRules({ ...opts, log, fs, ps }));
 
 	scry
 		.command("remove")

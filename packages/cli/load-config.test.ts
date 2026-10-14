@@ -27,8 +27,7 @@ describe("loadConfig", () => {
 		medium: model,
 		high: model,
 	});
-	const config = (rules: object) =>
-		`export default { scry: ${JSON.stringify(rules)} };\n`;
+	const config = (scry: object) => `export default ${JSON.stringify(scry)};\n`;
 
 	beforeEach(async () => {
 		root = await mkdtemp(join(tmpdir(), "wiz-config-"));
@@ -52,13 +51,13 @@ describe("loadConfig", () => {
 	});
 
 	it("lays the user's config over the project's, and the environment over both", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ jobs: 2, exclude: ["vendor/**"] }),
 		);
-		await fs.mkdir(`${root}/home/.config/wiz`);
-		await fs.write(`${root}/home/.config/wiz/config.ts`, config({ jobs: 4 }));
+		await fs.mkdir(`${root}/home/.config/scry`);
+		await fs.write(`${root}/home/.config/scry/config.ts`, config({ jobs: 4 }));
 		expect((await loadConfig(`${root}/p`, { fs, ps })).jobs).toEqual(4);
 
 		ps.setEnv({ WIZ_SCRY_JOBS: "16" });
@@ -67,14 +66,14 @@ describe("loadConfig", () => {
 	});
 
 	it("lays each model over the last layer's", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ models: { som: "jev-latest" } }),
 		);
-		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.mkdir(`${root}/home/.config/scry`);
 		await fs.write(
-			`${root}/home/.config/wiz/config.ts`,
+			`${root}/home/.config/scry/config.ts`,
 			config({ models: { llm: "claude-fable-5-1" } }),
 		);
 
@@ -87,9 +86,9 @@ describe("loadConfig", () => {
 	});
 
 	it("lays each effort's model over the last layer's, keeping those it leaves out", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ models: { llm: { default: "claude-fable-5-1" } } }),
 		);
 
@@ -102,17 +101,17 @@ describe("loadConfig", () => {
 	});
 
 	it("lays a profile's models over the config's, and a later layer's over the profile", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({
 				models: { som: "clef" },
 				profiles: { "double-check": { som: { high: "jev-latest" } } },
 			}),
 		);
-		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.mkdir(`${root}/home/.config/scry`);
 		await fs.write(
-			`${root}/home/.config/wiz/config.ts`,
+			`${root}/home/.config/scry/config.ts`,
 			config({ profiles: { "double-check": { llm: "claude-opus-5-5" } } }),
 		);
 
@@ -131,9 +130,9 @@ describe("loadConfig", () => {
 	});
 
 	it("refuses a profile no config names, saying which do", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ profiles: { "double-check": { som: "jev-latest" } } }),
 		);
 		const settings = await loadConfig(`${root}/p`, { fs, ps });
@@ -165,21 +164,21 @@ describe("loadConfig", () => {
 			"scry.budgets[0].decider: decider is now som",
 		],
 	])("refuses models it cannot ask: %j", async (scry, message) => {
-		await fs.mkdir(`${root}/p/.wiz`);
-		await fs.write(`${root}/p/.wiz/config.ts`, config(scry));
+		await fs.mkdir(`${root}/p`);
+		await fs.write(`${root}/p/scry.config.ts`, config(scry));
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(message);
 	});
 
 	it("excludes what the project's config and the user's both exclude", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ exclude: ["vendor/**"] }),
 		);
-		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.mkdir(`${root}/home/.config/scry`);
 		await fs.write(
-			`${root}/home/.config/wiz/config.ts`,
+			`${root}/home/.config/scry/config.ts`,
 			config({ exclude: ["scratch/**"] }),
 		);
 
@@ -190,14 +189,14 @@ describe("loadConfig", () => {
 	});
 
 	it("lays the user's rule options over the project's, option by option", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ rules: { "compact-files": { limit: 400, tests: false } } }),
 		);
-		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.mkdir(`${root}/home/.config/scry`);
 		await fs.write(
-			`${root}/home/.config/wiz/config.ts`,
+			`${root}/home/.config/scry/config.ts`,
 			config({ rules: { "compact-files": { limit: 300 } } }),
 		);
 
@@ -207,8 +206,8 @@ describe("loadConfig", () => {
 			{ "compact-files": { limit: 300, tests: false } },
 			{
 				"compact-files": {
-					limit: `${root}/home/.config/wiz/config.ts`,
-					tests: `${root}/p/.wiz/config.ts`,
+					limit: `${root}/home/.config/scry/config.ts`,
+					tests: `${root}/p/scry.config.ts`,
 				},
 			},
 		]);
@@ -223,7 +222,7 @@ describe("loadConfig", () => {
 				`${dir}/.wiz/scry/compact-files/rule.ts`,
 				ruleSource(undefined, { options: { limit: 500 } }),
 			);
-			await fs.write(`${dir}/.wiz/config.ts`, config({ rules: options }));
+			await fs.write(`${dir}/scry.config.ts`, config({ rules: options }));
 			const settings = await loadConfig(dir, { fs, ps });
 			try {
 				checkRuleOptions(settings, await Rules.load(dir, { fs }));
@@ -239,16 +238,16 @@ describe("loadConfig", () => {
 			await refusal("d", { "compact-files": { limit: "400" } }),
 		]).toEqual([
 			undefined,
-			'<project>/.wiz/config.ts: scry.rules.nope: no rule "nope" in .wiz/scry',
-			"<project>/.wiz/config.ts: scry.rules.compact-files.lines: compact-files takes only limit",
-			"<project>/.wiz/config.ts: scry.rules.compact-files.limit: expected a number",
+			'<project>/scry.config.ts: scry.rules.nope: no rule "nope" in .wiz/scry',
+			"<project>/scry.config.ts: scry.rules.compact-files.lines: compact-files takes only limit",
+			"<project>/scry.config.ts: scry.rules.compact-files.limit: expected a number",
 		]);
 	});
 
 	it("refuses a rule option that is not a string, number or boolean", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ rules: { "compact-files": { limit: [400] } } }),
 		);
 
@@ -267,7 +266,7 @@ describe("loadConfig", () => {
 			}),
 		);
 		await fs.write(
-			`${dir}/.wiz/config.ts`,
+			`${dir}/scry.config.ts`,
 			config({ rules: { "compact-files": { limit: 300, name: "y" } } }),
 		);
 		const settings = await loadConfig(dir, { fs, ps });
@@ -314,17 +313,17 @@ describe("loadConfig", () => {
 	});
 
 	it("reads the user's config from XDG_CONFIG_HOME when it is set", async () => {
-		await fs.mkdir(`${root}/xdg/wiz`);
-		await fs.write(`${root}/xdg/wiz/config.ts`, config({ jobs: 7 }));
+		await fs.mkdir(`${root}/xdg/scry`);
+		await fs.write(`${root}/xdg/scry/config.ts`, config({ jobs: 7 }));
 		ps.setEnv({ XDG_CONFIG_HOME: `${root}/xdg` });
 
 		expect((await loadConfig(`${root}/p`, { fs, ps })).jobs).toEqual(7);
 	});
 
 	it("refuses settings that no longer do anything, rather than ignore them", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ agents: { medium: "claude -p" }, model: "clef" }),
 		);
 
@@ -334,14 +333,14 @@ describe("loadConfig", () => {
 	});
 
 	it("spells the budget presets out, and takes the last layer's budgets whole", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ budgets: [{ llm: 1000, per: "day" }] }),
 		);
-		await fs.mkdir(`${root}/home/.config/wiz`);
+		await fs.mkdir(`${root}/home/.config/scry`);
 		await fs.write(
-			`${root}/home/.config/wiz/config.ts`,
+			`${root}/home/.config/scry/config.ts`,
 			config({ budgets: "unlimited" }),
 		);
 
@@ -388,15 +387,15 @@ describe("loadConfig", () => {
 			"scry.budgets[0]: unknown tokens: expected som, llm, per or within",
 		],
 	])("refuses budgets a check cannot hold to: %j", async (scry, message) => {
-		await fs.mkdir(`${root}/p/.wiz`);
-		await fs.write(`${root}/p/.wiz/config.ts`, config(scry));
+		await fs.mkdir(`${root}/p`);
+		await fs.write(`${root}/p/scry.config.ts`, config(scry));
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(message);
 	});
 
 	it("refuses scry.effort, which picked the models before scry.models named them", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
-		await fs.write(`${root}/p/.wiz/config.ts`, config({ effort: "high" }));
+		await fs.mkdir(`${root}/p`);
+		await fs.write(`${root}/p/scry.config.ts`, config({ effort: "high" }));
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
 			"scry.effort is gone",
@@ -404,9 +403,9 @@ describe("loadConfig", () => {
 	});
 
 	it("refuses models named per effort, as scry.models once took them", async () => {
-		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.mkdir(`${root}/p`);
 		await fs.write(
-			`${root}/p/.wiz/config.ts`,
+			`${root}/p/scry.config.ts`,
 			config({ models: { high: { llm: "claude-opus-5-5" } } }),
 		);
 
@@ -431,6 +430,18 @@ describe("loadConfig", () => {
 
 		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
 			'WIZ_SCRY_JOBS: expected a number, got "lots"',
+		);
+	});
+
+	it("refuses scry's settings left in a wiz config, saying how to move them", async () => {
+		await fs.mkdir(`${root}/p/.wiz`);
+		await fs.write(
+			`${root}/p/.wiz/config.ts`,
+			"export default { scry: { jobs: 2 } };\n",
+		);
+
+		await expect(loadConfig(`${root}/p`, { fs, ps })).rejects.toThrow(
+			`${root}/p/.wiz/config.ts: scry's settings have moved to ${root}/p/scry.config.ts: run \`wiz scry update\` to move them`,
 		);
 	});
 

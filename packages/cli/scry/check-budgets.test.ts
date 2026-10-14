@@ -38,13 +38,13 @@ describe("wiz scry", () => {
 	});
 
 	it("refuses to check with no budget declared, and exits 3", async () => {
-		await sandbox.fs.rm(`${sandbox.root}/.config/wiz/config.ts`);
+		await sandbox.fs.rm(`${sandbox.root}/.config/scry/config.ts`);
 
 		await sandbox.run();
 
 		expect([sandbox.warned(), sandbox.asked, sandbox.proc.exits]).toEqual([
 			[
-				'no budget declared: set scry.budgets in .wiz/config.ts or ~/.config/wiz/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
+				'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
 			],
 			[],
 			[3],
@@ -52,7 +52,7 @@ describe("wiz scry", () => {
 	});
 
 	it("checks with no budget declared when told to override it", async () => {
-		await sandbox.fs.rm(`${sandbox.root}/.config/wiz/config.ts`);
+		await sandbox.fs.rm(`${sandbox.root}/.config/scry/config.ts`);
 
 		await check({
 			paths: ["a.ts"],

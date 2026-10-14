@@ -122,10 +122,9 @@ describe("wiz scry", () => {
 	});
 
 	it("checks none of the files the config excludes", async () => {
-		await sandbox.fs.mkdir(`${sandbox.root}/.wiz`);
 		await sandbox.fs.write(
-			`${sandbox.root}/.wiz/config.ts`,
-			'export default { scry: { exclude: ["vendor/**"] } };\n',
+			`${sandbox.root}/scry.config.ts`,
+			'export default { exclude: ["vendor/**"] };\n',
 		);
 		await sandbox.fs.mkdir(`${sandbox.root}/vendor`);
 		await sandbox.fs.write(`${sandbox.root}/vendor/b.ts`, "const foo = 2;\n");

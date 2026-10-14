@@ -1,5 +1,5 @@
 import type { DecideOptions, Decider, Effort, Span } from "@webappwiz/scry";
-import type { ByEffort } from "../config";
+import type { ByEffort } from "@webappwiz/scry/config";
 
 /**
  * A decider that hands each question to the one for the effort it asks at,

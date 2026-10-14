@@ -51,7 +51,7 @@ code is sure, so only a model's findings ever fall under it.
 installs, which is for a rule that reads on any project rather than one
 about a stack it may not have. `options` names what a project can tune,
 each with its default, like `{ limit: 500 }`: a string, number or boolean. A
-project sets them in its config under `scry.rules.<id>`, each to a value of
+project sets them in its `scry.config.ts` under `rules.<id>`, each to a value of
 its default's type, and the rule's constructor gets them, with the defaults
 under what the project set, after its tools:
 

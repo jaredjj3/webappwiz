@@ -10,6 +10,18 @@ import { type ProjectOptions, project, retired as RETIRED } from "./skill";
  * one installed in its place.
  */
 export async function update(opts: ProjectOptions): Promise<void> {
+	const { log } = project(opts);
+	if ((await refresh(opts)).length === 0) {
+		log.info(`no webappwiz skills in ${opts.dir}: add one with \`skills add\``);
+	}
+}
+
+/**
+ * `update`, saying nothing when the project has none of the skills: what
+ * `wiz update`, `scry update` and the like refresh their own skills with.
+ * Answers with the skills it refreshed.
+ */
+export async function refresh(opts: ProjectOptions): Promise<string[]> {
 	const { skills, log, fs, version, shipped } = project(opts);
 	const installed = await skills.installed();
 	const wanted = shipped.filter((name) => installed.includes(name));
@@ -28,9 +40,8 @@ export async function update(opts: ProjectOptions): Promise<void> {
 			wanted.push(now);
 		}
 	}
-	if (wanted.length === 0) {
-		log.info(`no webappwiz skills in ${opts.dir}: add one with \`skills add\``);
-		return;
+	if (wanted.length > 0) {
+		await skills.add(wanted, version);
 	}
-	await skills.add(wanted, version);
+	return wanted;
 }

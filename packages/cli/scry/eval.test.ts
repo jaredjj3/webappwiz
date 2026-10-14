@@ -79,10 +79,10 @@ describe("wiz scry eval", () => {
 
 	/** Declares `budgets`, as source, in the user's config. */
 	async function budget(budgets: string) {
-		await fs.mkdir(`${root}/.config/wiz`, { recursive: true });
+		await fs.mkdir(`${root}/.config/scry`, { recursive: true });
 		await fs.write(
-			`${root}/.config/wiz/config.ts`,
-			`export default { scry: { budgets: ${budgets} } };\n`,
+			`${root}/.config/scry/config.ts`,
+			`export default { budgets: ${budgets} };\n`,
 		);
 	}
 
@@ -130,12 +130,12 @@ describe("wiz scry eval", () => {
 
 	it("refuses to score with no budget declared, and exits 3", async () => {
 		await install("asks", asking);
-		await fs.rm(`${root}/.config/wiz/config.ts`);
+		await fs.rm(`${root}/.config/scry/config.ts`);
 
 		await run();
 
 		expect([printed(), proc.exits]).toEqual([
-			'no budget declared: set scry.budgets in .wiz/config.ts or ~/.config/wiz/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
+			'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend',
 			[3],
 		]);
 	});

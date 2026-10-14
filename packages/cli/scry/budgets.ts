@@ -1,7 +1,12 @@
 import { dirname } from "node:path";
+import {
+	type Budget,
+	type Period,
+	ROLES,
+	type Role,
+} from "@webappwiz/scry/config";
 import { FileLock, type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { Duration } from "webappwiz/time";
-import { type Budget, type Period, ROLES, type Role } from "../config";
 
 /** What one role spent in one check, as the ledger keeps it. */
 export interface Spending {

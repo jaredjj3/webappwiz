@@ -1,8 +1,8 @@
+import { ROLES, type Role } from "@webappwiz/scry/config";
 import { projectName } from "webappwiz/creds";
 import { color } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { SystemWallClock, type WallClock } from "webappwiz/time";
-import { ROLES, type Role } from "../config";
 import type { Settings } from "../load-config";
 import { table } from "../table";
 import { type Allowance, Budgets, Ledger, type Standing } from "./budgets";
@@ -13,7 +13,7 @@ export const OVER_BUDGET = 3;
 
 /** Why a run with no budget declared does not start. */
 export const NONE_DECLARED =
-	'no budget declared: set scry.budgets in .wiz/config.ts or ~/.config/wiz/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend';
+	'no budget declared: set budgets in scry.config.ts or ~/.config/scry/config.ts to "nothing", "unlimited", or limits like [{ llm: 2_000_000, per: "month" }]; --cost says what a check would spend';
 
 export interface ProjectBudgetsOptions {
 	/** Spends without a limit, and with no budget declared. False by default. */

@@ -190,10 +190,10 @@ export class Testing {
 
 	/** Declares `budgets`, as source, in the user's config. */
 	async budget(budgets: string) {
-		await this.fs.mkdir(`${this.root}/.config/wiz`, { recursive: true });
+		await this.fs.mkdir(`${this.root}/.config/scry`, { recursive: true });
 		await this.fs.write(
-			`${this.root}/.config/wiz/config.ts`,
-			`export default { scry: { budgets: ${budgets} } };\n`,
+			`${this.root}/.config/scry/config.ts`,
+			`export default { budgets: ${budgets} };\n`,
 		);
 	}
 

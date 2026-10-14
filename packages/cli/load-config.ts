@@ -1,15 +1,15 @@
 import { EFFORTS, type Rules } from "@webappwiz/scry";
-import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import {
 	type Budget,
 	type ByEffort,
-	type Config,
 	type Models,
 	type ModelsConfig,
 	ROLES,
 	type Role,
 	type ScryConfig,
-} from "./config";
+} from "@webappwiz/scry/config";
+import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
+import type { Config } from "./config";
 import { within } from "./scry/budgets";
 
 /** `scry` with every default filled in. */
@@ -47,8 +47,8 @@ export interface LoadConfigOptions {
 
 /**
  * The settings `wiz scry` runs with, each layer over the last: the
- * defaults, the project's `.wiz/config.ts`, the user's
- * `$XDG_CONFIG_HOME/wiz/config.ts` (`~/.config/wiz/config.ts`), then
+ * defaults, the project's `scry.config.ts`, the user's
+ * `$XDG_CONFIG_HOME/scry/config.ts` (`~/.config/scry/config.ts`), then
  * `WIZ_SCRY_JOBS`. `models` and each of `profiles` lay each model they name
  * over the last layer's, effort by effort, `exclude` gathers every layer's,
  * `rules` lays each rule's options over the last layer's, and
@@ -60,7 +60,19 @@ export async function loadConfig(
 ): Promise<Settings> {
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
-	const found = await files(dir, fs, ps);
+	const found: { path: string; config: ScryConfig }[] = [];
+	for (const paths of configPaths(dir, ps)) {
+		const wiz = await load<Config & { scry?: unknown }>(paths.wiz, fs);
+		if (wiz?.scry !== undefined) {
+			throw new Error(
+				`${paths.wiz}: scry's settings have moved to ${paths.scry}: run \`wiz scry update\` to move them`,
+			);
+		}
+		const config = await load<ScryConfig>(paths.scry, fs);
+		if (config !== null) {
+			found.push({ path: paths.scry, config });
+		}
+	}
 	const layers = [...found.map((config) => scry(config)), environment(ps)];
 	const settings: Settings = {
 		models: { ...DEFAULT_MODELS },
@@ -83,7 +95,7 @@ export async function loadConfig(
 		settings.budgets = budgets(layer.budgets) ?? settings.budgets;
 	}
 	for (const { path, config } of found) {
-		for (const [id, options] of Object.entries(config.scry?.rules ?? {})) {
+		for (const [id, options] of Object.entries(config.rules ?? {})) {
 			for (const name of Object.keys(options)) {
 				settings.rulesFrom[id] = { ...settings.rulesFrom[id], [name]: path };
 			}
@@ -174,35 +186,51 @@ export async function loadCredentialsConfig(
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
 	let names: Record<string, string> = {};
-	for (const { config } of await files(dir, fs, ps)) {
-		names = { ...names, ...config.credentials?.names };
+	for (const paths of configPaths(dir, ps)) {
+		const config = await load<Config>(paths.wiz, fs);
+		names = { ...names, ...config?.credentials?.names };
 	}
 	return { names };
 }
 
-/** The project's config, then the user's, each with where it came from. */
-async function files(
-	dir: string,
-	fs: Fs,
-	ps: Ps,
-): Promise<{ path: string; config: Config }[]> {
-	const home = ps.env("XDG_CONFIG_HOME") ?? `${ps.env("HOME") ?? "~"}/.config`;
-	const found: { path: string; config: Config }[] = [];
-	for (const path of [`${dir}/.wiz/config.ts`, `${home}/wiz/config.ts`]) {
-		if (await fs.exists(path)) {
-			// failing beats falling back: a config silently ignored is a run
-			// against settings nobody chose
-			const mod = (await import(path).catch((cause: unknown) => {
-				throw new Error(`could not load ${path}: ${cause}`, { cause });
-			})) as { default?: Config };
-			found.push({ path, config: mod.default ?? {} });
-		}
-	}
-	return found;
+/** Where one layer's wiz config and scry config are kept. */
+export interface ConfigPaths {
+	/** `.wiz/config.ts`, or the user's `~/.config/wiz/config.ts`. */
+	wiz: string;
+	/** `scry.config.ts`, or the user's `~/.config/scry/config.ts`. */
+	scry: string;
 }
 
-function scry({ path, config }: { path: string; config: Config }): ScryConfig {
-	const scry = (config.scry ?? {}) as ScryConfig & Record<string, unknown>;
+/** The project's config files, then the user's. */
+export function configPaths(dir: string, ps: Ps): ConfigPaths[] {
+	const home = ps.env("XDG_CONFIG_HOME") ?? `${ps.env("HOME") ?? "~"}/.config`;
+	return [
+		{ wiz: `${dir}/.wiz/config.ts`, scry: `${dir}/scry.config.ts` },
+		{ wiz: `${home}/wiz/config.ts`, scry: `${home}/scry/config.ts` },
+	];
+}
+
+/** What the config at `path` exports by default; null when there is none. */
+async function load<T>(path: string, fs: Fs): Promise<T | null> {
+	if (!(await fs.exists(path))) {
+		return null;
+	}
+	// failing beats falling back: a config silently ignored is a run
+	// against settings nobody chose
+	const mod = (await import(path).catch((cause: unknown) => {
+		throw new Error(`could not load ${path}: ${cause}`, { cause });
+	})) as { default?: T };
+	return mod.default ?? ({} as T);
+}
+
+function scry({
+	path,
+	config,
+}: {
+	path: string;
+	config: ScryConfig;
+}): ScryConfig {
+	const scry = config as ScryConfig & Record<string, unknown>;
 	// a setting that does nothing now is a check run unlike its author meant
 	if ("budget" in scry) {
 		throw new Error(

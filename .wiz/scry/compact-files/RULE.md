@@ -1,7 +1,7 @@
 # Compact files
 
 A file of logic holds fewer lines of code than a limit, 500 unless the
-project sets `scry.rules.compact-files.limit` in `.wiz/config.ts`. Past it, a
+project sets `rules.compact-files.limit` in `scry.config.ts`. Past it, a
 reader can no longer keep the whole file in mind, and it is usually doing more
 than one thing.
 

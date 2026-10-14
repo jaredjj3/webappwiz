@@ -6,29 +6,28 @@ only when the user asks.
 
 ## Where it is set
 
-`.wiz/config.ts` is the project's, shared by everyone who checks it out, and
-`~/.config/wiz/config.ts` is the user's own, over it. Ask which they mean
-when they have not said. `WIZ_SCRY_JOBS` is over both. The `ScryConfig`
-type in `@webappwiz/cli/config` documents every key, and the default models.
+`scry.config.ts`, at the project root, is the project's, shared by everyone
+who checks it out, and `~/.config/scry/config.ts` is the user's own, over
+it. Ask which they mean when they have not said. `WIZ_SCRY_JOBS` is over
+both. The `ScryConfig` type in `@webappwiz/scry/config` documents every key,
+and the default models.
 
 ## Models
 
 ```ts
-import { defineConfig } from "@webappwiz/cli/config";
+import { defineConfig } from "@webappwiz/scry/config";
 
 export default defineConfig({
-	scry: {
-		// over the defaults, effort by effort: what it leaves out keeps the default
-		models: {
-			som: "jev-latest", // at every effort
-			llm: { default: "claude-sonnet-5-5", high: "claude-fable-5-1" },
-		},
-		// laid over models by --profile double-check
-		profiles: { "double-check": { som: "jev-preview" } },
-		jobs: 8, // requests at once, to each model
-		exclude: ["vendor/**"], // files no rule checks, from the project root
-		rules: { "compact-files": { limit: 400 } }, // over the options a rule declares
+	// over the defaults, effort by effort: what it leaves out keeps the default
+	models: {
+		som: "jev-latest", // at every effort
+		llm: { default: "claude-sonnet-5-5", high: "claude-fable-5-1" },
 	},
+	// laid over models by --profile double-check
+	profiles: { "double-check": { som: "jev-preview" } },
+	jobs: 8, // requests at once, to each model
+	exclude: ["vendor/**"], // files no rule checks, from the project root
+	rules: { "compact-files": { limit: 400 } }, // over the options a rule declares
 });
 ```
 
@@ -60,15 +59,13 @@ read as its default's type.
 ## Budgets
 
 ```ts
-scry: { budgets: "unlimited" }  // spend without a limit
-scry: {
-	budgets: [
-		// every entry holds at once; a model no entry names spends nothing
-		{ som: "unlimited", llm: 2_000_000, per: "month" },
-		{ llm: 300_000, within: "7d" },
-		{ llm: 100_000, per: "check" },
-	],
-}
+budgets: "unlimited"  // spend without a limit
+budgets: [
+	// every entry holds at once; a model no entry names spends nothing
+	{ som: "unlimited", llm: 2_000_000, per: "month" },
+	{ llm: 300_000, within: "7d" },
+	{ llm: 100_000, per: "check" },
+]
 ```
 
 - Each entry gives the `som`, the `llm` or both a number of input

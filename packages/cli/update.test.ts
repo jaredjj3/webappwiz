@@ -15,8 +15,13 @@ describe("update", () => {
 	const manifest = (deps: Record<string, string>) =>
 		JSON.stringify({ name: "app", dependencies: deps }, null, "\t");
 
-	const skill = (version: string) =>
-		`---\nname: arbor\nversion: ${version}\n---\n\n# arbor\n`;
+	const skill = async (name: string) => {
+		await fs.mkdir(`/p/.agents/skills/${name}`);
+		await fs.write(
+			`/p/.agents/skills/${name}/SKILL.md`,
+			`---\nname: ${name}\nversion: 0.9.0\n---\n\n# ${name}\n`,
+		);
+	};
 
 	const updating = () => ({
 		dir: "/p",
@@ -26,7 +31,6 @@ describe("update", () => {
 		ps,
 		store,
 		deviceStore: device,
-		skills: ["arbor"],
 	});
 
 	beforeEach(async () => {
@@ -78,16 +82,26 @@ describe("update", () => {
 		expect(await fs.read("/p/package.json")).toEqual(own);
 	});
 
-	it("refreshes the skills the project has installed", async () => {
+	it("refreshes the webappwiz skill, and leaves arbor's and scry's to their own updaters", async () => {
 		await fs.write("/p/package.json", manifest({ webappwiz: "0.1.0" }));
-		await fs.mkdir("/p/.agents/skills/arbor");
-		await fs.write("/p/.agents/skills/arbor/SKILL.md", skill("0.9.0"));
+		await skill("arbor");
+		await skill("scry");
+		await skill("webappwiz");
 
 		await update(updating());
 
-		expect(ps.getCalls()).toContain(
-			"bunx skills@1 add jaredjj3/webappwiz#v1.0.0 --yes --skill arbor",
+		expect(ps.getCalls().filter((call) => call.includes("skills@1"))).toEqual(
+			["webappwiz", "arbor", "scry"].map(
+				(name) =>
+					`bunx skills@1 add jaredjj3/webappwiz#v1.0.0 --yes --skill ${name}`,
+			),
 		);
+	});
+
+	it("leaves arbor alone in a project without its skill", async () => {
+		await update(updating());
+
+		expect(ps.getCalls().join("\n")).not.toContain("--skill arbor");
 	});
 
 	it("skips node_modules", async () => {
@@ -114,31 +128,22 @@ describe("update", () => {
 		);
 	});
 
-	it("moves .wiz/rules to .wiz/scry, rules and all", async () => {
-		await fs.mkdir("/p/.wiz/rules/mine");
-		await fs.write("/p/.wiz/rules/mine/RULE.md", "mine");
+	it("moves scry's settings out of .wiz/config.ts, as scry update does", async () => {
+		await fs.mkdir("/p/.wiz");
+		await fs.write(
+			"/p/.wiz/config.ts",
+			'export default {\n\tscry: { budgets: "unlimited" },\n};\n',
+		);
 
 		await update(updating());
 
-		expect(await fs.read("/p/.wiz/scry/mine/RULE.md")).toEqual("mine");
-		expect(await fs.exists("/p/.wiz/rules")).toBe(false);
-	});
-
-	it("leaves .wiz/rules alone when .wiz/scry already exists, and says so", async () => {
-		await fs.mkdir("/p/.wiz/rules/old");
-		await fs.write("/p/.wiz/rules/old/RULE.md", "old");
-		await fs.mkdir("/p/.wiz/scry/new");
-		await fs.write("/p/.wiz/scry/new/RULE.md", "new");
-
-		await update(updating());
-
-		expect(await fs.read("/p/.wiz/rules/old/RULE.md")).toEqual("old");
-		expect(log.entries.map((entry) => String(entry.message))).toContain(
-			"/p/.wiz/rules and /p/.wiz/scry both exist: move what you still want from /p/.wiz/rules by hand",
+		expect(await fs.read("/p/scry.config.ts")).toEqual(
+			'export default { budgets: "unlimited" };\n',
 		);
 	});
 
-	it("moves arbor todos saved with tags into a lane a tag", async () => {
+	it("moves arbor todos saved with tags into a lane a tag, as arbor update does", async () => {
+		await skill("arbor");
 		await fs.mkdir("/p/.git/arbor/todos");
 		await fs.write(
 			"/p/.git/arbor/todos/1.json",

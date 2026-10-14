@@ -110,10 +110,9 @@ describe("wiz scry", () => {
 			}
 		`,
 		);
-		await sandbox.fs.mkdir(`${sandbox.root}/.wiz`);
 		await sandbox.fs.write(
-			`${sandbox.root}/.wiz/config.ts`,
-			'export default { scry: { models: { som: { default: "clef", low: "jev-latest" } } } };\n',
+			`${sandbox.root}/scry.config.ts`,
+			'export default { models: { som: { default: "clef", low: "jev-latest" } } };\n',
 		);
 		await sandbox.fs.write(
 			`${sandbox.root}/a.ts`,
@@ -127,10 +126,9 @@ describe("wiz scry", () => {
 
 	it("asks a profile's models over the config's with --profile", async () => {
 		await sandbox.install("why-not-what", sandbox.asking);
-		await sandbox.fs.mkdir(`${sandbox.root}/.wiz`);
 		await sandbox.fs.write(
-			`${sandbox.root}/.wiz/config.ts`,
-			'export default { scry: { profiles: { "double-check": { som: "jev-latest" } } } };\n',
+			`${sandbox.root}/scry.config.ts`,
+			'export default { profiles: { "double-check": { som: "jev-latest" } } };\n',
 		);
 		await sandbox.fs.write(
 			`${sandbox.root}/a.ts`,

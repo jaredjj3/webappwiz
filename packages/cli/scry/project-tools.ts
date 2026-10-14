@@ -8,8 +8,8 @@ import {
 	DisabledDecider,
 	type Tools,
 } from "@webappwiz/scry";
+import type { ByEffort, Models, Role } from "@webappwiz/scry/config";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import type { ByEffort, Models, Role } from "../config";
 import { ProjectCredentials } from "../creds/project-credentials";
 import type { Allowance, Spending } from "./budgets";
 import { EffortDecider } from "./effort-decider";

@@ -74,12 +74,10 @@ showing any.
 many input tokens each may spend on the `som` and the `llm`; only a check
 with both models turned off needs none (see Turning a model off). When either
 says no budget is declared, declare `"nothing"` in the project's
-`.wiz/config.ts`, which asks no model, so only code decides:
+`scry.config.ts`, which asks no model, so only code decides:
 
 ```ts
-export default defineConfig({
-	scry: { budgets: "nothing" },
-});
+export default defineConfig({ budgets: "nothing" });
 ```
 
 Then tell the user you did, that every question a rule would ask a model
@@ -172,6 +170,8 @@ which deletes its directory, check and all.
 When `wiz scry` refuses a config key it no longer takes, or names files still
 using `rule-ignore`, show the user its message, and with their yes do what it
 says. When it does not say what to use instead, ask. When you touch a file
-that uses `rule-ignore`, rename its comments to `scry-ignore`. Rules still in
-`.wiz/rules` move with `bunx @webappwiz/cli update`, and a rule reading
+that uses `rule-ignore`, rename its comments to `scry-ignore`. When it says scry's
+settings have moved, `wiz scry update` moves them from `.wiz/config.ts` to
+`scry.config.ts`. Rules still in `.wiz/rules` move with `wiz scry update`
+too, and a rule reading
 `tools.decider` reads `tools.som` now.

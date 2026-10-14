@@ -95,23 +95,21 @@ where `creds add` keeps them (see [creds](#creds)).
 | `claude-sonnet-5-5`, `claude-opus-5-5`, ... | Anthropic | `ANTHROPIC_API_KEY` |
 
 ```ts
-// .wiz/config.ts
-import { defineConfig } from "@webappwiz/cli/config";
+// scry.config.ts
+import { defineConfig } from "@webappwiz/scry/config";
 
 export default defineConfig({
-	scry: {
-		models: {
-			som: "jev-latest", // at every effort
-			llm: { default: "claude-sonnet-5-5", high: "claude-fable-5-1" },
-		},
-		profiles: { "double-check": { som: "jev-preview" } },
-		jobs: 8,
+	models: {
+		som: "jev-latest", // at every effort
+		llm: { default: "claude-sonnet-5-5", high: "claude-fable-5-1" },
 	},
+	profiles: { "double-check": { som: "jev-preview" } },
+	jobs: 8,
 });
 ```
 
-Each layer overrides the last: `.wiz/config.ts`, then the user's own
-`~/.config/wiz/config.ts` (under `$XDG_CONFIG_HOME` when set), then
+Each layer overrides the last: the project's `scry.config.ts`, then the
+user's own `~/.config/scry/config.ts` (under `$XDG_CONFIG_HOME` when set), then
 `WIZ_SCRY_JOBS`. `models` lays each model it names over the one under it,
 effort by effort, so `{ llm: { high: "claude-fable-5-1" } }` keeps every
 other default, and a bare name like `{ llm: "claude-fable-5-1" }` asks it
@@ -120,8 +118,10 @@ way when `--profile` picks it, and a later layer's profile of the same name
 lays its models over the earlier one's.
 `exclude` takes globs, from the
 project root, of files no rule checks, like `[".agents/**"]` for skills
-copied in from elsewhere; the user's are added to the project's. A config where `@webappwiz/cli` is not
-installed exports the same object without `defineConfig`. A config still
+copied in from elsewhere; the user's are added to the project's. A config where `@webappwiz/scry` is not
+installed exports the same object without `defineConfig`. scry's settings
+were once the `scry` key of `.wiz/config.ts` and `~/.config/wiz/config.ts`:
+`scry update` moves them, and a check refuses them until it has. A config still
 holding `agents` or `batch`, from before a rule's check
 was code, `model` or `effort`, from before `models` named the models by
 role, `decider`, from before it was called `som`, or `budget`, from
@@ -135,15 +135,13 @@ may spend in input tokens on each model. The last config to set it wins
 whole, so a user's own config can loosen or tighten the project's.
 
 ```ts
-scry: { budgets: "nothing" }    // ask no model: only code decides
-scry: { budgets: "unlimited" }  // spend without a limit
-scry: {
-	budgets: [
-		{ som: "unlimited", llm: 2_000_000, per: "month" },
-		{ llm: 300_000, within: "7d" },
-		{ llm: 100_000, per: "check" },
-	],
-}
+budgets: "nothing"    // ask no model: only code decides
+budgets: "unlimited"  // spend without a limit
+budgets: [
+	{ som: "unlimited", llm: 2_000_000, per: "month" },
+	{ llm: 300_000, within: "7d" },
+	{ llm: 100_000, per: "check" },
+]
 ```
 
 Each entry gives the `som`, the `llm` or both a number of tokens,
@@ -290,10 +288,10 @@ combination nobody tested.
 The default version is this package's own, which is the point of `bunx`: the
 release you invoke is the release you get. `--version` pins something else.
 `workspace:` ranges are left alone; inside a monorepo they already track each
-other. Installed skills and copied rules are refreshed too, and arbor todos
-saved while arbor kept tags move into a lane a tag (named `Dark mode` for
-`dark-mode`; a todo with several goes to the one the most todos share), since
-arbor refuses to read them until then. Last, it names
+other. It refreshes the webappwiz skill, then hands the rest to each
+package's own updater at that version: `arbor update`, when the project has
+the arbor skill, and `scry update`, which bring along what older releases of
+them left behind and refresh their own skills. Last, it names
 any credential the project uses that neither the environment nor the secret
 store has, with the `creds add` command a person runs for each.
 
