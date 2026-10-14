@@ -98,6 +98,7 @@ const CODE: Record<string, string[]> = {
 const EVALS: Record<string, string[]> = {
 	"classes-over-function-exports": [
 		"deploy.good.ts",
+		"destructured-points.good.ts",
 		"feature-flags.bad.ts",
 		"fix-options.good.ts",
 		"fix.bad.ts",
