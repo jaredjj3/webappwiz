@@ -77,6 +77,17 @@ Bun.serve<DictationRelay>({
   the final text before `done` goes back, applying the edits it is sure of
   and returning the rest as `DictationEdit`s on `done.edits` for the page to
   offer. One that throws leaves the text as heard.
+- `CleanupSequence` runs cleanups one after another, each on the text the
+  one before left, carrying the edits an earlier one left open onto the
+  later text and dropping any whose span a later one rewrote. One that
+  throws is skipped.
+- `ListFormatter` lays out the lists a take speaks as markdown lists,
+  deciding with a `Decider` from `webappwiz/decide` in one request: code
+  splits the text at sentence ends and at commas before cue words ("then",
+  "second", "and finally"), the model says what each piece does, and code
+  puts each item on its own line without its cue word, numbered when the
+  items are steps. An item it is unsure of joins the one before, with a
+  `type: "item"` edit to split it off. `LIST_THRESHOLDS` holds its cutoffs.
 - `DictationMessage` is what the server says on the socket, as JSON.
 
 `webappwiz/dictate/testing` has `FakeMicrophone`, `FakeDictationLink` and

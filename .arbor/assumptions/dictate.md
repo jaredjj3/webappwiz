@@ -29,6 +29,15 @@
 - Only the systems some span may name get a Noul, so a take that names none asks nothing. (2026-10-15, dictation-tag-systems)
 - A heard word may be a system's name exactly under 4 letters, a letter off for 4–7, two for 8+; words heard apart ("s cry") must keep every letter. (2026-10-15, dictation-tag-systems)
 - `done.edits` carries only the middle-band tags, `{ type: "tag", start, end, system, probability }`, spanning `done.text` with the sure tags applied. (2026-10-15, dictation-tag-systems)
+  → replaced 2026-10-15 in dictation-spoken-lists: assumed it also carries unsure list items, `{ type: "item", start, end, text, probability }`, spanning `done.text` after every cleanup ran
 - A take whose cleanup fails, or whose model lacks creds, goes back as heard; the creds are asked for when the take starts. (2026-10-15, dictation-tag-systems)
+  → replaced 2026-10-15 in dictation-spoken-lists: assumed a cleanup that fails is skipped and the others still apply; a model lacking creds still leaves the take as heard
 - A question describes a system by its name, aliases and up to three globs, since systems have no description. (2026-10-15, dictation-tag-systems)
 - The page sends its cleanup model as `?model=` on the dictation socket. (2026-10-15, dictation-tag-systems)
+- Tagging runs first, then lists, one request after the other, each on the text the one before left. (2026-10-15, dictation-spoken-lists)
+- An edit a cleanup left open is carried onto a later cleanup's text through a case-blind character diff, and dropped when that cleanup changed its span. (2026-10-15, dictation-spoken-lists)
+- A take asks about lists only when it splits into three or more segments, or two with a cue word opening the second. (2026-10-15, dictation-spoken-lists)
+- A segment starts a list item above 0.6 and is never offered as one below 0.2; a list is numbered when its items average above 0.7 as steps (`LIST_THRESHOLDS`). (2026-10-15, dictation-spoken-lists)
+- A list item loses a trailing comma or semicolon, and its full stop when it is one sentence. (2026-10-15, dictation-spoken-lists)
+- An unsure split in a numbered list offers the next sure item's number, leaving later numbers one behind once accepted. (2026-10-15, dictation-spoken-lists)
+- A list starts on the line after its intro, which ends in a colon, and a blank line follows it. (2026-10-15, dictation-spoken-lists)

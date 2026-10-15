@@ -1,15 +1,29 @@
 /**
- * An edit a cleanup was unsure of, left for the person to judge: replacing
- * `text.slice(start, end)` of the `done` text with `#system`, which it is
- * `probability` sure of. The sure ones are already in the text.
+ * An edit a cleanup was unsure of, left for the person to judge, spanning
+ * `text.slice(start, end)` of the `done` text. The sure ones are already in
+ * the text.
  */
-export interface DictationEdit {
-	type: "tag";
-	start: number;
-	end: number;
-	system: string;
-	probability: number;
-}
+export type DictationEdit =
+	/** Replacing the span with `#system`, which it is `probability` sure of. */
+	| {
+			type: "tag";
+			start: number;
+			end: number;
+			system: string;
+			probability: number;
+	  }
+	/**
+	 * Starting a new list item where the span sits, by replacing it with
+	 * `text` (a line break, the item's marker and its first letter), which it
+	 * is `probability` sure of.
+	 */
+	| {
+			type: "item";
+			start: number;
+			end: number;
+			text: string;
+			probability: number;
+	  };
 
 /** A take's final text once its cleanups ran, and the edits they left open. */
 export interface Cleaned {

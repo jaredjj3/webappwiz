@@ -2,6 +2,7 @@ import type { Duration } from "webappwiz/time";
 
 /** Answers typed questions about a state. */
 export interface Decider {
+	/** Clef refuses a question id outside `[A-Za-z0-9_.-]`, so ids keep to those. */
 	decide(
 		state: unknown,
 		questions: Record<string, Question>,
