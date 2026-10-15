@@ -4,6 +4,7 @@ import type { AsyncResource } from "./async-resource";
 export class AsyncDisposer implements AsyncResource {
 	private resources = [] as AsyncResource[];
 	private _disposed = false;
+	private disposing: Promise<void> | undefined;
 
 	get disposed(): boolean {
 		return this._disposed;
@@ -26,20 +27,22 @@ export class AsyncDisposer implements AsyncResource {
 		this.resources.push({ disposeAsync: onDispose });
 	}
 
-	/** Safe to call twice. */
-	disposeAsync = async (): Promise<void> => {
+	/** Safe to call twice: a second call waits for the first to finish. */
+	disposeAsync = (): Promise<void> => {
 		// An arrow so it survives being passed as a callback: this is usually
 		// handed straight to a shutdown hook.
-		if (this._disposed) {
-			return;
-		}
 		this._disposed = true;
+		this.disposing ??= this.release();
+		return this.disposing;
+	};
+
+	private async release(): Promise<void> {
 		let resource = this.resources.pop();
 		while (resource) {
 			await resource.disposeAsync();
 			resource = this.resources.pop();
 		}
-	};
+	}
 
 	private assertOpen(): void {
 		if (this._disposed) {
