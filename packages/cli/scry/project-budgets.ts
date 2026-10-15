@@ -5,7 +5,7 @@ import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { SystemWallClock, type WallClock } from "webappwiz/time";
 import type { Settings } from "../load-config";
 import { table } from "../table";
-import { BudgetChanges, type Raise } from "./budget-changes";
+import { BudgetChanges, type Pause, type Raise } from "./budget-changes";
 import { type Allowance, Budgets, type Standing } from "./budgets";
 import { Ledger } from "./ledger";
 import { type ProjectTools, thousands } from "./project-tools";
@@ -48,6 +48,8 @@ export interface RoleReport {
 	set: boolean;
 	standing: Omit<Standing, "role">[];
 	raises: Omit<Raise, "role">[];
+	/** The pause stopping it asking anything; none when it asks as it may. */
+	paused: Omit<Pause, "role"> | null;
 }
 
 /** What a run would use of each role's budgets, as a report says it. */
@@ -89,7 +91,9 @@ export class ProjectBudgets {
 		const now = clock.now();
 		const raises = changes.raises(now);
 		return new ProjectBudgets(
-			Budgets.over(settings.budgets, changes.set, changes.path)?.raised(raises),
+			Budgets.over(settings.budgets, changes.set, changes.path)
+				?.raised(raises)
+				.paused(changes.pauses(now)),
 			ledger,
 			clock,
 			opts.override ?? false,
@@ -144,6 +148,10 @@ export class ProjectBudgets {
 		return Object.fromEntries(
 			ROLES.flatMap((role) => {
 				const limit = short.find((each) => each.role === role);
+				const paused = budgets.pausedReason(role);
+				if (paused !== undefined) {
+					return [[role, paused]];
+				}
 				if (budgets.spendsNothing(role)) {
 					return [[role, `scry.budgets spends nothing on the ${role}`]];
 				}
@@ -156,7 +164,12 @@ export class ProjectBudgets {
 
 	/** Why a run that would `use` this much does not start; none when it fits. */
 	overrun(use: Use, run: string): string | undefined {
-		const over = this.standing.some((each) => use(each.role) > each.left);
+		// a paused role asks nothing, so cannot go over
+		const over = this.standing.some(
+			(each) =>
+				this.budgets?.pausedReason(each.role) === undefined &&
+				use(each.role) > each.left,
+		);
 		return over
 			? [
 					`over budget: this ${run} would spend more than scry.budgets allows`,
@@ -178,6 +191,9 @@ export class ProjectBudgets {
 		}
 		const rows = ROLES.flatMap((role): string[][] => {
 			const using = thousands(use(role));
+			if (budgets.pausedReason(role) !== undefined) {
+				return [[`  ${role}`, "paused", `${using} would go unasked`, ""]];
+			}
 			if (budgets.spendsNothing(role)) {
 				return [[`  ${role}`, "nothing", `${using} would go unasked`, ""]];
 			}
@@ -220,6 +236,7 @@ export class ProjectBudgets {
 	report(): BudgetReport {
 		const budgets = this.budgets;
 		const raises = this.changes.raises(this.now);
+		const pauses = this.changes.pauses(this.now);
 		return {
 			declared: budgets !== undefined,
 			roles: ROLES.map((role) => {
@@ -238,6 +255,7 @@ export class ProjectBudgets {
 					raises: raises
 						.filter((raise) => raise.role === role)
 						.map(({ role: _, ...raise }) => raise),
+					paused: pauseOf(pauses, role),
 				};
 			}),
 		};
@@ -251,4 +269,9 @@ export class ProjectBudgets {
 	private get standing(): Standing[] {
 		return this.budgets?.standing(this.ledger, this.now) ?? [];
 	}
+}
+
+function pauseOf(pauses: Pause[], role: Role): Omit<Pause, "role"> | null {
+	const pause = pauses.find((each) => each.role === role);
+	return pause === undefined ? null : { from: pause.from, until: pause.until };
 }

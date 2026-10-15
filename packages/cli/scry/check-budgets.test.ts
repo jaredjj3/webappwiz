@@ -8,7 +8,8 @@ import {
 	it,
 } from "bun:test";
 import { FakeJudge } from "@webappwiz/scry/testing";
-import { color } from "webappwiz/log";
+import { color, MemoryLogger } from "webappwiz/log";
+import { pause } from "./budgets-commands";
 import { check } from "./check";
 import { Testing } from "./testing";
 
@@ -73,6 +74,29 @@ describe("wiz scry", () => {
 		expect(sandbox.printed()).toContain(
 			"  why-not-what on a.ts   scry.budgets spends nothing on the som",
 		);
+		expect([
+			(sandbox.judge as FakeJudge).judgments,
+			sandbox.proc.exits,
+		]).toEqual([[], [2]]);
+	});
+
+	it("asks a paused role no question, and holds it to no budget, until its pause ends", async () => {
+		await sandbox.budget(
+			'{ som: { tokens: 200, per: "check" }, llm: "unlimited" }',
+		);
+		await pause({
+			role: "som",
+			for: "4h",
+			format: "json",
+			log: new MemoryLogger(),
+			fs: sandbox.fs,
+			ps: sandbox.ps,
+			clock: sandbox.clock,
+		});
+
+		await sandbox.run();
+
+		expect(sandbox.printed()).toContain("the som is paused until");
 		expect([
 			(sandbox.judge as FakeJudge).judgments,
 			sandbox.proc.exits,

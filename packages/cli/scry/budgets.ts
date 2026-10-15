@@ -5,13 +5,14 @@ import {
 	type Spend,
 } from "@webappwiz/scry/config";
 import { Duration } from "webappwiz/time";
-import type { Raise } from "./budget-changes";
+import type { Pause, Raise } from "./budget-changes";
 import type { Ledger } from "./ledger";
 
 /**
  * The limits `scry.budgets` declares, as checked against what the ledger
  * holds. A role that spends `"nothing"` asks no question; one with no limit
- * is unlimited; one with limits is held to every one of them.
+ * is unlimited; one with limits is held to every one of them. A paused one
+ * asks nothing until its pause ends, whatever it may spend.
  */
 export class Budgets {
 	private constructor(
@@ -19,6 +20,8 @@ export class Budgets {
 		private nothing: Set<Role>,
 		/** What each role was declared to spend, and where, before any raise. */
 		readonly declared: Record<Role, Declared>,
+		/** When each paused role's pause ends, as epoch ms. */
+		private pauses: ReadonlyMap<Role, number> = new Map(),
 	) {}
 
 	/**
@@ -134,7 +137,17 @@ export class Budgets {
 				});
 			}
 		}
-		return new Budgets(limits, nothing, this.declared);
+		return new Budgets(limits, nothing, this.declared, this.pauses);
+	}
+
+	/** These budgets with each role in `pauses` asking nothing until it ends. */
+	paused(pauses: Pause[]): Budgets {
+		return new Budgets(
+			this.limits,
+			this.nothing,
+			this.declared,
+			new Map(pauses.map((pause) => [pause.role, pause.until])),
+		);
 	}
 
 	/** Whether any role has a number to stay under, which takes counting first. */
@@ -150,6 +163,14 @@ export class Budgets {
 	/** Whether `role` may spend nothing. */
 	spendsNothing(role: Role): boolean {
 		return this.nothing.has(role);
+	}
+
+	/** Why `role` asks nothing for now; none unless it is paused. */
+	pausedReason(role: Role): string | undefined {
+		const until = this.pauses.get(role);
+		return until === undefined
+			? undefined
+			: `the ${role} is paused until ${new Date(until).toLocaleString()}`;
 	}
 
 	/** Where each numbered limit stands at `now`, by role, then as declared. */
@@ -178,6 +199,10 @@ export class Budgets {
 
 	/** What `role` may spend in this check; none for unlimited. */
 	allowance(role: Role, ledger: Ledger, now: number): Allowance | undefined {
+		const paused = this.pausedReason(role);
+		if (paused !== undefined) {
+			return { input: 0, reason: paused };
+		}
 		if (this.nothing.has(role)) {
 			return { input: 0, reason: `scry.budgets spends nothing on the ${role}` };
 		}

@@ -79,6 +79,39 @@ export async function raise(
 	print(await open(opts), opts);
 }
 
+/**
+ * Stops `role` asking anything `for` a while, like `1d`, in place of any
+ * pause it had, and prints where the budgets stand.
+ */
+export async function pause(
+	opts: BudgetsOptions & { role: string; for: string },
+): Promise<void> {
+	const role = roleIn(opts.role);
+	const span = within(opts.for);
+	const budgets = await open(opts);
+	if (!budgets.report().declared) {
+		throw new Error(
+			"no budget declared, so nothing is asked: set one with `wiz scry budgets set <som|llm> <spend>` first",
+		);
+	}
+	const from = (opts.clock ?? new SystemWallClock()).now();
+	await budgets.changes.pause(role, { from, until: from + span.ms });
+	print(await open(opts), opts);
+}
+
+/** Ends `role`'s pause before its time, and prints where the budgets stand. */
+export async function resume(
+	opts: BudgetsOptions & { role: string },
+): Promise<void> {
+	const role = roleIn(opts.role);
+	const budgets = await open(opts);
+	const now = (opts.clock ?? new SystemWallClock()).now();
+	if (!(await budgets.changes.resume(role, now))) {
+		throw new Error(`the ${role} is not paused`);
+	}
+	print(await open(opts), opts);
+}
+
 /** Ends raise `id` before its time, and prints where the budgets stand. */
 export async function end(
 	opts: BudgetsOptions & { id: number },
@@ -120,7 +153,7 @@ function lines(report: BudgetReport, now: number): string[] {
 		];
 	}
 	const rows = report.roles.flatMap((role): string[][] => {
-		const said = `${role.spend} ${color.dim(role.set ? "(set here)" : `(${role.from})`)}`;
+		const said = `${role.spend} ${color.dim(role.set ? "(set here)" : `(${role.from})`)}${role.paused === null ? "" : color.yellow(` paused until ${new Date(role.paused.until).toLocaleString()}`)}`;
 		if (role.standing.length === 0) {
 			return [[role.role, said, "", ""]];
 		}

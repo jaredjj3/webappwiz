@@ -6,7 +6,8 @@ import { Ledger } from "./ledger";
 /**
  * What the user changed of a project's budgets on this device, from
  * `wiz scry budgets` or arbor dev's Budget page: what each role may spend,
- * over what the configs declare, and the raises that add to it for a while.
+ * over what the configs declare, the raises that add to it for a while,
+ * and the pauses that stop it asking anything for a while.
  * It lives beside the ledger, so every worktree of a project shares it.
  */
 export class BudgetChanges {
@@ -46,6 +47,11 @@ export class BudgetChanges {
 	/** The raises that have not ended by `now`, oldest first. */
 	raises(now: number): Raise[] {
 		return this.kept.raises.filter((raise) => raise.until > now);
+	}
+
+	/** The pauses that have not ended by `now`, one a role at most. */
+	pauses(now: number): Pause[] {
+		return this.kept.pauses.filter((pause) => pause.until > now);
 	}
 
 	/** Sets what `role` may spend, or, for none, gives it back to the configs. */
@@ -91,6 +97,40 @@ export class BudgetChanges {
 		return found;
 	}
 
+	/**
+	 * Stops `role` asking anything from `from` until `until`, as Unix epoch
+	 * milliseconds, in place of any pause it had.
+	 */
+	async pause(
+		role: Role,
+		{ from, until }: { from: number; until: number },
+	): Promise<void> {
+		await this.change((kept) => ({
+			...kept,
+			pauses: [
+				...kept.pauses.filter(
+					(pause) => pause.role !== role && pause.until > from,
+				),
+				{ role, from, until },
+			],
+		}));
+	}
+
+	/** Ends `role`'s pause now; false when it had none. */
+	async resume(role: Role, now: number): Promise<boolean> {
+		let found = false;
+		await this.change((kept) => {
+			found = kept.pauses.some(
+				(pause) => pause.role === role && pause.until > now,
+			);
+			return {
+				...kept,
+				pauses: kept.pauses.filter((pause) => pause.role !== role),
+			};
+		});
+		return found;
+	}
+
 	/** Rereads the file under its lock, so another process's change is kept. */
 	private async change(edit: (kept: Kept) => Kept): Promise<void> {
 		await this.fs.mkdir(dirname(this.path), { recursive: true });
@@ -126,15 +166,29 @@ export interface Raise {
 	until: number;
 }
 
+/** A while a role asks nothing, whatever it may spend. */
+export interface Pause {
+	role: Role;
+	/** When it began, as Unix epoch milliseconds. */
+	from: number;
+	/** When it ends, as Unix epoch milliseconds. */
+	until: number;
+}
+
 interface Kept {
 	set: Partial<Record<Role, Spend>>;
 	raises: Raise[];
+	pauses: Pause[];
 }
 
 async function read(fs: Fs, path: string): Promise<Kept> {
 	if (!(await fs.exists(path))) {
-		return { set: {}, raises: [] };
+		return { set: {}, raises: [], pauses: [] };
 	}
 	const kept = JSON.parse(await fs.read(path)) as Partial<Kept>;
-	return { set: kept.set ?? {}, raises: kept.raises ?? [] };
+	return {
+		set: kept.set ?? {},
+		raises: kept.raises ?? [],
+		pauses: kept.pauses ?? [],
+	};
 }

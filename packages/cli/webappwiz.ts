@@ -12,8 +12,10 @@ import { version } from "./package.json";
 import { add as addRule } from "./scry/add";
 import {
 	end as endRaise,
+	pause as pauseBudget,
 	raise as raiseBudget,
 	reset as resetBudget,
+	resume as resumeBudget,
 	set as setBudget,
 	show as showBudgets,
 } from "./scry/budgets-commands";
@@ -336,6 +338,25 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		})
 		.option(...format)
 		.action((opts, { log, fs, ps }) => raiseBudget({ ...opts, log, fs, ps }));
+
+	budgets
+		.command("pause")
+		.description("stop a model asking anything for a while, like 1d")
+		.arg("role", z.string(), { description: "som or llm" })
+		.option("for", z.string(), {
+			default: "1d",
+			description:
+				'how long, in hours, days or weeks, like "4h" or "2d" (default: 1d)',
+		})
+		.option(...format)
+		.action((opts, { log, fs, ps }) => pauseBudget({ ...opts, log, fs, ps }));
+
+	budgets
+		.command("resume")
+		.description("let a paused model ask again before its pause ends")
+		.arg("role", z.string(), { description: "som or llm" })
+		.option(...format)
+		.action((opts, { log, fs, ps }) => resumeBudget({ ...opts, log, fs, ps }));
 
 	budgets
 		.command("end")

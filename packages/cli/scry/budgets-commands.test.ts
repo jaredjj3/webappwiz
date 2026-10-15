@@ -8,7 +8,15 @@ import {
 	it,
 } from "bun:test";
 import { Duration } from "webappwiz/time";
-import { end, raise, reset, set, show } from "./budgets-commands";
+import {
+	end,
+	pause,
+	raise,
+	reset,
+	resume,
+	set,
+	show,
+} from "./budgets-commands";
 import type { BudgetReport } from "./project-budgets";
 import { Testing } from "./testing";
 
@@ -132,6 +140,44 @@ describe("wiz scry budgets", () => {
 		await end({ ...opts(), id: made?.id ?? 0 });
 
 		expect([made?.id, report().roles[0]?.raises]).toEqual([1, []]);
+	});
+
+	it("pauses a model until its pause ends, keeping its windows", async () => {
+		await pause({ ...opts(), role: "som", for: "4h" });
+		const paused = report().roles[0];
+		sandbox.clock.advance(Duration.hrs(4));
+		await show(opts());
+
+		expect([
+			paused?.paused,
+			paused?.standing.length,
+			report().roles[0]?.paused,
+		]).toEqual([
+			{
+				from: sandbox.clock.now() - Duration.hrs(4).ms,
+				until: sandbox.clock.now(),
+			},
+			1,
+			null,
+		]);
+	});
+
+	it("pauses a model again in place of its pause, and resumes it early", async () => {
+		await pause({ ...opts(), role: "som", for: "4h" });
+		await pause({ ...opts(), role: "som", for: "1d" });
+		const until = report().roles[0]?.paused?.until;
+		await resume({ ...opts(), role: "som" });
+
+		expect([until, report().roles[0]?.paused]).toEqual([
+			sandbox.clock.now() + Duration.days(1).ms,
+			null,
+		]);
+	});
+
+	it("refuses to resume a model that is not paused", async () => {
+		expect(resume({ ...opts(), role: "llm" })).rejects.toThrow(
+			"the llm is not paused",
+		);
 	});
 
 	it("refuses to raise an unlimited model", async () => {
