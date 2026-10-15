@@ -19,7 +19,7 @@
     },
     "packages/arbor": {
       "name": "@webappwiz/arbor",
-      "version": "0.0.43",
+      "version": "0.0.44",
       "bin": {
         "arbor": "./index.ts",
       },
@@ -69,7 +69,7 @@
     },
     "packages/aws": {
       "name": "@webappwiz/aws",
-      "version": "0.0.43",
+      "version": "0.0.44",
       "devDependencies": {
         "@types/bun": "^1.3.0",
         "aws-cdk-lib": "^2.250.0",
@@ -82,7 +82,7 @@
     },
     "packages/cli": {
       "name": "@webappwiz/cli",
-      "version": "0.0.43",
+      "version": "0.0.44",
       "bin": {
         "webappwiz": "./index.ts",
       },
@@ -99,7 +99,7 @@
     },
     "packages/react": {
       "name": "@webappwiz/react",
-      "version": "0.0.43",
+      "version": "0.0.44",
       "dependencies": {
         "webappwiz": "workspace:*",
       },
@@ -115,7 +115,7 @@
     },
     "packages/scry": {
       "name": "@webappwiz/scry",
-      "version": "0.0.43",
+      "version": "0.0.44",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.131.0",
         "@ast-grep/napi": "0.45.3",
@@ -125,7 +125,7 @@
     },
     "packages/webappwiz": {
       "name": "webappwiz",
-      "version": "0.0.43",
+      "version": "0.0.44",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
       },
@@ -135,7 +135,7 @@
     },
     "packages/wiz": {
       "name": "wiz",
-      "version": "0.0.43",
+      "version": "0.0.44",
       "dependencies": {
         "@webappwiz/cli": "workspace:*",
         "@webappwiz/scry": "workspace:*",
