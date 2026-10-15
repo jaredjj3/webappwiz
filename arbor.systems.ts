@@ -56,6 +56,10 @@ export default {
 	scry: {
 		globs: ["packages/scry/**"],
 	},
+	dictate: {
+		aliases: ["dictation"],
+		globs: ["packages/dictate/**"],
+	},
 	skills: {
 		globs: ["skills/**"],
 	},

@@ -97,6 +97,22 @@
         "typescript": "^7",
       },
     },
+    "packages/dictate": {
+      "name": "dictate",
+      "version": "0.0.43",
+      "dependencies": {
+        "@webappwiz/arbor": "workspace:*",
+        "@webappwiz/react": "workspace:*",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8",
+        "webappwiz": "workspace:*",
+      },
+      "devDependencies": {
+        "@testing-library/react": "^16.3.1",
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.4",
+      },
+    },
     "packages/react": {
       "name": "@webappwiz/react",
       "version": "0.0.43",
@@ -592,6 +608,8 @@
     "detect-node-es": ["detect-node-es@1.1.0", "", {}, "sha512-ypdmJU/TbBby2Dxibuv7ZLW3Bs1QEmM7nHjEANfohJLvE0XVujisn1qPJcZxg+qDucsr+bP6fLD1rPS3AhJ7EQ=="],
 
     "devlop": ["devlop@1.1.0", "", { "dependencies": { "dequal": "^2.0.0" } }, "sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA=="],
+
+    "dictate": ["dictate@workspace:packages/dictate"],
 
     "dom-accessibility-api": ["dom-accessibility-api@0.5.16", "", {}, "sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg=="],
 
