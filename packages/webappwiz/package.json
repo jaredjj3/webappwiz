@@ -29,6 +29,8 @@
 		"./id": "./id/index.ts",
 		"./log": "./log/index.ts",
 		"./md": "./md/index.ts",
+		"./push": "./push/index.ts",
+		"./push/testing": "./push/testing.ts",
 		"./ship": "./ship/index.ts",
 		"./ship/testing": "./ship/testing.ts",
 		"./system": "./system/index.ts",
