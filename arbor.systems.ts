@@ -68,6 +68,9 @@ export default {
 			"packages/arbor/dev/app-conversation-dictation.test.tsx",
 		],
 	},
+	tagger: {
+		globs: ["packages/arbor/dev-tag-*.ts"],
+	},
 	skills: {
 		globs: ["skills/**"],
 	},
