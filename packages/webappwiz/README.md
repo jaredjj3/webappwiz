@@ -25,6 +25,7 @@ the rest unread.
 | [`webappwiz/browser`](./browser) | The browser platform behind interfaces: scrolling, animation frames, device and visibility |
 | [`webappwiz/cmd`](./cmd) | Builds a CLI: subcommands, typed positional arguments and flag options |
 | [`webappwiz/creds`](./creds) | API keys and tokens, read from the environment, a `.env` file or the operating system's secret store, as the caller lists |
+| [`webappwiz/dictate`](./dictate) | Dictation: the browser's mic as PCM16, streamed to a server that transcribes it live |
 | [`webappwiz/disposable`](./disposable) | Resources that must be released, and stacks that release them in reverse order |
 | [`webappwiz/events`](./events) | Typed event dispatch, with a read-only view to hand to whoever listens |
 | [`webappwiz/geometry`](./geometry) | The 2D value types a web app keeps rewriting: `Rect`, `Position` and a `QuadTree` |
@@ -43,15 +44,18 @@ Most of these run anywhere. The ones that do not are kept off their module's
 main entry point, so importing a task queue on a server does not reach for
 `requestAnimationFrame`:
 
-- Needs a browser: `webappwiz/browser`, `webappwiz/task/browser`,
-  `webappwiz/worker/web`
-- Needs a server: `webappwiz/cmd`, `webappwiz/ship`, `webappwiz/system`
+- Needs a browser: `webappwiz/browser`, `webappwiz/dictate/browser`,
+  `webappwiz/task/browser`, `webappwiz/worker/web`
+- Needs a server: `webappwiz/cmd`, `webappwiz/dictate/server`,
+  `webappwiz/ship`, `webappwiz/system`
 
 `platform.test.ts` holds that line, failing if an entry point that runs
 anywhere starts reaching one that does not.
 
-The fakes live beside what they replace, under `/testing`: `webappwiz/time/testing`,
-`webappwiz/system/testing`, `webappwiz/ship/testing`, `webappwiz/worker/testing`.
+The fakes live beside what they replace, under `/testing`:
+`webappwiz/dictate/testing`, `webappwiz/time/testing`,
+`webappwiz/system/testing`, `webappwiz/ship/testing`,
+`webappwiz/worker/testing`.
 
 ## The rest of webappwiz
 

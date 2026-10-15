@@ -58,7 +58,15 @@ export default {
 	},
 	dictate: {
 		aliases: ["dictation"],
-		globs: ["packages/dictate/**"],
+		globs: [
+			"packages/webappwiz/dictate/**",
+			"packages/arbor/dev-dictation*.ts",
+			"packages/arbor/dev-transcriber.ts",
+			"packages/arbor/vocabulary*.ts",
+			"packages/arbor/dev/dictat*.ts*",
+			"packages/arbor/dev/take-under-way.ts",
+			"packages/arbor/dev/app-conversation-dictation.test.tsx",
+		],
 	},
 	skills: {
 		globs: ["skills/**"],
