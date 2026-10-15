@@ -1,5 +1,11 @@
-import { type Period, ROLES, type Role } from "@webappwiz/scry/config";
+import {
+	type Period,
+	ROLES,
+	type Role,
+	type Spend,
+} from "@webappwiz/scry/config";
 import { Duration } from "webappwiz/time";
+import type { Raise } from "./budget-changes";
 import type { Ledger } from "./ledger";
 
 /**
@@ -11,6 +17,8 @@ export class Budgets {
 	private constructor(
 		private limits: RoleLimit[],
 		private nothing: Set<Role>,
+		/** What each role was declared to spend, and where, before any raise. */
+		readonly declared: Record<Role, Declared>,
 	) {}
 
 	/**
@@ -46,6 +54,7 @@ export class Budgets {
 		}
 		const limits: RoleLimit[] = [];
 		const nothing = new Set<Role>();
+		const declared = {} as Record<Role, Declared>;
 		for (const role of ROLES) {
 			const spend = value[role];
 			const at = `${where}.${role}`;
@@ -54,6 +63,7 @@ export class Budgets {
 					`${where}: say what the ${role} may spend, like ${role}: "nothing"`,
 				);
 			}
+			declared[role] = { spend: spend as Spend, where };
 			if (spend === "nothing") {
 				nothing.add(role);
 			} else if (spend !== "unlimited") {
@@ -69,7 +79,62 @@ export class Budgets {
 				}
 			}
 		}
-		return new Budgets(limits, nothing);
+		return new Budgets(limits, nothing, declared);
+	}
+
+	/**
+	 * The budgets `set` declares for some roles, `where`, over what `under`
+	 * declares for the rest; none when neither says anything. Throws, as
+	 * `from` does, when a role is left with nothing declared.
+	 */
+	static over(
+		under: Budgets | undefined,
+		set: Partial<Record<Role, Spend>>,
+		where: string,
+	): Budgets | undefined {
+		if (Object.keys(set).length === 0) {
+			return under;
+		}
+		const budgets = Budgets.from(
+			Object.fromEntries(
+				ROLES.map((role) => [role, set[role] ?? under?.declared[role].spend]),
+			),
+			where,
+		);
+		for (const role of ROLES) {
+			if (set[role] === undefined && under !== undefined) {
+				budgets.declared[role] = under.declared[role];
+			}
+		}
+		return budgets;
+	}
+
+	/**
+	 * These budgets with `raises` added: each raise's tokens on top of every
+	 * limit of its role, and, for a role that spends nothing, a limit of
+	 * their tokens from when the first began. An unlimited role has nothing
+	 * to raise.
+	 */
+	raised(raises: Raise[]): Budgets {
+		const limits = this.limits.map((limit) => {
+			const extra = sum(raises.filter((raise) => raise.role === limit.role));
+			return { ...limit, tokens: limit.tokens + extra, raised: extra };
+		});
+		const nothing = new Set(this.nothing);
+		for (const role of this.nothing) {
+			const own = raises.filter((raise) => raise.role === role);
+			if (own.length > 0) {
+				nothing.delete(role);
+				const extra = sum(own);
+				limits.push({
+					role,
+					tokens: extra,
+					raised: extra,
+					since: Math.min(...own.map((raise) => raise.from)),
+				});
+			}
+		}
+		return new Budgets(limits, nothing, this.declared);
 	}
 
 	/** Whether any role has a number to stay under, which takes counting first. */
@@ -103,6 +168,7 @@ export class Budgets {
 								role,
 								window: windowName(limit),
 								tokens: limit.tokens,
+								raised: limit.raised ?? 0,
 								spent,
 								left: Math.max(0, limit.tokens - spent),
 							};
@@ -127,12 +193,23 @@ export class Budgets {
 	}
 }
 
+/** What a role was declared to spend, and the config or file that said it. */
+export interface Declared {
+	spend: Spend;
+	/** Like `scry.config.ts: scry.budgets`. */
+	where: string;
+}
+
 /** A role's numbered limit over one window. */
 interface RoleLimit {
 	role: Role;
 	tokens: number;
 	per?: Period;
 	within?: string;
+	/** For a raise on a role that spends nothing: from when, as epoch ms. */
+	since?: number;
+	/** How much of `tokens` raises added. */
+	raised?: number;
 }
 
 /** Where a role stands against one of its limits. */
@@ -140,7 +217,10 @@ export interface Standing {
 	role: Role;
 	/** The window, as a report names it: `this month`, `the last 7d`. */
 	window: string;
+	/** What it may spend in the window, raises included. */
 	tokens: number;
+	/** How much of `tokens` raises added; 0 for none. */
+	raised: number;
 	/** What the ledger holds for the window. */
 	spent: number;
 	/** What is left of it, never below 0. */
@@ -157,6 +237,9 @@ export interface Allowance {
 
 /** When a limit's window began, as Unix epoch milliseconds in local time. */
 function start(limit: RoleLimit, now: number): number {
+	if (limit.since !== undefined) {
+		return limit.since;
+	}
 	if (limit.within !== undefined) {
 		return now - within(limit.within).ms;
 	}
@@ -186,6 +269,9 @@ export function within(window: string): Duration {
 }
 
 function windowName(limit: RoleLimit): string {
+	if (limit.since !== undefined) {
+		return "the raise";
+	}
 	if (limit.within !== undefined) {
 		return `the last ${limit.within}`;
 	}
@@ -247,6 +333,10 @@ function checkLimit(
 		per: per as Period | undefined,
 		within: rolling as string | undefined,
 	};
+}
+
+function sum(raises: Raise[]): number {
+	return raises.reduce((total, raise) => total + raise.tokens, 0);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

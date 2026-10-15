@@ -160,6 +160,26 @@ spent is kept per user on the device, in
 `~/.local/state/wiz/<project>/scry-spent.json` (under `$XDG_STATE_HOME` when
 set), so every worktree of a project draws on one budget.
 
+`wiz scry budgets` shows what each model may spend, where that was
+declared, what each window has left, and the raises on it; `--format json`
+says the same for a program, like arbor dev's Budget page. Its commands
+change the budgets for this project on this device, kept beside the spending
+in `scry-budgets.json`, never in a config:
+
+```
+$ bunx @webappwiz/cli scry budgets set llm 2m/month,300k/7d
+$ bunx @webappwiz/cli scry budgets reset llm      # back to the configs'
+$ bunx @webappwiz/cli scry budgets raise som 2m --for 4h
+$ bunx @webappwiz/cli scry budgets end 1          # end raise #1 early
+```
+
+`set` lays one model's spend over whatever the configs declare, written as
+`nothing`, `unlimited`, or limits joined by commas, each tokens over a
+window, like `5m/day`; with no config declaring budgets, the other model
+spends nothing until set. `raise` adds tokens to each of a model's limits
+until it ends (`--for`, a day by default); a model that spends nothing may
+spend the raise, and an unlimited one has nothing to raise.
+
 With a number to stay under, a check first counts what it would ask, as
 `--cost` does, and when that would go over any window it refuses, saying
 which, and exits 3. A question it would still ask past a budget, like one to

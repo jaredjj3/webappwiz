@@ -5,9 +5,11 @@ import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { SystemWallClock, type WallClock } from "webappwiz/time";
 import type { Settings } from "../load-config";
 import { table } from "../table";
-import type { Allowance, Budgets, Standing } from "./budgets";
+import { BudgetChanges, type Raise } from "./budget-changes";
+import { type Allowance, Budgets, type Standing } from "./budgets";
 import { Ledger } from "./ledger";
 import { type ProjectTools, thousands } from "./project-tools";
+import { saySpend } from "./spend";
 
 /** The exit when a run would spend what no budget allows, or none is declared. */
 export const OVER_BUDGET = 3;
@@ -23,6 +25,29 @@ export interface ProjectBudgetsOptions {
 	clock?: WallClock;
 	fs?: Fs;
 	ps?: Ps;
+}
+
+/** Where a project's budgets stand, as `wiz scry budgets --format json` prints it. */
+export interface BudgetReport {
+	/** Whether any config or change declares budgets, without which no check runs. */
+	declared: boolean;
+	roles: RoleReport[];
+}
+
+/** Where one role's budget stands. */
+export interface RoleReport {
+	role: Role;
+	/** What it may spend, as `wiz scry budgets set` takes it; none when undeclared. */
+	spend: string | null;
+	/**
+	 * The config or file that declared it, from the project's root when in
+	 * it; none when undeclared.
+	 */
+	from: string | null;
+	/** Whether it was set with `wiz scry budgets set`, over the configs. */
+	set: boolean;
+	standing: Omit<Standing, "role">[];
+	raises: Omit<Raise, "role">[];
 }
 
 /** What a run would use of each role's budgets, as a report says it. */
@@ -41,6 +66,10 @@ export class ProjectBudgets {
 		private override: boolean,
 		/** When the run started, which every window is measured to. */
 		private now: number,
+		/** What the user changed here, over the configs. */
+		readonly changes: BudgetChanges,
+		/** The project's root, which a report names its config from. */
+		private dir: string,
 	) {}
 
 	static async open(
@@ -51,16 +80,22 @@ export class ProjectBudgets {
 		const fs = opts.fs ?? new NodeFs();
 		const ps = opts.ps ?? new NodePs();
 		const clock = opts.clock ?? new SystemWallClock();
-		const ledger = await Ledger.open(
-			Ledger.path(await projectName(dir, { fs, ps }), { ps }),
+		const project = await projectName(dir, { fs, ps });
+		const ledger = await Ledger.open(Ledger.path(project, { ps }), { fs, ps });
+		const changes = await BudgetChanges.open(
+			BudgetChanges.path(project, { ps }),
 			{ fs, ps },
 		);
+		const now = clock.now();
+		const raises = changes.raises(now);
 		return new ProjectBudgets(
-			settings.budgets,
+			Budgets.over(settings.budgets, changes.set, changes.path)?.raised(raises),
 			ledger,
 			clock,
 			opts.override ?? false,
-			clock.now(),
+			now,
+			changes,
+			dir,
 		);
 	}
 
@@ -175,6 +210,37 @@ export class ProjectBudgets {
 						use: use(each.role),
 					})),
 				};
+	}
+
+	/**
+	 * Where each role stands, as `wiz scry budgets` and arbor dev's Budget
+	 * page show it: what it was declared to spend and where, each limit's
+	 * window with its raises in, and the raises not yet ended.
+	 */
+	report(): BudgetReport {
+		const budgets = this.budgets;
+		const raises = this.changes.raises(this.now);
+		return {
+			declared: budgets !== undefined,
+			roles: ROLES.map((role) => {
+				const declared = budgets?.declared[role];
+				const from = declared?.where.replace(/: scry\.budgets$/, "");
+				return {
+					role,
+					spend: declared === undefined ? null : saySpend(declared.spend),
+					from: from?.startsWith(`${this.dir}/`)
+						? from.slice(this.dir.length + 1)
+						: (from ?? null),
+					set: this.changes.set[role] !== undefined,
+					standing: this.standing
+						.filter((each) => each.role === role)
+						.map(({ role: _, ...each }) => each),
+					raises: raises
+						.filter((raise) => raise.role === role)
+						.map(({ role: _, ...raise }) => raise),
+				};
+			}),
+		};
 	}
 
 	/** Keeps what `asking` spent, for every later run's windows. */

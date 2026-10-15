@@ -81,5 +81,11 @@ budgets: {
   say so, and help them pick tokens: `--cost` on a typical check says what
   it would spend, and the som is far cheaper per token than the llm.
 - The last config to set `budgets` wins whole.
+- `wiz scry budgets set <som|llm> <spend>`, like `5m/day`, lays one model's
+  budget over the configs for this project on this device only, and `wiz
+  scry budgets raise <som|llm> <tokens> --for <4h|1d>` adds tokens for a
+  while. When the user wants a change for themselves rather than everyone
+  on the project, or only for now, use these rather than a config; `wiz
+  scry budgets` shows where each stands.
 - What was spent is kept per user on the device, so every worktree of a
   project draws on one budget.

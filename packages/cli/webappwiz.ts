@@ -10,6 +10,13 @@ import { remove as removeCredential } from "./creds/remove";
 import { run as runWithCredentials } from "./creds/run";
 import { version } from "./package.json";
 import { add as addRule } from "./scry/add";
+import {
+	end as endRaise,
+	raise as raiseBudget,
+	reset as resetBudget,
+	set as setBudget,
+	show as showBudgets,
+} from "./scry/budgets-commands";
 import { check } from "./scry/check";
 import { evaluate } from "./scry/eval";
 import { list as listRules } from "./scry/list";
@@ -273,6 +280,71 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description: "project to remove it from (default: .)",
 		})
 		.action((opts, { log, fs }) => removeRule({ ...opts, log, fs }));
+
+	const budgets = scry
+		.group("budgets")
+		.description(
+			"show and change what checks may spend on each model in this project, on this device",
+		)
+		.fallback("show");
+
+	const format = [
+		"format",
+		z.enum(["text", "json"]),
+		{ default: "text", description: "text or json (default: text)" },
+	] as const;
+
+	budgets
+		.command("show")
+		.description(
+			"show what each model may spend, what it has spent of each window, and the raises on it",
+		)
+		.option(...format)
+		.action((opts, { log, fs, ps }) => showBudgets({ ...opts, log, fs, ps }));
+
+	budgets
+		.command("set")
+		.description(
+			"set what a model may spend in this project, over scry.budgets in the configs",
+		)
+		.arg("role", z.string(), { description: "som or llm" })
+		.arg("spend", z.string(), {
+			description:
+				"nothing, unlimited, or limits joined by commas, each tokens over a window, like 5m/day or 2m/month,300k/7d",
+		})
+		.option(...format)
+		.action((opts, { log, fs, ps }) => setBudget({ ...opts, log, fs, ps }));
+
+	budgets
+		.command("reset")
+		.description("give a model's budget back to scry.budgets in the configs")
+		.arg("role", z.string(), { description: "som or llm" })
+		.option(...format)
+		.action((opts, { log, fs, ps }) => resetBudget({ ...opts, log, fs, ps }));
+
+	budgets
+		.command("raise")
+		.description(
+			"add tokens to each of a model's limits for a while, like 2m for 1d",
+		)
+		.arg("role", z.string(), { description: "som or llm" })
+		.arg("tokens", z.string(), { description: "like 300k or 2m" })
+		.option("for", z.string(), {
+			default: "1d",
+			description:
+				'how long, in hours, days or weeks, like "4h" or "2d" (default: 1d)',
+		})
+		.option(...format)
+		.action((opts, { log, fs, ps }) => raiseBudget({ ...opts, log, fs, ps }));
+
+	budgets
+		.command("end")
+		.description("end a raise before its time")
+		.arg("id", z.coerce.number(), {
+			description: "its number, as `scry budgets` lists it",
+		})
+		.option(...format)
+		.action((opts, { log, fs, ps }) => endRaise({ ...opts, log, fs, ps }));
 
 	const credentials = program
 		.group("creds")

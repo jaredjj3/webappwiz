@@ -89,8 +89,8 @@ turn both models off instead (see Turning a model off). Raise a budget only
 when they ask, to what they ask for (see [references/config.md](references/config.md)).
 
 When a run would go over a budget, it refuses. Show the user its message as
-printed, and stop. **Never pass `--override-budget`, or raise a budget,
-without the user's yes for that run;** a yes for one run is not one for the
+printed, and stop. **Never pass `--override-budget`, or raise a budget
+(`wiz scry budgets raise` included), without the user's yes for that run;** a yes for one run is not one for the
 next. Checking fewer files, by paths or `--since`, stays within what they
 declared. `--cost` says what a check would spend of each budget, without
 asking a model; run it when the user asks what a check costs or whether it
