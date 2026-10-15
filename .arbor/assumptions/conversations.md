@@ -8,3 +8,5 @@
 - A phone keeps its own New buttons, unchanged by the desktop's. (2026-10-15, new-button)
 - The Check in bar sits above the composer once the agent has gone ten minutes since the last message it took, so a check-in restarts the count. (2026-10-15, check-in-button)
 - The Check in bar shows only for an agent the person runs, with nothing queued for it: running, no checkpoint asked, not archived, not handed out. (2026-10-15, check-in-button)
+- An external task counts as abandoned only when the page conversation that last took it is archived or deleted; one that moved to another task is left to going quiet, since a subagent's task looks the same. (2026-10-15, orphan-vs-external)
+- An external task shows as quiet after 30 minutes without a commit, a file edit or an arbor command. (2026-10-15, orphan-vs-external)

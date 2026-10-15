@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, setSystemTime } from "bun:test";
 
 import { FakeFs } from "../testing";
 
@@ -22,6 +22,21 @@ describe("FakeFs", () => {
 		});
 		expect((await fs.stat("/app")).isDirectory()).toBe(true);
 		expect((await fs.stat("/app/a.txt")).isDirectory()).toBe(false);
+	});
+
+	it("stats a path as last written when it was", async () => {
+		setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		await fs.write("/app/a.txt", "a");
+		setSystemTime(new Date("2026-01-01T00:05:00Z"));
+		await fs.append("/app/b.txt", "b");
+		setSystemTime();
+
+		expect((await fs.stat("/app/a.txt")).mtimeMs).toBe(
+			Date.parse("2026-01-01T00:00:00Z"),
+		);
+		expect((await fs.stat("/app/b.txt")).mtimeMs).toBe(
+			Date.parse("2026-01-01T00:05:00Z"),
+		);
 	});
 
 	it("rejects removing a missing path unless forced, and recurses when asked", async () => {

@@ -57,4 +57,6 @@ export interface StatResult {
 	isDirectory(): boolean;
 	/** Bytes on disk. Zero for a directory. */
 	size: number;
+	/** When it was last written, as epoch ms. */
+	mtimeMs: number;
 }

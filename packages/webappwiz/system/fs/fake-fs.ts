@@ -15,6 +15,8 @@ export class FakeFs implements Fs {
 	readonly store = new Map<string, string | Uint8Array | typeof DIRECTORY>();
 	/** Each symbolic link, to the path it points at, as `symlink` was given it. */
 	private readonly links = new Map<string, string>();
+	/** When each path was last written, as epoch ms, for `stat`. */
+	private readonly modified = new Map<string, number>();
 	private readonly watches = new Set<{
 		root: string;
 		recursive: boolean;
@@ -136,6 +138,7 @@ export class FakeFs implements Fs {
 		return {
 			isDirectory: () => entry === DIRECTORY,
 			size: entry === DIRECTORY ? 0 : Buffer.byteLength(entry),
+			mtimeMs: this.modified.get(this.follow(path)) ?? 0,
 		};
 	}
 
@@ -176,6 +179,7 @@ export class FakeFs implements Fs {
 
 	/** Tells each watch whose reach `path` is in, as a real one would. */
 	private changed(path: string): void {
+		this.modified.set(path, Date.now());
 		for (const { root, recursive, onChange } of this.watches) {
 			if (
 				path === root ||
