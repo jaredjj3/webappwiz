@@ -17,6 +17,8 @@
 		"./cmd": "./cmd/index.ts",
 		"./creds": "./creds/index.ts",
 		"./creds/testing": "./creds/testing.ts",
+		"./decide": "./decide/index.ts",
+		"./decide/testing": "./decide/testing.ts",
 		"./dictate": "./dictate/index.ts",
 		"./dictate/browser": "./dictate/browser.ts",
 		"./dictate/server": "./dictate/server.ts",
