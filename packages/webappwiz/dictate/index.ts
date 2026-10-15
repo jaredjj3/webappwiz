@@ -1,5 +1,9 @@
 export { BufferedSink } from "./buffered-sink";
 export { CleanupSequence } from "./cleanup-sequence";
+export {
+	CORRECTION_THRESHOLDS,
+	CorrectionDropper,
+} from "./correction-dropper";
 export type { Cue } from "./cue";
 export { DictationFailure } from "./dictation-failure";
 export type {
@@ -17,6 +21,7 @@ export {
 	type DictationPeer,
 	DictationRelay,
 } from "./dictation-relay";
+export { FILLER_THRESHOLDS, FillerDropper } from "./filler-dropper";
 export { LIST_THRESHOLDS, ListFormatter } from "./list-formatter";
 export {
 	type AudioSink,

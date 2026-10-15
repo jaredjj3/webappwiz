@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import type { Answer } from "webappwiz/decide";
 import { FakeDecider } from "webappwiz/decide/testing";
-import { LIST_FIXTURES } from "./list-fixtures";
+import { LIST_FIXTURES } from "./fixtures";
 import { ListFormatter } from "./list-formatter";
 
 describe("ListFormatter", () => {

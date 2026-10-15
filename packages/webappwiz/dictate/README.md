@@ -88,6 +88,20 @@ Bun.serve<DictationRelay>({
   puts each item on its own line without its cue word, numbered when the
   items are steps. An item it is unsure of joins the one before, with a
   `type: "item"` edit to split it off. `LIST_THRESHOLDS` holds its cutoffs.
+- `CorrectionDropper` drops what a speaker took back: code splits the text
+  at sentence ends and at commas before a cue ("no", "wait", "I mean",
+  "actually", "scratch that"), the model says in one request whether each
+  cued piece replaces the one before, amends its last words, or neither,
+  and code drops the words taken back with the cue, keeping the newer
+  wording. A cue after a question is an answer, so it asks nothing. One it
+  is unsure of stays, with a `type: "correction"` edit to drop it.
+  `CORRECTION_THRESHOLDS` holds its cutoffs.
+- `FillerDropper` drops "um" and "uh" outright, and asks the model in one
+  request whether each "like", "kind of", "sort of", "you know", "I mean"
+  and "so" is filler in its sentence, dropping it with the commas around
+  it. One it is unsure of stays, with a `type: "filler"` edit to drop it.
+  `FILLER_THRESHOLDS` holds its cutoffs.
+- Run the droppers before the other cleanups, so those see only what stays.
 - `DictationMessage` is what the server says on the socket, as JSON.
 
 `webappwiz/dictate/testing` has `FakeMicrophone`, `FakeDictationLink` and

@@ -1,0 +1,186 @@
+[
+	{
+		"name": "a sentence said again, on clef-flash",
+		"model": "clef-flash",
+		"said": "Push the fix to staging. Actually, no, push it to production.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "replaces",
+				"probabilities": {
+					"replaces": 0.7221,
+					"amends": 0.1745,
+					"neither": 0.1034
+				},
+				"confidence": 0.3438
+			}
+		},
+		"text": "Push the fix to staging. Actually, no, push it to production.",
+		"edits": [
+			{
+				"type": "correction",
+				"start": 0,
+				"end": 40,
+				"text": "P",
+				"probability": 0.8966
+			}
+		]
+	},
+	{
+		"name": "one word amended mid-sentence, on clef-flash",
+		"model": "clef-flash",
+		"said": "The meeting is on Tuesday, I mean Wednesday, at noon.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "amends",
+				"probabilities": {
+					"replaces": 0.368,
+					"amends": 0.4831,
+					"neither": 0.1489
+				},
+				"confidence": 0.0864
+			}
+		},
+		"text": "The meeting is on Tuesday, I mean Wednesday, at noon.",
+		"edits": [
+			{
+				"type": "correction",
+				"start": 18,
+				"end": 34,
+				"text": "",
+				"probability": 0.8511
+			}
+		]
+	},
+	{
+		"name": "a sentence retracted, on clef-flash",
+		"model": "clef-flash",
+		"said": "Add a retry to the upload. Scratch that. Log every failure instead.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "replaces",
+				"probabilities": {
+					"replaces": 0.9144,
+					"amends": 0.0488,
+					"neither": 0.0368
+				},
+				"confidence": 0.7599
+			}
+		},
+		"text": "Log every failure instead.",
+		"edits": []
+	},
+	{
+		"name": "an aside that takes nothing back, on clef-flash",
+		"model": "clef-flash",
+		"said": "We should ship today. Actually, that reminds me, the docs need updating.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "replaces",
+				"probabilities": {
+					"replaces": 0.7478,
+					"amends": 0.1014,
+					"neither": 0.1508
+				},
+				"confidence": 0.3883
+			}
+		},
+		"text": "We should ship today. Actually, that reminds me, the docs need updating.",
+		"edits": [
+			{
+				"type": "correction",
+				"start": 0,
+				"end": 33,
+				"text": "T",
+				"probability": 0.8492000000000001
+			}
+		]
+	},
+	{
+		"name": "a sentence said again, on clef",
+		"model": "clef",
+		"said": "Push the fix to staging. Actually, no, push it to production.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "replaces",
+				"probabilities": {
+					"replaces": 0.912,
+					"amends": 0.071,
+					"neither": 0.017
+				},
+				"confidence": 0.7557
+			}
+		},
+		"text": "Push it to production.",
+		"edits": []
+	},
+	{
+		"name": "one word amended mid-sentence, on clef",
+		"model": "clef",
+		"said": "The meeting is on Tuesday, I mean Wednesday, at noon.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "replaces",
+				"probabilities": {
+					"replaces": 0.532,
+					"amends": 0.4277,
+					"neither": 0.0403
+				},
+				"confidence": 0.2013
+			}
+		},
+		"text": "The meeting is on Wednesday, at noon.",
+		"edits": []
+	},
+	{
+		"name": "a sentence retracted, on clef",
+		"model": "clef",
+		"said": "Add a retry to the upload. Scratch that. Log every failure instead.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "replaces",
+				"probabilities": {
+					"replaces": 0.9641,
+					"amends": 0.0243,
+					"neither": 0.0116
+				},
+				"confidence": 0.8953
+			}
+		},
+		"text": "Log every failure instead.",
+		"edits": []
+	},
+	{
+		"name": "an aside that takes nothing back, on clef",
+		"model": "clef",
+		"said": "We should ship today. Actually, that reminds me, the docs need updating.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "neither",
+				"probabilities": {
+					"replaces": 0.3121,
+					"amends": 0.2615,
+					"neither": 0.4264
+				},
+				"confidence": 0.0214
+			}
+		},
+		"text": "We should ship today. Actually, that reminds me, the docs need updating.",
+		"edits": [
+			{
+				"type": "correction",
+				"start": 0,
+				"end": 33,
+				"text": "T",
+				"probability": 0.5736
+			}
+		]
+	}
+]
