@@ -58,3 +58,4 @@
 - A sentence seeming to lack a word is flagged above 0.6 (`MISSING_THRESHOLDS`) as `{ type: "missing", start, end, probability }` spanning the sentence, with nothing to replace; sentences under four words are not asked about. (2026-10-15, dictation-missing-word)
 - The missing-word flagger runs last, after tagging and lists, so no later cleanup drops its flag. (2026-10-15, dictation-missing-word)
 - The review draws a flag as a wavy underline on the sentence's words that no other mark covers, with nothing to flip, and Settings has a "Flag missing words" switch. (2026-10-15, dictation-missing-word)
+- A list item the speaker already marked is re-marked with the list's own marker and keeps its text as written. (2026-10-15, dictation-lists-keep-markers)

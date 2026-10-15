@@ -48,6 +48,38 @@ describe("ListFormatter", () => {
 		expect(text.slice(54, 63)).toBe(". Also, t");
 	});
 
+	it("keeps a take's own markers rather than splitting them off or doubling them", async () => {
+		const said = "Two replies:\n1. SGTM\n2. SGTM\n- wiz-rules SGTM";
+		decider.answers = {
+			"kind.0": kind({ intro: 0.9, prose: 0.1 }),
+			"kind.1": kind({ item: 0.9, prose: 0.1 }),
+			"kind.2": kind({ item: 0.9, prose: 0.1 }),
+			"kind.3": kind({ item: 0.9, prose: 0.1 }),
+			"step.0": noul,
+			"step.1": noul,
+			"step.2": noul,
+			"step.3": noul,
+		};
+
+		const { text, edits } = await new ListFormatter(decider).clean(said);
+
+		expect(decider.asked[0]?.state).toBe(
+			"S0| Two replies:\nS1| 1. SGTM\nS2| 2. SGTM\nS3| - wiz-rules SGTM",
+		);
+		expect(text).toBe("Two replies:\n- SGTM\n- SGTM\n- wiz-rules SGTM");
+		expect(edits).toEqual([]);
+	});
+
+	it("asks nothing of two numbered lines", async () => {
+		const said = "1. SGTM\n2. SGTM";
+
+		expect(await new ListFormatter(decider).clean(said)).toEqual({
+			text: said,
+			edits: [],
+		});
+		expect(decider.asked).toEqual([]);
+	});
+
 	it("asks nothing of a sentence or two with no cue word", async () => {
 		const said = "Fix the header. It overlaps the menu.";
 

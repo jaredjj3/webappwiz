@@ -60,8 +60,20 @@ export class ListFormatter implements Cleanup {
 const CUE =
 	"(?:and\\s+)?(?:then|next|also|finally|lastly|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)(?:ly)?|(?:number|step)\\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|\\d+))\\b";
 
-/** Where one segment ends: a sentence end, or a comma before a cue word. */
-const BOUNDARY = new RegExp(`[.!?](?=\\s+\\S)|,(?=\\s+${CUE})`, "giu");
+/** A list marker already opening a line: `-`, `*` or `1.`, then a space. */
+const MARKER = "(?:[-*]|\\d+[.)])[ \\t]+(?=\\S)";
+
+/**
+ * Where one segment ends: a sentence end that is no number of a marker, a
+ * comma before a cue word, or a line break before a marker.
+ */
+const BOUNDARY = new RegExp(
+	`(?<!(?:^|\\n)[ \\t]*\\d+)[.!?](?=\\s+\\S)|,(?=\\s+${CUE})|(?<=\\S)(?=[ \\t]*\\n[ \\t]*${MARKER})`,
+	"giu",
+);
+
+/** A marker leading a segment, which a rendered item replaces. */
+const LEADING_MARKER = new RegExp(`^${MARKER}`, "u");
 
 /** A cue word leading a segment, with the comma or colon after it. */
 const LEADING_CUE = new RegExp(`^${CUE}[,:]?\\s+(?=\\S)`, "iu");
@@ -93,7 +105,7 @@ function segmentsOf(text: string): Segment[] {
 		return segments;
 	}
 	for (const match of text.matchAll(BOUNDARY)) {
-		const end = match.index + 1;
+		const end = match.index + match[0].length;
 		segments.push({ start, end });
 		start = end + text.slice(end).search(/\S/);
 	}
@@ -234,7 +246,7 @@ function render(text: string, segments: Segment[], judged: Judged[]): Cleaned {
 				before.endsWith(",")) &&
 			!/[?!]$/.test(before)
 		) {
-			before = `${before.replace(/[.,;]$/, "")}:`;
+			before = `${before.replace(/[.,;:]$/, "")}:`;
 		}
 		out += before === "" ? "" : `${before}\n`;
 		let number = 1;
@@ -243,7 +255,9 @@ function render(text: string, segments: Segment[], judged: Judged[]): Cleaned {
 		for (let index = list.first; index <= list.last; index++) {
 			const segment = segments[index] ?? first;
 			const said = slice(text, segment);
-			const bare = said.replace(LEADING_CUE, "");
+			// The speaker's own marker is the item's: its text stays as written.
+			const marked = LEADING_MARKER.test(said);
+			const bare = said.replace(LEADING_MARKER, "").replace(LEADING_CUE, "");
 			const probability = judged[index]?.item ?? 0;
 			if (index === list.first || probability > LIST_THRESHOLDS.apply) {
 				if (index !== list.first) {
@@ -251,7 +265,7 @@ function render(text: string, segments: Segment[], judged: Judged[]): Cleaned {
 				}
 				out += marker();
 				item = out.length;
-				out += capitalized(bare);
+				out += marked ? bare : capitalized(bare);
 				number++;
 				continue;
 			}
