@@ -35,6 +35,8 @@ const KINDS = {
  * `decider` once per take, and nothing of a take too short to hold a list.
  */
 export class ListFormatter implements Cleanup {
+	readonly kind = "item";
+
 	constructor(private readonly decider: Decider) {}
 
 	async clean(text: string): Promise<Cleaned> {

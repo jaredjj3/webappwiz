@@ -1,7 +1,7 @@
 import { Dispatcher } from "webappwiz/events";
 import { DictationFailure } from "./dictation-failure";
 import type { DictationLink, DictationLinkEvents } from "./dictation-link";
-import type { DictationMessage } from "./dictation-message";
+import type { DictatedTake, DictationMessage } from "./dictation-message";
 
 /**
  * A take over a WebSocket to a server that relays it with `DictationRelay`:
@@ -10,7 +10,7 @@ import type { DictationMessage } from "./dictation-message";
 export class DictationSocket implements DictationLink {
 	private readonly dispatcher = new Dispatcher<DictationLinkEvents>();
 	readonly events = this.dispatcher.events;
-	private finishing: PromiseWithResolvers<string> | undefined;
+	private finishing: PromiseWithResolvers<DictatedTake> | undefined;
 	/** What the server last said went wrong, which a closing take fails with. */
 	private failure: DictationFailure | undefined;
 	private ended = false;
@@ -40,7 +40,7 @@ export class DictationSocket implements DictationLink {
 		}
 	}
 
-	finish(): Promise<string> {
+	finish(): Promise<DictatedTake> {
 		if (this.finishing === undefined) {
 			this.finishing = Promise.withResolvers();
 			if (this.ended) {
@@ -68,7 +68,14 @@ export class DictationSocket implements DictationLink {
 			this.dispatcher.dispatch("failed");
 		} else {
 			this.ended = true;
-			this.finishing?.resolve(message.text);
+			// A server built before a field existed leaves it out.
+			this.finishing?.resolve({
+				text: message.text,
+				said: message.said ?? message.text,
+				applied: message.applied ?? [],
+				edits: message.edits ?? [],
+				decisions: message.decisions ?? [],
+			});
 		}
 	};
 

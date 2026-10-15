@@ -12,9 +12,13 @@ export type {
 	OpenLink,
 } from "./dictation-link";
 export type {
+	AppliedEdit,
 	Cleaned,
+	DictatedTake,
+	DictationDecision,
 	DictationEdit,
 	DictationMessage,
+	EditKind,
 } from "./dictation-message";
 export {
 	type Cleanup,

@@ -35,7 +35,14 @@ describe("DictationRelay", () => {
 		expect(said).toEqual([
 			{ type: "heard", text: "heard: one " },
 			{ type: "heard", text: "heard: one two" },
-			{ type: "done", text: "heard: one two", edits: [] },
+			{
+				type: "done",
+				text: "heard: one two",
+				said: "heard: one two",
+				applied: [],
+				edits: [],
+				decisions: [],
+			},
 		]);
 		relay.dispose();
 	});
@@ -50,7 +57,13 @@ describe("DictationRelay", () => {
 		} as const;
 		const { relay, said, hungUp } = relayed(
 			Promise.resolve(new FakeTranscriber()),
-			{ clean: async (text) => ({ text: text.toUpperCase(), edits: [edit] }) },
+			{
+				clean: async (text) => ({
+					text: text.toUpperCase(),
+					edits: [edit],
+					applied: [{ type: "filler", start: 0, end: 1, was: "h" }],
+				}),
+			},
 		);
 		relay.receive(new TextEncoder().encode("one"));
 		relay.receive("finish");
@@ -59,7 +72,10 @@ describe("DictationRelay", () => {
 		expect(said.at(-1)).toEqual({
 			type: "done",
 			text: "HEARD: ONE",
+			said: "heard: one",
+			applied: [{ type: "filler", start: 0, end: 1, was: "h" }],
 			edits: [edit],
+			decisions: [],
 		});
 		relay.dispose();
 	});
@@ -80,7 +96,10 @@ describe("DictationRelay", () => {
 		expect(said.at(-1)).toEqual({
 			type: "done",
 			text: "heard: one",
+			said: "heard: one",
+			applied: [],
 			edits: [],
+			decisions: [],
 		});
 		relay.dispose();
 	});

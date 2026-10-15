@@ -57,6 +57,8 @@ interface Segment {
  * keeping the newer wording. It asks nothing of a take with no cue.
  */
 export class CorrectionDropper implements Cleanup {
+	readonly kind = "correction";
+
 	constructor(private readonly decider: Decider) {}
 
 	async clean(text: string): Promise<Cleaned> {

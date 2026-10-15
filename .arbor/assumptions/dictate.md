@@ -50,3 +50,8 @@
 - A correction applies above 0.9 and filler above 0.8, both offered from 0.3 (`CORRECTION_THRESHOLDS`, `FILLER_THRESHOLDS`). (2026-10-15, dictation-drop-corrections)
 - "um", "uh", "erm" and "hmm" are dropped without asking; "like", "kind of", "sort of", "you know", "I mean" and "so" get a Noul each. (2026-10-15, dictation-drop-corrections)
 - Deletions go back as `{ type: "correction" | "filler", start, end, text, probability }`, `text` empty or the capital of what follows. (2026-10-15, dictation-drop-corrections)
+- `done` is `{ text, said, applied, edits, decisions }`: `said` is the transcription, and `applied` has an `{ type, start, end, was }` for each run of words a cleanup changed, found by diffing the text it was given with the text it left. (2026-10-15, dictation-review-take)
+- `decisions` is each request a cleanup made of its model: the state, every question with its answer in words, latency, tokens and dollars. (2026-10-15, dictation-review-take)
+- The composer shows a take's cleanup under the message, the cleaned text with each edit a button that flips it and the message following, and "As said" and "Cleaned up" for all at once. (2026-10-15, dictation-review-take)
+- The review lasts until the next take or a dismiss, and hides while the message no longer holds the take's text. (2026-10-15, dictation-review-take)
+- Settings holds one switch per cleanup, and the page sends the ones off as `?off=` on the dictation socket. (2026-10-15, dictation-review-take)

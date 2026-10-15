@@ -22,7 +22,7 @@ socket.events.on("heard", (text) => draft.show(text));
 
 // On stop:
 (await recording).dispose();
-const text = await socket.finish();
+const { text, said, applied, edits } = await socket.finish();
 ```
 
 On the server, `webappwiz/dictate/server`, a `DictationRelay` per socket:
@@ -80,7 +80,11 @@ Bun.serve<DictationRelay>({
 - `CleanupSequence` runs cleanups one after another, each on the text the
   one before left, carrying the edits an earlier one left open onto the
   later text and dropping any whose span a later one rewrote. One that
-  throws is skipped.
+  throws is skipped. It also says what each cleanup applied, by comparing
+  the text the cleanup was given with the one it left: an `AppliedEdit`
+  for each run of changed words, labeled with the cleanup's `kind`, which
+  `done.applied` carries with `done.said`, the text as heard, so a page can
+  show a take against what was said and undo any edit.
 - `ListFormatter` lays out the lists a take speaks as markdown lists,
   deciding with a `Decider` from `webappwiz/decide` in one request: code
   splits the text at sentence ends and at commas before cue words ("then",

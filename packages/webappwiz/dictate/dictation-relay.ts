@@ -1,6 +1,6 @@
 import type { Resource } from "webappwiz/disposable";
 import { DictationFailure } from "./dictation-failure";
-import type { Cleaned, DictationMessage } from "./dictation-message";
+import type { Cleaned, DictationMessage, EditKind } from "./dictation-message";
 import type { Transcriber, Transcription } from "./transcriber";
 
 /** The socket a relay answers on: a server's end of the page's `DictationSocket`. */
@@ -12,6 +12,11 @@ export interface DictationPeer {
 
 /** Tidies a take's final text before it goes back, such as tagging the names it says. */
 export interface Cleanup {
+	/**
+	 * What the edits it makes are called, so a {@link CleanupSequence} can
+	 * say which cleanup each came from; none says nothing of them.
+	 */
+	readonly kind?: EditKind;
 	/** Throwing leaves the text as heard. */
 	clean(text: string): Promise<Cleaned>;
 }
@@ -71,15 +76,21 @@ export class DictationRelay implements Resource {
 				return;
 			}
 			this.say(
-				await transcription.finish().then(
-					async (text): Promise<DictationMessage> => ({
-						type: "done",
-						...(await this.cleanup
-							.clean(text)
-							.catch(() => AS_HEARD.clean(text))),
-					}),
-					failed,
-				),
+				await transcription
+					.finish()
+					.then(async (said): Promise<DictationMessage> => {
+						const cleaned = await this.cleanup
+							.clean(said)
+							.catch(() => AS_HEARD.clean(said));
+						return {
+							type: "done",
+							text: cleaned.text,
+							said,
+							applied: cleaned.applied ?? [],
+							edits: cleaned.edits,
+							decisions: cleaned.decisions ?? [],
+						};
+					}, failed),
 			);
 			this.peer.hangUp();
 		});

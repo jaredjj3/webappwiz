@@ -10,8 +10,60 @@ export type DictationMessage =
 	 * page now asks for.
 	 */
 	| { type: "failed"; message: string; cred?: string }
-	/** The take's final text, after "finish", and the edits left open on it. */
-	| { type: "done"; text: string; edits: DictationEdit[] };
+	/** The take, after "finish", as {@link DictatedTake} says. */
+	| ({ type: "done" } & DictatedTake);
+
+/**
+ * A take's final text with what its cleanups did, so a person can judge it
+ * against what was said.
+ */
+export interface DictatedTake {
+	/** The text once the sure edits are applied. */
+	text: string;
+	/** The text as the transcription heard it, before any cleanup. */
+	said: string;
+	/** The edits already in `text`, each spanning what it left there. */
+	applied: AppliedEdit[];
+	/** The edits left open on `text`, each spanning the words it would change. */
+	edits: DictationEdit[];
+	/** What each cleanup asked its model, and what it cost. */
+	decisions: DictationDecision[];
+}
+
+/** Which cleanup an edit came from. */
+export type EditKind = DictationEdit["type"];
+
+/**
+ * An edit a cleanup was sure of and made, spanning `text.slice(start, end)`
+ * of the `done` text, where it left the new words, if any. Putting `was`
+ * back in its place undoes it.
+ */
+export interface AppliedEdit {
+	type: EditKind;
+	start: number;
+	end: number;
+	/** The words the edit replaced, empty when it only added. */
+	was: string;
+}
+
+/** One request a cleanup made of its model, with what it asked and what came back. */
+export interface DictationDecision {
+	cleanup: EditKind;
+	/** The model that answered, as asked for. */
+	model: string;
+	/** What the cleanup showed the model of the text. */
+	state: string;
+	questions: {
+		id: string;
+		instructions: string;
+		/** The answer in words, such as `0.82` or `item 0.7, prose 0.2`. */
+		answer: string;
+	}[];
+	latencyMs: number;
+	inputTokens: number;
+	outputTokens: number;
+	dollars: number;
+}
 
 /**
  * An edit a cleanup was unsure of, left for the person to judge, spanning
@@ -68,4 +120,8 @@ export type DictationEdit =
 export interface Cleaned {
 	text: string;
 	edits: DictationEdit[];
+	/** What a {@link CleanupSequence} made of the text it was given. */
+	applied?: AppliedEdit[];
+	/** What the cleanups asked their models, when someone recorded it. */
+	decisions?: DictationDecision[];
 }

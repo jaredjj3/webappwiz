@@ -24,6 +24,8 @@ const FILLER =
  * It asks nothing of a take with no such word.
  */
 export class FillerDropper implements Cleanup {
+	readonly kind = "filler";
+
 	constructor(private readonly decider: Decider) {}
 
 	async clean(text: string): Promise<Cleaned> {

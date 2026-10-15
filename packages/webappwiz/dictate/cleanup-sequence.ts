@@ -1,4 +1,4 @@
-import type { Cleaned, DictationEdit } from "./dictation-message";
+import type { AppliedEdit, Cleaned } from "./dictation-message";
 import type { Cleanup } from "./dictation-relay";
 
 /**
@@ -7,6 +7,11 @@ import type { Cleanup } from "./dictation-relay";
  * wherever their span came through as it was; one whose span a later
  * cleanup rewrote is dropped, since it no longer says what it replaces. A
  * cleanup that throws is skipped, so the others still apply.
+ *
+ * What each cleanup applied is found by comparing the text it was given with
+ * the text it left, one {@link AppliedEdit} for each run of changed words,
+ * labeled with the cleanup's `kind`; a cleanup with none is not reported.
+ * Those carry onward the way open edits do.
  */
 export class CleanupSequence implements Cleanup {
 	private readonly cleanups: Cleanup[];
@@ -16,18 +21,26 @@ export class CleanupSequence implements Cleanup {
 	}
 
 	async clean(text: string): Promise<Cleaned> {
-		let cleaned: Cleaned = { text, edits: [] };
+		let cleaned: Cleaned = { text, edits: [], applied: [] };
 		for (const cleanup of this.cleanups) {
 			const next = await cleanup.clean(cleaned.text).catch(() => undefined);
 			if (next === undefined) {
 				continue;
 			}
 			const carried = carry(cleaned.edits, cleaned.text, next.text);
+			const made =
+				cleanup.kind === undefined
+					? []
+					: appliedBy(cleanup.kind, cleaned.text, next.text);
 			cleaned = {
 				text: next.text,
 				edits: [...carried, ...next.edits].sort(
 					(one, other) => one.start - other.start,
 				),
+				applied: [
+					...carry(cleaned.applied ?? [], cleaned.text, next.text),
+					...made,
+				].sort((one, other) => one.start - other.start),
 			};
 		}
 		return cleaned;
@@ -46,16 +59,16 @@ interface Change {
  * A change in letter case is no change, so a span a cleanup capitalized
  * is still carried.
  */
-function carry(
-	edits: DictationEdit[],
+function carry<Edit extends { start: number; end: number }>(
+	edits: Edit[],
 	before: string,
 	after: string,
-): DictationEdit[] {
+): Edit[] {
 	if (edits.length === 0 || before === after) {
 		return edits;
 	}
 	const changes = diff(before, after);
-	const moved: DictationEdit[] = [];
+	const moved: Edit[] = [];
 	for (const edit of edits) {
 		// A change at a span's edge leaves it whole; one within it does not.
 		const touched = changes.some((change) =>
@@ -78,12 +91,102 @@ function carry(
 }
 
 /**
+ * What `kind` changed in turning `before` into `after`: each run of changed
+ * words, and the runs with no word between them as one, so "s cry" becoming
+ * "#scry" is one edit, not two.
+ */
+function appliedBy(
+	kind: AppliedEdit["type"],
+	before: string,
+	after: string,
+): AppliedEdit[] {
+	const from = tokens(before);
+	const to = tokens(after);
+	const runs: { start: number; end: number; now: number; stop: number }[] = [];
+	let old = 0;
+	let now = 0;
+	for (const [keptOld, keptNow] of [
+		...kept(
+			from.map((token) => token.text),
+			to.map((token) => token.text),
+		),
+		[from.length, to.length] as [number, number],
+	]) {
+		if (keptOld > old || keptNow > now) {
+			const run = {
+				start: from[old]?.start ?? before.length,
+				end: from[keptOld]?.start ?? before.length,
+				now: to[now]?.start ?? after.length,
+				stop: to[keptNow]?.start ?? after.length,
+			};
+			const last = runs.at(-1);
+			const gap = last === undefined ? "" : before.slice(last.end, run.start);
+			// Nothing but space, or no space at all, between two changes: one edit.
+			if (last !== undefined && (gap.trim() === "" || !/\s/u.test(gap))) {
+				last.end = run.end;
+				last.stop = run.stop;
+			} else {
+				runs.push(run);
+			}
+		}
+		old = keptOld + 1;
+		now = keptNow + 1;
+	}
+	return runs.map((run) => {
+		// A space both sides end with was kept, however the diff lined it up.
+		while (
+			run.end > run.start &&
+			run.stop > run.now &&
+			/\s/u.test(before.charAt(run.end - 1)) &&
+			before.charAt(run.end - 1) === after.charAt(run.stop - 1)
+		) {
+			run.end--;
+			run.stop--;
+		}
+		return {
+			type: kind,
+			start: run.now,
+			end: run.stop,
+			was: before.slice(run.start, run.end),
+		};
+	});
+}
+
+/** The words, spaces and marks of `text`, each with where it starts. */
+function tokens(text: string): { text: string; start: number }[] {
+	return [...text.matchAll(/[\p{L}\p{N}]+|\s+|[^\p{L}\p{N}\s]/gu)].map(
+		(match) => ({ text: match[0], start: match.index }),
+	);
+}
+
+/**
  * The fewest changes that turn `before` into `after`, in order, found by
  * Myers' diff over characters, ignoring letter case.
  */
 function diff(before: string, after: string): Change[] {
 	const from = before.toLowerCase();
 	const to = after.toLowerCase();
+	const changes: Change[] = [];
+	let fromOld = 0;
+	let fromNow = 0;
+	for (const [keptOld, keptNow] of [
+		...kept([...from], [...to]),
+		[from.length, to.length] as [number, number],
+	]) {
+		if (keptOld > fromOld || keptNow > fromNow) {
+			changes.push({ start: fromOld, end: keptOld, length: keptNow - fromNow });
+		}
+		fromOld = keptOld + 1;
+		fromNow = keptNow + 1;
+	}
+	return changes;
+}
+
+/**
+ * The pairs of positions `[old, now]` of the items `from` and `to` share, in
+ * order, found by Myers' diff: the fewest changes that turn one into the other.
+ */
+function kept(from: string[], to: string[]): [number, number][] {
 	const most = from.length + to.length;
 	// Diagonal `k` is kept at `furthest[offset + k]`, so it can go negative.
 	const offset = most + 1;
@@ -116,7 +219,7 @@ function diff(before: string, after: string): Change[] {
 		furthest = next;
 	}
 	// Walk back from the end, gathering each pair of characters kept.
-	const kept: [number, number][] = [];
+	const pairs: [number, number][] = [];
 	let old = from.length;
 	let now = to.length;
 	for (let depth = trace.length - 1; depth > 0; depth--) {
@@ -128,7 +231,7 @@ function diff(before: string, after: string): Change[] {
 		while (old > previousOld && now > previousNow) {
 			old--;
 			now--;
-			kept.push([old, now]);
+			pairs.push([old, now]);
 		}
 		old = previousOld;
 		now = previousNow;
@@ -136,21 +239,8 @@ function diff(before: string, after: string): Change[] {
 	while (old > 0 && now > 0) {
 		old--;
 		now--;
-		kept.push([old, now]);
+		pairs.push([old, now]);
 	}
-	kept.reverse();
-	const changes: Change[] = [];
-	let fromOld = 0;
-	let fromNow = 0;
-	for (const [keptOld, keptNow] of [
-		...kept,
-		[from.length, to.length] as [number, number],
-	]) {
-		if (keptOld > fromOld || keptNow > fromNow) {
-			changes.push({ start: fromOld, end: keptOld, length: keptNow - fromNow });
-		}
-		fromOld = keptOld + 1;
-		fromNow = keptNow + 1;
-	}
-	return changes;
+	pairs.reverse();
+	return pairs;
 }
