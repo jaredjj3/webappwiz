@@ -1,6 +1,7 @@
 import type { CommandDeps } from "@webappwiz/cli/webappwiz";
 import { webappwiz } from "@webappwiz/cli/webappwiz";
 import { z } from "zod";
+import { evalSkill } from "./eval";
 import { fix } from "./fix";
 import { path } from "./path";
 import { ship } from "./ship";
@@ -18,6 +19,30 @@ export type WizDeps = CommandDeps;
 export const wiz = webappwiz("wiz");
 
 const dev = wiz.group("dev").description("work on the webappwiz workspace");
+
+dev
+	.command("eval")
+	.description(
+		"compare versions of the arbor skill by running agents on it; spends real money, so run it only when asked",
+	)
+	.rest("args", z.string(), {
+		description:
+			"[run] [versions...] [--reps n] [--scenario id] [--model m], or: report, which prints the kept runs and spends nothing",
+	})
+	.allowUnknownOption()
+	.action((opts, { fs, ps }) => evalSkill({ ...opts, fs, ps }));
+
+dev
+	.command("eval")
+	.description(
+		"compare versions of the arbor skill by running agents on it; spends real money, so run it only when asked",
+	)
+	.rest("args", z.string(), {
+		description:
+			"[run] [versions...] [--reps n] [--scenario id] [--model m], or: report, which prints the kept runs and spends nothing",
+	})
+	.allowUnknownOption()
+	.action((opts, { fs, ps }) => evalSkill({ ...opts, fs, ps }));
 
 dev
 	.command("fix")

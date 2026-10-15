@@ -56,7 +56,7 @@ export async function test(opts: TestOptions): Promise<void> {
 	}
 }
 
-async function workspaceRoot(fs: Fs, from: string): Promise<string> {
+export async function workspaceRoot(fs: Fs, from: string): Promise<string> {
 	for (let dir = from; ; dir = dirname(dir)) {
 		let pkg: { workspaces?: unknown } = {};
 		try {
