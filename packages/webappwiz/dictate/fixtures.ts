@@ -3,6 +3,7 @@ import correctionsRecorded from "./correction-fixtures.json";
 import type { DictationEdit } from "./dictation-message";
 import fillerRecorded from "./filler-fixtures.json";
 import listsRecorded from "./list-fixtures.json";
+import missingRecorded from "./missing-fixtures.json";
 
 /** A take as dictated, what a model answered about it, and what it becomes. */
 export interface CleanupFixture {
@@ -30,3 +31,6 @@ export const CORRECTION_FIXTURES = correctionsRecorded as CleanupFixture[];
 
 /** Takes for `FillerDropper`. */
 export const FILLER_FIXTURES = fillerRecorded as CleanupFixture[];
+
+/** Takes for `MissingWordFlagger`. */
+export const MISSING_FIXTURES = missingRecorded as CleanupFixture[];

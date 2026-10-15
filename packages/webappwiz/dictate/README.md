@@ -105,6 +105,13 @@ Bun.serve<DictationRelay>({
   and "so" is filler in its sentence, dropping it with the commas around
   it. One it is unsure of stays, with a `type: "filler"` edit to drop it.
   `FILLER_THRESHOLDS` holds its cutoffs.
+- `MissingWordFlagger` asks the model in one request, per sentence of four
+  words or more, whether it seems to be missing a word, as transcription
+  loses some ("push the fix staging"). A model can tell a word is gone but
+  not which, so the text stays and a sentence it is over
+  `MISSING_THRESHOLDS.flag` sure of gets a `type: "missing"` edit, which
+  spans the sentence and replaces nothing. Run it last, so no later cleanup
+  rewrites a flagged sentence and drops the flag.
 - Run the droppers before the other cleanups, so those see only what stays.
 - `DictationMessage` is what the server says on the socket, as JSON.
 

@@ -35,6 +35,7 @@ export {
 	type RecordingEvents,
 	TICK,
 } from "./microphone";
+export { MISSING_THRESHOLDS, MissingWordFlagger } from "./missing-word-flagger";
 export { SAMPLE_RATE } from "./pcm";
 export { Pcm16Encoder } from "./pcm16-encoder";
 export type {

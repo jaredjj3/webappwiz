@@ -114,7 +114,13 @@ export type DictationEdit =
 			end: number;
 			text: string;
 			probability: number;
-	  };
+	  }
+	/**
+	 * Flagging the span, a sentence that seems to be missing a word, which it
+	 * is `probability` sure of. It replaces nothing: a model can tell a word
+	 * is gone but not which.
+	 */
+	| { type: "missing"; start: number; end: number; probability: number };
 
 /** A take's final text once its cleanups ran, and the edits they left open. */
 export interface Cleaned {

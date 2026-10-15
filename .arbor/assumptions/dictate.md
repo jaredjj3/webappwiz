@@ -55,3 +55,6 @@
 - The composer shows a take's cleanup under the message, the cleaned text with each edit a button that flips it and the message following, and "As said" and "Cleaned up" for all at once. (2026-10-15, dictation-review-take)
 - The review lasts until the next take or a dismiss, and hides while the message no longer holds the take's text. (2026-10-15, dictation-review-take)
 - Settings holds one switch per cleanup, and the page sends the ones off as `?off=` on the dictation socket. (2026-10-15, dictation-review-take)
+- A sentence seeming to lack a word is flagged above 0.6 (`MISSING_THRESHOLDS`) as `{ type: "missing", start, end, probability }` spanning the sentence, with nothing to replace; sentences under four words are not asked about. (2026-10-15, dictation-missing-word)
+- The missing-word flagger runs last, after tagging and lists, so no later cleanup drops its flag. (2026-10-15, dictation-missing-word)
+- The review draws a flag as a wavy underline on the sentence's words that no other mark covers, with nothing to flip, and Settings has a "Flag missing words" switch. (2026-10-15, dictation-missing-word)
