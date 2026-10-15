@@ -39,6 +39,13 @@ export default {
 			"packages/arbor/dev/app-lanes.test.tsx",
 		],
 	},
+	mobile: {
+		aliases: ["phone"],
+		globs: [
+			"packages/arbor/dev/phone-*.tsx",
+			"packages/arbor/dev/app-phone.test.tsx",
+		],
+	},
 	annotation: {
 		globs: [
 			"packages/arbor/dev/annotation.ts",
