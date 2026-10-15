@@ -10,3 +10,4 @@
 - An agent that hands on with `--relay` reports it as `## ⏳ Working <task>: on <agent>`, then ends on the task's own Merged, Removed or Escalated report. (2026-10-14, agent-handoff)
 - An agent hands its task up only after a step failed twice despite a change of course, or a call it could not settle after investigating. (2026-10-14, handoff-needs-reason)
 - An untriaged orchestrator learns to say a lane it named in Working the untriaged lane in SKILL.md; the rule for all of a lane orchestrator's calls sits in lanes.md's Reporting on lanes. (2026-10-15, skill-report-trimmed)
+- An agent heads only the todos it proposes; one it adds is left to the conversation's "Added" line, in `arbor dev` or not. (2026-10-15, todo-add-line)
