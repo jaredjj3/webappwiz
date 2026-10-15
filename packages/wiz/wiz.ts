@@ -23,11 +23,11 @@ const dev = wiz.group("dev").description("work on the webappwiz workspace");
 dev
 	.command("eval")
 	.description(
-		"compare versions of the arbor skill by running agents on it; spends real money, so run it only when asked",
+		"compare versions of the arbor skill by running agents on it; uses tokens billed to an API key or counted against a Claude plan, so run it only when asked",
 	)
 	.rest("args", z.string(), {
 		description:
-			"[run] [versions...] [--reps n] [--scenario id] [--model m] [--limit minutes], or: report, which prints the kept runs and spends nothing",
+			"[run] [versions...] [--reps n] [--scenario id] [--model m] [--limit minutes], or: report, which prints the kept runs and uses nothing",
 	})
 	.allowUnknownOption()
 	.action((opts, { fs, ps }) => evalSkill({ ...opts, fs, ps }));

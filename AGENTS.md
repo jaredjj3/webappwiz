@@ -8,5 +8,7 @@ After making code changes:
 
 During an arbor task, the user may be on the arbor dev server from another device, so give every link as both its remote and its local URL.
 
-Only run `bin/wiz dev eval` when the user asks you to, since it costs real money.
+Only run `bin/wiz dev eval` when the user asks you to, since it uses tokens the
+user pays for: billed to an API key, or counted against their Claude plan's
+usage limits.
 `bin/wiz dev eval report` and the evals' tests (`bin/wiz dev test`) are free.
