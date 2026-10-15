@@ -6,3 +6,5 @@
 - A paused agent stays idle after its checkpoint, and the usual 30-minute idle stop ends its process. (2026-10-15, pause-button)
 - New sits atop the desktop sidebar, above the page tabs, with the waiting-on-you line heading the conversation list. (2026-10-15, new-button)
 - A phone keeps its own New buttons, unchanged by the desktop's. (2026-10-15, new-button)
+- The Check in bar sits above the composer once the agent has gone ten minutes since the last message it took, so a check-in restarts the count. (2026-10-15, check-in-button)
+- The Check in bar shows only for an agent the person runs, with nothing queued for it: running, no checkpoint asked, not archived, not handed out. (2026-10-15, check-in-button)
