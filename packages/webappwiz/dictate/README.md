@@ -22,7 +22,7 @@ socket.events.on("heard", (text) => draft.show(text));
 
 // On stop:
 (await recording).dispose();
-const { text, said, applied, edits } = await socket.finish();
+const text = await socket.finish();
 ```
 
 On the server, `webappwiz/dictate/server`, a `DictationRelay` per socket:
@@ -73,46 +73,6 @@ Bun.serve<DictationRelay>({
   Realtime API with `gpt-live-transcribe`; its `prompt` and `keywords` are
   where the words an app spells its own way go. A transcriber that rejects
   with a `DictationFailure` tells the page which cred to ask for.
-- A `DictationRelay` takes a `Cleanup` as its third argument, which tidies
-  the final text before `done` goes back, applying the edits it is sure of
-  and returning the rest as `DictationEdit`s on `done.edits` for the page to
-  offer. One that throws leaves the text as heard.
-- `CleanupSequence` runs cleanups one after another, each on the text the
-  one before left, carrying the edits an earlier one left open onto the
-  later text and dropping any whose span a later one rewrote. One that
-  throws is skipped. It also says what each cleanup applied, by comparing
-  the text the cleanup was given with the one it left: an `AppliedEdit`
-  for each run of changed words, labeled with the cleanup's `kind`, which
-  `done.applied` carries with `done.said`, the text as heard, so a page can
-  show a take against what was said and undo any edit.
-- `ListFormatter` lays out the lists a take speaks as markdown lists,
-  deciding with a `Decider` from `webappwiz/decide` in one request: code
-  splits the text at sentence ends and at commas before cue words ("then",
-  "second", "and finally"), the model says what each piece does, and code
-  puts each item on its own line without its cue word, numbered when the
-  items are steps. An item it is unsure of joins the one before, with a
-  `type: "item"` edit to split it off. `LIST_THRESHOLDS` holds its cutoffs.
-- `CorrectionDropper` drops what a speaker took back: code splits the text
-  at sentence ends and at commas before a cue ("no", "wait", "I mean",
-  "actually", "scratch that"), the model says in one request whether each
-  cued piece replaces the one before, amends its last words, or neither,
-  and code drops the words taken back with the cue, keeping the newer
-  wording. A cue after a question is an answer, so it asks nothing. One it
-  is unsure of stays, with a `type: "correction"` edit to drop it.
-  `CORRECTION_THRESHOLDS` holds its cutoffs.
-- `FillerDropper` drops "um" and "uh" outright, and asks the model in one
-  request whether each "like", "kind of", "sort of", "you know", "I mean"
-  and "so" is filler in its sentence, dropping it with the commas around
-  it. One it is unsure of stays, with a `type: "filler"` edit to drop it.
-  `FILLER_THRESHOLDS` holds its cutoffs.
-- `MissingWordFlagger` asks the model in one request, per sentence of four
-  words or more, whether it seems to be missing a word, as transcription
-  loses some ("push the fix staging"). A model can tell a word is gone but
-  not which, so the text stays and a sentence it is over
-  `MISSING_THRESHOLDS.flag` sure of gets a `type: "missing"` edit, which
-  spans the sentence and replaces nothing. Run it last, so no later cleanup
-  rewrites a flagged sentence and drops the flag.
-- Run the droppers before the other cleanups, so those see only what stays.
 - `DictationMessage` is what the server says on the socket, as JSON.
 
 `webappwiz/dictate/testing` has `FakeMicrophone`, `FakeDictationLink` and

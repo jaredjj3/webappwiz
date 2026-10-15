@@ -1,7 +1,6 @@
 import { Dispatcher } from "webappwiz/events";
 import { DictationFailure } from "./dictation-failure";
 import type { DictationLink, DictationLinkEvents } from "./dictation-link";
-import type { DictatedTake } from "./dictation-message";
 
 /**
  * A server in a test: hears the bytes a take sends as text, says it all so
@@ -14,8 +13,6 @@ export class FakeDictationLink implements DictationLink {
 	text = "";
 	/** Set to make finishing fail with it, as a missing key or a dropped socket does. */
 	failure: DictationFailure | undefined;
-	/** Set to make finishing give this take, with edits to review, in place of the heard text alone. */
-	take: ((text: string) => DictatedTake) | undefined;
 	open = true;
 
 	send(pcm: Uint8Array<ArrayBuffer>): void {
@@ -23,19 +20,11 @@ export class FakeDictationLink implements DictationLink {
 		this.dispatcher.dispatch("heard", this.text);
 	}
 
-	async finish(): Promise<DictatedTake> {
+	async finish(): Promise<string> {
 		if (this.failure !== undefined) {
 			throw this.failure;
 		}
-		return (
-			this.take?.(this.text) ?? {
-				text: this.text,
-				said: this.text,
-				applied: [],
-				edits: [],
-				decisions: [],
-			}
-		);
+		return this.text;
 	}
 
 	/** Breaks the take off, as the server does when it lacks `cred`. */

@@ -26,36 +26,67 @@
 - Dictation chimes: two soft sine notes of 70 ms at gain 0.08, rising on start and falling on stop, synthesized on the take's own `AudioContext`. (2026-10-15, dictate-sound-cues)
 - The mic ignores its first ~190 ms after the start cue so the chime never enters the transcript. (2026-10-15, dictate-sound-cues)
 - A system tag's probability is its span's Choice probability times the system's Noul; it applies above 0.8, is dropped below 0.2, and goes back as an edit between (`TAG_THRESHOLDS`). (2026-10-15, dictation-tag-systems)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - Only the systems some span may name get a Noul, so a take that names none asks nothing. (2026-10-15, dictation-tag-systems)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A heard word may be a system's name exactly under 4 letters, a letter off for 4–7, two for 8+; words heard apart ("s cry") must keep every letter. (2026-10-15, dictation-tag-systems)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - `done.edits` carries only the middle-band tags, `{ type: "tag", start, end, system, probability }`, spanning `done.text` with the sure tags applied. (2026-10-15, dictation-tag-systems)
   → replaced 2026-10-15 in dictation-spoken-lists: assumed it also carries unsure list items, `{ type: "item", start, end, text, probability }`, spanning `done.text` after every cleanup ran
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A take whose cleanup fails, or whose model lacks creds, goes back as heard; the creds are asked for when the take starts. (2026-10-15, dictation-tag-systems)
   → replaced 2026-10-15 in dictation-spoken-lists: assumed a cleanup that fails is skipped and the others still apply; a model lacking creds still leaves the take as heard
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A question describes a system by its name, aliases and up to three globs, since systems have no description. (2026-10-15, dictation-tag-systems)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - The page sends its cleanup model as `?model=` on the dictation socket. (2026-10-15, dictation-tag-systems)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - Tagging runs first, then lists, one request after the other, each on the text the one before left. (2026-10-15, dictation-spoken-lists)
   → replaced 2026-10-15 in dictation-drop-corrections: assumed corrections, then filler, run before tagging and lists, so those see only what stays
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - An edit a cleanup left open is carried onto a later cleanup's text through a case-blind character diff, and dropped when that cleanup changed its span. (2026-10-15, dictation-spoken-lists)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A take asks about lists only when it splits into three or more segments, or two with a cue word opening the second. (2026-10-15, dictation-spoken-lists)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A segment starts a list item above 0.6 and is never offered as one below 0.2; a list is numbered when its items average above 0.7 as steps (`LIST_THRESHOLDS`). (2026-10-15, dictation-spoken-lists)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A list item loses a trailing comma or semicolon, and its full stop when it is one sentence. (2026-10-15, dictation-spoken-lists)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - An unsure split in a numbered list offers the next sure item's number, leaving later numbers one behind once accepted. (2026-10-15, dictation-spoken-lists)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A list starts on the line after its intro, which ends in a colon, and a blank line follows it. (2026-10-15, dictation-spoken-lists)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - Corrections run first, then filler, then tagging, then lists. (2026-10-15, dictation-drop-corrections)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A correction is a segment opening with a cue, split at sentence ends and at commas before a cue; a Choice says whether it replaces the segment before whole, amends its last words, or neither. (2026-10-15, dictation-drop-corrections)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - An amend runs from the last word of the segment before that the newer wording opens with, else as many trailing words as its first clause has. (2026-10-15, dictation-drop-corrections)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - "no", "nope", "wait", "sorry" and "actually" cue a correction only before punctuation or another cue; "I mean", "scratch that", "never mind", "or rather" and "let me rephrase" anywhere; a cue after a question is an answer and asks nothing. (2026-10-15, dictation-drop-corrections)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A correction amends rather than replaces when the model leans that way, or its newer wording has under half the words of the segment before. (2026-10-15, dictation-drop-corrections)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A correction applies above 0.9 and filler above 0.8, both offered from 0.3 (`CORRECTION_THRESHOLDS`, `FILLER_THRESHOLDS`). (2026-10-15, dictation-drop-corrections)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - "um", "uh", "erm" and "hmm" are dropped without asking; "like", "kind of", "sort of", "you know", "I mean" and "so" get a Noul each. (2026-10-15, dictation-drop-corrections)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - Deletions go back as `{ type: "correction" | "filler", start, end, text, probability }`, `text` empty or the capital of what follows. (2026-10-15, dictation-drop-corrections)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - `done` is `{ text, said, applied, edits, decisions }`: `said` is the transcription, and `applied` has an `{ type, start, end, was }` for each run of words a cleanup changed, found by diffing the text it was given with the text it left. (2026-10-15, dictation-review-take)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - `decisions` is each request a cleanup made of its model: the state, every question with its answer in words, latency, tokens and dollars. (2026-10-15, dictation-review-take)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - The composer shows a take's cleanup under the message, the cleaned text with each edit a button that flips it and the message following, and "As said" and "Cleaned up" for all at once. (2026-10-15, dictation-review-take)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - The review lasts until the next take or a dismiss, and hides while the message no longer holds the take's text. (2026-10-15, dictation-review-take)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - Settings holds one switch per cleanup, and the page sends the ones off as `?off=` on the dictation socket. (2026-10-15, dictation-review-take)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A sentence seeming to lack a word is flagged above 0.6 (`MISSING_THRESHOLDS`) as `{ type: "missing", start, end, probability }` spanning the sentence, with nothing to replace; sentences under four words are not asked about. (2026-10-15, dictation-missing-word)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - The missing-word flagger runs last, after tagging and lists, so no later cleanup drops its flag. (2026-10-15, dictation-missing-word)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - The review draws a flag as a wavy underline on the sentence's words that no other mark covers, with nothing to flip, and Settings has a "Flag missing words" switch. (2026-10-15, dictation-missing-word)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard
 - A list item the speaker already marked is re-marked with the list's own marker and keeps its text as written. (2026-10-15, dictation-lists-keep-markers)
+  → contradicted 2026-10-15 in simplify-dictate: the user had the cleanups removed, so a take goes into the message as heard

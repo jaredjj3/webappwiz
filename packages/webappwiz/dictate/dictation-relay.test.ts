@@ -1,15 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { DictationFailure } from "./dictation-failure";
 import type { DictationMessage } from "./dictation-message";
-import { type Cleanup, DictationRelay } from "./dictation-relay";
+import { DictationRelay } from "./dictation-relay";
 import { FakeTranscriber } from "./fake-transcriber";
 
 describe("DictationRelay", () => {
 	/** A relay over a socket that keeps all it was sent, and whether it hung up. */
-	const relayed = (
-		transcriber: Promise<FakeTranscriber>,
-		cleanup?: Cleanup,
-	) => {
+	const relayed = (transcriber: Promise<FakeTranscriber>) => {
 		const said: DictationMessage[] = [];
 		const { promise: hungUp, resolve } = Promise.withResolvers<void>();
 		const relay = new DictationRelay(
@@ -18,7 +15,6 @@ describe("DictationRelay", () => {
 				hangUp: resolve,
 			},
 			transcriber,
-			cleanup,
 		);
 		return { relay, said, hungUp };
 	};
@@ -35,72 +31,8 @@ describe("DictationRelay", () => {
 		expect(said).toEqual([
 			{ type: "heard", text: "heard: one " },
 			{ type: "heard", text: "heard: one two" },
-			{
-				type: "done",
-				text: "heard: one two",
-				said: "heard: one two",
-				applied: [],
-				edits: [],
-				decisions: [],
-			},
+			{ type: "done", text: "heard: one two" },
 		]);
-		relay.dispose();
-	});
-
-	it("cleans up the final text before it goes back", async () => {
-		const edit = {
-			type: "tag",
-			start: 0,
-			end: 3,
-			system: "scry",
-			probability: 0.5,
-		} as const;
-		const { relay, said, hungUp } = relayed(
-			Promise.resolve(new FakeTranscriber()),
-			{
-				clean: async (text) => ({
-					text: text.toUpperCase(),
-					edits: [edit],
-					applied: [{ type: "filler", start: 0, end: 1, was: "h" }],
-				}),
-			},
-		);
-		relay.receive(new TextEncoder().encode("one"));
-		relay.receive("finish");
-		await hungUp;
-
-		expect(said.at(-1)).toEqual({
-			type: "done",
-			text: "HEARD: ONE",
-			said: "heard: one",
-			applied: [{ type: "filler", start: 0, end: 1, was: "h" }],
-			edits: [edit],
-			decisions: [],
-		});
-		relay.dispose();
-	});
-
-	it("says the text as heard when the cleanup fails", async () => {
-		const { relay, said, hungUp } = relayed(
-			Promise.resolve(new FakeTranscriber()),
-			{
-				clean: async () => {
-					throw new Error("no model");
-				},
-			},
-		);
-		relay.receive(new TextEncoder().encode("one"));
-		relay.receive("finish");
-		await hungUp;
-
-		expect(said.at(-1)).toEqual({
-			type: "done",
-			text: "heard: one",
-			said: "heard: one",
-			applied: [],
-			edits: [],
-			decisions: [],
-		});
 		relay.dispose();
 	});
 

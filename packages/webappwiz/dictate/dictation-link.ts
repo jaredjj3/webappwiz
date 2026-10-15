@@ -1,6 +1,5 @@
 import type { Resource } from "webappwiz/disposable";
 import type { Eventful } from "webappwiz/events";
-import type { DictatedTake } from "./dictation-message";
 import type { AudioSink } from "./microphone";
 
 export interface DictationLinkEvents extends Record<string, unknown> {
@@ -17,8 +16,8 @@ export interface DictationLink
 	extends AudioSink,
 		Eventful<DictationLinkEvents>,
 		Resource {
-	/** Ends the take, resolving with what it said; rejects with a `DictationFailure`. */
-	finish(): Promise<DictatedTake>;
+	/** Ends the take, resolving with its final text; rejects with a `DictationFailure`. */
+	finish(): Promise<string>;
 }
 
 /** Opens a take's link to the server. */
