@@ -1,12 +1,7 @@
-import type { Take } from "./take";
+import { LiveTake } from "./live-take";
+import { summary, type TakeSummary } from "./take";
 import type { Takes } from "./takes";
 import type { Transcriber } from "./transcriber";
-
-/** What the page sees of a take: everything but the audio, which it fetches by id. */
-export interface TakeSummary {
-	id: string;
-	transcript: string;
-}
 
 /** What the playground does, one method per route the page calls. */
 export class DictateService {
@@ -15,10 +10,9 @@ export class DictateService {
 		private readonly takes: Takes,
 	) {}
 
-	/** Transcribes `audio` and keeps it as a take. */
-	async record(audio: Blob): Promise<TakeSummary> {
-		const transcript = await this.transcriber.transcribe(audio);
-		return summary(this.takes.add(audio, transcript));
+	/** Starts a take, transcribed as it is recorded and kept once finished. */
+	async listen(): Promise<LiveTake> {
+		return new LiveTake(await this.transcriber.listen(), this.takes);
 	}
 
 	list(): TakeSummary[] {
@@ -28,8 +22,4 @@ export class DictateService {
 	audio(id: string): Blob | undefined {
 		return this.takes.get(id)?.audio;
 	}
-}
-
-function summary(take: Take): TakeSummary {
-	return { id: take.id, transcript: take.transcript };
 }

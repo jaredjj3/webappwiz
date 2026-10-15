@@ -2,6 +2,7 @@ import { useReactive, useResource } from "@webappwiz/react";
 import { useEffect } from "react";
 import type { DictateApi } from "./dictate-api";
 import { DictationController } from "./dictation-controller";
+import { LiveText } from "./live-text";
 import type { Microphone } from "./microphone";
 import { RecordButton } from "./record-button";
 import { TakeList } from "./take-list";
@@ -25,6 +26,7 @@ export function App({ microphone, api }: AppProps) {
 		<main>
 			<h1>Dictate</h1>
 			<RecordButton dictation={dictation} />
+			<LiveText dictation={dictation} />
 			{error !== undefined && (
 				<p className="error" role="alert">
 					{error}

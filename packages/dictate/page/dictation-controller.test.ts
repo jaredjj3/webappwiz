@@ -29,7 +29,15 @@ describe("DictationController", () => {
 		await server.disposeAsync();
 	});
 
-	it("records on the first toggle and transcribes on the second", async () => {
+	/** Waits for the controller's state to pass `check`, up to a second. */
+	const until = async (check: () => boolean) => {
+		for (let i = 0; i < 100 && !check(); i++) {
+			await Bun.sleep(10);
+		}
+		expect(check()).toBe(true);
+	};
+
+	it("records on the first toggle and keeps the take on the second", async () => {
 		await dictation.toggle();
 		expect(dictation.state.phase).toBe("recording");
 		expect(microphone.open).toBe(true);
@@ -38,9 +46,18 @@ describe("DictationController", () => {
 		expect(dictation.state).toEqual({
 			phase: "idle",
 			error: undefined,
+			live: "",
 			takes: [{ id: expect.any(String), transcript: "heard: something" }],
 		});
 		expect(microphone.open).toBe(false);
+	});
+
+	it("shows the text as it is heard, while recording", async () => {
+		await dictation.toggle();
+		await until(() => dictation.state.live === "heard: something");
+		microphone.speak(" more");
+		await until(() => dictation.state.live === "heard: something more");
+		expect(dictation.state.phase).toBe("recording");
 	});
 
 	it("puts each new take first", async () => {
@@ -75,7 +92,7 @@ describe("DictationController", () => {
 	});
 
 	it("says why a take failed to transcribe, and clears it on the next", async () => {
-		transcriber.failure = new Error("OpenAI answered 401: bad key");
+		transcriber.failure = new Error("OpenAI said: bad key");
 		await dictation.toggle();
 		await dictation.toggle();
 		expect(dictation.state.phase).toBe("idle");
@@ -84,6 +101,14 @@ describe("DictationController", () => {
 		transcriber.failure = undefined;
 		await dictation.toggle();
 		expect(dictation.state.error).toBeUndefined();
+	});
+
+	it("says why the server could not be reached, and stays idle", async () => {
+		await server.disposeAsync();
+		await dictation.toggle();
+		expect(dictation.state.phase).toBe("idle");
+		expect(dictation.state.error).toBe("could not reach the dictate server");
+		expect(microphone.open).toBe(false);
 	});
 
 	it("lets go of the mic when disposed mid-take", async () => {

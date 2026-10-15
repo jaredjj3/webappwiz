@@ -24,6 +24,15 @@ main {
 	border-color: #c62828;
 }
 
+.live {
+	font-size: 1.25rem;
+	white-space: pre-wrap;
+}
+
+.live[data-empty="true"] {
+	opacity: 0.6;
+}
+
 .error {
 	color: #c62828;
 }

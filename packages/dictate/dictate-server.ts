@@ -1,5 +1,6 @@
 import type { AsyncResource } from "webappwiz/disposable";
 import type { DictateService } from "./dictate-service";
+import type { LiveMessage, LiveTake } from "./live-take";
 import page from "./page/index.html";
 
 export interface DictateServerOptions {
@@ -7,12 +8,17 @@ export interface DictateServerOptions {
 	port?: number;
 }
 
+/** A live socket's take, or nothing once it failed to start. */
+interface LiveData {
+	take: Promise<LiveTake | undefined>;
+}
+
 /**
- * The playground over HTTP: the page, and a route per {@link DictateService}
- * method, each translating a request into one call.
+ * The playground over HTTP: the page, a route per {@link DictateService}
+ * method, and a websocket a take is recorded over.
  */
 export class DictateServer implements AsyncResource {
-	private readonly server: Bun.Server<undefined>;
+	private readonly server: Bun.Server<LiveData>;
 
 	constructor(service: DictateService, opts: DictateServerOptions = {}) {
 		this.server = Bun.serve({
@@ -24,21 +30,6 @@ export class DictateServer implements AsyncResource {
 				"/": page,
 				"/api/takes": {
 					GET: () => Response.json(service.list()),
-					POST: async (request) => {
-						// The type the recorder gave the take, which the transcriber
-						// names its file by and the take is played back as.
-						const audio = new Blob([await request.arrayBuffer()], {
-							type: request.headers.get("Content-Type") ?? "",
-						});
-						if (audio.size === 0) {
-							return new Response("no audio", { status: 400 });
-						}
-						try {
-							return Response.json(await service.record(audio));
-						} catch (error) {
-							return new Response(String(error), { status: 502 });
-						}
-					},
 				},
 				"/api/takes/:id/audio": (request) => {
 					const audio = service.audio(request.params.id);
@@ -47,6 +38,77 @@ export class DictateServer implements AsyncResource {
 						: new Response(audio, {
 								headers: { "Content-Type": audio.type },
 							});
+				},
+				"/api/live": (request, server) => {
+					// Each take spends OpenAI money, so a browser may open one only
+					// from this page; any other site the user visits could reach
+					// the port too. A client that is no browser sends no Origin.
+					const origin = request.headers.get("origin");
+					if (
+						origin !== null &&
+						URL.parse(origin)?.host !== request.headers.get("host")
+					) {
+						return new Response("a take opens only from its own page", {
+							status: 403,
+						});
+					}
+					const data = { take: Promise.resolve(undefined) };
+					// Bun answers an upgrade itself, so there is nothing to return.
+					return server.upgrade(request, { data })
+						? undefined
+						: new Response("a take is a WebSocket: connect with one", {
+								status: 400,
+							});
+				},
+			},
+			// The page sends the take's audio as bytes, then "finish" as text.
+			websocket: {
+				// Only types `socket.data`, as Bun documents; `upgrade` sets it.
+				data: {} as LiveData,
+				open: (socket) => {
+					const say = (message: LiveMessage) =>
+						socket.send(JSON.stringify(message));
+					socket.data.take = service.listen().then(
+						(take) => {
+							take.events.on("heard", (text) => say({ type: "heard", text }));
+							take.events.on("failed", (error) =>
+								say({ type: "failed", message: error.message }),
+							);
+							return take;
+						},
+						(error: unknown) => {
+							say({ type: "failed", message: String(error) });
+							socket.close();
+							return undefined;
+						},
+					);
+				},
+				// Every message waits on the same take, so they reach it in order.
+				message: (socket, message) => {
+					void socket.data.take.then(async (take) => {
+						if (take === undefined) {
+							return;
+						}
+						if (typeof message !== "string") {
+							take.append(new Uint8Array(message));
+							return;
+						}
+						if (message !== "finish") {
+							return;
+						}
+						const reply: LiveMessage = await take.finish().then(
+							(summary) => ({ type: "take", take: summary }),
+							(error: unknown) => ({
+								type: "failed",
+								message: error instanceof Error ? error.message : String(error),
+							}),
+						);
+						socket.send(JSON.stringify(reply));
+						socket.close();
+					});
+				},
+				close: (socket) => {
+					void socket.data.take.then((take) => take?.dispose());
 				},
 			},
 		});

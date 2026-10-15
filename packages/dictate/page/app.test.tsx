@@ -30,15 +30,24 @@ describe("App", () => {
 		await server.disposeAsync();
 	});
 
-	it("shows a take's transcript once it is recorded and stopped", async () => {
-		const view = render(<App microphone={new FakeMicrophone()} api={api} />);
+	it("shows the text as it is heard, then lists the take once stopped", async () => {
+		const microphone = new FakeMicrophone();
+		const view = render(<App microphone={microphone} api={api} />);
 		expect(view.getByText("No takes yet.")).toBeDefined();
 
 		view.getByRole("button", { name: "Record" }).click();
 		const stop = await view.findByRole("button", { name: "Stop" });
+		microphone.speak(" more");
+		const live = await view.findByText("heard: something more");
+		expect(live.className).toBe("live");
 		stop.click();
 
-		expect(await view.findByText("heard: something")).toBeDefined();
+		await waitFor(() =>
+			expect(view.container.querySelector(".transcript")?.textContent).toBe(
+				"heard: something more",
+			),
+		);
+		expect(view.container.querySelector(".live")).toBeNull();
 		await waitFor(() =>
 			expect(view.getByRole("button", { name: "Record" })).toBeDefined(),
 		);

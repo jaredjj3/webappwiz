@@ -1,10 +1,11 @@
 import type { Resource } from "webappwiz/disposable";
 import { Dispatcher, type Eventful } from "webappwiz/events";
-import type { TakeSummary } from "../dictate-service";
+import type { TakeSummary } from "../take";
 import type { DictateApi } from "./dictate-api";
+import type { LiveSocket } from "./live-socket";
 import type { Microphone, Recording } from "./microphone";
 
-/** Where the mic is in a take: waiting, asking for it, listening, or being transcribed. */
+/** Where the mic is in a take: waiting, asking for it, listening, or finishing the text. */
 export type Phase = "idle" | "starting" | "recording" | "transcribing";
 
 /** What the page shows. */
@@ -12,11 +13,16 @@ export interface DictationState {
 	phase: Phase;
 	/** Why the last start or take failed, until the next one. */
 	error: string | undefined;
+	/** The take under way as heard so far, rough until it is kept. */
+	live: string;
 	/** Newest first. */
 	takes: TakeSummary[];
 }
 
-/** Records a take, sends it off to be transcribed, and keeps the list of takes. */
+/**
+ * Records a take, streaming it to the server to be transcribed as it is
+ * spoken, and keeps the list of takes.
+ */
 export class DictationController
 	implements Eventful<{ changed: undefined }>, Resource
 {
@@ -25,8 +31,10 @@ export class DictationController
 	private current: DictationState = {
 		phase: "idle",
 		error: undefined,
+		live: "",
 		takes: [],
 	};
+	private socket: LiveSocket | undefined;
 	private recording: Recording | undefined;
 
 	constructor(
@@ -47,7 +55,7 @@ export class DictationController
 		}
 	}
 
-	/** Starts a take when idle, ends and transcribes it while recording. */
+	/** Starts a take when idle, ends and keeps it while recording. */
 	async toggle(): Promise<void> {
 		if (this.current.phase === "idle") {
 			await this.start();
@@ -59,31 +67,47 @@ export class DictationController
 	dispose(): void {
 		this.recording?.dispose();
 		this.recording = undefined;
+		this.socket?.dispose();
+		this.socket = undefined;
 		this.dispatcher.dispose();
 	}
 
 	private async start(): Promise<void> {
-		this.set({ phase: "starting", error: undefined });
+		this.set({ phase: "starting", error: undefined, live: "" });
 		try {
-			this.recording = await this.microphone.start();
+			const socket = await this.api.listen();
+			this.socket = socket;
+			socket.events.on("heard", (live) => this.set({ live }));
+			socket.events.on("failed", (error) => this.set({ error }));
+			this.recording = await this.microphone.start(socket);
 			this.set({ phase: "recording" });
 		} catch (error) {
+			this.socket?.dispose();
+			this.socket = undefined;
 			this.set({ phase: "idle", error: message(error) });
 		}
 	}
 
 	private async stop(): Promise<void> {
-		const recording = this.recording;
+		const { recording, socket } = this;
 		this.recording = undefined;
-		if (recording === undefined) {
+		this.socket = undefined;
+		if (recording === undefined || socket === undefined) {
 			return;
 		}
+		recording.dispose();
 		this.set({ phase: "transcribing" });
 		try {
-			const take = await this.api.record(await recording.stop());
-			this.set({ phase: "idle", takes: [take, ...this.current.takes] });
+			const take = await socket.finish();
+			this.set({
+				phase: "idle",
+				live: "",
+				takes: [take, ...this.current.takes],
+			});
 		} catch (error) {
 			this.set({ phase: "idle", error: message(error) });
+		} finally {
+			socket.dispose();
 		}
 	}
 

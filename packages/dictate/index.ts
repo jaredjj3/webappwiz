@@ -5,7 +5,7 @@ import { DictateServer } from "./dictate-server";
 import { DictateService } from "./dictate-service";
 import { OpenAiTranscriber } from "./openai-transcriber";
 import { Takes } from "./takes";
-import { vocabulary } from "./vocabulary";
+import { vocabulary, words } from "./vocabulary";
 
 // The store only, as a dev run should read it: a stray export is never what
 // the playground picks up. `arbor creds request OPENAI_API_KEY --device` puts
@@ -17,8 +17,10 @@ const credentials = new Credentials([
 const apiKey = await credentials.require("OPENAI_API_KEY");
 
 const root = `${import.meta.dirname}/../..`;
+const systems = await readSystems(root);
 const transcriber = new OpenAiTranscriber(apiKey, {
-	prompt: vocabulary(await readSystems(root)),
+	prompt: vocabulary(systems),
+	keywords: words(systems),
 });
 const server = new DictateServer(
 	new DictateService(transcriber, new Takes(new UuidProvider())),

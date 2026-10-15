@@ -5,7 +5,7 @@ const LABELS: Record<Phase, string> = {
 	idle: "Record",
 	starting: "Asking for the mic…",
 	recording: "Stop",
-	transcribing: "Transcribing…",
+	transcribing: "Finishing…",
 };
 
 export interface RecordButtonProps {

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { vocabulary } from "./vocabulary";
+import { vocabulary, words } from "./vocabulary";
 
 describe("vocabulary", () => {
+	it("lists each word once: the project's own, then every system and alias", () => {
+		expect(
+			words({ arbor: { aliases: ["todos"], globs: [] }, scry: { globs: [] } }),
+		).toEqual(["webappwiz", "wiz", "arbor", "scry", "todos"]);
+	});
+
 	it("names every system and alias after the project's own words", () => {
 		expect(
 			vocabulary({

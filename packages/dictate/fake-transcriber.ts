@@ -1,14 +1,12 @@
-import type { Transcriber } from "./transcriber";
+import { FakeTranscription } from "./fake-transcription";
+import type { Transcriber, Transcription } from "./transcriber";
 
-/** Hears whatever text a test recorded as the audio's own. */
+/** Hears whatever text a test sent as the audio's own bytes. */
 export class FakeTranscriber implements Transcriber {
-	/** Set to make the next call fail with it. */
+	/** Set to make a take fail with it when it finishes. */
 	failure: Error | undefined;
 
-	async transcribe(audio: Blob): Promise<string> {
-		if (this.failure !== undefined) {
-			throw this.failure;
-		}
-		return `heard: ${await audio.text()}`;
+	async listen(): Promise<Transcription> {
+		return new FakeTranscription(this);
 	}
 }

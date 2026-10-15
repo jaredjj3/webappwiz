@@ -16,8 +16,9 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 // `Bun.serve` does not recognise a happy-dom `Response` and quietly answers
 // with its own welcome page instead. That would corrupt any file loaded after
 // this one in the same worker. Nothing that needs a DOM needs happy-dom's
-// HTTP, so hand the runtime's back.
-const http = ["Response", "Request", "Headers", "fetch"];
+// HTTP, so hand the runtime's back, its WebSocket too, whose happy-dom stand-in
+// never reaches a `Bun.serve` socket.
+const http = ["Response", "Request", "Headers", "fetch", "WebSocket"];
 const runtime = http.map(
 	(name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)] as const,
 );

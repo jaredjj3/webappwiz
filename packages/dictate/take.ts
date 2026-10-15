@@ -4,3 +4,13 @@ export interface Take {
 	audio: Blob;
 	transcript: string;
 }
+
+/** What the page sees of a take: everything but the audio, which it fetches by id. */
+export interface TakeSummary {
+	id: string;
+	transcript: string;
+}
+
+export function summary(take: Take): TakeSummary {
+	return { id: take.id, transcript: take.transcript };
+}

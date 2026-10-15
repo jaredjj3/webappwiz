@@ -1,27 +1,31 @@
-import type { Microphone, Recording } from "./microphone";
+import type { AudioSink, Microphone, Recording } from "./microphone";
 
-/** Records `said` each take, as `audio/webm`, unless a test makes it fail. */
+/** Says `said` as each take starts, and more on `speak`, unless a test makes it fail. */
 export class FakeMicrophone implements Microphone {
 	said = "something";
 	/** Set to make the next start fail with it, as a denied mic does. */
 	failure: Error | undefined;
 	/** Whether the last take still holds the mic. */
 	open = false;
+	private sink: AudioSink | undefined;
 
-	async start(): Promise<Recording> {
+	async start(sink: AudioSink): Promise<Recording> {
 		if (this.failure !== undefined) {
 			throw this.failure;
 		}
 		this.open = true;
-		const said = this.said;
+		this.sink = sink;
+		this.speak(this.said);
 		return {
-			stop: async () => {
-				this.open = false;
-				return new Blob([said], { type: "audio/webm" });
-			},
 			dispose: () => {
 				this.open = false;
+				this.sink = undefined;
 			},
 		};
+	}
+
+	/** Says `text` into the take under way, as its bytes. */
+	speak(text: string): void {
+		this.sink?.send(new TextEncoder().encode(text));
 	}
 }
