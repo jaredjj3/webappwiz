@@ -10,6 +10,8 @@
         "@types/bun": "latest",
         "@webappwiz/arbor": "workspace:*",
         "@webappwiz/scry": "workspace:*",
+        "webappwiz": "workspace:*",
+        "zod": "^4.4.3",
       },
       "peerDependencies": {
         "typescript": "^7",

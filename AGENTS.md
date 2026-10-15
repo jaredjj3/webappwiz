@@ -9,3 +9,7 @@ After making code changes:
 Don't use em dashes.
 
 Git stash is not used in this repo, so you don't have to check the stash.
+
+`evals/arbor-skill` runs the arbor skill against `claude -p` and costs real
+money: never run it, or ask a subagent to, unless the user asks you to. Its
+tests run with `bin/wiz dev test` and spend nothing.
