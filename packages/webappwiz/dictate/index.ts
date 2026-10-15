@@ -6,8 +6,16 @@ export type {
 	DictationLinkEvents,
 	OpenLink,
 } from "./dictation-link";
-export type { DictationMessage } from "./dictation-message";
-export { type DictationPeer, DictationRelay } from "./dictation-relay";
+export type {
+	Cleaned,
+	DictationEdit,
+	DictationMessage,
+} from "./dictation-message";
+export {
+	type Cleanup,
+	type DictationPeer,
+	DictationRelay,
+} from "./dictation-relay";
 export {
 	type AudioSink,
 	type MicPermission,

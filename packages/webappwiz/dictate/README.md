@@ -73,6 +73,10 @@ Bun.serve<DictationRelay>({
   Realtime API with `gpt-live-transcribe`; its `prompt` and `keywords` are
   where the words an app spells its own way go. A transcriber that rejects
   with a `DictationFailure` tells the page which cred to ask for.
+- A `DictationRelay` takes a `Cleanup` as its third argument, which tidies
+  the final text before `done` goes back, applying the edits it is sure of
+  and returning the rest as `DictationEdit`s on `done.edits` for the page to
+  offer. One that throws leaves the text as heard.
 - `DictationMessage` is what the server says on the socket, as JSON.
 
 `webappwiz/dictate/testing` has `FakeMicrophone`, `FakeDictationLink` and
