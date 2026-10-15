@@ -41,8 +41,8 @@ export interface RecordingEvents extends Record<string, unknown> {
 export interface Recording extends Eventful<RecordingEvents>, Resource {
 	/**
 	 * Plays `cue` out loud, quietly. The `start` cue keeps its own sound out of
-	 * the recording; a `stop` cue is played before `dispose`, which lets it
-	 * finish after the mic is let go.
+	 * the recording; a `stop` cue waits for `dispose`, which plays it once the
+	 * mic is let go.
 	 */
 	cue(cue: Cue): void;
 }

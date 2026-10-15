@@ -1,9 +1,15 @@
 import { Disposer } from "webappwiz/disposable";
 import { Dispatcher } from "webappwiz/events";
-import { SystemTimer } from "webappwiz/time";
+import { Duration, SystemTimer, sleep } from "webappwiz/time";
 import { type Cue, cueLength, playCue } from "./cue";
 import { type Recording, type RecordingEvents, TICK } from "./microphone";
 import type { Pcm16Encoder } from "./pcm16-encoder";
+
+/**
+ * How long the stop cue waits for the context to play again once the mic is
+ * let go, as iOS pauses it while it moves the audio off recording.
+ */
+const SETTLE = Duration.secs(1);
 
 /** The level, in dBFS, that reads as silence and as full. */
 const FLOOR_DB = -60;
@@ -25,8 +31,8 @@ export class BrowserRecording implements Recording {
 	private wakeLock: Promise<WakeLockSentinel | undefined>;
 	/** Until when the mic would hear the start cue, so its samples are dropped. */
 	private deaf = 0;
-	/** The stop cue, which the context stays open for. */
-	private stopped: Promise<void> | undefined;
+	/** Whether to play the stop cue once the mic is let go. */
+	private stopCue = false;
 
 	constructor(
 		private readonly stream: MediaStream,
@@ -79,7 +85,7 @@ export class BrowserRecording implements Recording {
 			this.deaf = performance.now() + cueLength(cue) + 50;
 			void playCue(this.context, cue);
 		} else {
-			this.stopped = playCue(this.context, cue);
+			this.stopCue = true;
 		}
 	}
 
@@ -87,13 +93,24 @@ export class BrowserRecording implements Recording {
 		this.tap.port.onmessage = null;
 		this.encoder.flush();
 		this.disposer.dispose();
-		// Closing the context would cut a stop cue off.
-		void (this.stopped ?? Promise.resolve()).then(() => this.context.close());
-		void this.wakeLock.then((lock) => lock?.release());
 		// Stopping the tracks is what turns off the browser's recording light.
 		for (const track of this.stream.getTracks()) {
 			track.stop();
 		}
+		void this.wakeLock.then((lock) => lock?.release());
+		void this.close();
+	}
+
+	/**
+	 * Plays the stop cue only now the mic is cold: a phone drops a sound that
+	 * plays while it moves its audio off recording.
+	 */
+	private async close(): Promise<void> {
+		if (this.stopCue) {
+			await Promise.race([this.context.resume(), sleep(SETTLE)]);
+			await playCue(this.context, "stop");
+		}
+		await this.context.close();
 	}
 
 	private readonly tick = (): void => {

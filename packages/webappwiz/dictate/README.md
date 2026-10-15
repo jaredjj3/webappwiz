@@ -80,4 +80,4 @@ Bun.serve<DictationRelay>({
 
 ## Cues
 
-`Recording.cue("start")` and `cue("stop")` play a soft synthesized chime on the take's own `AudioContext`, so no file ships and a phone that unlocked audio on the tap plays them. The start cue drops the mic's samples for its length so it never reaches the transcript; the stop cue plays after the mic is let go and keeps the context open until it ends.
+`Recording.cue("start")` and `cue("stop")` play a soft synthesized chime on the take's own `AudioContext`, so no file ships and a phone that unlocked audio on the tap plays them. The start cue drops the mic's samples for its length so it never reaches the transcript; the stop cue plays only once the mic is let go, waiting up to a second for a phone to bring the context back from moving its audio off recording, and keeps the context open until it ends.
