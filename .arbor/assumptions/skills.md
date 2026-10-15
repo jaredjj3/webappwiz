@@ -9,3 +9,4 @@
   → contradicted 2026-10-14 in handoff-needs-reason: the user asked for a concrete reason the task gave, never a model mismatch; down only when most of the task is ahead, fully planned and mechanical
 - An agent that hands on with `--relay` reports it as `## ⏳ Working <task>: on <agent>`, then ends on the task's own Merged, Removed or Escalated report. (2026-10-14, agent-handoff)
 - An agent hands its task up only after a step failed twice despite a change of course, or a call it could not settle after investigating. (2026-10-14, handoff-needs-reason)
+- An untriaged orchestrator learns to say a lane it named in Working the untriaged lane in SKILL.md; the rule for all of a lane orchestrator's calls sits in lanes.md's Reporting on lanes. (2026-10-15, skill-report-trimmed)
