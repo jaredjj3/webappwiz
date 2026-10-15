@@ -132,5 +132,65 @@
 		},
 		"text": "The handle is sort of hidden, and I like the old one better.",
 		"edits": []
+	},
+	{
+		"name": "a like that reports a feeling, on clef-flash",
+		"model": "clef-flash",
+		"said": "I feel like nothing is happening.",
+		"answers": {
+			"filler.0": {
+				"type": "noul",
+				"noul": 0.2817
+			}
+		},
+		"text": "I feel like nothing is happening.",
+		"edits": []
+	},
+	{
+		"name": "a like that compares, on clef-flash",
+		"model": "clef-flash",
+		"said": "Something like trello would work.",
+		"answers": {
+			"filler.0": {
+				"type": "noul",
+				"noul": 0.3068
+			}
+		},
+		"text": "Something like trello would work.",
+		"edits": [
+			{
+				"type": "filler",
+				"start": 10,
+				"end": 15,
+				"text": "",
+				"probability": 0.3068
+			}
+		]
+	},
+	{
+		"name": "a like that reports a feeling, on clef",
+		"model": "clef",
+		"said": "I feel like nothing is happening.",
+		"answers": {
+			"filler.0": {
+				"type": "noul",
+				"noul": 0.1142
+			}
+		},
+		"text": "I feel like nothing is happening.",
+		"edits": []
+	},
+	{
+		"name": "a like that compares, on clef",
+		"model": "clef",
+		"said": "Something like trello would work.",
+		"answers": {
+			"filler.0": {
+				"type": "noul",
+				"noul": 0.1383
+			}
+		},
+		"text": "Something like trello would work.",
+		"edits": []
 	}
 ]

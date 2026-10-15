@@ -42,6 +42,9 @@ const BOUNDARY = new RegExp(
 	"giu",
 );
 
+/** A segment that is only a list number, such as "2." or "3)". */
+const LIST_MARKER = /^\d+[.)]$/u;
+
 /** A run of the text, `[start, end)`, its punctuation included. */
 interface Segment {
 	start: number;
@@ -66,12 +69,17 @@ export class CorrectionDropper implements Cleanup {
 		const cued = segments
 			.map((segment, index) => ({ segment, index }))
 			// A question is answered, never corrected: "Did it pass? No, …".
-			.filter(
-				({ index, segment }) =>
-					index > 0 &&
+			// Nor is a list marker or a lone cue: "2. No, …" has nothing to take back.
+			.filter(({ index, segment }) => {
+				const before = segments[index - 1];
+				return (
+					before !== undefined &&
 					cueOf(text, segment) > 0 &&
-					!slice(text, segments[index - 1] ?? segment).endsWith("?"),
-			);
+					!slice(text, before).endsWith("?") &&
+					!LIST_MARKER.test(slice(text, before)) &&
+					cueOf(text, before) < slice(text, before).length
+				);
+			});
 		if (cued.length === 0) {
 			return { text, edits: [] };
 		}
@@ -155,7 +163,10 @@ function dropOf(
 		// Nothing past the cue: the whole segment goes with what it retracts.
 		if (after === undefined) {
 			const start = text.slice(0, before.start).trimEnd().length;
-			return { start, end: segment.end, capital: false, probability };
+			// A retraction of the whole take would leave it empty: drop nothing.
+			return start === 0
+				? undefined
+				: { start, end: segment.end, capital: false, probability };
 		}
 		newer = after.start;
 	} else if (amends > replaces || few(text, before, rest)) {

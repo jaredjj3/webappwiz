@@ -182,5 +182,59 @@
 				"probability": 0.5736
 			}
 		]
+	},
+	{
+		"name": "a retraction with nothing before it, on clef-flash",
+		"model": "clef-flash",
+		"said": "Actually, A, sorry.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "replaces",
+				"probabilities": {
+					"replaces": 0.6602,
+					"amends": 0.2036,
+					"neither": 0.1362
+				},
+				"confidence": 0.2438
+			}
+		},
+		"text": "Actually, A, sorry.",
+		"edits": []
+	},
+	{
+		"name": "a cue after a list number, on clef-flash",
+		"model": "clef-flash",
+		"said": "1. Yes, it is on. 2. No, it is off.",
+		"answers": {},
+		"text": "1. Yes, it is on. 2. No, it is off.",
+		"edits": []
+	},
+	{
+		"name": "a retraction with nothing before it, on clef",
+		"model": "clef",
+		"said": "Actually, A, sorry.",
+		"answers": {
+			"correction.1": {
+				"type": "choice",
+				"choice": "replaces",
+				"probabilities": {
+					"replaces": 0.6612,
+					"amends": 0.2368,
+					"neither": 0.102
+				},
+				"confidence": 0.2555
+			}
+		},
+		"text": "Actually, A, sorry.",
+		"edits": []
+	},
+	{
+		"name": "a cue after a list number, on clef",
+		"model": "clef",
+		"said": "1. Yes, it is on. 2. No, it is off.",
+		"answers": {},
+		"text": "1. Yes, it is on. 2. No, it is off.",
+		"edits": []
 	}
 ]

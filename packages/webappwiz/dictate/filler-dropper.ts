@@ -104,7 +104,7 @@ function question(text: string, start: number, end: number): Question {
 		criteria: {
 			true: "It is filler: a pause or hedge the speaker would not write, and dropping it changes nothing the sentence says.",
 			false:
-				'It carries meaning: a verb, a comparison ("tired like a dog"), a degree ("kind of red"), a consequence ("so we left"), or what a question asks.',
+				'It carries meaning: a verb, a comparison or example ("tired like a dog", "something like trello"), a feeling or impression ("I feel like nothing is happening", "it looks like rain"), a degree ("kind of red"), a consequence ("so we left"), or what a question asks.',
 		},
 	};
 }

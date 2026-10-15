@@ -120,6 +120,36 @@ describe("CorrectionDropper", () => {
 		expect(decider.asked).toEqual([]);
 	});
 
+	it("drops nothing of a retraction with nothing before it but the take itself", async () => {
+		decider.answers = { "correction.1": role({ replaces: 1 }) };
+		const said = "Actually, A, sorry.";
+
+		expect(await new CorrectionDropper(decider).clean(said)).toEqual({
+			text: said,
+			edits: [],
+		});
+	});
+
+	it("asks nothing of a cue after a list number, and keeps the number", async () => {
+		const said = "1. Yes. 2. No, use the second one.";
+
+		expect(await new CorrectionDropper(decider).clean(said)).toEqual({
+			text: said,
+			edits: [],
+		});
+		expect(decider.asked).toEqual([]);
+	});
+
+	it("asks nothing of a cue after a lone cue", async () => {
+		const said = "Actually, sorry, send it today.";
+
+		expect(await new CorrectionDropper(decider).clean(said)).toEqual({
+			text: said,
+			edits: [],
+		});
+		expect(decider.asked).toEqual([]);
+	});
+
 	it("amends when the newer wording is too short to say the segment again", async () => {
 		decider.answers = { "correction.1": role({ replaces: 0.6, amends: 0.35 }) };
 

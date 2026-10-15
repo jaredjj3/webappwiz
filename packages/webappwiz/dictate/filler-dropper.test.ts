@@ -21,6 +21,18 @@ describe("FillerDropper", () => {
 		expect(edits).toEqual(fixture.edits);
 	});
 
+	it("tells the model a like that compares or reports a feeling is no filler", async () => {
+		decider.answers = { "filler.0": no, "filler.1": no };
+
+		const said = "I feel like nothing is happening. Something like trello.";
+		const { text } = await new FillerDropper(decider).clean(said);
+
+		expect(text).toBe(said);
+		expect(JSON.stringify(decider.asked[0]?.questions)).toMatch(
+			/something like trello.*I feel like nothing|I feel like nothing.*something like trello/su,
+		);
+	});
+
 	it("drops um and uh without asking", async () => {
 		const { text } = await new FillerDropper(decider).clean(
 			"Um, the build is, uh, broken.",
