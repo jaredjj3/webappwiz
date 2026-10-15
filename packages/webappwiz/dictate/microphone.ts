@@ -1,6 +1,7 @@
 import type { Resource } from "webappwiz/disposable";
 import type { Eventful } from "webappwiz/events";
 import { Duration } from "webappwiz/time";
+import type { Cue } from "./cue";
 
 /** How often a recording says how loud it is. */
 export const TICK = Duration.ms(100);
@@ -37,4 +38,11 @@ export interface RecordingEvents extends Record<string, unknown> {
 }
 
 /** A recording under way: `dispose` hands over what is left and lets go of the mic. */
-export interface Recording extends Eventful<RecordingEvents>, Resource {}
+export interface Recording extends Eventful<RecordingEvents>, Resource {
+	/**
+	 * Plays `cue` out loud, quietly. The `start` cue keeps its own sound out of
+	 * the recording; a `stop` cue is played before `dispose`, which lets it
+	 * finish after the mic is let go.
+	 */
+	cue(cue: Cue): void;
+}

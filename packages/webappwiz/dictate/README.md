@@ -77,3 +77,7 @@ Bun.serve<DictationRelay>({
 
 `webappwiz/dictate/testing` has `FakeMicrophone`, `FakeDictationLink` and
 `FakeTranscriber`, which hear the bytes a test sends as text.
+
+## Cues
+
+`Recording.cue("start")` and `cue("stop")` play a soft synthesized chime on the take's own `AudioContext`, so no file ships and a phone that unlocked audio on the tap plays them. The start cue drops the mic's samples for its length so it never reaches the transcript; the stop cue plays after the mic is let go and keeps the context open until it ends.

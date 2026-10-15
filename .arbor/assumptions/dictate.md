@@ -23,3 +23,5 @@
 - The cleanups go in `webappwiz/dictate` (lists, filler), the decision-model client in a webappwiz subpath of its own, and systems tagging and the review view in arbor. (2026-10-15, dictate-record-control)
 - Asking for the mic breathes the glyph like the other waiting states, with no ripple round the button. (2026-10-15, dictate-record-control)
 - While an agent runs, the mic shows beside the stop-generating button when the message is empty. (2026-10-15, dictate-record-control)
+- Dictation chimes: two soft sine notes of 70 ms at gain 0.08, rising on start and falling on stop, synthesized on the take's own `AudioContext`. (2026-10-15, dictate-sound-cues)
+- The mic ignores its first ~190 ms after the start cue so the chime never enters the transcript. (2026-10-15, dictate-sound-cues)

@@ -1,4 +1,5 @@
 export { BufferedSink } from "./buffered-sink";
+export type { Cue } from "./cue";
 export { DictationFailure } from "./dictation-failure";
 export type {
 	DictationLink,

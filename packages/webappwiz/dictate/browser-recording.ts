@@ -1,6 +1,7 @@
 import { Disposer } from "webappwiz/disposable";
 import { Dispatcher } from "webappwiz/events";
 import { SystemTimer } from "webappwiz/time";
+import { type Cue, cueLength, playCue } from "./cue";
 import { type Recording, type RecordingEvents, TICK } from "./microphone";
 import type { Pcm16Encoder } from "./pcm16-encoder";
 
@@ -22,6 +23,10 @@ export class BrowserRecording implements Recording {
 	private squares = 0;
 	private samples = 0;
 	private wakeLock: Promise<WakeLockSentinel | undefined>;
+	/** Until when the mic would hear the start cue, so its samples are dropped. */
+	private deaf = 0;
+	/** The stop cue, which the context stays open for. */
+	private stopped: Promise<void> | undefined;
 
 	constructor(
 		private readonly stream: MediaStream,
@@ -30,6 +35,9 @@ export class BrowserRecording implements Recording {
 		private readonly encoder: Pcm16Encoder,
 	) {
 		tap.port.onmessage = ({ data }: MessageEvent<Float32Array>) => {
+			if (performance.now() < this.deaf) {
+				return;
+			}
 			for (const sample of data) {
 				this.squares += sample * sample;
 			}
@@ -65,11 +73,22 @@ export class BrowserRecording implements Recording {
 		});
 	}
 
+	cue(cue: Cue): void {
+		if (cue === "start") {
+			// The start cue would otherwise come back through the mic.
+			this.deaf = performance.now() + cueLength(cue) + 50;
+			void playCue(this.context, cue);
+		} else {
+			this.stopped = playCue(this.context, cue);
+		}
+	}
+
 	dispose(): void {
 		this.tap.port.onmessage = null;
 		this.encoder.flush();
 		this.disposer.dispose();
-		void this.context.close();
+		// Closing the context would cut a stop cue off.
+		void (this.stopped ?? Promise.resolve()).then(() => this.context.close());
 		void this.wakeLock.then((lock) => lock?.release());
 		// Stopping the tracks is what turns off the browser's recording light.
 		for (const track of this.stream.getTracks()) {

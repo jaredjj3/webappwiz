@@ -1,5 +1,6 @@
 import { Dispatcher } from "webappwiz/events";
 import type { Duration } from "webappwiz/time";
+import type { Cue } from "./cue";
 import {
 	type AudioSink,
 	type MicPermission,
@@ -18,6 +19,8 @@ export class FakeMicrophone implements Microphone {
 	allowed: MicPermission = "granted";
 	/** Whether the last take still holds the mic. */
 	open = false;
+	/** The cues the last take played, in order. */
+	cues: Cue[] = [];
 	private sink: AudioSink | undefined;
 	private dispatcher: Dispatcher<RecordingEvents> | undefined;
 
@@ -31,12 +34,16 @@ export class FakeMicrophone implements Microphone {
 		}
 		const dispatcher = new Dispatcher<RecordingEvents>();
 		this.open = true;
+		this.cues = [];
 		this.sink = sink;
 		this.dispatcher = dispatcher;
 		// After the start resolves, as a real mic's first audio comes.
 		setTimeout(() => this.speak(this.said));
 		return {
 			events: dispatcher.events,
+			cue: (cue) => {
+				this.cues.push(cue);
+			},
 			dispose: () => {
 				this.open = false;
 				this.sink = undefined;
