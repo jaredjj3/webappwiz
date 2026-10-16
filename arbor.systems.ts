@@ -2,6 +2,7 @@ import type { SystemsFile } from "@webappwiz/arbor/systems";
 
 export default {
 	conversations: {
+		description: "The agent conversations on the arbor dev page",
 		aliases: ["conversation view"],
 		globs: [
 			"packages/arbor/conversations*.ts",
@@ -11,6 +12,7 @@ export default {
 		],
 	},
 	composer: {
+		description: "Writing a message, with its # and @ references",
 		aliases: ["mentions"],
 		globs: [
 			"packages/arbor/dev/composing.tsx",
@@ -21,6 +23,7 @@ export default {
 		],
 	},
 	checkpoint: {
+		description: "Restarting arbor dev without losing agents' work",
 		aliases: ["restart"],
 		globs: [
 			"packages/arbor/dev/checkpoint.tsx",
@@ -28,6 +31,7 @@ export default {
 		],
 	},
 	board: {
+		description: "Todos and the lanes they sit in",
 		aliases: ["todos", "lanes"],
 		globs: [
 			"packages/arbor/todo*.ts",
@@ -40,6 +44,7 @@ export default {
 		],
 	},
 	mobile: {
+		description: "arbor dev's phone layout",
 		aliases: ["phone"],
 		globs: [
 			"packages/arbor/dev/phone-*.tsx",
@@ -47,6 +52,7 @@ export default {
 		],
 	},
 	annotation: {
+		description: "Marking up a screenshot for an agent",
 		globs: [
 			"packages/arbor/dev/annotation.ts",
 			"packages/arbor/dev/annotation.test.ts",
@@ -54,9 +60,11 @@ export default {
 		],
 	},
 	scry: {
+		description: "Checking code against rules written in prose",
 		globs: ["packages/scry/**"],
 	},
 	dictate: {
+		description: "Speaking a message instead of typing it",
 		aliases: ["dictation"],
 		globs: [
 			"packages/webappwiz/dictate/**",
@@ -69,6 +77,7 @@ export default {
 		],
 	},
 	skills: {
+		description: "The skills agents read",
 		globs: ["skills/**"],
 	},
 } satisfies SystemsFile;
