@@ -53,6 +53,10 @@ export class NodeFs implements Fs {
 		return fs.readdir(normalize(path));
 	}
 
+	chmod(path: string, mode: number): Promise<void> {
+		return fs.chmod(normalize(path), mode);
+	}
+
 	stat(path: string): Promise<StatResult> {
 		return fs.stat(normalize(path));
 	}

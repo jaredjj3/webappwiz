@@ -18,6 +18,8 @@ export interface Fs {
 	readdir(path: string): Promise<string[]>;
 	stat(path: string): Promise<StatResult>;
 	rm(path: string, opts?: RmOptions): Promise<void>;
+	/** Sets `path`'s permission bits, such as 0o600 for its owner alone. */
+	chmod(path: string, mode: number): Promise<void>;
 	/**
 	 * Whether `path` is itself a symbolic link, rather than what one points
 	 * at; false when nothing is there.

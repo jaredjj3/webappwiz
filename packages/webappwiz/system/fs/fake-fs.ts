@@ -17,6 +17,7 @@ export class FakeFs implements Fs {
 	private readonly links = new Map<string, string>();
 	/** When each path was last written, as epoch ms, for `stat`. */
 	private readonly modified = new Map<string, number>();
+	private readonly modes = new Map<string, number>();
 	private readonly watches = new Set<{
 		root: string;
 		recursive: boolean;
@@ -103,6 +104,13 @@ export class FakeFs implements Fs {
 	async writeBytes(path: string, data: Uint8Array): Promise<void> {
 		this.store.set(normalize(path), data.slice());
 		this.changed(normalize(path));
+	}
+
+	async chmod(path: string, mode: number): Promise<void> {
+		if (!(await this.exists(path))) {
+			throw new Error(`Path does not exist: ${path}`);
+		}
+		this.modes.set(normalize(path), mode);
 	}
 
 	async rename(from: string, to: string): Promise<void> {
