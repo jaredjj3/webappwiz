@@ -1,5 +1,7 @@
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
+import { type HeavyCap, HeavyJobs } from "@webappwiz/arbor/heavy";
+import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 
 export interface TestOptions {
@@ -9,11 +11,15 @@ export interface TestOptions {
 	workers?: number;
 	fs?: Fs;
 	ps?: Ps;
+	log?: Logger;
+	/** The machine's heavy-job slots, one of which the run waits for. */
+	heavy?: HeavyCap;
 }
 
 export async function test(opts: TestOptions): Promise<void> {
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
+	const log = opts.log ?? new ConsoleLogger();
 	// the tree you are standing in, not the one `wiz` was installed from: a git
 	// worktree has its own copy of both, and testing the other one passes while
 	// saying nothing about your work
@@ -39,6 +45,11 @@ export async function test(opts: TestOptions): Promise<void> {
 	// each test gets 30s rather than 5s.
 	const workers =
 		opts.workers ?? Math.max(1, Math.floor(availableParallelism() / 2));
+	// one of the machine's few heavy-job slots, as arbor's `preMerge` takes,
+	// so agents testing at once queue rather than run out of memory; run from
+	// a `preMerge` hook, it runs in the slot the merge already holds
+	const heavy = opts.heavy ?? HeavyJobs.ofMachine({ fs, ps, log });
+	await using slot = await heavy.take({ what: "wiz dev test" });
 	const { exitCode } = await ps.spawn(
 		[
 			"bun",
@@ -49,7 +60,7 @@ export async function test(opts: TestOptions): Promise<void> {
 			"30000",
 			...filter,
 		],
-		{ cwd: root },
+		{ cwd: root, env: slot.env },
 	);
 	if (exitCode !== 0) {
 		throw new Error("Tests failed");

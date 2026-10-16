@@ -137,6 +137,7 @@
       "name": "wiz",
       "version": "0.0.44",
       "dependencies": {
+        "@webappwiz/arbor": "workspace:*",
         "@webappwiz/cli": "workspace:*",
         "@webappwiz/scry": "workspace:*",
         "webappwiz": "workspace:*",

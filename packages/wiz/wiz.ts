@@ -66,4 +66,4 @@ dev
 		default: "",
 		description: "only test this package (default: all)",
 	})
-	.action((opts, { fs, ps }) => test({ ...opts, fs, ps }));
+	.action((opts, { log, fs, ps }) => test({ ...opts, log, fs, ps }));

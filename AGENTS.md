@@ -4,7 +4,8 @@ Use the arbor skill for any work that may change code: start a task with
 After making code changes:
 
 - `bin/wiz dev fix` typecheck, format, and check the project, scry included.
-- `bin/wiz dev test` test each package.
+- `bin/wiz dev test` test each package. It takes a heavy-job slot itself, so
+  it needs no `arbor heavy`.
 
 During an arbor task, the user may be on the arbor dev server from another device, so give every link as both its remote and its local URL.
 

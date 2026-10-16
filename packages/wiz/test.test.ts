@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { availableParallelism } from "node:os";
+import type { HeavyCap } from "@webappwiz/arbor/heavy";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 
 import { test } from "./test";
@@ -33,6 +34,27 @@ describe("test", () => {
 		expect(ps.getCalls()).toEqual([
 			`bun test --pass-with-no-tests --parallel=${half} --timeout 30000`,
 		]);
+	});
+
+	it("runs in one of the machine's heavy-job slots, which it gives back", async () => {
+		const taken: string[] = [];
+		const heavy: HeavyCap = {
+			take: async ({ what }) => {
+				taken.push(what);
+				return {
+					env: { ARBOR_HEAVY: "1-0" },
+					[Symbol.asyncDispose]: async () => {
+						taken.push("given back");
+					},
+				};
+			},
+			read: async () => ({ cap: 2, running: [], waiting: [] }),
+		};
+
+		await test({ ...{ package: "", workers: 4 }, fs, ps, heavy });
+
+		expect(taken).toEqual(["wiz dev test", "given back"]);
+		expect(ps.getCallEnvs()).toEqual([{ ARBOR_HEAVY: "1-0" }]);
 	});
 
 	it("filters to the named package", async () => {
