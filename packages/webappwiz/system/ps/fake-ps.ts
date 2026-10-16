@@ -1,6 +1,7 @@
 import { disposables, type Resource } from "webappwiz/disposable";
 import { FakeChild, FakeTerminalChild } from "./fake-child";
 import type {
+	ListeningEntry,
 	ProcessEntry,
 	Ps,
 	SpawnCaptureResult,
@@ -31,6 +32,7 @@ export class FakePs implements Ps {
 	private children: FakeChild[] = [];
 	private terminals: FakeTerminalChild[] = [];
 	private table: ProcessEntry[] = [];
+	private listeners: ListeningEntry[] = [];
 	/** The pid the next child started gets. */
 	private nextPid = 5000;
 
@@ -81,6 +83,15 @@ export class FakePs implements Ps {
 
 	async processes(): Promise<ProcessEntry[]> {
 		return this.table;
+	}
+
+	async listening(): Promise<ListeningEntry[]> {
+		return this.listeners;
+	}
+
+	/** What `listening` lists from now on. */
+	setListening(listeners: ListeningEntry[]): void {
+		this.listeners = listeners;
 	}
 
 	/** What `processes` lists from now on. */

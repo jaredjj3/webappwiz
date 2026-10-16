@@ -1,10 +1,13 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { readlink } from "node:fs/promises";
 import { constants, hostname } from "node:os";
 import { Readable, Writable } from "node:stream";
 import { disposables, type Resource } from "webappwiz/disposable";
 import type { ProcessLike } from "../process-like/process-like";
+import { type Listener, parseLsof, parseLsofCwds, parseSs } from "./listening";
 import type {
 	Child,
+	ListeningEntry,
 	ProcessEntry,
 	Ps,
 	SpawnCaptureResult,
@@ -208,6 +211,57 @@ export class NodePs implements Ps {
 		});
 	}
 
+	async listening(): Promise<ListeningEntry[]> {
+		if (this.platform === "win32") {
+			return [];
+		}
+		// Exits 1 when nothing listens, which is no failure.
+		const lsof = await this.spawnCapture(
+			["lsof", "-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"],
+			{ stdin: "" },
+		).catch(() => null);
+		if (lsof !== null && lsof.exitCode <= 1) {
+			const listeners = parseLsof(lsof.stdout);
+			const pids = [...new Set(listeners.map((each) => each.pid))];
+			const cwds =
+				pids.length === 0
+					? new Map<number, string>()
+					: parseLsofCwds(
+							(
+								await this.spawnCapture(
+									[
+										"lsof",
+										"-nP",
+										"-a",
+										"-d",
+										"cwd",
+										"-p",
+										pids.join(","),
+										"-Fpn",
+									],
+									{ stdin: "" },
+								)
+							).stdout,
+						);
+			return withCwds(listeners, (pid) => cwds.get(pid) ?? null);
+		}
+		// A slim Linux image may have no lsof, but iproute2's `ss` and /proc.
+		if (this.platform === "linux") {
+			const ss = await this.spawnCapture(["ss", "-Hltnp"], {
+				stdin: "",
+			}).catch(() => null);
+			if (ss?.exitCode === 0) {
+				const listeners = parseSs(ss.stdout);
+				const cwds = new Map<number, string | null>();
+				for (const { pid } of listeners) {
+					cwds.set(pid, await readlink(`/proc/${pid}/cwd`).catch(() => null));
+				}
+				return withCwds(listeners, (pid) => cwds.get(pid) ?? null);
+			}
+		}
+		return [];
+	}
+
 	/**
 	 * Node replaces the whole environment when `env` is given, so a command
 	 * launched with the caller's two or three variables would have no PATH and
@@ -371,3 +425,10 @@ libc.symbols.execvp(ptr(strings[0]), ptr(pointers));
 console.error("could not run " + argv[0]);
 process.exit(127);
 `;
+
+function withCwds(
+	listeners: Listener[],
+	cwd: (pid: number) => string | null,
+): ListeningEntry[] {
+	return listeners.map((each) => ({ ...each, cwd: cwd(each.pid) }));
+}

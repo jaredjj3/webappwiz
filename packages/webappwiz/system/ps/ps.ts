@@ -40,6 +40,13 @@ export interface Ps {
 	 * what runs under a child: its descendants, and its terminal's job.
 	 */
 	processes(): Promise<ProcessEntry[]>;
+	/**
+	 * Every TCP port a process on this host listens on, as `lsof` lists them
+	 * (or `ss`, on Linux without it), with where each process runs; none on
+	 * Windows. With `processes`, what a child's tree serves, as an editor
+	 * finds the ports to forward.
+	 */
+	listening(): Promise<ListeningEntry[]>;
 	/** The working directory, as `cd` last left it. */
 	cwd(): string;
 	env(name: string): string | undefined;
@@ -115,6 +122,19 @@ export interface ProcessEntry {
 	command: string;
 }
 
+/** One TCP socket a process listens on, as `Ps.listening` lists it. */
+export interface ListeningEntry {
+	pid: number;
+	/**
+	 * The address it is bound to, as listed: `*` for every IPv4 and IPv6
+	 * address, `127.0.0.1`, or an IPv6 one in brackets, as `[::1]`.
+	 */
+	host: string;
+	port: number;
+	/** The listening process's working directory, or null when it cannot be read. */
+	cwd: string | null;
+}
+
 /** A child still running, its stdio open: bytes in, bytes out. */
 export interface Child {
 	/** Its pid; null for one that never started. */
@@ -143,5 +163,6 @@ export interface TerminalChild {
 	/** Sends it `signal`, SIGTERM by default; nothing once it has exited. */
 	kill(signal?: NodeJS.Signals): void;
 	/** Closes the terminal, after which writes and resizes do nothing. */
+	// scry-ignore resources-are-disposable: named as `Bun.Terminal` names it, and the page's terminals call it; untouched here
 	close(): void;
 }

@@ -38,6 +38,7 @@ export type { ProcessLike } from "./process-like/process-like";
 export { NodePs, type NodePsOptions } from "./ps/node-ps";
 export type {
 	Child,
+	ListeningEntry,
 	OutputWatcher,
 	ProcessEntry,
 	Ps,
