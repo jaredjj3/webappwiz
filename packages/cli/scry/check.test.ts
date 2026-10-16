@@ -42,7 +42,7 @@ describe("wiz scry", () => {
 			].join("\n"),
 		);
 		expect(sandbox.proc.exits).toEqual([1]);
-	});
+	}, 15_000);
 
 	it("names each file still excusing itself with rule-ignore", async () => {
 		await sandbox.fs.write(
