@@ -50,6 +50,11 @@ export interface Ps {
 	/** The working directory, as `cd` last left it. */
 	cwd(): string;
 	env(name: string): string | undefined;
+	/**
+	 * How many columns wide the terminal stdout writes to is, for text laid out
+	 * to fit it; undefined when stdout is not a terminal, as when piped.
+	 */
+	columns(): number | undefined;
 	cd(path: string): void;
 	exit(code: number): void;
 	/** Listens until the returned resource is disposed. */
@@ -162,7 +167,7 @@ export interface TerminalChild {
 	exited: Promise<number>;
 	/** Sends it `signal`, SIGTERM by default; nothing once it has exited. */
 	kill(signal?: NodeJS.Signals): void;
+	// scry-ignore resources-are-disposable: named as `Bun.Terminal` names it, and the page's terminals call it
 	/** Closes the terminal, after which writes and resizes do nothing. */
-	// scry-ignore resources-are-disposable: named as `Bun.Terminal` names it, and the page's terminals call it; untouched here
 	close(): void;
 }

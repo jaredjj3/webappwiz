@@ -2,6 +2,7 @@ import { ConsoleLogger, color } from "webappwiz/log";
 import { NodePs } from "webappwiz/system";
 import { Command } from "./command";
 import type { Deps } from "./deps";
+import { type Row, table } from "./help";
 import type { AnyMiddleware, Middleware } from "./middleware";
 
 /**
@@ -9,8 +10,8 @@ import type { AnyMiddleware, Middleware } from "./middleware";
  * `Command` satisfies it as it is, which is what lets the two nest freely.
  */
 interface Node<D> {
-	/** One row of the parent's help table, keyed by the name it registered under. */
-	helpLine(name: string, pad: number): string;
+	/** What it does, beside the name it registered under in the parent's help. */
+	summary(): string;
 	exec(argv: string[], deps: D, outer: AnyMiddleware[], path: string): unknown;
 }
 
@@ -36,12 +37,10 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 		return this;
 	}
 
-	/**
-	 * Wraps every command's action. Has to come before the commands it wraps:
-	 * `command()` fixes the context type at the point it is called, so a later
-	 * `use` would change what actions receive without changing their types.
-	 */
+	/** Wraps every command's action. Call it before any `command()`. */
 	use<Out extends object>(middleware: Middleware<C, Out>): Cli<D, Out> {
+		// `command()` fixes the context type at the point it is called, so a
+		// later `use` would change what actions receive without their types
 		if (this.cmds.size > 0) {
 			throw new Error(`${this.name}: use() must come before command()`);
 		}
@@ -145,10 +144,8 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 		);
 	}
 
-	// padded before it is coloured: the trailing spaces land inside the escape
-	// sequence, where they are invisible, so the column still lines up
-	helpLine(name: string, pad: number): string {
-		return `  ${color.bold(color.blue(name.padEnd(pad)))}${this._description ? `  ${this._description}` : ""}`;
+	summary(): string {
+		return this._description;
 	}
 
 	// message only, no stack: a bad flag is a user error, not a crash
@@ -158,16 +155,15 @@ export class Cli<D extends Deps = Deps, C extends object = D>
 	}
 
 	private help(deps: D, path: string): void {
-		const entries = [...this.cmds];
-		const pad = Math.max(0, ...entries.map(([name]) => name.length));
+		const rows = [...this.cmds].map(([name, command]): Row => {
+			const fallback = name === this._fallback ? color.dim("(default)") : "";
+			return [name, [command.summary(), fallback].filter(Boolean).join(" ")];
+		});
 		const lines = [
 			`${color.bold("Usage:")} ${color.bold(path)} ${color.dim("<command> [options]")}`,
 			"",
 			color.bold("Commands:"),
-			...entries.map(
-				([name, command]) =>
-					`${command.helpLine(name, pad)}${name === this._fallback ? color.dim(" (default)") : ""}`,
-			),
+			...table(rows, (name) => color.bold(color.blue(name)), deps.ps.columns()),
 			"",
 			color.dim(`Run \`${path} <command> --help\` for a command's options.`),
 		];

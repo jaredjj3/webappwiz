@@ -222,6 +222,24 @@ describe("cli", () => {
 		expect(help()).toContain("check  check a change (default)");
 	});
 
+	it("wraps long descriptions to the terminal, under their own column", () => {
+		ps.setColumns(44);
+		wiz
+			.command("list")
+			.description("list every task, with its status and its lease");
+		wiz.command("show").description("read one task");
+		wiz.fallback("show");
+		wiz.run(deps, ["--help"]);
+		expect(help()).toContain(
+			[
+				"  list  list every task, with its status and",
+				"        its lease",
+				"",
+				"  show  read one task (default)",
+			].join("\n"),
+		);
+	});
+
 	it("prints a group's help for --help", () => {
 		grouped().run(deps, ["skills", "--help"]);
 

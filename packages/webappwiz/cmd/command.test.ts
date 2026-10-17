@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { color, MemoryLogger } from "webappwiz/log";
+import { FakePs } from "webappwiz/system/testing";
 import { z } from "zod";
 import { Command } from "./command";
 
@@ -198,13 +199,29 @@ describe("Command", () => {
 		expect(new Command("noop").exec([], { log })).toBeUndefined();
 	});
 
-	it("pads the name and omits an unset description in helpLine", () => {
-		expect(
-			color.strip(
-				new Command("c").description("does a thing").helpLine("c", 4),
-			),
-		).toBe("  c     does a thing");
-		expect(color.strip(new Command("c").helpLine("c", 4))).toBe("  c   ");
+	it("summarizes itself by its description, empty when unset", () => {
+		expect(new Command("c").description("does a thing").summary()).toBe(
+			"does a thing",
+		);
+		expect(new Command("c").summary()).toBe("");
+	});
+
+	it("wraps its help to the terminal's width", () => {
+		const ps = new FakePs();
+		ps.setColumns(50);
+		new Command("c")
+			.description("a description long enough that it needs a second line")
+			.option("name", z.string(), {
+				description: "who to greet, by the name they go by, in full",
+			})
+			.exec(["--help"], { log, ps });
+		const lines = color.strip(log.entries[0]?.message).split("\n");
+		expect(lines).toContain("a description long enough that it needs a second");
+		expect(lines).toContain("line");
+		// "-h, --help" is ten wide, so the text column starts at fourteen
+		expect(lines).toContain("  --name      who to greet, by the name they go");
+		expect(lines).toContain("              by, in full");
+		expect(lines.every((line) => line.length <= 50)).toBe(true);
 	});
 
 	it("prints usage, options, and defaults and skips the action on --help", () => {

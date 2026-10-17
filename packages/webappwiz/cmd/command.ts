@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { color, type Logger } from "webappwiz/log";
 import type { Deps } from "./deps";
+import { type Row, table, wrap } from "./help";
 import { type AnyMiddleware, compose, type Middleware } from "./middleware";
 
 // `parsed` is the whole command line: the positionals `arg()` declares and the
@@ -61,10 +62,8 @@ export class Command<O, C extends object = object> {
 		return this;
 	}
 
-	// padded before it is coloured: the trailing spaces land inside the escape
-	// sequence, where they are invisible, so the column still lines up
-	helpLine(name: string, pad: number): string {
-		return `  ${color.bold(color.blue(name.padEnd(pad)))}${this._description ? `  ${this._description}` : ""}`;
+	summary(): string {
+		return this._description;
 	}
 
 	option<K extends string, T>(
@@ -198,18 +197,20 @@ export class Command<O, C extends object = object> {
 		return this;
 	}
 
-	// Of the dependencies only the logger is this command's business; the rest of
-	// the object it just seeds the context with, for the middleware and action.
+	// Of the dependencies only the logger, and the terminal's width for help, are
+	// this command's business; the rest of the object it just seeds the context
+	// with, for the middleware and action. A command run standalone may leave
+	// `ps` out, and its help is then laid out as for a pipe.
 	// `path` is the spelling that reached this command, for the usage line; the
 	// cli dispatching here passes it, a command run standalone is just its name.
 	exec(
 		argv: string[],
-		deps: Pick<Deps, "log">,
+		deps: Pick<Deps, "log"> & Partial<Pick<Deps, "ps">>,
 		outer: AnyMiddleware[] = [],
 		path = this.name,
 	): unknown {
 		if (this.wantsHelp(argv)) {
-			this.help(deps.log, path);
+			this.help(deps.log, path, deps.ps?.columns());
 			return;
 		}
 		const opts = this.parse(argv);
@@ -398,7 +399,7 @@ export class Command<O, C extends object = object> {
 		];
 	}
 
-	private help(log: Logger, path: string): void {
+	private help(log: Logger, path: string, width: number | undefined): void {
 		const args = this.args.map((arg) =>
 			arg.hasDefault ? `[${arg.name}]` : `<${arg.name}>`,
 		);
@@ -411,29 +412,28 @@ export class Command<O, C extends object = object> {
 		].join(" ");
 		const lines = [`${color.bold("Usage:")} ${usage}`];
 		if (this._description) {
-			lines.push("", this._description);
+			lines.push("", ...wrap(this._description, width));
 		}
 		const named = this.variadic
 			? [...this.args, { ...this.variadic, name: `${this.variadic.name}...` }]
 			: this.args;
 		if (named.length > 0) {
-			lines.push("", color.bold("Arguments:"));
-			const pad = Math.max(...named.map((arg) => arg.name.length));
-			for (const arg of named) {
-				lines.push(
-					`  ${color.blue(arg.name.padEnd(pad))}  ${arg.description ?? ""}`.trimEnd(),
-				);
-			}
+			lines.push(
+				"",
+				color.bold("Arguments:"),
+				...table(
+					named.map((arg): Row => [arg.name, arg.description ?? ""]),
+					color.blue,
+					width,
+				),
+			);
 		}
 		lines.push("", color.bold("Options:"));
 		const rows = [
 			...this.options.map((option) => this.optionRow(option)),
 			["-h, --help", "show this help"] as const,
 		];
-		const pad = Math.max(...rows.map(([flag]) => flag.length));
-		for (const [flag, text] of rows) {
-			lines.push(`  ${color.blue(flag.padEnd(pad))}  ${text}`.trimEnd());
-		}
+		lines.push(...table(rows, color.blue, width));
 		log.info(lines.join("\n"));
 	}
 }

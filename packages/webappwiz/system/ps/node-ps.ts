@@ -296,6 +296,10 @@ export class NodePs implements Ps {
 		return this.proc.env[name];
 	}
 
+	columns(): number | undefined {
+		return this.proc.stdout?.columns;
+	}
+
 	cd(path: string): void {
 		this.proc.chdir(path);
 	}

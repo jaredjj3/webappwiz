@@ -1,13 +1,15 @@
 /**
- * The parts of `process` that NodePs touches. Injecting it is what lets a test
- * keep real spawning (real subprocesses, real exit codes) without a real
- * `process.exit` killing the runner or signal handlers leaking between tests.
+ * The parts of `process` that NodePs touches. Hand NodePs a `FakeProcess` to
+ * test with real subprocesses and exit codes, while `exit` kills nothing and
+ * signal handlers stay with the test that set them.
  */
 export interface ProcessLike {
 	platform: NodeJS.Platform;
 	pid: number;
 	argv: string[];
 	env: NodeJS.ProcessEnv;
+	/** `columns` is set only while stdout is a terminal. */
+	stdout?: { columns?: number };
 	kill(pid: number, signal: 0): boolean;
 	cwd(): string;
 	chdir(path: string): void;

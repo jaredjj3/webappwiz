@@ -21,6 +21,7 @@ export class FakePs implements Ps {
 	private dead = new Set<number>();
 	private path = "/";
 	private vars: Record<string, string> = {};
+	private width: number | undefined;
 	private calls: string[] = [];
 	private dirs: string[] = [];
 	private envs: Record<string, string>[] = [];
@@ -107,6 +108,10 @@ export class FakePs implements Ps {
 		return this.vars[name];
 	}
 
+	columns(): number | undefined {
+		return this.width;
+	}
+
 	cd(path: string): void {
 		if (!this.exited) {
 			this.path = path;
@@ -149,6 +154,11 @@ export class FakePs implements Ps {
 
 	setCaptureOutput(stdout: string, stderr: string): void {
 		this.captureOutput = { stdout, stderr };
+	}
+
+	/** Makes stdout a terminal this many columns wide; undefined, a pipe again. */
+	setColumns(width: number | undefined): void {
+		this.width = width;
 	}
 
 	setEnv(vars: Record<string, string>): void {

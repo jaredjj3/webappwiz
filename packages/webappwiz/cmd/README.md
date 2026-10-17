@@ -167,7 +167,10 @@ await app.run({ log: new MemoryLogger(), ps: new FakePs(), fs: new FakeFs() }, [
 ```
 
 `Deps` is the minimum: a `Logger` to print help and errors through, and a `Ps`
-to exit with. A program's own type extends it with whatever its commands need.
+to exit with and to read the terminal's width from. On a terminal, help wraps
+each description to fit, back to its own column rather than the left edge, and
+parts the rows with blank lines once any wraps; piped, every row stays one
+line, so grep finds it whole. A program's own type extends it with whatever its commands need.
 
 Actions always get both, but a caller need not supply them: `run` fills in a
 `ConsoleLogger` and a `NodePs` when they are left out, and reads `argv` from
