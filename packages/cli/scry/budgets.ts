@@ -184,7 +184,7 @@ export class Budgets {
 							const spent =
 								limit.per === "check"
 									? 0
-									: ledger.spent(role, start(limit, now));
+									: ledger.spent(role, windowStart(limit, now));
 							return {
 								role,
 								window: windowName(limit),
@@ -261,7 +261,10 @@ export interface Allowance {
 }
 
 /** When a limit's window began, as Unix epoch milliseconds in local time. */
-function start(limit: RoleLimit, now: number): number {
+export function windowStart(
+	limit: { per?: Period; within?: string; since?: number },
+	now: number,
+): number {
 	if (limit.since !== undefined) {
 		return limit.since;
 	}

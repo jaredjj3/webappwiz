@@ -17,6 +17,7 @@
 	"exports": {
 		".": "./index.ts",
 		"./config": "./config.ts",
+		"./budget-policy": "./budget-policy.ts",
 		"./webappwiz": "./webappwiz.ts"
 	},
 	"engines": {

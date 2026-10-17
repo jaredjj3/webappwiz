@@ -11,6 +11,7 @@
 		"@happy-dom/global-registrator": "^20.3.1",
 		"@types/bun": "latest",
 		"@webappwiz/arbor": "workspace:*",
+		"@webappwiz/cli": "workspace:*",
 		"@webappwiz/scry": "workspace:*",
 		"webappwiz": "workspace:*",
 		"zod": "^4.4.3"
