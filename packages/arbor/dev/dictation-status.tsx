@@ -80,13 +80,15 @@ function Status({
 			<span
 				aria-hidden="true"
 				className={cn(
-					"dictation-level size-2 shrink-0 rounded-full transition-[opacity,transform] duration-75 motion-reduce:transition-none",
+					"dictation-level size-2.5 shrink-0 rounded-full transition-[opacity,transform] duration-75 motion-reduce:transition-none",
 					phase === "recording" ? "bg-destructive" : "bg-foreground",
 				)}
 				style={{
 					opacity: 0.2 + Math.sqrt(level) * 0.8,
-					// Transform leaves the strip and controls fixed as loudness changes.
-					transform: `scale(${0.5 + Math.sqrt(level) * 0.75})`,
+					// Transform leaves the strip and controls fixed as loudness changes; it
+					// only shrinks, so the loudest dot fills its box and never reaches the
+					// stop button.
+					transform: `scale(${0.4 + Math.sqrt(level) * 0.6})`,
 				}}
 			/>
 			<span
