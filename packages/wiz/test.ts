@@ -1,8 +1,14 @@
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
-import { type HeavyCap, HeavyJobs } from "@webappwiz/arbor/heavy";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
-import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
+import {
+	type Fs,
+	type HeavyCap,
+	NodeFs,
+	NodePs,
+	type Ps,
+} from "webappwiz/system";
+import { machineHeavyJobs } from "./heavy";
 
 export interface TestOptions {
 	/** One package to test, by name; empty runs all packages. */
@@ -62,7 +68,7 @@ export async function test(opts: TestOptions): Promise<void> {
 	// one of the machine's few heavy-job slots, as arbor's `preMerge` takes,
 	// so agents testing at once queue rather than run out of memory; run from
 	// a `preMerge` hook, it runs in the slot the merge already holds
-	const heavy = opts.heavy ?? HeavyJobs.ofMachine({ fs, ps, log });
+	const heavy = opts.heavy ?? machineHeavyJobs({ fs, ps, log });
 	await using slot = await heavy.take({ what: "wiz dev test" });
 	const { exitCode } = await ps.spawn(
 		[

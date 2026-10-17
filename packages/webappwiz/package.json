@@ -31,6 +31,7 @@
 		"./push/testing": "./push/testing.ts",
 		"./ship": "./ship/index.ts",
 		"./ship/testing": "./ship/testing.ts",
+		"./skills": "./skills/index.ts",
 		"./system": "./system/index.ts",
 		"./system/testing": "./system/testing.ts",
 		"./task": "./task/index.ts",

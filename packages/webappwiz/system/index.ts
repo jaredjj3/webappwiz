@@ -9,6 +9,14 @@ export { NodeFs } from "./fs/node-fs";
 export type { Glob } from "./glob/glob";
 export { NodeGlob } from "./glob/node-glob";
 export {
+	type HeavyCap,
+	type HeavyJob,
+	HeavyJobs,
+	type HeavyJobsOptions,
+	type HeavyJobsReading,
+	type HeavySlot,
+} from "./heavy/heavy-jobs";
+export {
 	FileHostMapper,
 	type FileHostMapperOptions,
 } from "./host-mapper/file-host-mapper";

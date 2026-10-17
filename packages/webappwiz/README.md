@@ -33,6 +33,7 @@ the rest unread.
 | [`webappwiz/log`](./log) | Logging behind a `Logger` interface, with decorators and an in-memory double |
 | [`webappwiz/md`](./md) | A markdown document as a data source: frontmatter fields, sections and code blocks |
 | [`webappwiz/ship`](./ship) | Releases every package in a workspace together, at one version |
+| [`webappwiz/skills`](./skills) | The agent skills a project installs from a repository's release tags, through the `skills` CLI |
 | [`webappwiz/system`](./system) | Interfaces for the things that touch the machine, so code under test doesn't |
 | [`webappwiz/task`](./task) | Somewhere to say "this needs doing again" without saying when |
 | [`webappwiz/time`](./time) | Time as a seam: `Duration`, `Clock` and `Timer`, with fakes for each |
@@ -47,7 +48,7 @@ main entry point, so importing a task queue on a server does not reach for
 - Needs a browser: `webappwiz/browser`, `webappwiz/dictate/browser`,
   `webappwiz/task/browser`, `webappwiz/worker/web`
 - Needs a server: `webappwiz/cmd`, `webappwiz/dictate/server`,
-  `webappwiz/ship`, `webappwiz/system`
+  `webappwiz/ship`, `webappwiz/skills`, `webappwiz/system`
 
 `platform.test.ts` holds that line, failing if an entry point that runs
 anywhere starts reaching one that does not.

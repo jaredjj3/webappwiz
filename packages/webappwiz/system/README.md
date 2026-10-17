@@ -2,8 +2,8 @@
 
 Interfaces for the things that touch the machine, so code under test doesn't
 have to: `Fs` (filesystem), `Ps` (processes), `IpProvider`/`HostMapper`
-(loopback IPs and hostname mapping), `PortProvider` (ports), plus `Lock`,
-built on those seams.
+(loopback IPs and hostname mapping), `PortProvider` (ports), plus `Lock`
+and `HeavyJobs`, built on those seams.
 
 ```ts
 import { NodeFs, NodePs } from "webappwiz/system";
@@ -73,6 +73,25 @@ on signals and uncaught exceptions.
 
 `MemoryLock` holds nothing but itself, so it only serializes callers inside one
 process that share the instance. Waiters are served in the order they arrived.
+
+`HeavyJobs` caps the heavy jobs (test runs, installs) a machine runs at once,
+so several agents testing together queue rather than run out of memory. Every
+process that opens the same directory shares its slots, whichever tool it runs
+in; a holder that dies gives its slot back by dying. What runs in a slot finds
+`held` set in its environment, so a heavy job it starts runs in that slot
+rather than waiting for another.
+
+```ts
+const heavy = HeavyJobs.under(`${home}/.tools`, {
+	fs,
+	ps,
+	log,
+	cap: 2,
+	held: "TOOLS_HEAVY",
+});
+await using slot = await heavy.take({ what: "bun test" });
+await ps.spawn(["bun", "test"], { env: slot.env });
+```
 
 A `PortProvider` answers which port to listen on, and `get()` takes nothing:
 which ports it will consider is settled when it is made, so a server keeps a

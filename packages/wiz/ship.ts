@@ -2,6 +2,7 @@ import { catalog } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
+import { ARBOR } from "./arbor";
 import { fix } from "./fix";
 
 /**
@@ -12,7 +13,7 @@ import { fix } from "./fix";
  * symlinks to them.
  */
 const SKILLS = [
-	"skills/arbor/SKILL.md",
+	...ARBOR.skills,
 	"skills/scry/SKILL.md",
 	"skills/webappwiz/SKILL.md",
 ];

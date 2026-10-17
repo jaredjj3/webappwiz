@@ -1,12 +1,11 @@
 import { basename } from "node:path";
-import { ProjectSkills } from "@webappwiz/arbor/skills";
-import { update as updateArbor } from "@webappwiz/arbor/update";
 import type { ShippedRule } from "@webappwiz/scry/catalog";
 import type { SecretStore } from "webappwiz/creds";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps, walk } from "webappwiz/system";
 import { ProjectCredentials } from "./creds/project-credentials";
 import { update as updateScry } from "./scry/update";
+import { project } from "./skills/skill";
 import { refresh as refreshSkills } from "./skills/update";
 
 /**
@@ -52,10 +51,10 @@ export interface UpdateOptions {
  * never runs two of these packages built against different versions of each
  * other. They are released together, so there is only ever one right answer.
  * A manifest still naming `@webappwiz/rules` gets `@webappwiz/scry`. Then it
- * refreshes the webappwiz skill, when the project has it, and hands the
- * rest to each package's own updater at that version: `arbor update`, when
- * the project has the arbor skill, and `scry update`, which bring along what
- * older releases of them left behind. Last, it names any credential the
+ * refreshes the webappwiz skill, when the project has it, and runs
+ * `scry update` at that version, which brings along what older releases left
+ * behind. Arbor keeps its own pace: a project with its skill is told to run
+ * `arbor update`, which this never imports. Last, it names any credential the
  * project uses that nothing has yet, and the command a person runs to add
  * it, since an upgrade is when a new one starts to matter.
  */
@@ -94,12 +93,11 @@ export async function update(opts: UpdateOptions): Promise<void> {
 		skills: opts.skills ?? ["webappwiz"],
 		retired: {},
 	});
-	if (
-		(await new ProjectSkills(opts.dir, { fs, ps, log }).installed()).includes(
-			"arbor",
-		)
-	) {
-		await updateArbor({ root: opts.dir, fs, ps, log, release: opts.version });
+	const { skills } = project({ dir: opts.dir, fs, ps, log });
+	if ((await skills.installed()).includes("arbor")) {
+		log.info(
+			"this project has the arbor skill; run `bunx @webappwiz/arbor update` to bring arbor up to date",
+		);
 	}
 	await updateScry({
 		dir: opts.dir,

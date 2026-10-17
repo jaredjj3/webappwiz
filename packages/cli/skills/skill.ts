@@ -1,7 +1,13 @@
-import { ProjectSkills } from "@webappwiz/arbor/skills";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
+import { ProjectSkills } from "webappwiz/skills";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { version as RELEASE } from "../package.json";
+
+/**
+ * The repository webappwiz's skills come from: each release is a tag in it,
+ * and each skill a `skills/<name>/SKILL.md` there.
+ */
+export const SOURCE = "jaredjj3/webappwiz";
 
 /**
  * The skills webappwiz ships, each a `skills/<name>/SKILL.md` in its
@@ -57,7 +63,7 @@ export function project(opts: ProjectOptions): {
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
 	return {
-		skills: new ProjectSkills(opts.dir, { fs, ps, log }),
+		skills: new ProjectSkills(opts.dir, { fs, ps, log, source: SOURCE }),
 		log,
 		fs,
 		version: opts.version ?? RELEASE,

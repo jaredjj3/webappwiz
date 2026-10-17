@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { availableParallelism } from "node:os";
-import type { HeavyCap } from "@webappwiz/arbor/heavy";
+import type { HeavyCap } from "webappwiz/system";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 
 import { test } from "./test";

@@ -50,7 +50,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 	program
 		.command("update")
 		.description(
-			"pin every webappwiz dependency in a tree to one version, then run `arbor update` and `scry update` at it",
+			"pin every webappwiz dependency in a tree to one version, then run `scry update` at it; arbor updates itself with `arbor update`",
 		)
 		.arg("dir", z.string(), {
 			default: ".",

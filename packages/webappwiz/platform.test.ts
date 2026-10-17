@@ -21,6 +21,7 @@ describe("platform", () => {
 		"./creds": "node",
 		"./ship": "node",
 		"./ship/testing": "node",
+		"./skills": "node",
 		"./system": "node",
 		"./system/testing": "node",
 	};

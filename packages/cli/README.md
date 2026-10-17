@@ -322,10 +322,10 @@ combination nobody tested.
 The default version is this package's own, which is the point of `bunx`: the
 release you invoke is the release you get. `--version` pins something else.
 `workspace:` ranges are left alone; inside a monorepo they already track each
-other. It refreshes the webappwiz skill, then hands the rest to each
-package's own updater at that version: `arbor update`, when the project has
-the arbor skill, and `scry update`, which bring along what older releases of
-them left behind and refresh their own skills. Last, it names
+other. It refreshes the webappwiz skill, then runs `scry update` at that
+version, which brings along what older releases left behind and refreshes
+scry's own skills. Arbor keeps its own pace: in a project with the arbor
+skill it says to run `bunx @webappwiz/arbor update`. Last, it names
 any credential the project uses that neither the environment nor the secret
 store has, with the `creds add` command a person runs for each.
 

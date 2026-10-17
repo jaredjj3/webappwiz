@@ -82,26 +82,38 @@ describe("update", () => {
 		expect(await fs.read("/p/package.json")).toEqual(own);
 	});
 
-	it("refreshes the webappwiz skill, and leaves arbor's and scry's to their own updaters", async () => {
+	it("refreshes the webappwiz skill, and leaves scry's to its own updater", async () => {
 		await fs.write("/p/package.json", manifest({ webappwiz: "0.1.0" }));
-		await skill("arbor");
 		await skill("scry");
 		await skill("webappwiz");
 
 		await update(updating());
 
 		expect(ps.getCalls().filter((call) => call.includes("skills@1"))).toEqual(
-			["webappwiz", "arbor", "scry"].map(
+			["webappwiz", "scry"].map(
 				(name) =>
 					`bunx skills@1 add jaredjj3/webappwiz#v1.0.0 --yes --skill ${name}`,
 			),
 		);
 	});
 
-	it("leaves arbor alone in a project without its skill", async () => {
+	it("leaves arbor to arbor update, saying to run it where the project has its skill", async () => {
+		await skill("arbor");
+
 		await update(updating());
 
 		expect(ps.getCalls().join("\n")).not.toContain("--skill arbor");
+		expect(log.entries.map((entry) => String(entry.message))).toContain(
+			"this project has the arbor skill; run `bunx @webappwiz/arbor update` to bring arbor up to date",
+		);
+	});
+
+	it("says nothing of arbor in a project without its skill", async () => {
+		await update(updating());
+
+		expect(
+			log.entries.map((entry) => String(entry.message)).join("\n"),
+		).not.toContain("arbor");
 	});
 
 	it("skips node_modules", async () => {
@@ -140,34 +152,6 @@ describe("update", () => {
 		expect(await fs.read("/p/scry.config.ts")).toEqual(
 			'export default { budgets: "unlimited" };\n',
 		);
-	});
-
-	it("moves arbor todos saved with tags into a lane a tag, as arbor update does", async () => {
-		await skill("arbor");
-		await fs.mkdir("/p/.git/arbor/todos");
-		await fs.write(
-			"/p/.git/arbor/todos/1.json",
-			JSON.stringify({
-				id: 1,
-				subject: "retry uploads",
-				text: "",
-				position: 1,
-				from: null,
-				createdAt: "2026-01-01T00:00:00.000Z",
-				takenBy: null,
-				files: [],
-				tags: ["uploads"],
-			}),
-		);
-
-		await update(updating());
-
-		expect(log.entries.map((entry) => String(entry.message))).toContain(
-			"moved #1 into lane 1 Uploads, from their tag",
-		);
-		const todo = JSON.parse(await fs.read("/p/.git/arbor/todos/1.json"));
-		expect(todo.lane).toBe(1);
-		expect(todo).not.toHaveProperty("tags");
 	});
 
 	it("names the credentials nothing has yet, and how a person adds each", async () => {

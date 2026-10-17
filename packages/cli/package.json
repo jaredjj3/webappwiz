@@ -28,7 +28,6 @@
 	},
 	"dependencies": {
 		"@ast-grep/napi": "0.45.3",
-		"@webappwiz/arbor": "workspace:*",
 		"@webappwiz/scry": "workspace:*",
 		"webappwiz": "workspace:*",
 		"zod": "^4.4.3"
