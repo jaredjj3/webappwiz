@@ -62,6 +62,17 @@ describe("OpenAiTranscriber", () => {
 		expect(await finished).toBe("Hello arbor.");
 	});
 
+	it("discards buffered audio without committing it for transcription", async () => {
+		transcription.append(new Uint8Array([1, 2, 3]));
+		await openai.received(2);
+		transcription.dispose();
+		await openai.disposeAsync();
+		expect(await openai.received(2)).toEqual([
+			expect.objectContaining({ type: "session.update" }),
+			{ type: "input_audio_buffer.append", audio: "AQID" },
+		]);
+	});
+
 	it("says the text so far as each delta comes, then the final text", async () => {
 		const heard: string[] = [];
 		transcription.events.on("heard", (text) => heard.push(text));
