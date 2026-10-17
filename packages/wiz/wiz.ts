@@ -27,7 +27,7 @@ dev
 	)
 	.rest("args", z.string(), {
 		description:
-			"[run] [versions...] [--reps n] [--scenario id] [--model m] [--limit minutes], or: report, which prints the kept runs and uses nothing",
+			"[fast|list|report] [--probe id] [--target agent:model] [--parallel n], or explicit e2e [run|report]",
 	})
 	.allowUnknownOption()
 	.action((opts, { fs, ps }) => evalSkill({ ...opts, fs, ps }));

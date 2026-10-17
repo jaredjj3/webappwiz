@@ -2,27 +2,20 @@ import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import { workspaceRoot } from "./test";
 
 export interface EvalOptions {
-	/** What `evals/arbor-skill/index.ts` is given: `run` or `report`, then its arguments. */
+	/** What `evals/arbor-skill/index.ts` is given: fast selection, report, or explicit e2e, then its arguments. */
 	args: string[];
 	fs?: Fs;
 	ps?: Ps;
 }
 
-/**
- * Hands the arbor skill evals their arguments, with this process's stdio, so
- * the evals' own guard holds: they ask before spending and refuse to run
- * without a terminal. A bare `eval` or one led by a version runs, as `run`
- * does; `eval report` prints what is kept.
- */
+/** Run the focused suite by default; legacy end-to-end evaluation requires `e2e`. */
 export async function evalSkill(opts: EvalOptions): Promise<void> {
 	const fs = opts.fs ?? new NodeFs();
 	const ps = opts.ps ?? new NodePs();
 	// the tree you are standing in, as `test` runs it: a worktree's skill is
 	// the one to compare
 	const root = await workspaceRoot(fs, ps.cwd());
-	const [first] = opts.args;
-	const args =
-		first === "run" || first === "report" ? opts.args : ["run", ...opts.args];
+	const args = opts.args.length ? opts.args : ["fast"];
 	const { exitCode } = await ps.spawn(
 		["bun", "evals/arbor-skill/index.ts", ...args],
 		{ cwd: root },

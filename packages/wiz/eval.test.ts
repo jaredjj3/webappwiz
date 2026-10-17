@@ -17,19 +17,19 @@ describe("evalSkill", () => {
 	it("runs the evals from the workspace root", async () => {
 		await evalSkill({ args: [], fs, ps });
 
-		expect(ps.getCalls()).toEqual(["bun evals/arbor-skill/index.ts run"]);
+		expect(ps.getCalls()).toEqual(["bun evals/arbor-skill/index.ts fast"]);
 		expect(ps.getCallDirs()).toEqual(["/tree"]);
 	});
 
-	it("runs when led by a version, passing every flag on", async () => {
+	it("runs legacy scenarios only with explicit e2e selection", async () => {
 		await evalSkill({
-			args: ["main", "--reps", "5", "--scenario", "lane"],
+			args: ["e2e", "main", "--reps", "5", "--scenario", "lane"],
 			fs,
 			ps,
 		});
 
 		expect(ps.getCalls()).toEqual([
-			"bun evals/arbor-skill/index.ts run main --reps 5 --scenario lane",
+			"bun evals/arbor-skill/index.ts e2e main --reps 5 --scenario lane",
 		]);
 	});
 
