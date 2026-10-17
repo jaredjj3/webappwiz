@@ -5,8 +5,12 @@ import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 
 export interface TestOptions {
-	/** One package to test, by name; empty runs the whole workspace. */
+	/** One package to test, by name; empty runs all packages. */
 	package: string;
+	/** Run only the free eval harness tests. */
+	evals?: boolean;
+	/** Run package and eval harness tests together. */
+	all?: boolean;
 	/** Test files run at once; half the cores when left out. */
 	workers?: number;
 	fs?: Fs;
@@ -27,12 +31,22 @@ export async function test(opts: TestOptions): Promise<void> {
 
 	// one run from the root, so bun reports every failure together instead of
 	// scrolling the early packages' errors off the top
+	if (opts.evals && opts.all) {
+		throw new Error("choose either --evals or --all");
+	}
+	if (opts.package !== "" && (opts.evals || opts.all)) {
+		throw new Error("a package cannot be combined with --evals or --all");
+	}
 	const filter: string[] = [];
 	if (opts.package !== "") {
 		if (!(await fs.exists(`${root}/packages/${opts.package}`))) {
 			throw new Error(`no such package: ${opts.package}`);
 		}
 		filter.push(`packages/${opts.package}/`);
+	} else if (opts.evals) {
+		filter.push("evals/");
+	} else if (!opts.all) {
+		filter.push("packages/");
 	}
 
 	// a worker per file; suites opt into within-file concurrency themselves,

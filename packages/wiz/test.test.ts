@@ -18,11 +18,11 @@ describe("test", () => {
 		ps.setCwd("/tree");
 	});
 
-	it("runs bun test once, from the workspace root", async () => {
+	it("runs only package tests once, from the workspace root", async () => {
 		await test({ ...{ package: "", workers: 4 }, fs, ps });
 
 		expect(ps.getCalls()).toEqual([
-			"bun test --pass-with-no-tests --parallel=4 --timeout 30000",
+			"bun test --pass-with-no-tests --parallel=4 --timeout 30000 packages/",
 		]);
 		expect(ps.getCallDirs()).toEqual(["/tree"]);
 	});
@@ -32,7 +32,7 @@ describe("test", () => {
 
 		const half = Math.max(1, Math.floor(availableParallelism() / 2));
 		expect(ps.getCalls()).toEqual([
-			`bun test --pass-with-no-tests --parallel=${half} --timeout 30000`,
+			`bun test --pass-with-no-tests --parallel=${half} --timeout 30000 packages/`,
 		]);
 	});
 
@@ -63,6 +63,46 @@ describe("test", () => {
 		expect(ps.getCalls()).toEqual([
 			"bun test --pass-with-no-tests --parallel=4 --timeout 30000 packages/log/",
 		]);
+	});
+
+	it("runs eval harness tests only when requested", async () => {
+		await test({ package: "", evals: true, workers: 4, fs, ps });
+
+		expect(ps.getCalls()).toEqual([
+			"bun test --pass-with-no-tests --parallel=4 --timeout 30000 evals/",
+		]);
+	});
+
+	it("runs both suites when requested", async () => {
+		await test({ package: "", all: true, workers: 4, fs, ps });
+
+		expect(ps.getCalls()).toEqual([
+			"bun test --pass-with-no-tests --parallel=4 --timeout 30000",
+		]);
+	});
+
+	it("rejects competing suite selections before spawning tests", async () => {
+		await expect(
+			test({ package: "", evals: true, all: true, fs, ps }),
+		).rejects.toThrow("choose either --evals or --all");
+
+		expect(ps.getCalls()).toEqual([]);
+	});
+
+	it("rejects a package combined with eval tests", async () => {
+		await expect(test({ package: "log", evals: true, fs, ps })).rejects.toThrow(
+			"a package cannot be combined with --evals or --all",
+		);
+
+		expect(ps.getCalls()).toEqual([]);
+	});
+
+	it("rejects a package combined with all tests", async () => {
+		await expect(test({ package: "log", all: true, fs, ps })).rejects.toThrow(
+			"a package cannot be combined with --evals or --all",
+		);
+
+		expect(ps.getCalls()).toEqual([]);
 	});
 
 	it("rejects a package that does not exist", async () => {

@@ -39,4 +39,15 @@ describe("wiz", () => {
 		expect(out()).toContain("error: no such package: nope");
 		expect(ps.getExitCode()).toBe(1);
 	});
+	it("passes eval-only selection to the test runner", async () => {
+		await wiz.run(deps, ["dev", "test", "--evals"]);
+
+		expect(ps.getCalls()[0]).toContain(" evals/");
+	});
+
+	it("passes all-tests selection to the test runner", async () => {
+		await wiz.run(deps, ["dev", "test", "--all"]);
+
+		expect(ps.getCalls()[0]).toMatch(/--timeout 30000$/);
+	});
 });

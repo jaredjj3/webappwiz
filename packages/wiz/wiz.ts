@@ -67,9 +67,17 @@ dev
 
 dev
 	.command("test")
-	.description("run the workspace tests")
+	.description("run package tests; eval harness tests are separate")
 	.arg("package", z.string(), {
 		default: "",
-		description: "only test this package (default: all)",
+		description: "only test this package (default: all packages)",
+	})
+	.option("evals", z.boolean(), {
+		default: false,
+		description: "run only free eval harness tests (no model calls)",
+	})
+	.option("all", z.boolean(), {
+		default: false,
+		description: "run package and eval harness tests together",
 	})
 	.action((opts, { log, fs, ps }) => test({ ...opts, log, fs, ps }));
