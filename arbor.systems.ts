@@ -1,6 +1,14 @@
 import type { SystemsFile } from "@webappwiz/arbor/systems";
 
 export default {
+	models: {
+		description: "Choosing agents and models",
+		globs: [
+			"packages/arbor/models.ts",
+			"packages/arbor/roster.ts",
+			"packages/arbor/dev/setting-controls.tsx",
+		],
+	},
 	conversations: {
 		description: "The agent conversations on the arbor dev page",
 		aliases: ["conversation view"],
