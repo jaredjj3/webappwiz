@@ -53,8 +53,8 @@ export interface UpdateOptions {
  * A manifest still naming `@webappwiz/rules` gets `@webappwiz/scry`. Then it
  * refreshes the webappwiz skill, when the project has it, and runs
  * `scry update` at that version, which brings along what older releases left
- * behind. Arbor keeps its own pace: a project with its skill is told to run
- * `arbor update`, which this never imports. Last, it names any credential the
+ * behind. Splates keeps its own pace: a project with its skill is told to run
+ * `splates update`, which this never imports. Last, it names any credential the
  * project uses that nothing has yet, and the command a person runs to add
  * it, since an upgrade is when a new one starts to matter.
  */
@@ -94,9 +94,10 @@ export async function update(opts: UpdateOptions): Promise<void> {
 		retired: {},
 	});
 	const { skills } = project({ dir: opts.dir, fs, ps, log });
-	if ((await skills.installed()).includes("arbor")) {
+	const installed = await skills.installed();
+	if (installed.includes("splates") || installed.includes("arbor")) {
 		log.info(
-			"this project has the arbor skill; run `bunx @webappwiz/arbor update` to bring arbor up to date",
+			"this project has the splates skill; run `bunx splates update` to bring splates up to date",
 		);
 	}
 	await updateScry({

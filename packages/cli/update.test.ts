@@ -97,23 +97,26 @@ describe("update", () => {
 		);
 	});
 
-	it("leaves arbor to arbor update, saying to run it where the project has its skill", async () => {
-		await skill("arbor");
+	it.each(["splates", "arbor"])(
+		"leaves splates to splates update, saying to run it where the project has its %s skill",
+		async (name) => {
+			await skill(name);
 
+			await update(updating());
+
+			expect(ps.getCalls().join("\n")).not.toContain(`--skill ${name}`);
+			expect(log.entries.map((entry) => String(entry.message))).toContain(
+				"this project has the splates skill; run `bunx splates update` to bring splates up to date",
+			);
+		},
+	);
+
+	it("says nothing of splates in a project without its skill", async () => {
 		await update(updating());
 
-		expect(ps.getCalls().join("\n")).not.toContain("--skill arbor");
-		expect(log.entries.map((entry) => String(entry.message))).toContain(
-			"this project has the arbor skill; run `bunx @webappwiz/arbor update` to bring arbor up to date",
-		);
-	});
-
-	it("says nothing of arbor in a project without its skill", async () => {
-		await update(updating());
-
-		expect(
-			log.entries.map((entry) => String(entry.message)).join("\n"),
-		).not.toContain("arbor");
+		const logged = log.entries.map((entry) => String(entry.message)).join("\n");
+		expect(logged).not.toContain("splates");
+		expect(logged).not.toContain("arbor");
 	});
 
 	it("skips node_modules", async () => {
