@@ -84,6 +84,10 @@ export default {
 			"packages/arbor/dev/app-conversation-dictation.test.tsx",
 		],
 	},
+	merge: {
+		description: "Landing a task on trunk",
+		globs: ["packages/arbor/merge.ts", "packages/arbor/merge.test.ts"],
+	},
 	skills: {
 		description: "The skills agents read",
 		globs: ["skills/**"],
