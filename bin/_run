@@ -2,7 +2,7 @@
 # Runs an entry from the checkout you are standing in, so a git worktree gets
 # its own code without anyone having to remember `./bin/`. Set WEBAPPWIZ_ROOT
 # to pin one checkout instead: that is the escape hatch for a command that must
-# not run the tree it is about to rewrite, `arbor merge` above all.
+# not run the tree it is about to rewrite, `splates merge` above all.
 #
 # usage: _run <entry relative to a checkout root> [args...]
 set -euo pipefail

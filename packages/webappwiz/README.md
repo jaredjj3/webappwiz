@@ -65,4 +65,4 @@ separately, so nothing you did not ask for arrives with it:
 [`@webappwiz/react`](../react) (peer `react`),
 [`@webappwiz/aws`](../aws) (peers `aws-cdk-lib`, `constructs`),
 [`@webappwiz/scry`](../scry), and the two commands,
-[`@webappwiz/cli`](../cli) and [`@webappwiz/arbor`](../arbor).
+and [`@webappwiz/cli`](../cli).

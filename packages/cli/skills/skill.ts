@@ -15,7 +15,7 @@ export const SOURCE = "jaredjj3/webappwiz";
  * `bunx skills add`. Listed rather than discovered, so adding a skill is a
  * line here.
  */
-export const SHIPPED = ["arbor", "scry", "webappwiz"];
+export const SHIPPED = ["scry", "webappwiz"];
 
 /** A skill this package used to ship under another name. */
 export interface Retired {

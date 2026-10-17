@@ -106,7 +106,7 @@ describe("update", () => {
 
 			expect(ps.getCalls().join("\n")).not.toContain(`--skill ${name}`);
 			expect(log.entries.map((entry) => String(entry.message))).toContain(
-				"this project has the splates skill; run `bunx splates update` to bring splates up to date",
+				"this project has the splates skill; run `bunx @stringsync/splates update` to bring splates up to date",
 			);
 		},
 	);

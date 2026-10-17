@@ -324,8 +324,8 @@ release you invoke is the release you get. `--version` pins something else.
 `workspace:` ranges are left alone; inside a monorepo they already track each
 other. It refreshes the webappwiz skill, then runs `scry update` at that
 version, which brings along what older releases left behind and refreshes
-scry's own skills. Arbor keeps its own pace: in a project with the arbor
-skill it says to run `bunx @webappwiz/arbor update`. Last, it names
+scry's own skills. Splates keeps its own pace: in a project with the splates
+skill it says to run `bunx @stringsync/splates update`. Last, it names
 any credential the project uses that neither the environment nor the secret
 store has, with the `creds add` command a person runs for each.
 
@@ -429,13 +429,11 @@ bunx @webappwiz/cli skills update ./project
 
 ```
 SKILL      SHIPS  INSTALLED
-arbor      1.4.0  1.3.0
-scry       1.4.0  -
+scry       1.4.0  1.3.0
 webappwiz  1.4.0  -
 ```
 
-Three ship: `arbor`, which lands an agent's work from its own worktree;
-`scry`, which writes, updates, and removes a project's rules and runs
+Two ship: `scry`, which writes, updates, and removes a project's rules and runs
 `wiz scry`; and `webappwiz`, which sends an agent to the package's catalogue
 before it writes infrastructure by hand.
 

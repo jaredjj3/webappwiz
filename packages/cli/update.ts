@@ -97,7 +97,7 @@ export async function update(opts: UpdateOptions): Promise<void> {
 	const installed = await skills.installed();
 	if (installed.includes("splates") || installed.includes("arbor")) {
 		log.info(
-			"this project has the splates skill; run `bunx splates update` to bring splates up to date",
+			"this project has the splates skill; run `bunx @stringsync/splates update` to bring splates up to date",
 		);
 	}
 	await updateScry({

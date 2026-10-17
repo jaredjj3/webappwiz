@@ -46,15 +46,5 @@
 			"correctness": { "noUndeclaredDependencies": "error" }
 		}
 	},
-	"formatter": { "enabled": true },
-	"overrides": [
-		{
-			"includes": [
-				"packages/arbor/dev/components/ui/**",
-				"packages/arbor/dev/components/assistant-ui/**",
-				"packages/arbor/dev/hooks/**"
-			],
-			"linter": { "enabled": false }
-		}
-	]
+	"formatter": { "enabled": true }
 }

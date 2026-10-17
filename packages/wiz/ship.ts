@@ -2,7 +2,6 @@ import { catalog } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
-import { ARBOR } from "./arbor";
 import { fix } from "./fix";
 
 /**
@@ -12,11 +11,7 @@ import { fix } from "./fix";
  * which release it came from; this repo's own `.agents/skills` copies are
  * symlinks to them.
  */
-const SKILLS = [
-	...ARBOR.skills,
-	"skills/scry/SKILL.md",
-	"skills/webappwiz/SKILL.md",
-];
+const SKILLS = ["skills/scry/SKILL.md", "skills/webappwiz/SKILL.md"];
 
 /**
  * Every rule the catalog ships, stamped the same way and for the same reason:

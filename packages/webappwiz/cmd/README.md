@@ -188,7 +188,7 @@ skills.command("update").action(/* … */);
 ```
 
 ```bash
-app skills add arbor
+app skills add scry
 app skills --help      # lists add and update
 ```
 

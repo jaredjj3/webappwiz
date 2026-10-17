@@ -9,16 +9,12 @@ bin/wiz --help
 bin/wiz dev --help
 ```
 
-`bin/wiz dev test` runs package tests, including Arbor's merge check. Eval
-harness tests run separately; these commands make no paid model calls:
+`bin/wiz dev test` runs package tests. Eval
+harness tests run separately:
 
 ```bash
 bin/wiz dev test             # all package tests
-bin/wiz dev test arbor       # one package
+bin/wiz dev test cli         # one package
 bin/wiz dev test --evals     # free eval harness tests only
 bin/wiz dev test --all       # package and eval harness tests
 ```
-
-When changing files under `evals/`, run `bin/wiz dev test --evals` as well.
-`bin/wiz dev eval` runs evaluations and can use paid model calls; run it only
-when explicitly requested.

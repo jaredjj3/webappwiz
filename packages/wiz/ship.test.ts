@@ -12,7 +12,6 @@ describe("ship", () => {
 	/** Every document the release stamps: the skills `SKILLS` in ship.ts
 	 * lists, and every rule the catalog ships. */
 	const SKILLS = [
-		"/repo/skills/arbor/SKILL.md",
 		"/repo/skills/scry/SKILL.md",
 		"/repo/skills/webappwiz/SKILL.md",
 		...Object.keys(catalog).map(

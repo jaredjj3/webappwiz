@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 import { NodePs } from "webappwiz/system";
 
 /**
- * `bin/_run` is what makes `wiz` and `arbor` mean the checkout you are standing
+ * `bin/_run` is what makes `wiz` and `splates` mean the checkout you are standing
  * in, so it is tested through a real process: which tree it picks is a fact
  * about bash, cwd and git, and nothing smaller than a spawn can tell us.
  */

@@ -10,7 +10,6 @@
 		"@biomejs/biome": "^2.5.7",
 		"@happy-dom/global-registrator": "^20.3.1",
 		"@types/bun": "latest",
-		"@webappwiz/arbor": "workspace:*",
 		"@webappwiz/cli": "workspace:*",
 		"@webappwiz/scry": "workspace:*",
 		"webappwiz": "workspace:*",
@@ -18,8 +17,5 @@
 	},
 	"peerDependencies": {
 		"typescript": "^7"
-	},
-	"scripts": {
-		"postinstall": "bun run --cwd packages/arbor build"
 	}
 }
