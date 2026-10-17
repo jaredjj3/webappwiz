@@ -82,11 +82,15 @@ export class ProjectTools {
 		const fs = opts.fs ?? new NodeFs();
 		const ps = opts.ps ?? new NodePs();
 		const decisions = await Decisions.open(`${dir}/${DECISIONS}`, { fs });
-		const providers =
-			opts.providers ??
-			new HostedProviders(
-				(await ProjectCredentials.open(dir, { fs, ps })).credentials,
-			);
+		let hosted: Promise<HostedProviders> | undefined;
+		const providers: Providers = opts.providers ?? {
+			async judge(model) {
+				hosted ??= ProjectCredentials.open(dir, { fs, ps }).then(
+					(project) => new HostedProviders(project.credentials),
+				);
+				return (await hosted).judge(model);
+			},
+		};
 		const asked: Asked[] = [];
 		// one decider for each model a role asks, however many efforts ask
 		// it, so the questions to it share requests and a tally its budget holds

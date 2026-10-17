@@ -39,7 +39,13 @@ dev
 		default: false,
 		description: "report problems without writing fixes (for CI)",
 	})
-	.action((opts, { log, ps }) => fix({ ...opts, log, ps }));
+	.option("code-only", z.boolean(), {
+		default: false,
+		description: "run Scry code rules without credentials or model calls",
+	})
+	.action(({ "code-only": codeOnly, ...opts }, { log, ps }) =>
+		fix({ ...opts, codeOnly, log, ps }),
+	);
 
 dev
 	.command("path")

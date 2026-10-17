@@ -4,6 +4,8 @@ import { NodePs, type Ps } from "webappwiz/system";
 export interface FixOptions {
 	/** Report problems without writing fixes, as CI wants it. */
 	check: boolean;
+	/** Check only code rules, without credentials or model calls. */
+	codeOnly?: boolean;
 	log?: Logger;
 	ps?: Ps;
 }
@@ -41,6 +43,7 @@ export async function fix(opts: FixOptions): Promise<void> {
 		"--since",
 		"main",
 		"--disable-over-budget",
+		...(opts.codeOnly ? ["--disable", "som", "--disable", "llm"] : []),
 	]);
 	step("scry", scry.exitCode === 0, "Scry check failed");
 }

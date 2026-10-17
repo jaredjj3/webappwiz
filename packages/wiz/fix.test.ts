@@ -35,6 +35,13 @@ describe("fix", () => {
 		]);
 	});
 
+	it("disables both model roles explicitly for code-only checks", async () => {
+		await fix({ check: false, codeOnly: true, log, ps });
+		expect(ps.getCalls().at(-1)).toBe(
+			"bin/wiz scry check --since main --disable-over-budget --disable som --disable llm",
+		);
+	});
+
 	it("throws when biome fails, without typechecking", async () => {
 		ps.exit(1); // FakePs returns this exit code from every spawn
 
