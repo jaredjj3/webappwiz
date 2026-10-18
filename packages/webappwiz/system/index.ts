@@ -57,4 +57,9 @@ export type {
 	TerminalChild,
 	TerminalOptions,
 } from "./ps/ps";
+export {
+	type MakeUndumpableOptions,
+	makeUndumpable,
+	type Undumpable,
+} from "./undumpable";
 export { type WalkOptions, walk } from "./walk";

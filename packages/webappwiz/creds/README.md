@@ -97,5 +97,52 @@ export default {
 };
 ```
 
+## Keeping a key from an agent
+
+A program you do not trust with a key, such as an agent's CLI, can still
+spend it through a `CredentialProxy`: a loopback HTTP proxy that forwards to
+one upstream with the program's placeholder swapped for the real key.
+
+```ts
+import { CredentialProxy, MemorySecretStore } from "webappwiz/creds";
+import { makeUndumpable } from "webappwiz/system";
+
+await makeUndumpable();
+const store = new MemorySecretStore();
+await store.set("ANTHROPIC_API_KEY", keyFromTheCoordinator);
+
+await using proxy = CredentialProxy.listen(store, {
+	upstream: "https://api.anthropic.com",
+	credential: "ANTHROPIC_API_KEY",
+	header: "x-api-key",
+});
+ps.start(["claude"], {
+	env: { ANTHROPIC_BASE_URL: proxy.url, ANTHROPIC_API_KEY: proxy.placeholder },
+});
+```
+
+For OpenAI's API, as Codex calls it, the key goes as a bearer token under a
+path: `upstream: "https://api.openai.com/v1"`, `header: "authorization"`,
+`scheme: "Bearer"`, with `OPENAI_BASE_URL` and `OPENAI_API_KEY` set the same
+way.
+
+- `MemorySecretStore` keeps values in this process's memory alone: never on
+  disk, in the environment, argv or a log. `clear()` or `dispose()` drops
+  them all at once. Neither its label, its errors, `console.log` nor
+  `JSON.stringify` of it shows a value.
+- `CredentialProxy.listen` binds 127.0.0.1 on a free port. A request
+  without its placeholder, random for each proxy, gets a 401 and reaches no
+  upstream, so another local process cannot spend the key through it. It
+  reads the key from its source on every request, so a rotated key needs no
+  restart, and once the source has none it answers 503. It reaches only its
+  upstream, which must be `https://` (or loopback), never follows a
+  redirect, and streams responses through untouched, server-sent events and
+  compressed bodies alike. `disposeAsync()` stops it.
+- `makeUndumpable()` from `webappwiz/system` keeps the user's other
+  processes, the agent's among them, out of the memory the key sits in. A
+  program running as your own user can still read its own environment, so
+  the placeholder is as private as that: run the program in a container
+  where that matters.
+
 `FakeSecretStore` in `webappwiz/creds/testing` is a map, so a test says
 what is kept and sees what changed.

@@ -116,3 +116,20 @@ is made rather than when it is asked, so a bad one never reaches a caller.
 open at the moment it is given rather than when the caller acts on it. A caller
 that cannot afford to lose that race should retry its own bind on `EADDRINUSE`
 instead.
+
+`makeUndumpable()` keeps other processes of the same user out of this one's
+memory, for a daemon holding secrets beside programs it does not trust. Call
+it once, at start; it cannot be undone. On Linux it clears the dumpable flag
+(`prctl(PR_SET_DUMPABLE, 0)`), so only root can ptrace the process or read
+its `/proc/<pid>/mem` and `environ`, and checks the flag took; on macOS it
+calls `ptrace(PT_DENY_ATTACH)`. It throws when that call fails, and elsewhere
+returns `{ undumpable: false, why }`. The programs it spawns are not covered.
+
+```ts
+import { makeUndumpable } from "webappwiz/system";
+
+const guard = await makeUndumpable();
+if (!guard.undumpable) {
+	log.warn(guard.why);
+}
+```
