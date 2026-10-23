@@ -1,3 +1,5 @@
+import { constants } from "node:os";
+
 /**
  * Collects a child's exit status from the kernel, for the runtime that can lose
  * it: call it with the child's pid when its `close` never comes.
@@ -34,4 +36,46 @@ async function load(): Promise<(pid: number) => number | null> {
 export function decode(status: number): number {
 	const signal = status & 0x7f;
 	return signal === 0 ? (status >> 8) & 0xff : 128 + signal;
+}
+
+/** The runtime and kernel race to report an exit; neither may hold up the other. */
+export async function exitOf(
+	child: {
+		pid: number;
+		exitCode: number | null;
+		signalCode: NodeJS.Signals | null;
+		exited: Promise<number>;
+	},
+	kernel: { reap(pid: number): number | null },
+): Promise<number> {
+	let timer: ReturnType<typeof setInterval> | undefined;
+	const polled = new Promise<number>((resolve) => {
+		// Give Bun a beat before taking a status out from under it.
+		timer = setInterval(() => {
+			if (child.exitCode !== null || child.signalCode !== null) {
+				resolve(shellCode(child.exitCode, child.signalCode));
+				return;
+			}
+			const status = kernel.reap(child.pid);
+			if (status !== null) {
+				resolve(decode(status));
+			}
+		}, 250);
+	});
+	try {
+		return await Promise.race([
+			child.exited.then((code) => shellCode(code, child.signalCode)),
+			polled,
+		]);
+	} finally {
+		clearInterval(timer);
+	}
+}
+
+/** Shell status for either a normal exit or a signal death. */
+export function shellCode(
+	code: number | null,
+	signal: NodeJS.Signals | null,
+): number {
+	return signal ? 128 + (constants.signals[signal] ?? 0) : (code ?? 0);
 }

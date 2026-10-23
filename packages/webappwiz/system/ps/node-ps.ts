@@ -1,9 +1,10 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { readlink } from "node:fs/promises";
-import { constants, hostname } from "node:os";
+import { hostname } from "node:os";
 import { Readable, Writable } from "node:stream";
 import { disposables, type Resource } from "webappwiz/disposable";
 import type { ProcessLike } from "../process-like/process-like";
+import { fileCapture, fileStart, ignoreClosedInput } from "./file-process";
 import { type Listener, parseLsof, parseLsofCwds, parseSs } from "./listening";
 import type {
 	Child,
@@ -17,7 +18,7 @@ import type {
 	TerminalChild,
 	TerminalOptions,
 } from "./ps";
-import { decode, reap } from "./reap";
+import { exitOf, reap, shellCode } from "./reap";
 
 /** What a `NodePs` speaks to; the running process by default. */
 export interface NodePsOptions {
@@ -53,6 +54,20 @@ export class NodePs implements Ps {
 
 	async spawn(argv: string[], opts?: SpawnOptions): Promise<SpawnResult> {
 		const [cmd, args] = parse(argv);
+		if (reap !== null) {
+			opts?.signal?.throwIfAborted();
+			const child = Bun.spawn(argv, {
+				...this.options(opts),
+				stdio: ["inherit", "inherit", "inherit"],
+			});
+			try {
+				const code = await exitOf(child, { reap });
+				opts?.signal?.throwIfAborted();
+				return { exitCode: code };
+			} finally {
+				child.unref();
+			}
+		}
 		const child = spawn(cmd, args, {
 			...this.options(opts),
 			stdio: "inherit",
@@ -65,6 +80,13 @@ export class NodePs implements Ps {
 		opts?: SpawnOptions,
 	): Promise<SpawnCaptureResult> {
 		const [cmd, args] = parse(argv);
+		if (reap !== null) {
+			return fileCapture(argv, {
+				...this.options(opts),
+				input: opts?.stdin,
+				watcher: opts?.watcher,
+			});
+		}
 		const child = spawn(cmd, args, {
 			...this.options(opts),
 			stdio: [opts?.stdin === undefined ? "inherit" : "pipe", "pipe", "pipe"],
@@ -93,6 +115,9 @@ export class NodePs implements Ps {
 
 	start(argv: string[], opts?: StartOptions): Child {
 		const [cmd, args] = parse(argv);
+		if (reap !== null) {
+			return fileStart(argv, this.options(opts));
+		}
 		const child = spawn(cmd, args, {
 			...this.options(opts),
 			stdio: "pipe",
@@ -102,7 +127,7 @@ export class NodePs implements Ps {
 		const exited = exitCode(child);
 		return {
 			pid: child.pid ?? null,
-			stdin: Writable.toWeb(child.stdin),
+			stdin: forgivingInput(child.stdin),
 			stdout: web(child.stdout),
 			stderr: web(child.stderr),
 			exited,
@@ -336,71 +361,23 @@ function web(readable: Readable): ReadableStream<Uint8Array> {
 	return Readable.toWeb(readable) as unknown as ReadableStream<Uint8Array>;
 }
 
-/** How often to check on a child the runtime may have lost track of. */
-const REAP_POLL_MS = 500;
-/**
- * How long output may take to drain once the child is gone. The runtime can
- * lose the end of a pipe as well as the exit, and output still unread by then
- * is not coming.
- */
-const DRAIN_MS = 2_000;
-
-function exitCode(child: ChildProcess): Promise<number> {
-	return new Promise((resolve, reject) => {
-		let exited: number | null = null;
-		let drained: ReturnType<typeof setTimeout> | undefined;
-		const stop = (): void => {
-			clearInterval(watch);
-			clearTimeout(drained);
-		};
-		const exit = (code: number): void => {
-			if (exited === null) {
-				exited = code;
-				drained = setTimeout(() => {
-					stop();
-					resolve(code);
-				}, DRAIN_MS);
-			}
-		};
-		// Only while the runtime has not seen the exit itself: once it has, the
-		// pid is free for the kernel to hand to the next child.
-		const watch = setInterval(() => {
-			if (!reap || !child.pid || exited !== null || child.exitCode !== null) {
-				return;
-			}
-			const status = reap(child.pid);
-			if (status !== null) {
-				exit(decode(status));
-			}
-		}, REAP_POLL_MS);
-		child.on("exit", (code, signal) => exit(shellCode(code, signal)));
-		// close, not exit: also waits for piped stdio to drain.
-		child.on("close", (code, signal) => {
-			stop();
-			resolve(exited ?? shellCode(code, signal));
-		});
-		child.on("error", (error) => {
-			// Once the watch has taken the exit status, the runtime's own wait
-			// finds no child: the exit is known, and still worth its drain.
-			if (
-				exited !== null &&
-				(error as NodeJS.ErrnoException).code === "ECHILD"
-			) {
-				return;
-			}
-			stop();
-			reject(error);
-		});
+/** Keep an early stdin close from making a successful command reject. */
+function forgivingInput(input: Writable): WritableStream<Uint8Array> {
+	const writer = Writable.toWeb(input).getWriter();
+	return new WritableStream<Uint8Array>({
+		write: (bytes) => writer.write(bytes).catch(ignoreClosedInput),
+		close: () => writer.close().catch(ignoreClosedInput),
+		abort: (reason) => writer.abort(reason).catch(ignoreClosedInput),
 	});
 }
 
-/**
- * A child killed by a signal has no exit code, and reading that as 0 would let
- * an OOM-killed test command pass for a green test run. 128 + signal is what a
- * shell reports for the same death.
- */
-function shellCode(code: number | null, signal: NodeJS.Signals | null): number {
-	return code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0);
+function exitCode(child: ChildProcess): Promise<number> {
+	return new Promise((resolve, reject) => {
+		// Only the ordinary pipe path uses this: wait for every pipe to close,
+		// without a deadline that could return partial output.
+		child.on("close", (code, signal) => resolve(shellCode(code, signal)));
+		child.on("error", reject);
+	});
 }
 
 /**
