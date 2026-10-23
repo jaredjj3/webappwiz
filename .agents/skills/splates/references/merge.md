@@ -32,6 +32,16 @@ every reply that ends your turn ends with the whole review report again,
 brought up to date: the page shows its Ready to merge card only for a whole
 report.
 
+## Run merge in the foreground
+
+Run `splates merge` as a plain foreground command, waiting on it until it
+exits: never with your harness's background option, `&`, `nohup` or a
+detached shell. The server sees a merge through the command your turn is
+running, so one sent to the background looks like an agent that has gone idle
+and the page cannot show the task as merging. A merge can take minutes while
+the gate runs; wait it out, and use a long enough timeout rather than
+backgrounding it.
+
 ## Project notes at merge
 
 When the project has notes, `splates merge` prints their index before anything
@@ -42,14 +52,34 @@ this: it cannot check a note, so the check is yours.
 
 ## When a merge fails
 
-An existing Git `index.lock` stops merge as `blocked` without spending an
-attempt. Wait for its owner to finish and merge again; never delete a lock
+A `tests_failed` or `timeout` leaves the worktree rebased onto the base commit
+the gate ran on. When the base moved since your last rebase, a `tests_failed`
+lists the commits that landed, each with the task it came from, those touching
+the failing tests, what they import or your files first: read those before the
+test, since a change that just landed is the likeliest cause. Then reproduce
+the failure there (`bun test <paths>` on the failing files), fix, commit and
+merge again.
+
+Merges waiting for the gate at once are gated as one batch: the first to
+go stacks the others' branches on its own, runs the gate once and lands
+them all, so a merge that queued may land without a gate of its own. A
+`tests_failed` from a batch says which tasks it was gated with and leaves
+your branch rebased on the base alone; it is yours only when the failing
+tests first fail with your commits in the stack, and the refusal then names
+the stack commit to reproduce on when the files pass alone. The rest of a
+failing batch is gated again without the culprit, charged nothing.
+
+A gate that runs past 3 minutes is killed, and merge stops as `timeout`
+without spending an attempt: merge again. An existing Git `index.lock`
+stops merge as `blocked` without spending an attempt. Wait for its owner to finish and merge again; never delete a lock
 held by a live operation. A failed rebase with no unmerged paths is
 `merge_failed`, not a content `conflict`.
 
 Each `conflict` or `merge_failed` spends one of the task's merge attempts.
 A `tests_failed` spends one only when the failing test files passed on the
-exact base commit and failed again with the task. Trunk-red and environment
+exact base commit and failed again with the task, and the failure repeats the
+last: the same base commit, or the same failing tests on any base. A failure
+against a base you were never gated on is new information and spends none. Trunk-red and environment
 failures hold the merge without charging; fix what the output names before
 retrying. Bun JUnit reports enable selective attribution; missing reports,
 unsupported runners, and inconclusive retests hold without charging. A flake

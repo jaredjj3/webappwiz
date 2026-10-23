@@ -1,18 +1,18 @@
 {
-  "version": 1,
-  "skills": {
-    "shadcn": {
-      "source": "shadcn/ui",
-      "sourceType": "github",
-      "skillPath": "skills/shadcn/SKILL.md",
-      "computedHash": "f615de216e085a84e31593ad0fa9062232adc40cd87b7c7ab2b8e49abf6500be"
-    },
-    "splates": {
-      "source": "stringsync/splates",
-      "ref": "v0.0.55",
-      "sourceType": "github",
-      "skillPath": "skills/splates/SKILL.md",
-      "computedHash": "4ac2a7a42b5f7ba5960f8c2ed09eb9ba4239b4260368e5a2e77f046132fb91b0"
-    }
-  }
+	"version": 1,
+	"skills": {
+		"shadcn": {
+			"source": "shadcn/ui",
+			"sourceType": "github",
+			"skillPath": "skills/shadcn/SKILL.md",
+			"computedHash": "f615de216e085a84e31593ad0fa9062232adc40cd87b7c7ab2b8e49abf6500be"
+		},
+		"splates": {
+			"source": "stringsync/splates",
+			"ref": "v0.0.56",
+			"sourceType": "github",
+			"skillPath": "skills/splates/SKILL.md",
+			"computedHash": "953e42fe59762e511a036c7fb152679de5906b858d0d24876ac7745b89b04abd"
+		}
+	}
 }

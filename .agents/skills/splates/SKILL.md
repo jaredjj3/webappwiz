@@ -1,7 +1,7 @@
 ---
 name: splates
 description: Use the splates CLI to land your work on trunk, or a base branch given as an argument, from an isolated git worktree without pull requests. Read this before investigating anything that may lead to a code change in a splates repository, since it decides where the work happens, and whenever you need to add, claim, merge, remove, list, show, locate, or defer a task, or queue, pick up, link, or reorder a task for later, or work down a lane of them. Also read it before asking the user a question or proposing anything in a splates repository, with a task open or not.
-version: 0.0.55
+version: 0.0.56
 ---
 
 # Using splates
@@ -13,16 +13,6 @@ only what the CLI cannot tell you. A bare `splates` prints help; start the
 server with `splates server`. `splates dev` is only for developing the splates
 repository itself.
 
-The runner image starts `splates runners serve`: an authenticated, job-only HTTP
-service for cloud runners, not a worker that runs agents. It reads its bearer
-secret from the hosting environment; people use `splates run` to send jobs.
-
-A project whose CI image already has what its jobs need names it as
-`runner: { image: "ghcr.io/me/ci" }` in `splates.config.ts`; Fly runners then boot
-it instead of the runner image. It needs `sh` and `curl` or `wget` (the runner
-fetches splates on boot) and must be public: a private registry is not
-supported yet.
-
 ## The short version
 
 Most of what follows fills in these steps. Hold to them even when you skip
@@ -33,33 +23,32 @@ the rest:
    edit only in the worktree path it prints.
 2. **Ask as a numbered list.** Every question for the user is a `1.` item
    ending at its `?`, as in Formats below.
-3. **Be careful on the host machine**, which the person works on. Never run
-   a whole test suite, an install or a build here. A **fraction** of the
-   tests, a test file or two, is fine to run directly and often quicker
-   than a runner. Prefer `bun test --changed` or explicit test-file paths;
-   combine them when the change reaches many tests. In splates's own repo,
-   use `splates dev test --changed` before committing, `--since main` after
-   committing, or explicit file paths. `--test-name-pattern <regex>` narrows
-   cases further; focused runs default to one worker (`--workers <n>`).
-   Leave the whole suite to the merge gate. Run other heavy work with
-   `splates run -- <command>`: it runs on a runner, in a checkout of your
-   worktree as it stands, output streamed back and its exit code yours.
-   It uses a runner of `splates server`'s, else, where the project's
-   `splates.config.ts` names a Fly.io `cloud`, makes one there itself,
-   server or not. With a cloud configured it never runs here, refusing with
-   `no_runner` when none can be had: run a few test files by hand or wait
-   for a runner. In a project with no cloud it takes a local heavy-job
-   slot, so keep the host's load in mind. A runner takes as many commands
-   at once as fit in its CPUs and memory, each asking what the project's
-   `job` setting says; `--cpus <n> --memory <size>` (as `8GB`) asks
-   otherwise. It is killed, exiting 124, past 30 minutes or the `job`
-   setting's `timeout`; `--timeout <length>` (as `90m`) gives one that
-   needs longer. Skip the wrapper only where the project's instructions
-   say a script takes a slot itself.
+3. **Keep off heavy work on the host machine**, which the person works on
+   beside many other agents. The whole suite runs only in the merge gate,
+   one premerge at a time on the machine. For checks, run a **fraction** of
+   the tests: `bun test --changed` or explicit test-file paths, combined when
+   the change reaches many tests. In splates's own repo, use `splates dev
+   test --changed` before committing, `--since main` after committing, or
+   explicit file paths; `--test-name-pattern <regex>` narrows cases further,
+   and focused runs use one worker (`--workers <n>`). Scoped runs reaching
+   at least half the test files report their estimated count and require the
+   same one-run permission card, naming the exact scoped command. Test-name
+   patterns do not reduce this file count. Run `splates dev fix`
+   once per step, not after every edit, with `--code-only` to skip scry's
+   model calls. An unscoped `splates dev test` or `splates dev premerge` is
+   refused an agent (`not_granted`) until the person allows one run from a
+   run-command card ending your reply: `## 🔐 Permission: run command:
+   <why>`, then the command alone on a line in backticks, as `` `splates dev
+   test` ``, and the why under it. Anything else heavy (an install, a build,
+   docker, a benchmark, anything long or CPU-hungry): ask with the same
+   card, end your turn, and run it only on `[SPLATES RUN ALLOWED]`. The
+   person may run as many agents as they like and nothing caps them, so the
+   machine's load is yours to mind.
 4. **Commit as you go**, in plain messages with no attribution.
 5. **Queue what you would offer.** Each follow-up you would suggest, or ask
    about, once the work lands, `splates task add` (or `defer`) before merging.
-6. **Land with `splates merge --message "<what the base gains>"`**, then `cd`
+6. **Land with `splates merge --message "<what the base gains>"`**, run in
+   the foreground, never in the background, then `cd`
    to the main tree it prints. When it fails, do what its stderr says.
 7. **End with the report**, its title copied from Formats below, one line on
    what changed for the user, and nothing after it: the task is over, so the
@@ -134,6 +123,20 @@ the user to queue):
 <A line on what the tasks add up to.>
 ```
 
+Anything heavy that is not a scoped test run (a build, an install, docker, a
+benchmark, anything long or CPU-hungry) is asked with the run-command card: the
+command alone on the first backticked line, and what it costs under it. End
+your turn after it; the user's Allow sends `[SPLATES RUN ALLOWED]`, and only
+then do you run it.
+
+```markdown
+## 🔐 Permission: run command: build the web app
+
+`bun run build`
+
+Takes about two minutes.
+```
+
 Evals cost the user tokens, so only they start them. To ask for a run
 (splates repository only, where `splates dev eval list` names the probes),
 end your reply with the run card: the probes you picked, one `` - `id` `` item
@@ -158,6 +161,15 @@ These ways hold in every conversation in a splates repository, with a task
 open or not: a design talk, or a question answered from the main tree, asks,
 proposes and reports as a task does. A task adds only its record in
 `SPLATES.md`.
+
+Only the person runs `splates queue pause` or `splates queue resume`, which
+pause or resume automatic starts across the server, as Pause on the Queue
+page does. Running agents finish, and the person can still start their own.
+Both take `--dev <url>` (otherwise `SPLATES_DEV`) to reach the server.
+
+Agents may add empty lanes and remove empty lanes. Removing a lane containing
+tasks needs the person's remove-lane permission card (see
+[reporting.md](references/reporting.md)). Backlog is permanent.
 
 You never change the queue, which splates refuses an agent: when a
 conversation asks for several tasks, add them as a lane, and when the user
@@ -184,6 +196,8 @@ the prompt after it asks. Read the file when one arrives.
 | `[SPLATES APPROVE]`                 | The user approved your proposal, from its card, with any answers after it                                                                         | As for a reply of "approve": [proposing.md](references/proposing.md)                                                                                                                                                                                                                                                                                                                                                                                           |
 | `[SPLATES GROOM #N]` | You are the project's groomer: organize backlog task N and mark it ready, never doing it. Once the backlog is empty, `[SPLATES SORT ...]` follows in the same conversation to find lanes for the Untriaged tasks it names | [groom.md](references/groom.md), which covers both, Sorting Untriaged included |
 | `[SPLATES LANE N]` | Work down lane N (`untriaged` places the Untriaged tasks in lanes first) | `splates lane show N` prints the steps and whether the next is blocked; [queue.md](references/queue.md) |
+| `[SPLATES RUN ALLOWED]`             | The user allowed the command your run-command card asked to run | Run that command now, as the card asked, then carry on |
+| `[SPLATES RUN DENIED]`              | The user turned down the command your run-command card asked to run | Do not run it: carry on without it, or ask what to do instead |
 | `[SPLATES CHECKPOINT]`              | Bring `SPLATES.md` up to date and stop, as before a restart                                                                                       | [checkpoint.md](references/checkpoint.md)                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `[SPLATES RESUME]`                  | Carry on from where `SPLATES.md` says you stopped                                                                                                 | [checkpoint.md](references/checkpoint.md)                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `[SPLATES RECONNECT]`               | A lost connection cut your last turn short, and splates, once it is back, or the user asks you to carry on                                        | Your last step may have finished, half finished, or never started: check what it left (`git status`, `git log`, what its command was to change) before running it again. Then carry on with the work as though nothing had come: no report of the interruption, no questions about it and no stop                                                                                                                                                              |
@@ -288,21 +302,18 @@ the message; a `Maybe relevant:` one only when it fits.
    path, to commit there, to run no `splates` command that adds, claims,
    merges or removes a task, and to list in its reply any call the user
    may need to settle, which you treat as your own. Subagents at work at
-   once share the tree, so give each its own files. Be careful on the host
-   machine the person works on: never run a whole suite, an install or a
-   build here. Test a small portion with `bun test --changed` or explicit
-   test-file paths; in splates's own repo prefer `splates dev test --changed`,
-   `--since main`, or file paths, optionally with `--test-name-pattern`.
-   Leave the whole suite to the merge gate. Use `splates run -- <command>`
-   for other heavy work (step 3 of The short version), and tell a subagent
-   to do the same. Files it writes on a runner stay there.
+   once share the tree, so give each its own files. Keep off heavy work on the host
+   machine the person works on, as step 3 of the short version says: test a
+   small portion, and ask with a run-command card before anything else
+   heavy. A subagent is bound by the same rule and asks through you.
 5. **Land.** Once every step under `## Next` (including any user review) and
    every question under `## Blocked` is checked, the task is ready to merge:
    `splates task add` any step you will not do, then check it off, `splates task add` or
    `defer` each follow-up you would otherwise offer or ask about once it
    lands (see [Reporting](references/reporting.md)), and `splates merge --message
 "<message>"` (see Committing), or ask for a review first (see
-   [merge.md](references/merge.md)). On failure, do what stderr says and merge again, with the
+   [merge.md](references/merge.md)). On failure, do what stderr says (after a failed gate the worktree holds the
+   tested tree: reproduce the failure there first) and merge again, with the
    real message, since a merge whose gate passes this time lands. A successful
    merge deletes your worktree: `cd` to the main tree it prints before
    running anything else. When merge stops on anything but success, read
@@ -316,11 +327,12 @@ the message; a `Maybe relevant:` one only when it fits.
 **Clean up every task you start.** A task ends in a merge or a remove, never
 left behind; one waiting on the user's answers is not done, so leave it for
 `splates claim`. When investigating shows there is nothing to change, the
-work is moot, or it is better redone against current trunk, `splates task
-remove` each queued task it took that is done or moot, `splates task update` the rest
-with what you learned, then `cd "$(splates path)"` and `splates remove <task>
---reason <why>`, which puts them back on the list, out of the queue and
-any queued lane until the user queues them again. The reason is `nothing`
+work is moot, or it is better redone against current trunk,
+`cd "$(splates path)"` and `splates remove <task> --reason <why>`, which
+removes the board tasks it took too. Only `--reason blocked` puts them back
+on the list, out of the queue and any queued lane until the user queues
+them again. Before removing work to redo, add replacement tasks with what
+you learned. The reason is `nothing`
 (nothing to change), `moot`, `superseded` (done some other way), `redo`
 (better redone against current trunk) or `blocked` (set aside until other work
 lands: report it as Deferred); the Stats page counts them.
