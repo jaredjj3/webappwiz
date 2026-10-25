@@ -319,6 +319,33 @@ describe("release", () => {
 		]);
 	});
 
+	it("rebuilds on retry while leaving completed publishes alone", async () => {
+		const bundle = new FakeBundle();
+		const building = releases.lockstep(
+			releases.build(bundle),
+			releases.custom("@scope/one", registry),
+			releases.custom("@scope/two", registry),
+		);
+		registry.fails = "/repo/packages/two/dist";
+		await expect(building.release(answering("y"))).rejects.toThrow(
+			"publish failed",
+		);
+		registry.fails = undefined;
+		// Even a failed rebuild must stop the retry before anything publishes.
+		bundle.fails = "/repo/packages/two";
+		await expect(building.release(answering("y"))).rejects.toThrow(
+			"build failed",
+		);
+		expect(registry.publishes).toEqual(["/repo/packages/one/dist"]);
+		bundle.fails = undefined;
+		await building.release(answering("y"));
+		expect(registry.publishes).toEqual([
+			"/repo/packages/one/dist",
+			"/repo/packages/two/dist",
+		]);
+		expect(bundle.built.filter((dir) => dir.endsWith("/two"))).toHaveLength(2);
+	});
+
 	it("clears the build after a release that worked", async () => {
 		const bundle = new FakeBundle();
 

@@ -126,11 +126,16 @@ export class Release {
 		try {
 			for (const [index, artifact] of going.entries()) {
 				const key = keyFor(artifact, index);
-				if (state.done.includes(key)) {
+				// Build output is cleaned even on failure, and staging lives only in
+				// this Cut. Rebuild on every run, including older RELEASE files
+				// that already record the build as done.
+				if (artifact.stage !== "build" && state.done.includes(key)) {
 					continue;
 				}
 				await artifact.publish(cut);
-				state.done.push(key);
+				if (!state.done.includes(key)) {
+					state.done.push(key);
+				}
 				await file.write(state);
 			}
 		} finally {
