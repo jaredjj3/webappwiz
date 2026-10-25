@@ -26,7 +26,10 @@ export interface Ps {
 	): Promise<SpawnCaptureResult>;
 	/**
 	 * Starts `argv` with its stdin, stdout and stderr left open as streams, for
-	 * a child spoken to while it runs, as over a protocol on its stdio.
+	 * a child spoken to while it runs, as over a protocol on its stdio. A
+	 * child blocks on writing once its unread output fills its pipe. One that
+	 * cannot start, its program or cwd missing, still returns: its output
+	 * streams error, and `exited` rejects with why.
 	 */
 	start(argv: string[], opts?: StartOptions): Child;
 	/**

@@ -1,22 +1,43 @@
-import { beforeEach, describe, expect, it } from "bun:test";
-import { existsSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { afterEach, describe, expect, it } from "bun:test";
+import { readdirSync } from "node:fs";
+import { constants, tmpdir } from "node:os";
 import {
 	type FileProcess,
 	type FileRuntime,
 	fileCapture,
 	fileStart,
 } from "./file-process";
+import type { Child } from "./ps";
+import { reap } from "./reap";
 
-describe("file-backed processes", () => {
-	let runtime: LostExit;
-	beforeEach(() => {
+const stdout = "out🙂".repeat(40_000);
+const stderr = "err\n".repeat(40_000);
+/** Writes the output above, more than a FIFO holds, and exits 7. */
+const writes = [
+	"bun",
+	"-e",
+	`process.stdout.write(${JSON.stringify(stdout)});
+	process.stderr.write(${JSON.stringify(stderr)});
+	process.exitCode = 7;`,
+];
+
+describe.if(reap !== null)("FIFO-backed processes", () => {
+	const left = (): string[] =>
+		readdirSync(tmpdir()).filter((name) => name.startsWith("webappwiz-ps-"));
+	const before = left();
+	let runtime = new LostExit();
+	const start = (argv: string[]): Child =>
+		fileStart(argv, { env: process.env, runtime });
+	afterEach(() => {
+		runtime.expectClean();
+		expect(left()).toEqual(before);
 		runtime = new LostExit();
 	});
-	it("recovers a lost capture exit, drains all output, and removes its files", async () => {
+
+	it("recovers a lost capture exit and delivers all its output", async () => {
 		const seen = { stdout: "", stderr: "" };
-		const result = await fileCapture(["fake"], {
-			env: {},
+		const result = await fileCapture(writes, {
+			env: process.env,
 			runtime,
 			watcher: {
 				stdout: (chunk) => {
@@ -28,37 +49,44 @@ describe("file-backed processes", () => {
 			},
 		});
 
-		expect(result).toEqual({
-			exitCode: 7,
-			stdout: runtime.stdout,
-			stderr: runtime.stderr,
-		});
-		expect(seen).toEqual({ stdout: runtime.stdout, stderr: runtime.stderr });
-		expect(runtime.polls).toBe(1);
-		runtime.expectClean();
+		expect(result).toEqual({ exitCode: 7, stdout, stderr });
+		expect(seen).toEqual({ stdout, stderr });
+		expect(runtime.polls).toBeGreaterThan(0);
 	});
 
-	it("closes both streams before a lost start exit resolves, even without readers", async () => {
-		runtime.status = 9;
-		const child = fileStart(["fake"], { env: {}, runtime });
-		expect(runtime.polls).toBe(0);
-		expect(await child.exited).toBe(137);
-		runtime.expectClean();
+	it("stalls a child its reader has stopped reading, and loses nothing", async () => {
+		const child = start(["sh", "-c", "head -c 20000000 /dev/zero; exit 3"]);
+		const reader = child.stdout.getReader();
+		const first = (await reader.read()).value?.length ?? 0;
+		expect(first).toBeGreaterThan(0);
+
+		await Bun.sleep(300);
+		expect(runtime.exited).toBe(false);
+
+		reader.releaseLock();
+		const rest = Buffer.concat(await Array.fromAsync(child.stdout));
+		expect(first + rest.length).toBe(20_000_000);
+		expect(await child.exited).toBe(3);
+	});
+
+	it("keeps what a child wrote before it exited, for a reader who comes later", async () => {
+		const child = start(["sh", "-c", "printf done; printf why >&2"]);
+
+		expect(await child.exited).toBe(0);
 		await child.stdin.close();
 		child.kill();
 		expect(runtime.killed).toBe(false);
-		expect(await new Response(child.stdout).text()).toBe(runtime.stdout);
-		expect(await new Response(child.stderr).text()).toBe(runtime.stderr);
+		expect(await new Response(child.stdout).text()).toBe("done");
+		expect(await new Response(child.stderr).text()).toBe("why");
 	});
 
-	it("streams before exit and lets a reader cancel without breaking completion", async () => {
-		const child = fileStart(["fake"], { env: {}, runtime });
+	it("lets a reader cancel without stalling the child", async () => {
+		const child = start(["head", "-c", "20000000", "/dev/zero"]);
 		const reader = child.stdout.getReader();
 		expect((await reader.read()).value?.length).toBeGreaterThan(0);
-		expect(runtime.polls).toBe(0);
 		await reader.cancel();
-		expect(await child.exited).toBe(7);
-		runtime.expectClean();
+		// It dies writing to a stdout nobody reads, as on a closed pipe.
+		expect(await child.exited).toBe(128 + 13);
 	});
 
 	it("settles capture even when the lost exit strands stdin writes", async () => {
@@ -67,61 +95,62 @@ describe("file-backed processes", () => {
 			flush: () => new Promise<number>(() => {}),
 			end: () => new Promise<number>(() => {}),
 		};
-		const result = await fileCapture(["fake"], {
-			env: {},
+		const result = await fileCapture(writes, {
+			env: process.env,
 			runtime,
 			input: "data",
 		});
-		expect(result).toEqual({
-			exitCode: 7,
-			stdout: runtime.stdout,
-			stderr: runtime.stderr,
-		});
-		runtime.expectClean();
+		expect(result).toEqual({ exitCode: 7, stdout, stderr });
 	});
 
-	it("removes its files when spawning throws", () => {
-		const spawn = runtime.spawn.bind(runtime);
-		runtime.spawn = (argv, opts) => {
-			spawn(argv, opts);
-			throw new Error("no program");
-		};
-		expect(() => fileStart(["fake"], { env: {}, runtime })).toThrow(
-			"no program",
-		);
-		expect(runtime.paths.map((path) => existsSync(dirname(path)))).toEqual([
-			false,
-			false,
-		]);
-	});
+	it.each([
+		["program", ["/no/such/webappwiz-program"], undefined],
+		["directory", ["true"], "/no/such/webappwiz-directory"],
+	])(
+		"ends a missing %s as streams that error and an exit that rejects",
+		async (_, argv, cwd) => {
+			const child = fileStart(argv, { env: process.env, cwd });
+
+			expect(child.pid).toBeNull();
+			await expect(child.exited).rejects.toThrow("ENOENT");
+			await expect(new Response(child.stdout).text()).rejects.toThrow();
+			await expect(new Response(child.stderr).text()).rejects.toThrow();
+			const writer = child.stdin.getWriter();
+			await writer.write(new Uint8Array([1]));
+			await writer.close();
+			child.kill();
+		},
+	);
 });
 
-/** A child that wrote everything and died, but Bun never delivered its exit. */
+/** A real child whose exit Bun never delivers: only the kernel's reap finds it. */
 class LostExit implements FileRuntime {
-	paths: string[] = [];
 	polls = 0;
-	unreferenced = false;
 	killed = false;
-	stdout = "out🙂".repeat(40_000);
-	stderr = "err\n".repeat(40_000);
-	status = 7 << 8;
+	exited = false;
 	input: FileProcess["stdin"] = undefined;
+	private unreferenced: boolean | undefined;
+	private readonly children = new Map<number, Bun.Subprocess>();
 
 	spawn(
-		_argv: string[],
+		argv: string[],
 		opts: Parameters<FileRuntime["spawn"]>[1],
 	): FileProcess {
-		this.paths = [String(opts.stdout.name), String(opts.stderr.name)];
-		writeFileSync(this.paths[0] ?? "", this.stdout);
-		writeFileSync(this.paths[1] ?? "", this.stderr);
+		this.unreferenced = false;
+		const child = Bun.spawn(argv, opts);
+		this.children.set(child.pid, child);
+		void child.exited.then(() => {
+			this.exited = true;
+		});
 		return {
-			pid: 123,
+			pid: child.pid,
 			exitCode: null,
 			signalCode: null,
 			exited: new Promise(() => {}),
-			stdin: this.input,
-			kill: () => {
+			stdin: this.input ?? child.stdin,
+			kill: (signal) => {
 				this.killed = true;
+				child.kill(signal);
 			},
 			unref: () => {
 				this.unreferenced = true;
@@ -130,17 +159,18 @@ class LostExit implements FileRuntime {
 	}
 
 	reap(pid: number): number | null {
-		expect(pid).toBe(123);
 		this.polls += 1;
-		return this.status;
+		const child = this.children.get(pid);
+		if (child?.exitCode == null && child?.signalCode == null) {
+			return null;
+		}
+		// Bun took the real status, so make the wait status it would have been.
+		return child.signalCode
+			? (constants.signals[child.signalCode] ?? 0)
+			: (child.exitCode ?? 0) << 8;
 	}
 
 	expectClean(): void {
-		expect(this.unreferenced).toBe(true);
-		expect(this.paths.map((path) => existsSync(path))).toEqual([false, false]);
-		expect(this.paths.map((path) => existsSync(dirname(path)))).toEqual([
-			false,
-			false,
-		]);
+		expect(this.unreferenced ?? true).toBe(true);
 	}
 }

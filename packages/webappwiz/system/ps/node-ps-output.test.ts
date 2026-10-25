@@ -37,4 +37,10 @@ describe("NodePs output", () => {
 			}),
 		).rejects.toThrow();
 	});
+
+	it("starts a missing program as one whose streams error and whose exit rejects", async () => {
+		const child = new NodePs().start(["/no/such/webappwiz-program"]);
+		await expect(child.exited).rejects.toThrow();
+		await expect(new Response(child.stdout).text()).rejects.toThrow();
+	});
 });

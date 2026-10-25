@@ -1,6 +1,6 @@
 import {
 	closeSync,
-	fstatSync,
+	constants,
 	mkdtempSync,
 	openSync,
 	readSync,
@@ -18,7 +18,7 @@ interface FileOptions {
 	signal?: AbortSignal;
 }
 
-/** Only the Bun process operations the file-backed path needs. */
+/** Only the Bun process operations the FIFO-backed path needs. */
 export interface FileProcess {
 	pid: number;
 	exitCode: number | null;
@@ -35,11 +35,27 @@ export interface FileRuntime {
 		argv: string[],
 		opts: FileOptions & {
 			stdin: "pipe" | "inherit";
-			stdout: Bun.BunFile;
-			stderr: Bun.BunFile;
+			stdout: number;
+			stderr: number;
 		},
 	): FileProcess;
 	reap(pid: number): number | null;
+}
+
+/** Makes a FIFO at a path; null where `fileStart` is not used. */
+const mkfifo: ((path: string) => void) | null =
+	reap === null ? null : await load();
+
+async function load(): Promise<(path: string) => void> {
+	const { dlopen, FFIType } = await import("bun:ffi");
+	const { symbols } = dlopen("libc.dylib", {
+		mkfifo: { args: [FFIType.cstring, FFIType.u16], returns: FFIType.i32 },
+	});
+	return (path) => {
+		if (symbols.mkfifo(Buffer.from(`${path}\0`), 0o600) !== 0) {
+			throw new Error(`cannot make a FIFO at ${path}`);
+		}
+	};
 }
 
 const runtime: FileRuntime = {
@@ -52,56 +68,80 @@ export function fileStart(
 	argv: string[],
 	opts: FileOptions & { stdin?: "pipe" | "inherit"; runtime?: FileRuntime },
 ): Child {
-	// Bun can lose both an exit and its pipe events. Files remain whole even
-	// then: tail them while running, then drain them before reporting exit.
+	// Bun can lose both an exit and its pipe events. Its output goes to FIFOs
+	// read here, by polling rather than on Bun's events, so none of it is lost,
+	// and a child whose reader has stopped blocks once its FIFO fills.
 	const { stdin = "pipe", runtime: rt = runtime, ...spawnOptions } = opts;
 	opts.signal?.throwIfAborted();
 	const dir = mkdtempSync(join(tmpdir(), "webappwiz-ps-"));
-	let out: FileOutput | undefined;
-	let err: FileOutput | undefined;
+	let out: FifoOutput | undefined;
+	let err: FifoOutput | undefined;
+	const writers: number[] = [];
+	let child: FileProcess;
 	try {
-		out = new FileOutput(join(dir, "stdout"));
-		err = new FileOutput(join(dir, "stderr"));
-		const child = rt.spawn(argv, {
-			...spawnOptions,
-			stdin,
-			stdout: Bun.file(out.path),
-			stderr: Bun.file(err.path),
-		});
-		return follow(child, out, err, dir, opts.signal, rt);
+		out = new FifoOutput(join(dir, "stdout"));
+		err = new FifoOutput(join(dir, "stderr"));
+		// Each FIFO already has its reader, so opening it to write returns at once.
+		const stdout = openSync(out.path, constants.O_WRONLY);
+		writers.push(stdout);
+		const stderr = openSync(err.path, constants.O_WRONLY);
+		writers.push(stderr);
+		child = rt.spawn(argv, { ...spawnOptions, stdin, stdout, stderr });
 	} catch (error) {
 		out?.[Symbol.dispose]();
 		err?.[Symbol.dispose]();
+		// One that cannot start, its program or cwd missing, ends as the pipe
+		// path's does: streams that error and an exit that rejects with why.
+		return unstarted(error);
+	} finally {
+		// The child holds its own copies: ours would keep the FIFOs from ending.
+		for (const fd of writers) {
+			closeSync(fd);
+		}
 		rmSync(dir, { recursive: true, force: true });
-		throw error;
 	}
+	return follow(child, out, err, opts.signal, rt);
+}
+
+function unstarted(error: unknown): Child {
+	const failed = (): ReadableStream<Uint8Array> =>
+		new ReadableStream({ start: (controller) => controller.error(error) });
+	return {
+		pid: null,
+		stdin: new WritableStream(),
+		stdout: failed(),
+		stderr: failed(),
+		exited: Promise.reject(error),
+		kill: () => {},
+	};
 }
 
 function follow(
 	child: FileProcess,
-	out: FileOutput,
-	err: FileOutput,
-	dir: string,
+	out: FifoOutput,
+	err: FifoOutput,
 	signal: AbortSignal | undefined,
 	rt: FileRuntime,
 ): Child {
 	let gone = false;
 	let readError: unknown;
-	const poll = setInterval(() => {
+	let poll: ReturnType<typeof setTimeout> | undefined;
+	const read = (): void => {
 		try {
-			out.drain(false);
-			err.drain(false);
+			// Read on at once while output flows, and check back otherwise.
+			const flowing = [out.drain(false), err.drain(false)].includes(true);
+			poll = flowing ? setTimeout(read, 0) : setTimeout(read, 20);
 		} catch (error) {
 			readError = error;
-			clearInterval(poll);
 			child.kill();
 		}
-	}, 20);
+	};
+	read();
 	const exited = (async () => {
 		try {
 			const code = await exitOf(child, rt);
 			gone = true;
-			clearInterval(poll);
+			clearTimeout(poll);
 			if (readError !== undefined) {
 				throw readError;
 			}
@@ -116,12 +156,11 @@ function follow(
 			throw error;
 		} finally {
 			gone = true;
-			clearInterval(poll);
+			clearTimeout(poll);
 			// A lost exit leaves Bun's handle referenced even after waitpid.
 			child.unref();
 			out[Symbol.dispose]();
 			err[Symbol.dispose]();
-			rmSync(dir, { recursive: true, force: true });
 		}
 	})();
 	const input = child.stdin;
@@ -237,53 +276,69 @@ export function ignoreClosedInput(error: unknown): void {
 	}
 }
 
-class FileOutput implements Disposable {
+/**
+ * How much of an exited child's output to take without a reader. The child's
+ * own is at most what its FIFO holds; only a descendant still writing has more.
+ */
+const LEFT_OVER = 1024 * 1024;
+
+/** One output stream, read from a FIFO the child writes. */
+class FifoOutput implements Disposable {
 	readonly stream: ReadableStream<Uint8Array>;
 	private readonly fd: number;
+	private readonly buffer = Buffer.allocUnsafe(64 * 1024);
 	private controller!: ReadableStreamDefaultController<Uint8Array>;
-	private offset = 0;
 	private closed = false;
 	private disposed = false;
 
 	constructor(readonly path: string) {
-		this.fd = openSync(path, "wx+", 0o600);
+		if (mkfifo === null) {
+			throw new Error("FIFO-backed processes need Bun on macOS");
+		}
+		mkfifo(path);
+		// Without blocking: there is no writer yet, and once there is, a read
+		// with nothing to read must return rather than wait.
+		this.fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK);
 		this.stream = new ReadableStream<Uint8Array>({
 			start: (controller) => {
 				this.controller = controller;
 			},
 			cancel: () => {
+				// A reader that leaves must not stall the child on a full FIFO.
 				this.closed = true;
+				this[Symbol.dispose]();
 			},
 		});
 	}
 
-	drain(final: boolean): void {
-		if (this.closed) {
-			return;
-		}
-		const size = fstatSync(this.fd).size;
+	/** Reads what the reader has room for, or all there is when `final`. */
+	drain(final: boolean): boolean {
+		let read = false;
+		let taken = 0;
 		while (
-			this.offset < size &&
-			(final || (this.controller.desiredSize ?? 0) > 0)
+			!this.closed &&
+			(final ? taken < LEFT_OVER : (this.controller.desiredSize ?? 0) > 0)
 		) {
-			const buffer = Buffer.allocUnsafe(
-				Math.min(64 * 1024, size - this.offset),
-			);
-			const count = readSync(this.fd, buffer, 0, buffer.length, this.offset);
-			if (count === 0) {
+			const count = this.next();
+			if (count === null) {
 				break;
 			}
-			this.offset += count;
-			this.controller.enqueue(buffer.subarray(0, count));
+			if (count === 0) {
+				this.end();
+				this[Symbol.dispose]();
+				break;
+			}
+			read = true;
+			taken += count;
+			this.controller.enqueue(Uint8Array.from(this.buffer.subarray(0, count)));
 		}
+		return read;
 	}
 
+	/** Takes what is left once the child is gone, and ends the stream. */
 	finish(): void {
-		if (!this.closed) {
-			this.drain(true);
-			this.closed = true;
-			this.controller.close();
-		}
+		this.drain(true);
+		this.end();
 	}
 
 	fail(error: unknown): void {
@@ -297,6 +352,25 @@ class FileOutput implements Disposable {
 		if (!this.disposed) {
 			this.disposed = true;
 			closeSync(this.fd);
+		}
+	}
+
+	private end(): void {
+		if (!this.closed) {
+			this.closed = true;
+			this.controller.close();
+		}
+	}
+
+	/** Bytes read into the buffer: 0 at the end, null for none yet. */
+	private next(): number | null {
+		try {
+			return readSync(this.fd, this.buffer, 0, this.buffer.length, null);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === "EAGAIN") {
+				return null;
+			}
+			throw error;
 		}
 	}
 }
