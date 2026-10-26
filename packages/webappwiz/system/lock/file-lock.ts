@@ -17,6 +17,11 @@ interface Holder {
 export interface FileLockOptions {
 	/** How long a holder on another host may hold the lock before it can be stolen. */
 	stalenessMs?: number;
+	/**
+	 * Judge a holder by its pid alone, whatever hostname it was written under,
+	 * for hosts whose hostname changes (macOS flips it with the network).
+	 */
+	pidOnly?: boolean;
 	/** How often to re-check a lock that is already taken. */
 	pollMs?: number;
 	fs?: Fs;
@@ -35,6 +40,7 @@ export class FileLock implements Lock {
 	private listeners: Disposer | null = null;
 	private readonly stalenessMs: number;
 	private readonly pollMs: number;
+	private readonly pidOnly: boolean;
 
 	private readonly fs: Fs;
 	private readonly ps: Ps;
@@ -49,6 +55,7 @@ export class FileLock implements Lock {
 		this.log = opts.log ?? new ConsoleLogger();
 		this.stalenessMs = opts.stalenessMs ?? 60_000;
 		this.pollMs = opts.pollMs ?? 2_000;
+		this.pidOnly = opts.pidOnly ?? false;
 	}
 
 	async acquire(): Promise<void> {
@@ -112,7 +119,7 @@ export class FileLock implements Lock {
 
 	async releaseIfOurs(): Promise<void> {
 		const holder = await this.holder();
-		if (holder?.pid === this.ps.pid && holder.hostname === this.ps.hostname) {
+		if (holder?.pid === this.ps.pid && this.sameHost(holder)) {
 			this.held = true;
 			await this.release();
 		}
@@ -136,10 +143,14 @@ export class FileLock implements Lock {
 		// lock is held, so judged by age a holder in a long test run would lose
 		// its lock to the next waiter. `at` only judges a holder on another host,
 		// whose pid cannot be checked.
-		if (holder.hostname === this.ps.hostname) {
+		if (this.sameHost(holder)) {
 			return !this.ps.alive(holder.pid);
 		}
 		return Date.now() - Date.parse(holder.at) > this.stalenessMs;
+	}
+
+	private sameHost(holder: Holder): boolean {
+		return this.pidOnly || holder.hostname === this.ps.hostname;
 	}
 
 	private steal(why: string): void {

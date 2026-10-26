@@ -68,7 +68,8 @@ try {
 `FileLock` holds the lock as a directory, so it works between processes:
 `mkdir` is atomic everywhere, so there is no check-then-write window. A holder
 that died is detected and its lock stolen: by its pid on this host, however long
-it has held the lock, and by `stalenessMs` on another. The directory is removed
+it has held the lock, and by `stalenessMs` on another, unless `pidOnly` judges by pid whatever the
+hostname, for hosts that rename. The directory is removed
 on signals and uncaught exceptions.
 
 `MemoryLock` holds nothing but itself, so it only serializes callers inside one

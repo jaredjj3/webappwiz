@@ -132,6 +132,44 @@ describe("FileLock", () => {
 		await lock.release();
 	});
 
+	it("with pidOnly, judges a holder written under another hostname by its pid", async () => {
+		const dead = 999_002;
+		await fs.mkdir(path, { recursive: false });
+		await fs.write(
+			`${path}/holder.json`,
+			JSON.stringify({
+				pid: dead,
+				hostname: "elsewhere",
+				at: new Date().toISOString(),
+			}),
+		);
+		ps.kill(dead);
+
+		const lock = new FileLock(path, { fs, ps, log, pollMs: 10, pidOnly: true });
+		await lock.acquire();
+
+		expect(
+			log.entries.map((entry) => String(entry.message)).join("\n"),
+		).toContain("stealing stale lock");
+		await lock.release();
+	});
+
+	it("with pidOnly, releaseIfOurs releases a lock written under another hostname", async () => {
+		await fs.mkdir(path, { recursive: false });
+		await fs.write(
+			`${path}/holder.json`,
+			JSON.stringify({
+				pid: ps.pid,
+				hostname: "elsewhere",
+				at: new Date().toISOString(),
+			}),
+		);
+
+		await new FileLock(path, { fs, ps, log, pidOnly: true }).releaseIfOurs();
+
+		expect(await fs.exists(path)).toBe(false);
+	});
+
 	it("removes the lock and exits on SIGINT", async () => {
 		await new FileLock(path, {
 			fs: fs,
