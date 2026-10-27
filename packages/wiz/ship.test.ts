@@ -51,13 +51,29 @@ describe("ship", () => {
 			JSON.stringify({ version: "1.3.0", done: [] }),
 		);
 
-		await ship(opts());
+		await ship({ ...opts(), env: {} });
 
 		// A patch would have stamped 1.2.4; RELEASE holding 1.3.0 overrules it.
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
 			"1.3.0",
 		);
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
+	});
+
+	it("releases at the bump SPLATES_SHIP_BUMP names", async () => {
+		await ship({ ...opts(), env: { SPLATES_SHIP_BUMP: "minor" } });
+
+		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
+			"1.3.0",
+		);
+	});
+
+	it("refuses a bump it does not know, before the gate", async () => {
+		await expect(
+			ship({ ...opts(), env: { SPLATES_SHIP_BUMP: "huge" } }),
+		).rejects.toThrow("SPLATES_SHIP_BUMP");
+
+		expect(ps.getCalls()).toEqual([]);
 	});
 
 	it("gates before it releases the workspace it found", async () => {

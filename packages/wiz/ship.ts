@@ -1,6 +1,6 @@
 import { catalog } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
-import { releases } from "webappwiz/ship";
+import { type Bump, releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
 import { fix } from "./fix";
 
@@ -31,16 +31,18 @@ export interface ShipOptions {
 	prompt?: (message: string) => string | null;
 	/** Skip the confirmation, for a caller that has already approved the ship. */
 	yes?: boolean;
+	/** The environment `SPLATES_SHIP_BUMP` is read from; the process's by default. */
+	env?: Record<string, string | undefined>;
 }
 
 /**
- * Releases every package in the workspace together, at one version, always a
- * patch. One version covers them all here, so anything larger would carry the
- * whole workspace on the strength of one package's change. A release that died
+ * Releases every package in the workspace together, at one version, a
+ * patch unless `SPLATES_SHIP_BUMP` asks for a minor or major. A release that died
  * is finished first, at the version it already holds.
  */
 export async function ship(opts: ShipOptions = {}): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
+	const bump = bumpOf(opts.env ?? process.env);
 	const ps = opts.ps ?? new NodePs();
 	// The build compiles without checking types, so a typecheck is the only
 	// gate there is: run it before anything is stamped or pushed. The suite is
@@ -54,11 +56,28 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 		),
 	);
 	await declared.release({
-		bump: "patch",
+		bump,
 		prompt: opts.prompt,
 		yes: opts.yes,
 		log,
 		fs: opts.fs,
 		ps,
 	});
+}
+
+const BUMPS: readonly Bump[] = ["patch", "minor", "major"];
+
+/** The bump `splates ship` chose, a patch when it chose none. */
+function bumpOf(env: Record<string, string | undefined>): Bump {
+	const value = env.SPLATES_SHIP_BUMP;
+	if (value === undefined || value === "") {
+		return "patch";
+	}
+	const bump = BUMPS.find((known) => known === value);
+	if (!bump) {
+		throw new Error(
+			`SPLATES_SHIP_BUMP must be patch, minor or major, not "${value}"`,
+		);
+	}
+	return bump;
 }
