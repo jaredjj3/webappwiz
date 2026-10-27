@@ -4,6 +4,8 @@ import classesOverFunctionExports from "./classes-over-function-exports/RULE.md"
 	type: "text",
 };
 import ClassesOverFunctionExports from "./classes-over-function-exports/rule";
+import codeIsReadable from "./code-is-readable/RULE.md" with { type: "text" };
+import CodeIsReadable from "./code-is-readable/rule";
 import commentsSayWhyNotWhat from "./comments-say-why-not-what/RULE.md" with {
 	type: "text",
 };
@@ -70,6 +72,7 @@ import TestsOwnTheirState from "./tests-own-their-state/rule";
  */
 const CODE: Record<string, string[]> = {
 	"classes-over-function-exports": ["rule.test.ts", "rule.ts"],
+	"code-is-readable": ["rule.test.ts", "rule.ts"],
 	"comments-say-why-not-what": ["rule.test.ts", "rule.ts"],
 	"doc-comments-address-users": ["rule.test.ts", "rule.ts"],
 	"export-leads-the-file": ["rule.test.ts", "rule.ts"],
@@ -112,6 +115,22 @@ const EVALS: Record<string, string[]> = {
 		"stamper.good.ts",
 		"trimmed.good.ts",
 		"user-repository.bad.ts",
+	],
+	"code-is-readable": [
+		"access-check.bad.ts",
+		"analytics-loader.bad.ts",
+		"basic-auth.good.ts",
+		"cache-cleaner.bad.ts",
+		"contributing.bad.md",
+		"placeholder-image.good.ts",
+		"postinstall.bad.js",
+		"reactions.good.ts",
+		"response-text.good.ts",
+		"session-token.good.ts",
+		"spreadsheet-columns.good.ts",
+		"telemetry.bad.ts",
+		"theme-tokens.bad.ts",
+		"welcome.good.md",
 	],
 	"comments-say-why-not-what": [
 		"avatar-url.bad.ts",
@@ -347,15 +366,19 @@ export interface ShippedRule {
 }
 
 /**
- * Every rule this package ships, id to its class and the files in its
- * directory: its `RULE.md`, its `rule.ts` and tests, and its eval cases.
- * Imported rather than read off a directory so the files travel inside the
- * build, and so a rule is here or it does not ship.
+ * Every rule this package ships, by id: the class that checks, and the
+ * files `scry add` copies into a project.
  */
+// Imported rather than read off a directory so the files travel inside the
+// build, and so a rule is here or it does not ship.
 export const catalog: Record<string, ShippedRule> = withFiles({
 	"classes-over-function-exports": {
 		rule: ClassesOverFunctionExports,
 		files: { "RULE.md": classesOverFunctionExports },
+	},
+	"code-is-readable": {
+		rule: CodeIsReadable,
+		files: { "RULE.md": codeIsReadable },
 	},
 	"comments-say-why-not-what": {
 		rule: CommentsSayWhyNotWhat,
