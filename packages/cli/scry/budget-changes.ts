@@ -1,7 +1,7 @@
 import { dirname } from "node:path";
 import type { Role, Spend } from "@webappwiz/scry/config";
 import { FileLock, type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import { Ledger } from "./ledger";
+import { Ledger, stateDir } from "./ledger";
 
 /**
  * What the user changed of a project's budgets on this device, from
@@ -9,6 +9,8 @@ import { Ledger } from "./ledger";
  * over what the configs declare, the raises that add to it for a while,
  * and the pauses that stop it asking anything for a while.
  * It lives beside the ledger, so every worktree of a project shares it.
+ * The shared changes, at `BudgetChanges.sharedPath`, hold the raises on a
+ * budget from the user's own config, which every project shares.
  */
 export class BudgetChanges {
 	private constructor(
@@ -16,6 +18,8 @@ export class BudgetChanges {
 		private kept: Kept,
 		private fs: Fs,
 		private ps: Ps,
+		/** Whether these are the changes every project shares. */
+		readonly shared: boolean,
 	) {}
 
 	/**
@@ -26,9 +30,14 @@ export class BudgetChanges {
 		return `${dirname(Ledger.path(project, opts))}/scry-budgets.json`;
 	}
 
+	/** Where the changes every project shares are kept, beside their ledgers. */
+	static sharedPath(opts: BudgetChangesOptions = {}): string {
+		return `${stateDir(opts.ps ?? new NodePs())}/scry-budgets.json`;
+	}
+
 	static async open(
 		path: string,
-		opts: BudgetChangesOptions = {},
+		opts: BudgetChangesOptions & { shared?: boolean } = {},
 	): Promise<BudgetChanges> {
 		const fs = opts.fs ?? new NodeFs();
 		return new BudgetChanges(
@@ -36,6 +45,7 @@ export class BudgetChanges {
 			await read(fs, path),
 			fs,
 			opts.ps ?? new NodePs(),
+			opts.shared ?? false,
 		);
 	}
 
@@ -46,7 +56,9 @@ export class BudgetChanges {
 
 	/** The raises that have not ended by `now`, oldest first. */
 	raises(now: number): Raise[] {
-		return this.kept.raises.filter((raise) => raise.until > now);
+		return this.kept.raises
+			.filter((raise) => raise.until > now)
+			.map((raise) => ({ ...raise, shared: this.shared }));
 	}
 
 	/** The pauses that have not ended by `now`, one a role at most. */
@@ -67,21 +79,27 @@ export class BudgetChanges {
 
 	/**
 	 * Adds `tokens` to what `role` may spend from `from` until `until`, as
-	 * Unix epoch milliseconds, and answers with the raise.
+	 * Unix epoch milliseconds, and answers with the raise, numbered past
+	 * `after` and every raise here.
 	 */
 	async raise(
 		role: Role,
 		tokens: number,
-		{ from, until }: { from: number; until: number },
+		{ from, until, after = 0 }: { from: number; until: number; after?: number },
 	): Promise<Raise> {
 		let made: Raise | undefined;
 		await this.change((kept) => {
 			const live = kept.raises.filter((raise) => raise.until > from);
-			const id = Math.max(0, ...kept.raises.map((raise) => raise.id)) + 1;
-			made = { id, role, tokens, from, until };
+			const id = Math.max(after, ...kept.raises.map((raise) => raise.id)) + 1;
+			made = { id, role, tokens, from, until, shared: this.shared };
 			return { ...kept, raises: [...live, made] };
 		});
 		return made as Raise;
+	}
+
+	/** The highest number any raise here has had; 0 for none. */
+	get lastRaise(): number {
+		return Math.max(0, ...this.kept.raises.map((raise) => raise.id));
 	}
 
 	/** Ends raise `id` now; false when there was none by that id. */
@@ -164,6 +182,8 @@ export interface Raise {
 	from: number;
 	/** When it ends, as Unix epoch milliseconds. */
 	until: number;
+	/** Whether it raises a budget every project shares, for them all. */
+	shared: boolean;
 }
 
 /** A while a role asks nothing, whatever it may spend. */

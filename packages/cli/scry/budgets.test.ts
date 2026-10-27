@@ -57,7 +57,9 @@ describe("Budgets", () => {
 		});
 
 		expect(
-			budgets.standing(ledger, now).map((each) => [each.window, each.spent]),
+			budgets
+				.standing(ledger, ledger, now)
+				.map((each) => [each.window, each.spent]),
 		).toEqual([
 			["today", 1000],
 			["this week", 1110],
@@ -77,8 +79,8 @@ describe("Budgets", () => {
 		});
 
 		expect([
-			budgets.allowance("llm", ledger, now),
-			budgets.allowance("som", ledger, now),
+			budgets.allowance("llm", ledger, ledger, now),
+			budgets.allowance("som", ledger, ledger, now),
 		]).toEqual([
 			{ input: 500, reason: "over the llm budget for today" },
 			undefined,
@@ -91,7 +93,7 @@ describe("Budgets", () => {
 			llm: { tokens: 2000, per: "day" },
 		});
 
-		expect(budgets.allowance("som", ledger, now)).toEqual({
+		expect(budgets.allowance("som", ledger, ledger, now)).toEqual({
 			input: 0,
 			reason: "scry.budgets spends nothing on the som",
 		});

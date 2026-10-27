@@ -51,7 +51,8 @@ export interface LoadConfigOptions {
  * `WIZ_SCRY_JOBS`. `models` and each of `profiles` lay each model they name
  * over the last layer's, effort by effort, `exclude` gathers every layer's,
  * `rules` lays each rule's options over the last layer's, and
- * `budgets` is the last layer's to set it, whole.
+ * `budgets` is the last layer's to set it, whole: the user's is shared by
+ * every project.
  */
 export async function loadConfig(
 	dir: string,
@@ -92,9 +93,14 @@ export async function loadConfig(
 			settings.rules[id] = { ...settings.rules[id], ...options };
 		}
 	}
+	const user = configPaths(dir, ps).at(-1)?.scry;
 	for (const { path, config } of found) {
 		if (config.budgets !== undefined) {
-			settings.budgets = Budgets.from(config.budgets, `${path}: scry.budgets`);
+			settings.budgets = Budgets.from(
+				config.budgets,
+				`${path}: scry.budgets`,
+				path === user,
+			);
 		}
 		for (const [id, options] of Object.entries(config.rules ?? {})) {
 			for (const name of Object.keys(options)) {

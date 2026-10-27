@@ -55,11 +55,18 @@ export async function reset(
 
 /**
  * Adds `tokens` to each of `role`'s limits `for` a while, like `1d`, and
- * prints where the budgets stand. A role that spends nothing may spend the
- * raise; an unlimited one, or one with no budget, has nothing to raise.
+ * prints where the budgets stand. On a budget every project shares, it
+ * raises it for them all, unless only for this `project`. A role that
+ * spends nothing may spend the raise; an unlimited one, or one with no
+ * budget, has nothing to raise.
  */
 export async function raise(
-	opts: BudgetsOptions & { role: string; tokens: string; for: string },
+	opts: BudgetsOptions & {
+		role: string;
+		tokens: string;
+		for: string;
+		project?: boolean;
+	},
 ): Promise<void> {
 	const role = roleIn(opts.role);
 	const tokens = parseTokens(opts.tokens);
@@ -75,7 +82,11 @@ export async function raise(
 		throw new Error(`the ${role} is unlimited: there is nothing to raise`);
 	}
 	const from = (opts.clock ?? new SystemWallClock()).now();
-	await budgets.changes.raise(role, tokens, { from, until: from + span.ms });
+	await budgets.raise(role, tokens, {
+		from,
+		until: from + span.ms,
+		project: opts.project ?? false,
+	});
 	print(await open(opts), opts);
 }
 
@@ -117,7 +128,7 @@ export async function end(
 	opts: BudgetsOptions & { id: number },
 ): Promise<void> {
 	const budgets = await open(opts);
-	if (!(await budgets.changes.end(opts.id))) {
+	if (!(await budgets.end(opts.id))) {
 		throw new Error(`no raise #${opts.id}: \`wiz scry budgets\` lists them`);
 	}
 	print(await open(opts), opts);
@@ -160,7 +171,7 @@ function lines(report: BudgetReport, now: number): string[] {
 		return role.standing.map((each, index) => [
 			index === 0 ? role.role : "",
 			index === 0 ? said : "",
-			`${each.window}: ${thousands(each.spent)} of ${thousands(each.tokens)}${each.raised > 0 ? color.dim(` (${thousands(each.raised)} raised)`) : ""}`,
+			`${each.window}${each.shared ? color.dim(" (every project)") : ""}: ${thousands(each.spent)} of ${thousands(each.tokens)}${each.raised > 0 ? color.dim(` (${thousands(each.raised)} raised)`) : ""}`,
 			each.left === 0
 				? color.red("nothing left")
 				: `${thousands(each.left)} left`,
@@ -170,7 +181,7 @@ function lines(report: BudgetReport, now: number): string[] {
 		role.raises.map((each) => [
 			`#${each.id}`,
 			role.role,
-			`+${thousands(each.tokens)}`,
+			`+${thousands(each.tokens)}${each.shared ? color.dim(" for every project") : ""}`,
 			`ends ${new Date(each.until).toLocaleString()}, in ${Math.ceil((each.until - now) / 3_600_000)}h`,
 		]),
 	);

@@ -158,10 +158,17 @@ config still holding the old list of windows is refused too, until `scry
 update` rewrites it. What each check and `scry eval`
 spent is kept per user on the device, in
 `~/.local/state/wiz/<project>/scry-spent.json` (under `$XDG_STATE_HOME` when
-set), so every worktree of a project draws on one budget.
+set), so every worktree of a project draws on one budget. A budget from the
+user's own `~/.config/scry/config.ts` is shared: each of its windows counts
+what every project on the device spent, so a limit there is one limit for
+them all. One from a project's `scry.config.ts`, or `scry budgets set`,
+counts that project's spending only, and a model set over a shared budget
+is held to both: its own limits, and the shared ones every project counts
+against.
 
 `wiz scry budgets` shows what each model may spend, where that was
-declared, what each window has left, and the raises on it; `--format json`
+declared and whether it is shared, what each window has left, and the
+raises on it; `--format json`
 says the same for a program, like arbor dev's Budget page. Its commands
 change the budgets for this project on this device, kept beside the spending
 in `scry-budgets.json`, never in a config:
@@ -170,6 +177,7 @@ in `scry-budgets.json`, never in a config:
 $ bunx @webappwiz/cli scry budgets set llm 2m/month,300k/7d
 $ bunx @webappwiz/cli scry budgets reset llm      # back to the configs'
 $ bunx @webappwiz/cli scry budgets raise som 2m --for 4h
+$ bunx @webappwiz/cli scry budgets raise som 1m --project  # this project only
 $ bunx @webappwiz/cli scry budgets end 1          # end raise #1 early
 ```
 
@@ -177,7 +185,9 @@ $ bunx @webappwiz/cli scry budgets end 1          # end raise #1 early
 `nothing`, `unlimited`, or limits joined by commas, each tokens over a
 window, like `5m/day`; with no config declaring budgets, the other model
 spends nothing until set. `raise` adds tokens to each of a model's limits
-until it ends (`--for`, a day by default); a model that spends nothing may
+until it ends (`--for`, a day by default). On a shared budget it raises it
+for every project, kept in `~/.local/state/wiz/scry-budgets.json`, unless
+`--project` raises it for this one alone; a model that spends nothing may
 spend the raise, and an unlimited one has nothing to raise.
 
 With a number to stay under, a check first counts what it would ask, as

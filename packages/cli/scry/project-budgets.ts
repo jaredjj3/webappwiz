@@ -7,7 +7,7 @@ import type { Settings } from "../load-config";
 import { table } from "../table";
 import { BudgetChanges, type Pause, type Raise } from "./budget-changes";
 import { type Allowance, Budgets, type Standing } from "./budgets";
-import { Ledger } from "./ledger";
+import { Ledger, type Spent } from "./ledger";
 import { type ProjectTools, thousands } from "./project-tools";
 import { saySpend } from "./spend";
 
@@ -46,6 +46,11 @@ export interface RoleReport {
 	from: string | null;
 	/** Whether it was set with `wiz scry budgets set`, over the configs. */
 	set: boolean;
+	/**
+	 * Whether every project's spend counts against it, as for a budget from
+	 * the user's own config.
+	 */
+	shared: boolean;
 	standing: Omit<Standing, "role">[];
 	raises: Omit<Raise, "role">[];
 	/** The pause stopping it asking anything; none when it asks as it may. */
@@ -64,12 +69,16 @@ export class ProjectBudgets {
 	private constructor(
 		private budgets: Budgets | undefined,
 		private ledger: Ledger,
+		/** What every project spent, for a budget they share. */
+		private everyProject: Spent,
 		private clock: WallClock,
 		private override: boolean,
 		/** When the run started, which every window is measured to. */
 		private now: number,
 		/** What the user changed here, over the configs. */
 		readonly changes: BudgetChanges,
+		/** The raises on budgets every project shares. */
+		private sharedChanges: BudgetChanges,
 		/** The project's root, which a report names its config from. */
 		private dir: string,
 	) {}
@@ -88,19 +97,51 @@ export class ProjectBudgets {
 			BudgetChanges.path(project, { ps }),
 			{ fs, ps },
 		);
+		const sharedChanges = await BudgetChanges.open(
+			BudgetChanges.sharedPath({ ps }),
+			{ fs, ps, shared: true },
+		);
 		const now = clock.now();
-		const raises = changes.raises(now);
+		const raises = [...changes.raises(now), ...sharedChanges.raises(now)];
 		return new ProjectBudgets(
 			Budgets.over(settings.budgets, changes.set, changes.path)
 				?.raised(raises)
 				.paused(changes.pauses(now)),
 			ledger,
+			await Ledger.everyProject({ fs, ps }),
 			clock,
 			opts.override ?? false,
 			now,
 			changes,
+			sharedChanges,
 			dir,
 		);
+	}
+
+	/**
+	 * Adds `tokens` to what `role` may spend from `from` until `until`, as
+	 * Unix epoch milliseconds: for every project when it is held to a budget
+	 * they share, unless only for this `project`.
+	 */
+	async raise(
+		role: Role,
+		tokens: number,
+		{ from, until, project }: { from: number; until: number; project: boolean },
+	): Promise<Raise> {
+		const shared =
+			!project &&
+			(this.budgets?.declared[role].shared === true ||
+				this.standing.some((each) => each.role === role && each.shared));
+		return (shared ? this.sharedChanges : this.changes).raise(role, tokens, {
+			from,
+			until,
+			after: Math.max(this.changes.lastRaise, this.sharedChanges.lastRaise),
+		});
+	}
+
+	/** Ends raise `id`, here or shared, now; false when there was none by that id. */
+	async end(id: number): Promise<boolean> {
+		return (await this.changes.end(id)) || (await this.sharedChanges.end(id));
 	}
 
 	/** Whether a run may not start for want of a budget. */
@@ -121,7 +162,12 @@ export class ProjectBudgets {
 		}
 		return Object.fromEntries(
 			ROLES.flatMap((role) => {
-				const allowance = budgets.allowance(role, this.ledger, this.now);
+				const allowance = budgets.allowance(
+					role,
+					this.ledger,
+					this.everyProject,
+					this.now,
+				);
 				return allowance === undefined ? [] : [[role, allowance]];
 			}),
 		);
@@ -235,7 +281,10 @@ export class ProjectBudgets {
 	 */
 	report(): BudgetReport {
 		const budgets = this.budgets;
-		const raises = this.changes.raises(this.now);
+		const raises = [
+			...this.changes.raises(this.now),
+			...this.sharedChanges.raises(this.now),
+		];
 		const pauses = this.changes.pauses(this.now);
 		return {
 			declared: budgets !== undefined,
@@ -249,6 +298,7 @@ export class ProjectBudgets {
 						? from.slice(this.dir.length + 1)
 						: (from ?? null),
 					set: this.changes.set[role] !== undefined,
+					shared: declared?.shared ?? false,
 					standing: this.standing
 						.filter((each) => each.role === role)
 						.map(({ role: _, ...each }) => each),
@@ -267,7 +317,9 @@ export class ProjectBudgets {
 	}
 
 	private get standing(): Standing[] {
-		return this.budgets?.standing(this.ledger, this.now) ?? [];
+		return (
+			this.budgets?.standing(this.ledger, this.everyProject, this.now) ?? []
+		);
 	}
 }
 

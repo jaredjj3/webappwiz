@@ -336,6 +336,11 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description:
 				'how long, in hours, days or weeks, like "4h" or "2d" (default: 1d)',
 		})
+		.option("project", z.boolean(), {
+			default: false,
+			description:
+				"raise it for this project only, when the budget is one every project shares from the user's config",
+		})
 		.option(...format)
 		.action((opts, { log, fs, ps }) => raiseBudget({ ...opts, log, fs, ps }));
 

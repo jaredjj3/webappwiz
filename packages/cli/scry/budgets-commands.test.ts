@@ -105,6 +105,88 @@ describe("wiz scry budgets", () => {
 		]);
 	});
 
+	/** Writes `input` som tokens spent now into `project`'s ledger. */
+	const spent = async (project: string, input: number) => {
+		const dir = `${sandbox.root}/.local/state/wiz/${project}`;
+		await sandbox.fs.mkdir(dir, { recursive: true });
+		await sandbox.fs.write(
+			`${dir}/scry-spent.json`,
+			JSON.stringify([
+				{ at: sandbox.clock.now(), role: "som", model: "clef", input },
+			]),
+		);
+	};
+
+	/** The som's windows: whether each is shared, its tokens, and what it spent. */
+	const som = () =>
+		report().roles[0]?.standing.map((each) => [
+			each.shared,
+			each.tokens,
+			each.spent,
+		]);
+
+	it("holds a budget from the user's config to every project's spend, one set here to both, and one from the project's config to this project's", async () => {
+		await spent(sandbox.root.split("/").pop() as string, 100);
+		await spent("other", 20);
+
+		await show(opts());
+		const user = som();
+		await set({ ...opts(), role: "som", spend: "1m/day" });
+		const here = som();
+		await reset({ ...opts(), role: "som" });
+		await sandbox.fs.rm(`${sandbox.root}/.config/scry/config.ts`);
+		await sandbox.fs.write(
+			`${sandbox.root}/scry.config.ts`,
+			`export default { budgets: { som: { tokens: 2_000_000, per: "day" }, llm: "nothing" } };\n`,
+		);
+		await show(opts());
+
+		expect([user, here, som()]).toEqual([
+			[[true, 5_000_000, 120]],
+			[
+				[false, 1_000_000, 100],
+				[true, 5_000_000, 120],
+			],
+			[[false, 2_000_000, 100]],
+		]);
+	});
+
+	it("raises a shared budget for every project, or with --project for this one alone", async () => {
+		await set({ ...opts(), role: "som", spend: "1m/day" });
+		await raise({ ...opts(), role: "som", tokens: "2m", for: "4h" });
+		const shared = som();
+		await raise({
+			...opts(),
+			role: "som",
+			tokens: "1m",
+			for: "4h",
+			project: true,
+		});
+		const both = som();
+		await end({ ...opts(), id: 1 });
+
+		expect([
+			shared,
+			both,
+			som(),
+			report().roles[0]?.raises.map((each) => [each.id, each.shared]),
+		]).toEqual([
+			[
+				[false, 1_000_000, 0],
+				[true, 7_000_000, 0],
+			],
+			[
+				[false, 2_000_000, 0],
+				[true, 8_000_000, 0],
+			],
+			[
+				[false, 2_000_000, 0],
+				[true, 6_000_000, 0],
+			],
+			[[2, false]],
+		]);
+	});
+
 	it("sets the other model to nothing when no config declares budgets", async () => {
 		await sandbox.fs.rm(`${sandbox.root}/.config/scry/config.ts`);
 

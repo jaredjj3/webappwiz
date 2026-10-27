@@ -6,7 +6,7 @@ import {
 } from "@webappwiz/scry/config";
 import { Duration } from "webappwiz/time";
 import type { Pause, Raise } from "./budget-changes";
-import type { Ledger } from "./ledger";
+import type { Spent } from "./ledger";
 
 /**
  * The limits `scry.budgets` declares, as checked against what the ledger
@@ -28,11 +28,12 @@ export class Budgets {
 	 * The budgets `value` declares, as a config sets `scry.budgets`. Throws,
 	 * saying `where` and what to write instead, unless every role is named
 	 * and each limit is one a check can hold to, since a config read at run
-	 * time was never typechecked.
+	 * time was never typechecked. A `shared` budget, as the user's own
+	 * config declares, is held against what every project spent.
 	 */
-	static from(value: unknown, where = "scry.budgets"): Budgets {
+	static from(value: unknown, where = "scry.budgets", shared = false): Budgets {
 		if (value === "nothing" || value === "unlimited") {
-			return Budgets.from({ som: value, llm: value }, where);
+			return Budgets.from({ som: value, llm: value }, where, shared);
 		}
 		if (Array.isArray(value)) {
 			throw new Error(
@@ -66,7 +67,7 @@ export class Budgets {
 					`${where}: say what the ${role} may spend, like ${role}: "nothing"`,
 				);
 			}
-			declared[role] = { spend: spend as Spend, where };
+			declared[role] = { spend: spend as Spend, where, shared };
 			if (spend === "nothing") {
 				nothing.add(role);
 			} else if (spend !== "unlimited") {
@@ -77,6 +78,7 @@ export class Budgets {
 				for (const [index, limit] of each.entries()) {
 					limits.push({
 						role,
+						shared,
 						...checkLimit(Array.isArray(spend) ? `${at}[${index}]` : at, limit),
 					});
 				}
@@ -87,7 +89,8 @@ export class Budgets {
 
 	/**
 	 * The budgets `set` declares for some roles, `where`, over what `under`
-	 * declares for the rest; none when neither says anything. Throws, as
+	 * declares for the rest; none when neither says anything. A role set
+	 * over a shared budget is held to the shared limits too. Throws, as
 	 * `from` does, when a role is left with nothing declared.
 	 */
 	static over(
@@ -104,23 +107,43 @@ export class Budgets {
 			),
 			where,
 		);
+		if (under === undefined) {
+			return budgets;
+		}
 		for (const role of ROLES) {
-			if (set[role] === undefined && under !== undefined) {
+			if (set[role] === undefined) {
 				budgets.declared[role] = under.declared[role];
 			}
 		}
-		return budgets;
+		// the user's limits cap every project, whatever one sets for itself
+		const shared = under.limits.filter(
+			(limit) =>
+				set[limit.role] !== undefined &&
+				limit.shared &&
+				!budgets.nothing.has(limit.role),
+		);
+		return new Budgets(
+			[...budgets.limits, ...shared],
+			budgets.nothing,
+			budgets.declared,
+		);
 	}
 
 	/**
 	 * These budgets with `raises` added: each raise's tokens on top of every
-	 * limit of its role, and, for a role that spends nothing, a limit of
-	 * their tokens from when the first began. An unlimited role has nothing
+	 * limit of its role, a shared raise's only on the shared ones, and, for
+	 * a role that spends nothing, a limit of their tokens from when the
+	 * first began, shared when any raise is. An unlimited role has nothing
 	 * to raise.
 	 */
 	raised(raises: Raise[]): Budgets {
 		const limits = this.limits.map((limit) => {
-			const extra = sum(raises.filter((raise) => raise.role === limit.role));
+			const extra = sum(
+				raises.filter(
+					(raise) =>
+						raise.role === limit.role && (limit.shared || !raise.shared),
+				),
+			);
 			return { ...limit, tokens: limit.tokens + extra, raised: extra };
 		});
 		const nothing = new Set(this.nothing);
@@ -131,6 +154,7 @@ export class Budgets {
 				const extra = sum(own);
 				limits.push({
 					role,
+					shared: own.some((raise) => raise.shared),
 					tokens: extra,
 					raised: extra,
 					since: Math.min(...own.map((raise) => raise.from)),
@@ -173,8 +197,11 @@ export class Budgets {
 			: `the ${role} is paused until ${new Date(until).toLocaleString()}`;
 	}
 
-	/** Where each numbered limit stands at `now`, by role, then as declared. */
-	standing(ledger: Ledger, now: number): Standing[] {
+	/**
+	 * Where each numbered limit stands at `now`, by role, then as declared:
+	 * against what `own` project spent, or for a shared limit, what `all` did.
+	 */
+	standing(own: Spent, all: Spent, now: number): Standing[] {
 		return ROLES.flatMap((role) =>
 			this.nothing.has(role)
 				? []
@@ -184,9 +211,13 @@ export class Budgets {
 							const spent =
 								limit.per === "check"
 									? 0
-									: ledger.spent(role, windowStart(limit, now));
+									: (limit.shared ? all : own).spent(
+											role,
+											windowStart(limit, now),
+										);
 							return {
 								role,
+								shared: limit.shared,
 								window: windowName(limit),
 								tokens: limit.tokens,
 								raised: limit.raised ?? 0,
@@ -198,7 +229,12 @@ export class Budgets {
 	}
 
 	/** What `role` may spend in this check; none for unlimited. */
-	allowance(role: Role, ledger: Ledger, now: number): Allowance | undefined {
+	allowance(
+		role: Role,
+		own: Spent,
+		all: Spent,
+		now: number,
+	): Allowance | undefined {
 		const paused = this.pausedReason(role);
 		if (paused !== undefined) {
 			return { input: 0, reason: paused };
@@ -206,7 +242,7 @@ export class Budgets {
 		if (this.nothing.has(role)) {
 			return { input: 0, reason: `scry.budgets spends nothing on the ${role}` };
 		}
-		const tightest = this.standing(ledger, now)
+		const tightest = this.standing(own, all, now)
 			.filter((each) => each.role === role)
 			.toSorted((left, right) => left.left - right.left)[0];
 		return tightest === undefined
@@ -223,11 +259,15 @@ export interface Declared {
 	spend: Spend;
 	/** Like `scry.config.ts: scry.budgets`. */
 	where: string;
+	/** Whether every project's spend counts against it, as the user's config declares. */
+	shared: boolean;
 }
 
 /** A role's numbered limit over one window. */
 interface RoleLimit {
 	role: Role;
+	/** Whether it holds what every project spent, not this one's alone. */
+	shared: boolean;
 	tokens: number;
 	per?: Period;
 	within?: string;
@@ -240,13 +280,15 @@ interface RoleLimit {
 /** Where a role stands against one of its limits. */
 export interface Standing {
 	role: Role;
+	/** Whether `spent` is every project's, for a budget they share. */
+	shared: boolean;
 	/** The window, as a report names it: `this month`, `the last 7d`. */
 	window: string;
 	/** What it may spend in the window, raises included. */
 	tokens: number;
 	/** How much of `tokens` raises added; 0 for none. */
 	raised: number;
-	/** What the ledger holds for the window. */
+	/** What the ledger holds for the window, every project's when shared. */
 	spent: number;
 	/** What is left of it, never below 0. */
 	left: number;
