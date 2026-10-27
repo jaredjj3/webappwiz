@@ -4,5 +4,7 @@ export default {
 	postCheckout: "bun install",
 	postRewrite: "bun install",
 	preMerge: "./bin/wiz dev test",
+	ship: "./bin/wiz dev ship",
+	afterBump: "bunx @webappwiz/cli update",
 	wiz: "./bin/wiz",
 };
