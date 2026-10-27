@@ -1,4 +1,4 @@
-import { afterAll, afterEach, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { constants, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,10 +24,19 @@ const writes = [
 
 describe.if(reap !== null)("FIFO-backed processes", () => {
 	// The machine's tmpdir is shared with every other run, so a private one is
-	// the only place a leftover directory can be told from someone else's.
+	// the only place a leftover directory can be told from someone else's. It
+	// is set only while this suite runs, not while the process loads every
+	// other test file, whose own children would then land in it too.
 	const shared = process.env.TMPDIR;
-	const own = mkdtempSync(join(tmpdir(), "webappwiz-ps-test-"));
-	process.env.TMPDIR = own;
+	let own = "";
+	let before: string[] = [];
+	const left = (): string[] =>
+		readdirSync(tmpdir()).filter((name) => name.startsWith("webappwiz-ps-"));
+	beforeAll(() => {
+		own = mkdtempSync(join(tmpdir(), "webappwiz-ps-test-"));
+		process.env.TMPDIR = own;
+		before = left();
+	});
 	afterAll(() => {
 		if (shared === undefined) {
 			delete process.env.TMPDIR;
@@ -36,9 +45,6 @@ describe.if(reap !== null)("FIFO-backed processes", () => {
 		}
 		rmSync(own, { recursive: true, force: true });
 	});
-	const left = (): string[] =>
-		readdirSync(tmpdir()).filter((name) => name.startsWith("webappwiz-ps-"));
-	const before = left();
 	let runtime = new LostExit();
 	const start = (argv: string[]): Child =>
 		fileStart(argv, { env: process.env, runtime });
