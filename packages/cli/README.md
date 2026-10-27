@@ -54,7 +54,10 @@ not: the tracked ones and the new ones git does not ignore. The project is
 the git repository around it. `--since <ref>` checks only the files under
 them that changed since the branch left the ref, committed or not:
 `--since main` for a branch's work, `--since HEAD` for what is not
-committed yet. It matches each rule's `files` glob against those files
+committed yet. Add `--changed-lines` to report only what is found on the
+lines the change added or changed, as a merge gate wants: the rules still
+read each changed file whole, but a finding on a line the branch never
+touched was there before it. It matches each rule's `files` glob against those files
 and runs the matching rules' checks, every rule on every file at once;
 `--rule <id>,<id>` runs only those rules.
 

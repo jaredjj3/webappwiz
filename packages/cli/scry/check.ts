@@ -80,6 +80,16 @@ export async function check(opts: CheckOptions): Promise<void> {
 	const changes =
 		opts.since === undefined ? undefined : await git.changes(opts.since, paths);
 	const since = changes?.since;
+	if (opts.changedLines && changes === undefined) {
+		log.error("--changed-lines needs --since, to know what changed");
+		ps.exit(1);
+		return;
+	}
+	// with changedLines, each file's added or changed lines; findings
+	// elsewhere were there before the change, so are not its to fix
+	const touched = opts.changedLines
+		? new Map(changes?.files.map((file) => [file.path, new Set(file.lines)]))
+		: undefined;
 	const found =
 		changes?.files.map((file) => file.path) ?? (await git.files(paths));
 	// what the config excludes, like code copied in from elsewhere, is not
@@ -178,7 +188,7 @@ export async function check(opts: CheckOptions): Promise<void> {
 				spinner?.dispose();
 			});
 		await asking.save();
-		return { asking, report };
+		return { asking, report: onTouched(report, touched) };
 	};
 
 	if (opts.cost) {
@@ -253,11 +263,15 @@ export async function check(opts: CheckOptions): Promise<void> {
 	log.info(
 		opts.format === "json"
 			? JSON.stringify({ since, ...report, spent }, null, 2)
-			: text({ ...report, unchecked }, since, {
-					spent,
-					off,
-					without: ROLES.filter((role) => disabled[role] !== undefined),
-				}).join("\n"),
+			: text(
+					{ ...report, unchecked },
+					opts.changedLines ? `${since}, on changed lines` : since,
+					{
+						spent,
+						off,
+						without: ROLES.filter((role) => disabled[role] !== undefined),
+					},
+				).join("\n"),
 	);
 	if (report.problems.some((problem) => problem.level === "error")) {
 		ps.exit(1);
@@ -275,6 +289,12 @@ export interface CheckOptions {
 	paths: string[];
 	/** Checks only the files under `paths` changed since this ref, committed or not. */
 	since?: string;
+	/**
+	 * Reports only what is found on the lines `since` added or changed. The
+	 * rules still read each changed file whole, since one may need the code
+	 * around a line to judge it. Needs `since`; false by default.
+	 */
+	changedLines?: boolean;
 	/** Checks with only the rules these ids name; every rule when empty. */
 	rules?: string[];
 	/** Rule options for this run, like `compact-files.limit=400`, over what the configs set. */
@@ -318,6 +338,25 @@ export interface CheckOptions {
 	timer?: Timer;
 	/** When spending happens, for the budgets' windows. */
 	clock?: WallClock;
+}
+
+/**
+ * `report` with only the problems on `touched` lines, by path, and none
+ * dropped when there is no `touched`.
+ */
+function onTouched(
+	report: Report,
+	touched: Map<string, Set<number>> | undefined,
+): Report {
+	if (touched === undefined) {
+		return report;
+	}
+	return {
+		...report,
+		problems: report.problems.filter((problem) =>
+			touched.get(problem.path)?.has(problem.line),
+		),
+	};
 }
 
 /** What a text report adds to the report itself. */

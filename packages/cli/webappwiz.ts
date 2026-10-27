@@ -81,6 +81,11 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			description:
 				"check only the files changed since the branch left this git ref, committed or not",
 		})
+		.option("changed-lines", z.boolean(), {
+			default: false,
+			description:
+				"with --since, report only problems on the lines the change added or changed; rules still read the whole file",
+		})
 		.option("rule", z.string(), {
 			default: "",
 			description:
@@ -139,6 +144,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 					option,
 					"override-budget": overrideBudget,
 					"disable-over-budget": disableOverBudget,
+					"changed-lines": changedLines,
 					disable,
 					...opts
 				},
@@ -148,6 +154,7 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 					...opts,
 					overrideBudget,
 					disableOverBudget,
+					changedLines,
 					disabled: Object.fromEntries(
 						disable.map((flag) => {
 							const [role, ...reason] = flag.split("=");

@@ -47,6 +47,25 @@ describe("Git", () => {
 		expect(changes.files[1]?.diff).toContain("+fresh");
 	});
 
+	it("lists the lines a change added or changed, in the file as it is now, and every line of a new one", async () => {
+		const before = Array.from({ length: 20 }, (_, i) => `line ${i + 1}`);
+		await fs.write(`${root}/kept.ts`, `${before.join("\n")}\n`);
+		await run("commit", "-qam", "twenty");
+		const after = [...before];
+		after.splice(2, 1, "changed 3");
+		after.splice(10, 0, "added 11a", "added 11b");
+		after.splice(18, 1);
+		await fs.write(`${root}/kept.ts`, `${after.join("\n")}\n`);
+		await fs.write(`${root}/new.ts`, "one\ntwo");
+
+		const changes = await git.changes("HEAD");
+
+		expect(changes.files.map((file) => [file.path, file.lines])).toEqual([
+			["kept.ts", [3, 11, 12]],
+			["new.ts", [1, 2]],
+		]);
+	});
+
 	it("measures from the ref it is given", async () => {
 		await fs.write(`${root}/kept.ts`, "later\n");
 		await run("commit", "-qam", "later");

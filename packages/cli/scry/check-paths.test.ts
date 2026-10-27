@@ -121,6 +121,45 @@ describe("wiz scry", () => {
 		);
 	});
 
+	it("reports only what it finds on the lines a change added or changed, given changedLines", async () => {
+		await sandbox.git("commit", "-qam", "foo");
+		await sandbox.fs.write(
+			`${sandbox.root}/a.ts`,
+			"const foo = 1;\nconst foo2 = 2;\nconst b = 3;\n",
+		);
+
+		await check({
+			paths: ["a.ts"],
+			since: "HEAD",
+			changedLines: true,
+			format: "text",
+			...sandbox.deps,
+		});
+
+		expect(sandbox.printed()).toEqual(
+			[
+				"a.ts",
+				"  2   error   100%   no foo   no-foo",
+				"",
+				"✖ 1 problem (1 error, 0 warnings) in 1 file since HEAD, on changed lines",
+			].join("\n"),
+		);
+	});
+
+	it("refuses changedLines without a ref to measure the change from", async () => {
+		await check({
+			paths: [],
+			changedLines: true,
+			format: "text",
+			...sandbox.deps,
+		});
+
+		expect(sandbox.warned()).toEqual([
+			"--changed-lines needs --since, to know what changed",
+		]);
+		expect(sandbox.proc.exits).toEqual([1]);
+	});
+
 	it("checks none of the files the config excludes", async () => {
 		await sandbox.fs.write(
 			`${sandbox.root}/scry.config.ts`,

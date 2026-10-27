@@ -7,6 +7,8 @@ export interface ChangedFile {
 	path: string;
 	/** The file's diff against the base, or its whole text when it is new. */
 	diff: string;
+	/** The lines the change added or changed, from 1, in the file as it is now. */
+	lines: number[];
 }
 
 /** What a check covers: the files a change touched, and what it measured from. */
@@ -97,7 +99,8 @@ export class Git {
 		);
 		const files: ChangedFile[] = [];
 		for (const path of tracked.toSorted()) {
-			files.push({ path, diff: await this.out("diff", base, "--", path) });
+			const diff = await this.out("diff", base, "--", path);
+			files.push({ path, diff, lines: addedLines(diff) });
 		}
 		for (const path of untracked.toSorted()) {
 			// --no-index exits 1 whenever the two differ, which a new file always does
@@ -108,7 +111,7 @@ export class Git {
 				"/dev/null",
 				path,
 			);
-			files.push({ path, diff: stdout });
+			files.push({ path, diff: stdout, lines: addedLines(stdout) });
 		}
 		return { since: ref, files };
 	}
@@ -149,4 +152,25 @@ export class Git {
 	private git(...args: string[]) {
 		return this.ps.spawnCapture(["git", "-C", this.dir, ...args]);
 	}
+}
+
+/**
+ * The lines a unified diff adds, from 1, in the file as it is after: a
+ * changed line is a removed one and an added one, so it counts too.
+ */
+export function addedLines(diff: string): number[] {
+	const added: number[] = [];
+	// undefined until the first hunk, so the header's `+++` line is not read as one
+	let line: number | undefined;
+	for (const text of diff.split("\n")) {
+		const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(text);
+		if (hunk !== null) {
+			line = Number(hunk[1]);
+		} else if (line !== undefined && text.startsWith("+")) {
+			added.push(line++);
+		} else if (line !== undefined && text.startsWith(" ")) {
+			line++;
+		}
+	}
+	return added;
 }
