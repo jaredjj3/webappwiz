@@ -29,6 +29,8 @@ export interface ShipOptions {
 	// scry-ignore objects-over-callbacks: the platform's own prompt() is the
 	// dependency here, and it is a bare function
 	prompt?: (message: string) => string | null;
+	/** Skip the confirmation, for a caller that has already approved the ship. */
+	yes?: boolean;
 }
 
 /**
@@ -54,6 +56,7 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 	await declared.release({
 		bump: "patch",
 		prompt: opts.prompt,
+		yes: opts.yes,
 		log,
 		fs: opts.fs,
 		ps,

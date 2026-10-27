@@ -27,6 +27,8 @@ export interface ReleaseOptions {
 	// scry-ignore objects-over-callbacks: the platform's own prompt() is the
 	// dependency here, and it is a bare function
 	prompt?: (message: string) => string | null;
+	/** Go ahead without asking, for a run whose caller has already approved it. */
+	yes?: boolean;
 }
 
 /**
@@ -99,7 +101,16 @@ export class Release {
 			current: await workspace.version(),
 		};
 		const version = found?.version ?? bump(next.current, next.bump);
-		if (!confirm(opts.prompt ?? prompt, log, this.packages, version, next)) {
+		if (
+			!confirm(
+				opts.prompt ?? prompt,
+				log,
+				this.packages,
+				version,
+				next,
+				opts.yes,
+			)
+		) {
 			log.info(color.red("aborted"));
 			return;
 		}
@@ -233,6 +244,7 @@ function confirm(
 	packages: readonly string[],
 	version: string,
 	next: Next,
+	yes = false,
 ): boolean {
 	log.info(
 		next.resuming
@@ -241,6 +253,9 @@ function confirm(
 	);
 	for (const name of packages) {
 		log.info(`  ${name}`);
+	}
+	if (yes) {
+		return true;
 	}
 	const answer = ask(
 		color.yellow(`publish ${packages.length} packages as ${version}? (y/n)`),

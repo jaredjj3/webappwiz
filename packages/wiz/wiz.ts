@@ -50,7 +50,11 @@ dev
 dev
 	.command("ship")
 	.description("release every package in the workspace at one patch version")
-	.action((_opts, { log, fs, ps }) => ship({ log, fs, ps }));
+	.option("yes", z.boolean(), {
+		default: false,
+		description: "skip the confirmation, for runs without a terminal",
+	})
+	.action(({ yes }, { log, fs, ps }) => ship({ yes, log, fs, ps }));
 
 dev
 	.command("test")

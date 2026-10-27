@@ -29,7 +29,7 @@ describe("npm registry", () => {
 
 		expect(ps.getCalls()).toEqual([
 			"npm whoami",
-			"npm login",
+			"npm login --auth-type=web",
 			"npm publish --access public",
 		]);
 	});
@@ -41,9 +41,9 @@ describe("npm registry", () => {
 		await registry.publish("/repo/packages/one");
 		await registry.publish("/repo/packages/two");
 
-		expect(ps.getCalls().filter((call) => call === "npm login")).toHaveLength(
-			1,
-		);
+		expect(
+			ps.getCalls().filter((call) => call === "npm login --auth-type=web"),
+		).toHaveLength(1);
 	});
 
 	it("says what to set instead of waiting on a human CI has not got", async () => {

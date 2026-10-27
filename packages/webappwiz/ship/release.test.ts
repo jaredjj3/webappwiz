@@ -68,6 +68,13 @@ describe("release", () => {
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
 	});
 
+	it("goes ahead without asking when told yes", async () => {
+		await release.release({ ...answering(null), yes: true });
+
+		expect(asked).toEqual([]);
+		expect(workspace.stamped).toEqual(["1.2.4"]);
+	});
+
 	it("moves the version as far as the bump says", async () => {
 		await release.release({ ...answering("y"), bump: "minor" });
 

@@ -53,12 +53,16 @@ export class NpmRegistry implements Registry {
 		if ((await this.ps.spawnCapture(["npm", "whoami"])).exitCode === 0) {
 			return;
 		}
-		// `npm login` reads from a human. CI is where there is none, and where it
+		// `npm login` reads from a human, though the web flow only prints a link. CI is where there is none, and where it
 		// would sit waiting rather than failing, so say what to set instead.
 		if (this.ps.env("CI") !== undefined) {
 			throw new Error("not logged in to npm: set NPM_TOKEN");
 		}
-		const { exitCode } = await this.ps.spawn(["npm", "login"]);
+		const { exitCode } = await this.ps.spawn([
+			"npm",
+			"login",
+			"--auth-type=web",
+		]);
 		if (exitCode !== 0) {
 			throw new Error("npm login failed");
 		}

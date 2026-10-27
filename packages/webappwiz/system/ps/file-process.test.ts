@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from "bun:test";
-import { readdirSync } from "node:fs";
+import { afterAll, afterEach, describe, expect, it } from "bun:test";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { constants, tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	type FileProcess,
 	type FileRuntime,
@@ -22,6 +23,19 @@ const writes = [
 ];
 
 describe.if(reap !== null)("FIFO-backed processes", () => {
+	// The machine's tmpdir is shared with every other run, so a private one is
+	// the only place a leftover directory can be told from someone else's.
+	const shared = process.env.TMPDIR;
+	const own = mkdtempSync(join(tmpdir(), "webappwiz-ps-test-"));
+	process.env.TMPDIR = own;
+	afterAll(() => {
+		if (shared === undefined) {
+			delete process.env.TMPDIR;
+		} else {
+			process.env.TMPDIR = shared;
+		}
+		rmSync(own, { recursive: true, force: true });
+	});
 	const left = (): string[] =>
 		readdirSync(tmpdir()).filter((name) => name.startsWith("webappwiz-ps-"));
 	const before = left();
