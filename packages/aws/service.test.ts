@@ -100,6 +100,21 @@ describe("Service", () => {
 		});
 	});
 
+	it("rolls failed deployments back to the last working task definition", () => {
+		new Service(stack, "Service", {
+			cluster,
+			image,
+			containerPort: 3000,
+		});
+		const template = Template.fromStack(stack);
+
+		template.hasResourceProperties("AWS::ECS::Service", {
+			DeploymentConfiguration: {
+				DeploymentCircuitBreaker: { Enable: true, Rollback: true },
+			},
+		});
+	});
+
 	it("layers runtime environment over the image's build-time variables", () => {
 		new Service(stack, "Service", {
 			cluster,

@@ -74,6 +74,7 @@ export class Service extends Construct implements Cacheable, ec2.IConnectable {
 			// Keep capacity up through deploys (roll a new task in before draining the old).
 			minHealthyPercent: 100,
 			maxHealthyPercent: 200,
+			circuitBreaker: { rollback: true },
 			// Lets ops exec into a running task (prod migrations, a database shell).
 			enableExecuteCommand: true,
 			cloudMapOptions: props.discoveryName
