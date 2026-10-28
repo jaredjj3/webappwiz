@@ -75,8 +75,31 @@ describe("release", () => {
 			"/repo/packages/two",
 		]);
 		expect([...git.tags]).toEqual(["v1.2.4"]);
-		expect(git.pushes).toEqual(["main", "v1.2.4"]);
+		expect(git.pushes).toEqual(["main", "main", "v1.2.4"]);
 		expect(github.releases).toEqual(["v1.2.4"]);
+		expect(await fs.exists("/repo/RELEASE")).toBe(false);
+	});
+
+	it("stops before caller steps or stamping when the initial push fails", async () => {
+		git.rejects.add("main");
+		let ran = false;
+		const declared = releases.lockstep(
+			release,
+			releases.step({
+				name: "Gate",
+				stage: "preflight",
+				deadline: Duration.mins(1),
+				run: async () => {
+					ran = true;
+				},
+			}),
+		);
+
+		await expect(declared.release(answering("y"))).rejects.toThrow("rejected");
+
+		expect(ran).toBe(false);
+		expect(workspace.stamped).toEqual([]);
+		expect(registry.publishes).toEqual([]);
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
 	});
 
@@ -98,6 +121,7 @@ describe("release", () => {
 				.map((event) => event.name),
 		).toEqual([
 			"Preflight",
+			"Push commits",
 			"Version 1.2.4",
 			"Publish @scope/one@1.2.4",
 			"Available @scope/one@1.2.4",
@@ -251,9 +275,12 @@ describe("release", () => {
 		expect(registry.publishes).toEqual(["/repo/packages/two"]);
 	});
 
-	it("asks before anything moves, and stops on any other answer", async () => {
+	it("pushes existing commits before asking, and stops publishing on any other answer", async () => {
+		git.current = "master";
+		git.trunk = "master";
 		await release.release(answering("n"));
 
+		expect(git.pushes).toEqual(["master"]);
 		expect(asked.join()).toContain("publish 2 packages as 1.2.4?");
 		expect(workspace.stamped).toEqual([]);
 		expect(registry.publishes).toEqual([]);

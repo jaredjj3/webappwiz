@@ -119,6 +119,15 @@ export class Release {
 				},
 			},
 		};
+		const push: StepDeclaration = {
+			id: "push-commits",
+			step: {
+				name: "Push commits",
+				deadline: Duration.mins(2),
+				stage: "preflight",
+				run: async () => git.push(await git.defaultBranch()),
+			},
+		};
 		const before = this.steps
 			.filter((step) => step.stage === "preflight")
 			.map((step, index) => ({ id: `preflight:${index}:${step.name}`, step }));
@@ -153,8 +162,9 @@ export class Release {
 		]
 			.toSorted((left, right) => stageRank(left) - stageRank(right))
 			.map((step, index) => ({ id: `step:${index}:${step.name}`, step }));
-		await runner.declare([preflight, ...before, versionStep, ...going]);
+		await runner.declare([preflight, push, ...before, versionStep, ...going]);
 		await runner.run(preflight, cut);
+		await runner.run(push, cut);
 		for (const step of before) {
 			await runner.run(step, cut);
 		}
