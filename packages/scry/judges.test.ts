@@ -239,15 +239,30 @@ describe("Clef and Jev", () => {
 			});
 			expect(received).toHaveLength(2);
 			const [sent] = received.map(({ body }) => body as Judgment);
-			const marker = sent?.state.marker as string;
+			const marker = sent?.state.__scry_whole_marker as string;
 			expect(Object.keys(sent?.state ?? {})).toEqual([
 				"path",
 				"file",
-				"marker",
+				"__scry_whole_marker",
 			]);
 			expect(sent?.questions.whole?.instructions).toEqual(
-				`Does \`marker\` say "${marker}"?`,
+				`Does \`__scry_whole_marker\` say "${marker}"?`,
 			);
+		});
+
+		it("keeps the marker apart from a file state that declares its own marker", async () => {
+			replies = [];
+			reply = answering(0.99, 9000);
+			const clef = new Clef("clef", { id: "acct", token: "t" }, { origin });
+
+			await clef.judge({
+				...long,
+				state: { ...long.state, marker: "\n\n> **Anything else?**\n\n" },
+			});
+
+			const [sent] = received.map(({ body }) => body as Judgment);
+			expect(sent?.state.marker).toEqual("\n\n> **Anything else?**\n\n");
+			expect(sent?.state.__scry_whole_marker).toMatch(/^[0-9a-f]{8}$/);
 		});
 
 		it("fails once every try came back cut short", async () => {

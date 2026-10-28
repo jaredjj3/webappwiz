@@ -209,15 +209,18 @@ export class SystemOneEndpoint {
 	}
 }
 
+/** The state key holding the marker, one no source under check declares. */
+const MARKER_KEY = "__scry_whole_marker";
+
 /** A judgment with `marker` after its state, and the question asking whether it arrived. */
 function marked(judgment: Judgment, marker: string): Judgment {
 	return {
-		state: { ...judgment.state, marker },
+		state: { ...judgment.state, [MARKER_KEY]: marker },
 		questions: {
 			...judgment.questions,
 			[WHOLE]: {
 				type: "noul",
-				instructions: `Does \`marker\` say "${marker}"?`,
+				instructions: `Does \`${MARKER_KEY}\` say "${marker}"?`,
 			},
 		},
 	};
