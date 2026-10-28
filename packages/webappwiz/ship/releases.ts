@@ -1,4 +1,5 @@
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
+import { Duration } from "webappwiz/time";
 import type { Artifact } from "./artifact/artifact";
 import { BunBundle } from "./bundle/bun-bundle";
 import type { Bundle } from "./bundle/bundle";
@@ -50,6 +51,23 @@ export class releases {
 	/** A caller-defined step, composed beside artifacts and other releases. */
 	static step(step: Step): Release {
 		return new Release([], [step]);
+	}
+
+	/**
+	 * Pushes existing Git commits to origin during preflight. Place this before
+	 * other preflight steps in lockstep to push before running their gates.
+	 * This is opt-in and does not create a tag or a release commit.
+	 */
+	static push(opts: GitArtifactOptions = {}): Release {
+		return releases.step({
+			name: "Push commits",
+			deadline: Duration.mins(2),
+			stage: "preflight",
+			run: async (cut) => {
+				const git = opts.git ?? new CliGit(cut.root, { ps: opts.ps });
+				await git.push(await git.branch());
+			},
+		});
 	}
 
 	/** The tag, and the push that publishes it. */

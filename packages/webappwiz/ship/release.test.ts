@@ -75,7 +75,7 @@ describe("release", () => {
 			"/repo/packages/two",
 		]);
 		expect([...git.tags]).toEqual(["v1.2.4"]);
-		expect(git.pushes).toEqual(["main", "main", "v1.2.4"]);
+		expect(git.pushes).toEqual(["main", "v1.2.4"]);
 		expect(github.releases).toEqual(["v1.2.4"]);
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
 	});
@@ -84,6 +84,7 @@ describe("release", () => {
 		git.rejects.add("main");
 		let ran = false;
 		const declared = releases.lockstep(
+			releases.push({ git }),
 			release,
 			releases.step({
 				name: "Gate",
@@ -121,7 +122,6 @@ describe("release", () => {
 				.map((event) => event.name),
 		).toEqual([
 			"Preflight",
-			"Push commits",
 			"Version 1.2.4",
 			"Publish @scope/one@1.2.4",
 			"Available @scope/one@1.2.4",
@@ -275,10 +275,18 @@ describe("release", () => {
 		expect(registry.publishes).toEqual(["/repo/packages/two"]);
 	});
 
+	it("does not push existing commits without an explicit push release", async () => {
+		await release.release(answering("n"));
+
+		expect(git.pushes).toEqual([]);
+	});
+
 	it("pushes existing commits before asking, and stops publishing on any other answer", async () => {
 		git.current = "master";
 		git.trunk = "master";
-		await release.release(answering("n"));
+		await releases
+			.lockstep(releases.push({ git }), release)
+			.release(answering("n"));
 
 		expect(git.pushes).toEqual(["master"]);
 		expect(asked.join()).toContain("publish 2 packages as 1.2.4?");

@@ -46,6 +46,7 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 	const bump = bumpOf(opts.env ?? process.env);
 	const ps = opts.ps ?? new NodePs();
 	const declared = releases.lockstep(
+		releases.push({ ps }),
 		releases.step({
 			name: "Typecheck",
 			deadline: Duration.mins(10),

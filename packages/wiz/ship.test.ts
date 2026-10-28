@@ -81,6 +81,11 @@ describe("ship", () => {
 
 		const calls = ps.getCalls();
 		const gate = calls.indexOf(GATE[0] ?? "");
+		const push = calls.findIndex((call) =>
+			call.startsWith("git -C /repo push origin"),
+		);
+		expect(push).toBeGreaterThan(-1);
+		expect(push).toBeLessThan(gate);
 		expect(calls.slice(gate, gate + GATE.length)).toEqual(GATE);
 		expect(gate).toBeLessThan(calls.indexOf("npm publish --access public"));
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
