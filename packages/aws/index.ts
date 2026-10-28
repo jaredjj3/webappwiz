@@ -10,6 +10,7 @@ export {
 	type DomainProps,
 	type RedirectDomain,
 } from "./domain";
+export { EcrImage, type EcrImageProps } from "./ecr-image";
 export {
 	Network,
 	type NetworkLookupProps,

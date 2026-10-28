@@ -5,8 +5,10 @@ import { join } from "node:path";
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import { DockerImage } from "./docker-image";
+import { EcrImage } from "./ecr-image";
 import { Network } from "./network";
 import { Service } from "./service";
 
@@ -33,6 +35,25 @@ describe("Service", () => {
 			buildContext,
 			env: { variables: { FOO: "bar" } },
 		});
+	});
+
+	it("uses a prebuilt ECR image's digest as its cache key", () => {
+		const digest = `sha256:${"b".repeat(64)}`;
+		const prebuiltImage = new EcrImage(stack, "PrebuiltImage", {
+			repository: ecr.Repository.fromRepositoryName(
+				stack,
+				"PrebuiltRepository",
+				"my-app",
+			),
+			digest,
+		});
+		const service = new Service(stack, "Service", {
+			cluster,
+			image: prebuiltImage,
+			containerPort: 3000,
+		});
+
+		expect(service.cacheKey).toBe(digest);
 	});
 
 	it("fronts the service with an internal load balancer when asked", () => {

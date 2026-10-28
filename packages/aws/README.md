@@ -3,7 +3,7 @@
 CDK constructs for running a web app on AWS: a `Network` (VPC), a `Database` (private
 RDS Postgres), a `Service` (a container on Fargate, optionally behind an internal ALB), a
 `Domain` (CloudFront + Route53 + ACM + a rate-limiting WAF in front of an internal ALB),
-and the building blocks (`DockerImage`, `SERVICE_INSTANCES`) the services are built from.
+and the building blocks (`DockerImage`, `EcrImage`, `SERVICE_INSTANCES`) the services are built from.
 
 This package ships constructs, not a stack. Deploy the shared network once per account and
 region from its own CDK app, then look it up by name from each app's CDK app. The network
@@ -38,12 +38,13 @@ changes reach staging first without a separate implementation that can drift.
 ```ts
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import {
 	Database,
-	DockerImage,
 	Domain,
+	EcrImage,
 	Network,
 	SERVICE_INSTANCES,
 	Service,
@@ -52,10 +53,12 @@ import {
 import type { Construct } from "constructs";
 
 type AppStackProps = cdk.StackProps & {
+	apiImageDigest: string;
 	domainName: string;
 	hostedZone: route53.IHostedZone;
 	instance: ServiceInstance;
 	maxCapacity: number;
+	webImageDigest: string;
 };
 
 class AppStack extends cdk.Stack {
@@ -76,7 +79,14 @@ class AppStack extends cdk.Stack {
 
 		const web = new Service(this, "Web", {
 			cluster,
-			image: new DockerImage(this, "WebImage", { filePath, buildContext }),
+			image: new EcrImage(this, "WebImage", {
+				repository: ecr.Repository.fromRepositoryName(
+					this,
+					"WebRepository",
+					"my-app-web",
+				),
+				digest: props.webImageDigest,
+			}),
 			containerPort: 3000,
 			instance: props.instance,
 			loadBalancer: { maxCapacity: props.maxCapacity },
@@ -84,7 +94,14 @@ class AppStack extends cdk.Stack {
 
 		const api = new Service(this, "Api", {
 			cluster,
-			image: new DockerImage(this, "ApiImage", { filePath, buildContext }),
+			image: new EcrImage(this, "ApiImage", {
+				repository: ecr.Repository.fromRepositoryName(
+					this,
+					"ApiRepository",
+					"my-app-api",
+				),
+				digest: props.apiImageDigest,
+			}),
 			containerPort: 3000,
 			containerName: "api",
 			instance: props.instance,
@@ -123,6 +140,8 @@ class AppStage extends cdk.Stage {
 
 const app = new cdk.App();
 const env = { account: "123456789012", region: "us-east-1" };
+const apiImageDigest = app.node.tryGetContext("apiImageDigest") as string;
+const webImageDigest = app.node.tryGetContext("webImageDigest") as string;
 // Create and delegate this prod zone before deploying either stage, then use its real ID.
 const prodHostedZone = route53.HostedZone.fromHostedZoneAttributes(
 	app,
@@ -132,6 +151,8 @@ const prodHostedZone = route53.HostedZone.fromHostedZoneAttributes(
 
 new AppStage(app, "Staging", {
 	env,
+	apiImageDigest,
+	webImageDigest,
 	appName: "my-app",
 	stageName: "staging",
 	domainName: "staging.example.com",
@@ -141,6 +162,8 @@ new AppStage(app, "Staging", {
 });
 new AppStage(app, "Prod", {
 	env,
+	apiImageDigest,
+	webImageDigest,
 	appName: "my-app",
 	stageName: "prod",
 	domainName: "example.com",
@@ -155,8 +178,39 @@ existing zone as above for staging: its `staging.example.com` and `www.staging.e
 records go into prod's zone instead of creating a zone that needs separate delegation.
 The zone must contain `domainName`.
 
-Deploy `Staging/App` on every merge, then inspect it and deploy `Prod/App` by hand. Avoid
-console changes in either stage. Activate the `app` and `stage` user-defined cost allocation
-tags in the AWS Billing and Cost Management console to split costs by app and environment;
-CDK applies them to every taggable resource in each stage. The separately deployed shared
-network is billed to the account rather than to one app's stage.
+Create the `my-app-web` and `my-app-api` ECR repositories once. On every merge, build and
+push each image once, resolve its immutable digest, and deploy staging with those digests:
+
+```sh
+ACCOUNT_ID=123456789012
+AWS_REGION=us-east-1
+GIT_COMMIT="$(git rev-parse HEAD)"
+REGISTRY="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+
+aws ecr get-login-password --region "$AWS_REGION" |
+	docker login --username AWS --password-stdin "$REGISTRY"
+for SERVICE in web api; do
+	docker build --platform linux/amd64 --file "docker/$SERVICE/Dockerfile" \
+		--tag "$REGISTRY/my-app-$SERVICE:$GIT_COMMIT" .
+	docker push "$REGISTRY/my-app-$SERVICE:$GIT_COMMIT"
+done
+
+WEB_IMAGE_DIGEST="$(aws ecr describe-images --repository-name my-app-web \
+	--image-ids imageTag="$GIT_COMMIT" --query 'imageDetails[0].imageDigest' --output text)"
+API_IMAGE_DIGEST="$(aws ecr describe-images --repository-name my-app-api \
+	--image-ids imageTag="$GIT_COMMIT" --query 'imageDetails[0].imageDigest' --output text)"
+CDK_CONTEXT=(
+	--context "webImageDigest=$WEB_IMAGE_DIGEST"
+	--context "apiImageDigest=$API_IMAGE_DIGEST"
+)
+cdk deploy Staging/App "${CDK_CONTEXT[@]}"
+```
+
+Inspect staging, then approve a manual CI job that reuses the same digest variables and runs
+`cdk deploy Prod/App "${CDK_CONTEXT[@]}"`. Do not rebuild or retag for prod: `EcrImage` makes
+both stages run the identical image and uses its digest as the CloudFront invalidation key.
+
+Avoid console changes in either stage. Activate the `app` and `stage` user-defined cost
+allocation tags in the AWS Billing and Cost Management console to split costs by app and
+environment; CDK applies them to every taggable resource in each stage. The separately
+deployed shared network is billed to the account rather than to one app's stage.
