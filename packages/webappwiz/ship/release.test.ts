@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { MemoryLogger } from "webappwiz/log";
-import { FakeFs } from "webappwiz/system/testing";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
+import { Duration } from "webappwiz/time";
+import { FakeTimer } from "webappwiz/time/testing";
 import { FakeBundle } from "./bundle/fake-bundle";
 import { FakeGit } from "./git/fake-git";
 import { FakeGithub } from "./github/fake-github";
@@ -8,6 +10,7 @@ import { GithubArtifact } from "./github/github-artifact";
 import { FakeRegistry } from "./registry/fake-registry";
 import type { Release, ReleaseOptions } from "./release";
 import { releases } from "./releases";
+import type { ReleaseStepEvent } from "./step-events";
 import { FakeWorkspace } from "./workspace/fake-workspace";
 
 describe("release", () => {
@@ -17,6 +20,7 @@ describe("release", () => {
 	let github: FakeGithub;
 	let log: MemoryLogger;
 	let fs: FakeFs;
+	let ps: FakePs;
 	let asked: string[];
 	/** Both public packages onto one registry, tagged, with the notes last. */
 	let release: Release;
@@ -28,6 +32,7 @@ describe("release", () => {
 		github = new FakeGithub();
 		log = new MemoryLogger();
 		fs = new FakeFs();
+		ps = new FakePs();
 		await fs.mkdir("/repo");
 		asked = [];
 		release = releases.lockstep(
@@ -43,6 +48,7 @@ describe("release", () => {
 		git,
 		log,
 		fs,
+		ps,
 		prompt: (message) => {
 			asked.push(message);
 			return answer;
@@ -52,6 +58,12 @@ describe("release", () => {
 	/** Everything the release said, colour codes and all. */
 	const said = () =>
 		log.entries.map((entry) => String(entry.message)).join("\n");
+
+	const events = async (): Promise<ReleaseStepEvent[]> =>
+		(await fs.read("/repo/events.jsonl"))
+			.trim()
+			.split("\n")
+			.map((line) => JSON.parse(line) as ReleaseStepEvent);
 
 	it("stamps, commits, publishes, tags, pushes and writes the notes", async () => {
 		await release.release(answering(" Y "));
@@ -66,6 +78,121 @@ describe("release", () => {
 		expect(git.pushes).toEqual(["main", "v1.2.4"]);
 		expect(github.releases).toEqual(["v1.2.4"]);
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
+	});
+
+	it("writes every declared step and its transitions as JSON lines", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
+
+		await release.release(answering("y"));
+
+		const written = await events();
+		expect(written[0]).toMatchObject({
+			type: "declared",
+			id: "preflight",
+			name: "Preflight",
+			deadlineMs: 30_000,
+		});
+		expect(
+			written
+				.filter((event) => event.type === "declared")
+				.map((event) => event.name),
+		).toEqual([
+			"Preflight",
+			"Version 1.2.4",
+			"Publish @scope/one@1.2.4",
+			"Available @scope/one@1.2.4",
+			"Publish @scope/two@1.2.4",
+			"Available @scope/two@1.2.4",
+			"Push branch",
+			"Tag v1.2.4",
+			"Push v1.2.4",
+			"Release notes",
+		]);
+		expect(
+			written
+				.filter((event) => event.type === "check")
+				.map((event) => event.passed),
+		).toEqual([true, true]);
+		expect(written.at(-1)).toMatchObject({
+			type: "done",
+			name: "Release notes",
+		});
+		expect(written.every((event) => !("expectedMs" in event))).toBe(true);
+		expect(written.every((event) => !Number.isNaN(Date.parse(event.at)))).toBe(
+			true,
+		);
+	});
+
+	it("writes no event file when WEBAPPWIZ_SHIP_EVENTS is unset", async () => {
+		await release.release(answering("y"));
+
+		expect(await fs.exists("/repo/events.jsonl")).toBe(false);
+	});
+
+	it("reports a failed step before rethrowing", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
+		github.error = new Error("not logged in to GitHub");
+
+		await expect(release.release(answering("y"))).rejects.toThrow(
+			"not logged in to GitHub",
+		);
+
+		expect((await events()).at(-1)).toMatchObject({
+			type: "failed",
+			name: "Release notes",
+			error: "not logged in to GitHub",
+		});
+	});
+
+	it("runs caller steps and retries their checks past the deadline", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
+		const timer = new FakeTimer();
+		let runs = 0;
+		let checks = 0;
+		const withStep = releases.lockstep(
+			release,
+			releases.step({
+				name: "Audit",
+				deadline: Duration.zero(),
+				stage: "preflight",
+				run: async () => {
+					runs++;
+				},
+				check: async () => ++checks === 2,
+			}),
+		);
+
+		const running = withStep.release({ ...answering("y"), timer });
+		await Bun.sleep(0);
+		expect(timer.timeouts).toHaveLength(1);
+		timer.fireTimeouts();
+		await running;
+
+		expect(runs).toBe(1);
+		expect(checks).toBe(2);
+		expect(
+			(await events())
+				.filter((event) => event.type === "check")
+				.map((event) => event.passed),
+		).toEqual([false, true, true, true]);
+	});
+
+	it("reports steps already done on resume without starting them again", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
+		github.error = new Error("stop after the tag");
+		await expect(release.release(answering("y"))).rejects.toThrow(
+			"stop after the tag",
+		);
+		await fs.write("/repo/events.jsonl", "");
+		github.error = undefined;
+
+		await release.release(answering("y"));
+
+		const publish = (await events()).filter(
+			(event) =>
+				event.name === "Publish @scope/one@1.2.4" && event.type !== "declared",
+		);
+		expect(publish.map((event) => event.type)).toEqual(["done"]);
 	});
 
 	it("goes ahead without asking when told yes", async () => {
@@ -143,10 +270,11 @@ describe("release", () => {
 
 		const state = JSON.parse(await fs.read("/repo/RELEASE"));
 		expect(state.version).toBe("1.2.4");
-		expect(state.done).toHaveLength(3); // both packages and the tag landed
+		// Both publishes and availability checks, then branch push, tag and tag push.
+		expect(state.done).toHaveLength(7);
 
 		// The retry finishes 1.2.4 whatever bump it asked for, skipping every
-		// artifact RELEASE says landed without so much as a registry lookup.
+		// step RELEASE says landed without so much as a registry lookup.
 		github.error = undefined;
 		const looked: string[] = [];
 		registry.published = async (name: string) => {

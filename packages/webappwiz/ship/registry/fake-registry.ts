@@ -1,15 +1,18 @@
 import type { Registry } from "./registry";
 
-/** Holding nothing, and recording every directory published. */
+/** A test registry whose published versions and publish calls are easy to set and read. */
 export class FakeRegistry implements Registry {
 	/** Entries read `name@version`. */
 	readonly has = new Set<string>();
 	readonly publishes: string[] = [];
-	/** The directory whose publish fails, as an unavailable registry would. */
 	fails?: string;
 
 	async published(name: string, version: string): Promise<boolean> {
 		return this.has.has(`${name}@${version}`);
+	}
+
+	async available(): Promise<boolean> {
+		return true;
 	}
 
 	async publish(dir: string): Promise<void> {

@@ -1,6 +1,8 @@
 import { color } from "webappwiz/log";
+import { Duration } from "webappwiz/time";
 import type { Artifact, Stage } from "../artifact/artifact";
 import type { Cut } from "../cut";
+import type { Step } from "../step";
 import type { Registry } from "./registry";
 
 /** One package, published through the registry that carries it. */
@@ -13,6 +15,29 @@ export class RegistryArtifact implements Artifact {
 		private readonly registry: Registry,
 	) {
 		this.packages = [name];
+	}
+
+	steps(cut: Cut): readonly Step[] {
+		return [
+			{
+				name: `Publish ${this.name}@${cut.version}`,
+				deadline: Duration.mins(5),
+				stage: "publish",
+				run: () => this.publish(cut),
+			},
+			{
+				name: `Available ${this.name}@${cut.version}`,
+				deadline: Duration.mins(15),
+				stage: "publish",
+				run: async () => {},
+				check: async () => {
+					if (this.registry.available !== undefined) {
+						return this.registry.available(this.name, cut.version);
+					}
+					return this.registry.published(this.name, cut.version);
+				},
+			},
+		];
 	}
 
 	async publish(cut: Cut): Promise<void> {

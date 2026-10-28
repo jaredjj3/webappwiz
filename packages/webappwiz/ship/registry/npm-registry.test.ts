@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import { FakePs } from "webappwiz/system/testing";
+import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { NpmRegistry } from "./npm-registry";
 
 describe("npm registry", () => {
@@ -54,5 +54,30 @@ describe("npm registry", () => {
 			new NpmRegistry({ ps }).publish("/repo/packages/one"),
 		).rejects.toThrow("not logged in to npm: set NPM_TOKEN");
 		expect(ps.getCalls()).toEqual(["npm whoami"]);
+	});
+
+	it("checks availability with an exact temporary bun install and cleans up", async () => {
+		const fs = new FakeFs();
+		let manifest = "";
+		let dir = "";
+		ps.simulate(async () => {
+			dir = ps.getCallDirs().at(-1) ?? "";
+			manifest = await fs.read(`${dir}/package.json`);
+			return 1;
+		});
+
+		const available = await new NpmRegistry({ fs, ps }).available(
+			"@scope/one",
+			"1.2.4",
+		);
+
+		expect(available).toBe(false);
+		expect(JSON.parse(manifest)).toEqual({
+			private: true,
+			dependencies: { "@scope/one": "1.2.4" },
+		});
+		expect(ps.getCalls()).toEqual(["bun install"]);
+		expect(dir).not.toBe("");
+		expect(await fs.exists(dir)).toBe(false);
 	});
 });

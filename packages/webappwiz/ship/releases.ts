@@ -12,6 +12,7 @@ import type { Registry } from "./registry/registry";
 import { RegistryArtifact } from "./registry/registry-artifact";
 import { Release } from "./release";
 import { SkillArtifact, type SkillArtifactOptions } from "./skill-artifact";
+import type { Step } from "./step";
 import { ManifestWorkspace } from "./workspace/manifest-workspace";
 
 /** What `releases.workspace` reads the roster through; the real system by default. */
@@ -46,6 +47,11 @@ export class releases {
 		return new Release([new RegistryArtifact(name, registry)]);
 	}
 
+	/** A caller-defined step, composed beside artifacts and other releases. */
+	static step(step: Step): Release {
+		return new Release([], [step]);
+	}
+
 	/** The tag, and the push that publishes it. */
 	static git(opts: GitArtifactOptions = {}): Release {
 		return new Release([new GitArtifact(opts)]);
@@ -76,16 +82,23 @@ export class releases {
 	}
 
 	/**
-	 * Every artifact given, at one version. Declare them in any order: each artifact's
-	 * stage decides when it runs, so the packages always publish before the tag
-	 * that names them, and the notes always come last.
+	 * Every declaration given, at one version. Stages decide when steps run, so
+	 * packages always publish before the tag that names them, and notes come last.
 	 */
-	static lockstep(...artifacts: Array<Artifact | Release>): Release {
-		return new Release(
-			artifacts.flatMap((artifact) =>
-				artifact instanceof Release ? [...artifact.artifacts] : [artifact],
-			),
-		);
+	static lockstep(...declarations: Array<Artifact | Release | Step>): Release {
+		const artifacts: Artifact[] = [];
+		const steps: Step[] = [];
+		for (const declaration of declarations) {
+			if (declaration instanceof Release) {
+				artifacts.push(...declaration.artifacts);
+				steps.push(...declaration.steps);
+			} else if ("run" in declaration) {
+				steps.push(declaration);
+			} else {
+				artifacts.push(declaration);
+			}
+		}
+		return new Release(artifacts, steps);
 	}
 
 	/**
@@ -96,7 +109,7 @@ export class releases {
 	static async workspace(opts: WorkspaceReleaseOptions = {}): Promise<Release> {
 		const ps = opts.ps ?? new NodePs();
 		const workspace = await ManifestWorkspace.at(ps.cwd(), { fs: opts.fs, ps });
-		const registry = new NpmRegistry({ ps });
+		const registry = new NpmRegistry({ fs: opts.fs, ps });
 		const artifacts: Artifact[] = (await workspace.packages())
 			.filter((pkg) => !pkg.private)
 			.map((pkg) => new RegistryArtifact(pkg.name, registry));

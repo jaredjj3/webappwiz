@@ -1,17 +1,22 @@
-import { NodePs, type Ps } from "webappwiz/system";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
 import type { Registry } from "./registry";
 
-/** The npm registry, reached through the npm CLI. */
-/** What a `NpmRegistry` spawns through; the real process by default. */
+/** The filesystem and processes `NpmRegistry` uses; real ones by default. */
 export interface NpmRegistryOptions {
+	fs?: Fs;
 	ps?: Ps;
 }
 
+/** Publishes packages to npm and checks exact versions with `bun install`. */
 export class NpmRegistry implements Registry {
+	private readonly fs: Fs;
 	private readonly ps: Ps;
 	private authed?: Promise<void>;
 
 	constructor(opts: NpmRegistryOptions = {}) {
+		this.fs = opts.fs ?? new NodeFs();
 		this.ps = opts.ps ?? new NodePs();
 	}
 
@@ -27,13 +32,23 @@ export class NpmRegistry implements Registry {
 		return exitCode === 0 && stdout.trim() !== "";
 	}
 
-	/**
-	 * Publishes the package in `dir`, asking for a login first if npm has
-	 * nobody. npm rather than bun sends it: npm's web 2FA can remember a
-	 * publish for five minutes, but only from the same IP, and on a dual-stack
-	 * network each bun process picks IPv4 or IPv6 afresh, so a release of
-	 * several packages asked again whenever the address changed.
-	 */
+	async available(name: string, version: string): Promise<boolean> {
+		const dir = join(tmpdir(), `webappwiz-ship-${crypto.randomUUID()}`);
+		await this.fs.mkdir(dir);
+		try {
+			await this.fs.write(
+				join(dir, "package.json"),
+				`${JSON.stringify({ private: true, dependencies: { [name]: version } })}\n`,
+			);
+			const { exitCode } = await this.ps.spawnCapture(["bun", "install"], {
+				cwd: dir,
+			});
+			return exitCode === 0;
+		} finally {
+			await this.fs.rm(dir, { recursive: true, force: true });
+		}
+	}
+
 	async publish(dir: string): Promise<void> {
 		this.authed ??= this.login();
 		await this.authed;

@@ -1,11 +1,15 @@
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
 import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
-import { type Artifact, STAGES } from "./artifact/artifact";
+import { Duration, type Timer, type WallClock } from "webappwiz/time";
+import { type Artifact, STAGES, type Stage } from "./artifact/artifact";
 import { Cut } from "./cut";
 import { CliGit } from "./git/cli-git";
 import type { Git } from "./git/git";
 import { order } from "./order";
 import { ReleaseFile } from "./release-file";
+import type { Step } from "./step";
+import { type StepDeclaration, StepEvents } from "./step-events";
+import { StepRunner } from "./step-runner";
 import { type Bump, bump } from "./version";
 import { ManifestWorkspace } from "./workspace/manifest-workspace";
 import type { Package, Workspace } from "./workspace/workspace";
@@ -24,6 +28,8 @@ export interface ReleaseOptions {
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
+	timer?: Timer;
+	wallClock?: WallClock;
 	// scry-ignore objects-over-callbacks: the platform's own prompt() is the
 	// dependency here, and it is a bare function
 	prompt?: (message: string) => string | null;
@@ -33,22 +39,24 @@ export interface ReleaseOptions {
 
 /**
  * Everything a release ships, ready to go out at one version. `releases`
- * composes these; `release()` runs the whole flow: say what would go out, ask,
- * stamp every package, commit, and carry each artifact out in stage order.
+ * composes these; `release()` runs the whole flow as declared steps: preflight,
+ * version, artifacts in stage order, and any steps the caller added.
  *
  * ```ts
  * await releases.lockstep(releases.npm("@scope/foo"), releases.git()).release();
  * ```
  *
  * A release that dies partway leaves a RELEASE file behind, and the next
- * `release()` finishes that version instead of bumping past it: every artifact
+ * `release()` finishes that version instead of bumping past it: every step
  * that landed is skipped, so nothing goes out twice.
  */
 export class Release {
 	/** Every artifact, in the order they will run: publish, then tag, then notes. */
 	readonly artifacts: readonly Artifact[];
+	/** Steps the caller declared beside the artifacts. */
+	readonly steps: readonly Step[];
 
-	constructor(artifacts: readonly Artifact[]) {
+	constructor(artifacts: readonly Artifact[], steps: readonly Step[] = []) {
 		// Sorting here, stably, is what frees declarations from caring about
 		// order: a tag cannot come before the packages it names however the
 		// artifacts were written down.
@@ -57,6 +65,7 @@ export class Release {
 				STAGES.indexOf(left.stage ?? "publish") -
 				STAGES.indexOf(right.stage ?? "publish"),
 		);
+		this.steps = steps;
 	}
 
 	/** The workspace packages this publishes, gathered from every artifact. */
@@ -72,27 +81,7 @@ export class Release {
 		const workspace =
 			opts.workspace ?? (await ManifestWorkspace.at(ps.cwd(), { fs, ps }));
 		const git = opts.git ?? new CliGit(workspace.root, { ps });
-
-		const [branch, trunk] = [await git.branch(), await git.defaultBranch()];
-		if (branch !== trunk) {
-			// Switching would release code nobody was looking at, so this is the one
-			// thing here a person has to answer with their own checkout.
-			throw new Error(`on "${branch}": releases go out from "${trunk}"`);
-		}
-		if (!(await git.clean())) {
-			// The release commit takes every tracked change with it, so a dirty tree
-			// is a release nobody reviewed. A run that died between the stamp and
-			// its commit lands here too: `git checkout` the stamps and release
-			// again, since the version comes back off RELEASE either way.
-			throw new Error(
-				"uncommitted changes: releases go out from a clean tree, so commit or discard them first",
-			);
-		}
-		// Ordered once, and used twice: it decides what builds before what, and
-		// then which package reaches the registry before which.
 		const packages = order(await workspace.packages());
-		declares(this.packages, packages);
-
 		const file = new ReleaseFile(workspace.root, { fs });
 		const found = await file.read();
 		const next: Next = {
@@ -101,6 +90,75 @@ export class Release {
 			current: await workspace.version(),
 		};
 		const version = found?.version ?? bump(next.current, next.bump);
+		const cut = new Cut(version, packages, { log, root: workspace.root });
+		const runner = new StepRunner(
+			new StepEvents(ps.env("WEBAPPWIZ_SHIP_EVENTS"), fs, opts.wallClock),
+			opts.timer,
+		);
+
+		const preflight: StepDeclaration = {
+			id: "preflight",
+			step: {
+				name: "Preflight",
+				deadline: Duration.secs(30),
+				stage: "preflight",
+				run: async () => {
+					const [branch, trunk] = [
+						await git.branch(),
+						await git.defaultBranch(),
+					];
+					if (branch !== trunk) {
+						throw new Error(`on "${branch}": releases go out from "${trunk}"`);
+					}
+					if (!(await git.clean())) {
+						throw new Error(
+							"uncommitted changes: releases go out from a clean tree, so commit or discard them first",
+						);
+					}
+					declares(this.packages, packages);
+				},
+			},
+		};
+		const before = this.steps
+			.filter((step) => step.stage === "preflight")
+			.map((step, index) => ({ id: `preflight:${index}:${step.name}`, step }));
+		const ordered = sequence(this.artifacts, packages);
+		const stamps = ordered.filter((artifact) => artifact.stage === "stamp");
+		const stamping = this.steps.filter((step) => step.stage === "stamp");
+		const versionStep: StepDeclaration = {
+			id: "version",
+			step: {
+				name: `Version ${version}`,
+				deadline: Duration.mins(2),
+				stage: "stamp",
+				run: async () => {
+					await workspace.setVersion(version);
+					for (const artifact of stamps) {
+						await artifact.publish(cut);
+					}
+					for (const step of stamping) {
+						await step.run(cut);
+					}
+					await git.commitAll(`Release ${version}`);
+				},
+			},
+		};
+		const going = [
+			...ordered
+				.filter((artifact) => artifact.stage !== "stamp")
+				.flatMap((artifact) => stepsFor(artifact, cut)),
+			...this.steps.filter(
+				(step) => step.stage !== "preflight" && step.stage !== "stamp",
+			),
+		]
+			.toSorted((left, right) => stageRank(left) - stageRank(right))
+			.map((step, index) => ({ id: `step:${index}:${step.name}`, step }));
+		await runner.declare([preflight, ...before, versionStep, ...going]);
+		await runner.run(preflight, cut);
+		for (const step of before) {
+			await runner.run(step, cut);
+		}
+
 		if (
 			!confirm(
 				opts.prompt ?? prompt,
@@ -116,36 +174,16 @@ export class Release {
 		}
 
 		const state = found ?? { version, done: [] };
-		// The file goes down before anything moves: a run that dies from here on
-		// is one the next run can see and finish.
 		await file.write(state);
-		const cut = new Cut(version, packages, { log, root: workspace.root });
-		await workspace.setVersion(version);
-		// Stamps go in before the commit takes them, and are never marked done:
-		// a resumed release writes the same version over the same files, which
-		// leaves the tree exactly as clean as it found it.
-		const ordered = sequence(this.artifacts, packages);
-		const [stamps, going] = [
-			ordered.filter((artifact) => artifact.stage === "stamp"),
-			ordered.filter((artifact) => artifact.stage !== "stamp"),
-		];
-		for (const artifact of stamps) {
-			await artifact.publish(cut);
-		}
-		await git.commitAll(`Release ${version}`);
-
 		try {
-			for (const [index, artifact] of going.entries()) {
-				const key = keyFor(artifact, index);
-				// Build output is cleaned even on failure, and staging lives only in
-				// this Cut. Rebuild on every run, including older RELEASE files
-				// that already record the build as done.
-				if (artifact.stage !== "build" && state.done.includes(key)) {
-					continue;
-				}
-				await artifact.publish(cut);
-				if (!state.done.includes(key)) {
-					state.done.push(key);
+			await runner.run(versionStep, cut);
+			for (const declaration of going) {
+				const done =
+					declaration.step.stage !== "build" &&
+					state.done.includes(declaration.id);
+				await runner.run(declaration, cut, { done });
+				if (!state.done.includes(declaration.id)) {
+					state.done.push(declaration.id);
 				}
 				await file.write(state);
 			}
@@ -187,15 +225,58 @@ function sequence(
 	});
 }
 
-/**
- * One name per artifact, so RELEASE can say which of them landed. The index makes
- * it unique; the rest makes the file legible. A declaration edited between a
- * death and its retry shifts the keys, and every artifact reruns: each one skips
- * what already went out, so the cost is a registry lookup, not a double
- * publish.
- */
-function keyFor(artifact: Artifact, index: number): string {
-	return `${index}:${artifact.packages.join(" ") || (artifact.stage ?? "publish")}`;
+/** The steps an artifact declares, or its whole publish operation as one. */
+function stepsFor(artifact: Artifact, cut: Cut): Step[] {
+	if (artifact.steps !== undefined) {
+		return artifact.steps(cut).map((step) => ({
+			...step,
+			stage: step.stage ?? artifact.stage,
+		}));
+	}
+	return [
+		{
+			name: artifactName(artifact),
+			deadline: deadlineFor(artifact.stage),
+			stage: artifact.stage,
+			run: (at) => artifact.publish(at),
+		},
+	];
+}
+
+function artifactName(artifact: Artifact): string {
+	if (artifact.packages.length > 0) {
+		return `Publish ${artifact.packages.join(" ")}`;
+	}
+	switch (artifact.stage) {
+		case "build":
+			return "Build";
+		case "tag":
+			return "Tag";
+		case "notes":
+			return "Release notes";
+		case "stamp":
+			return "Stamp";
+		default:
+			return "Publish";
+	}
+}
+
+function deadlineFor(stage: Stage | undefined): Duration {
+	switch (stage) {
+		case "build":
+			return Duration.mins(10);
+		case "tag":
+		case "notes":
+			return Duration.mins(2);
+		default:
+			return Duration.mins(5);
+	}
+}
+
+function stageRank(step: Step): number {
+	return STAGES.indexOf(
+		step.stage === "preflight" ? "publish" : (step.stage ?? "publish"),
+	);
 }
 
 /** The version about to go out, and everything the prompt should say about it. */

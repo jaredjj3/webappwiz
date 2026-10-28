@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { Duration } from "webappwiz/time";
 import { FakeArtifact } from "./artifact/fake-artifact";
 import { FakeRegistry } from "./registry/fake-registry";
 import { releases } from "./releases";
@@ -42,5 +43,17 @@ describe("releases", () => {
 
 		expect(release.artifacts[0]).toBe(docker);
 		expect(release.artifacts[1]?.stage).toBe("tag");
+	});
+
+	it("composes caller-defined steps beside artifacts", () => {
+		const step = {
+			name: "Typecheck",
+			deadline: Duration.secs(1),
+			stage: "preflight" as const,
+			run: async () => {},
+		};
+		const release = releases.lockstep(releases.step(step), releases.git());
+
+		expect(release.steps).toEqual([step]);
 	});
 });

@@ -2,6 +2,7 @@ import { catalog } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, type Logger } from "webappwiz/log";
 import { type Bump, releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
+import { Duration } from "webappwiz/time";
 import { fix } from "./fix";
 
 /**
@@ -44,12 +45,15 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const bump = bumpOf(opts.env ?? process.env);
 	const ps = opts.ps ?? new NodePs();
-	// The build compiles without checking types, so a typecheck is the only
-	// gate there is: run it before anything is stamped or pushed. The suite is
-	// not run here; whoever ships is expected to have run it already.
-	await fix({ check: true, log, ps });
-
 	const declared = releases.lockstep(
+		releases.step({
+			name: "Typecheck",
+			deadline: Duration.mins(10),
+			stage: "preflight",
+			// The build compiles without checking types, so this is the only gate.
+			// The suite is expected to have run before anybody ships.
+			run: async () => fix({ check: true, log, ps }),
+		}),
 		await releases.workspace({ fs: opts.fs, ps }),
 		...[...SKILLS, ...RULES].map((path) =>
 			releases.skill(path, { fs: opts.fs }),

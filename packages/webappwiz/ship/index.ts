@@ -12,5 +12,14 @@ export type { Registry } from "./registry/registry";
 export { Release, type ReleaseOptions } from "./release";
 export { releases, type WorkspaceReleaseOptions } from "./releases";
 export type { SkillArtifactOptions } from "./skill-artifact";
+export type { Step, StepStage } from "./step";
+export type {
+	ReleaseStepEvent,
+	StepCheckEvent,
+	StepDeclaredEvent,
+	StepDoneEvent,
+	StepFailedEvent,
+	StepStartedEvent,
+} from "./step-events";
 export type { Bump } from "./version";
 export type { Package, Workspace } from "./workspace/workspace";

@@ -79,8 +79,10 @@ describe("ship", () => {
 	it("gates before it releases the workspace it found", async () => {
 		await ship(opts());
 
-		expect(ps.getCalls().slice(0, GATE.length)).toEqual(GATE);
-		expect(ps.getCalls()).toContain("npm publish --access public");
+		const calls = ps.getCalls();
+		const gate = calls.indexOf(GATE[0] ?? "");
+		expect(calls.slice(gate, gate + GATE.length)).toEqual(GATE);
+		expect(gate).toBeLessThan(calls.indexOf("npm publish --access public"));
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
 			"1.2.4",
 		);
@@ -104,9 +106,33 @@ describe("ship", () => {
 
 		await expect(ship(opts())).rejects.toThrow("Typechecking failed");
 
-		expect(ps.getCalls()).toEqual(GATE);
+		expect(ps.getCalls().slice(-GATE.length)).toEqual(GATE);
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
 			"1.2.3",
 		);
+	});
+
+	it("reports typecheck as a declared preflight step", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
+
+		await ship(opts());
+
+		const events = (await fs.read("/repo/events.jsonl"))
+			.trim()
+			.split("\n")
+			.map((line) => JSON.parse(line));
+		expect(
+			events.find(
+				(event) => event.type === "declared" && event.name === "Typecheck",
+			),
+		).toMatchObject({ deadlineMs: 600_000 });
+		const typechecked = events.findIndex(
+			(event) => event.type === "done" && event.name === "Typecheck",
+		);
+		const versioned = events.findIndex(
+			(event) => event.type === "started" && event.name === "Version 1.2.4",
+		);
+		expect(typechecked).toBeGreaterThan(-1);
+		expect(typechecked).toBeLessThan(versioned);
 	});
 });

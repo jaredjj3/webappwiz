@@ -45,4 +45,18 @@ describe("registry artifact", () => {
 			'"@scope/gone" has no workspace package',
 		);
 	});
+
+	it("declares publishing and registry availability separately", async () => {
+		const cut = cutting();
+		const steps = new RegistryArtifact("@scope/one", new FakeRegistry()).steps(
+			cut,
+		);
+
+		expect(steps.map((step) => step.name)).toEqual([
+			"Publish @scope/one@1.2.4",
+			"Available @scope/one@1.2.4",
+		]);
+		await steps[0]?.run(cut);
+		expect(await steps[1]?.check?.(cut)).toBe(true);
+	});
 });

@@ -29,4 +29,21 @@ describe("git artifact", () => {
 		// A tag here would say 1.2.4 finished, and send the next release past it.
 		expect([...git.tags]).toEqual([]);
 	});
+
+	it("declares the branch push, tag and tag push separately", async () => {
+		const git = new FakeGit();
+		const cut = new Cut("1.2.4", [], { log: new MemoryLogger() });
+		const steps = new GitArtifact({ git }).steps(cut);
+
+		expect(steps.map((step) => step.name)).toEqual([
+			"Push branch",
+			"Tag v1.2.4",
+			"Push v1.2.4",
+		]);
+		await steps[0]?.run(cut);
+		await steps[1]?.run(cut);
+		await steps[2]?.run(cut);
+		expect(git.pushes).toEqual(["main", "v1.2.4"]);
+		expect([...git.tags]).toEqual(["v1.2.4"]);
+	});
 });
