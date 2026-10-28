@@ -5,25 +5,39 @@ RDS Postgres), a `Service` (a container on Fargate, optionally behind an interna
 `Domain` (CloudFront + Route53 + ACM + a rate-limiting WAF in front of an internal ALB),
 and the building blocks (`DockerImage`, `SERVICE_INSTANCES`) the services are built from.
 
-This package ships constructs, not a stack. Each app composes them into its own.
+This package ships constructs, not a stack. Deploy the shared network once per account and
+region from its own CDK app, then look it up by name from each app's CDK app. The network
+spans two AZs with public, internet and no-internet subnet tiers. DNS Firewall allowlists
+and flow logs are opt-in.
 
 ```ts
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import { Network, Database, DockerImage, Domain, Service } from "@webappwiz/aws";
+import type { Construct } from "constructs";
 
-export class Stack extends cdk.Stack {
+// In the network CDK app. Deploy this before synthesizing the app stacks.
+export class NetworkStack extends cdk.Stack {
 	constructor(scope: Construct, id: string) {
 		super(scope, id);
 
-		const network = new Network(this, "Network", { maxAzs: 2 });
+		new Network(this, "Network", { name: "shared", cidr: "10.0.0.0/16" });
+	}
+}
+
+// In each app's own CDK app. Network.lookup reads the shared VPC's Name tag at synth time.
+export class AppStack extends cdk.Stack {
+	constructor(scope: Construct, id: string) {
+		super(scope, id);
+
+		const network = Network.lookup(this, "Network", { name: "shared" });
 		const database = new Database(this, "Database", { vpc: network.vpc, databaseName: "app" });
 
 		const cluster = new ecs.Cluster(this, "Cluster", { vpc: network.vpc });
 		cluster.addDefaultCloudMapNamespace({ name: "app.internal" });
 
-		// Public-facing web service, behind an internal ALB.
+		// Public-facing web service, behind an internal ALB in the internet tier.
 		const web = new Service(this, "Web", {
 			cluster,
 			image: new DockerImage(this, "WebImage", { filePath, buildContext }),
@@ -31,12 +45,13 @@ export class Stack extends cdk.Stack {
 			loadBalancer: { maxCapacity: 2 },
 		});
 
-		// Private api, reached at api.app.internal:3000 by the web service alone.
+		// AWS-only api in the no-internet tier, reached at api.app.internal:3000 by web alone.
 		const api = new Service(this, "Api", {
 			cluster,
 			image: new DockerImage(this, "ApiImage", { filePath, buildContext }),
 			containerPort: 3000,
 			containerName: "api",
+			subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
 			discoveryName: "api",
 			secrets: { DB_PASSWORD: ecs.Secret.fromSecretsManager(database.secret, "password") },
 		});
@@ -53,3 +68,6 @@ export class Stack extends cdk.Stack {
 	}
 }
 ```
+
+`cdk synth` fails with the requested network name when no VPC has that tag. The lookup is
+cached in the app's `cdk.context.json`; remove that file to look up a changed network again.

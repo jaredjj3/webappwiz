@@ -10,7 +10,11 @@ export {
 	type DomainProps,
 	type RedirectDomain,
 } from "./domain";
-export { Network, type NetworkProps } from "./network";
+export {
+	Network,
+	type NetworkLookupProps,
+	type NetworkProps,
+} from "./network";
 export {
 	type LoadBalancerOptions,
 	SERVICE_INSTANCES,

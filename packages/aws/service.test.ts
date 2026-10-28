@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import { DockerImage } from "./docker-image";
 import { Network } from "./network";
@@ -11,6 +12,7 @@ import { Service } from "./service";
 
 describe("Service", () => {
 	let stack: cdk.Stack;
+	let network: Network;
 	let cluster: ecs.Cluster;
 	let image: DockerImage;
 
@@ -18,7 +20,10 @@ describe("Service", () => {
 		stack = new cdk.Stack(new cdk.App(), "TestStack", {
 			env: { account: "123456789012", region: "us-east-1" },
 		});
-		const network = new Network(stack, "Network", { maxAzs: 2 });
+		network = new Network(stack, "Network", {
+			name: "shared",
+			cidr: "10.0.0.0/16",
+		});
 		cluster = new ecs.Cluster(stack, "Cluster", { vpc: network.vpc });
 		cluster.addDefaultCloudMapNamespace({ name: "app.internal" });
 		const buildContext = mkdtempSync(join(tmpdir(), "aws-service-"));
@@ -38,18 +43,44 @@ describe("Service", () => {
 			loadBalancer: { healthCheckPath: "/health", maxCapacity: 2 },
 		});
 		const template = Template.fromStack(stack);
+		const subnetIds = network.vpc.privateSubnets.map((subnet) =>
+			stack.resolve(subnet.subnetId),
+		);
 
 		expect(service.loadBalancer).toBeDefined();
+		template.hasResourceProperties("AWS::ECS::Service", {
+			NetworkConfiguration: { AwsvpcConfiguration: { Subnets: subnetIds } },
+		});
 		template.hasResourceProperties(
 			"AWS::ElasticLoadBalancingV2::LoadBalancer",
-			{
-				Scheme: "internal",
-			},
+			{ Scheme: "internal", Subnets: subnetIds },
 		);
 		template.hasResourceProperties("AWS::ElasticLoadBalancingV2::TargetGroup", {
 			HealthCheckPath: "/health",
 		});
 		template.resourceCountIs("AWS::ApplicationAutoScaling::ScalableTarget", 1);
+	});
+
+	it("places the service and its load balancer in isolated subnets when asked", () => {
+		new Service(stack, "Service", {
+			cluster,
+			image,
+			containerPort: 3000,
+			subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+			loadBalancer: {},
+		});
+		const template = Template.fromStack(stack);
+		const subnetIds = network.vpc.isolatedSubnets.map((subnet) =>
+			stack.resolve(subnet.subnetId),
+		);
+
+		template.hasResourceProperties("AWS::ECS::Service", {
+			NetworkConfiguration: { AwsvpcConfiguration: { Subnets: subnetIds } },
+		});
+		template.hasResourceProperties(
+			"AWS::ElasticLoadBalancingV2::LoadBalancer",
+			{ Subnets: subnetIds },
+		);
 	});
 
 	it("stays private and Cloud Map discoverable without a load balancer", () => {

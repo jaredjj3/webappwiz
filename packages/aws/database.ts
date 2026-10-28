@@ -8,7 +8,6 @@ export type DatabaseProps = {
 	vpc: ec2.IVpc;
 	/** Name of the database and of the master user. */
 	databaseName: string;
-	/** Defaults to a single small burstable instance. Bump when load warrants it. */
 	instanceType?: ec2.InstanceType;
 	multiAz?: boolean;
 	/** Defaults to 20 (GiB). */
@@ -38,9 +37,7 @@ export class Database extends Construct {
 				version: rds.PostgresEngineVersion.VER_16,
 			}),
 			vpc: props.vpc,
-			// The VPC has no isolated subnets; private-with-egress plus a strict
-			// security group (wired by the caller) keeps the database off the internet.
-			vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+			vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
 			instanceType:
 				props.instanceType ??
 				ec2.InstanceType.of(

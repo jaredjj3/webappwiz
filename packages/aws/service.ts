@@ -1,5 +1,5 @@
 import { RemovalPolicy } from "aws-cdk-lib";
-import type * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -65,9 +65,11 @@ export class Service extends Construct implements Cacheable, ec2.IConnectable {
 			healthCheck: props.healthCheck,
 		});
 
+		const subnetType = props.subnetType ?? ec2.SubnetType.PRIVATE_WITH_EGRESS;
 		this.service = new ecs.FargateService(this, "Service", {
 			cluster: props.cluster,
 			taskDefinition,
+			vpcSubnets: { subnetType },
 			desiredCount: 1,
 			// Keep capacity up through deploys (roll a new task in before draining the old).
 			minHealthyPercent: 100,
@@ -86,7 +88,11 @@ export class Service extends Construct implements Cacheable, ec2.IConnectable {
 			this.loadBalancer = new elbv2.ApplicationLoadBalancer(
 				this,
 				"LoadBalancer",
-				{ vpc: props.cluster.vpc, internetFacing: false },
+				{
+					vpc: props.cluster.vpc,
+					internetFacing: false,
+					vpcSubnets: { subnetType },
+				},
 			);
 
 			const targetGroup = this.loadBalancer
@@ -131,6 +137,10 @@ export type ServiceProps = {
 	cluster: ecs.ICluster;
 	image: ServiceImage;
 	containerPort: number;
+	/** Network bucket for the tasks and internal ALB. Defaults to private-with-egress. */
+	subnetType?:
+		| ec2.SubnetType.PRIVATE_WITH_EGRESS
+		| ec2.SubnetType.PRIVATE_ISOLATED;
 	/** Container name, also the log stream prefix. Defaults to 'app'. */
 	containerName?: string;
 	/** Defaults to `SERVICE_INSTANCES.MICRO`. */

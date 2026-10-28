@@ -13,8 +13,11 @@ describe("Database", () => {
 		});
 	});
 
-	it("provisions a private, non-publicly-accessible Postgres instance", () => {
-		const network = new Network(stack, "Network");
+	it("provisions a non-publicly-accessible Postgres instance in isolated subnets", () => {
+		const network = new Network(stack, "Network", {
+			name: "shared",
+			cidr: "10.0.0.0/16",
+		});
 		new Database(stack, "Database", { vpc: network.vpc, databaseName: "app" });
 		const template = Template.fromStack(stack);
 
@@ -22,6 +25,11 @@ describe("Database", () => {
 			Engine: "postgres",
 			DBName: "app",
 			PubliclyAccessible: false,
+		});
+		template.hasResourceProperties("AWS::RDS::DBSubnetGroup", {
+			SubnetIds: network.vpc.isolatedSubnets.map((subnet) =>
+				stack.resolve(subnet.subnetId),
+			),
 		});
 	});
 });
