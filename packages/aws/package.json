@@ -11,6 +11,9 @@
 	},
 	"type": "module",
 	"module": "index.ts",
+	"bin": {
+		"webappwiz-cdk-guard": "./cdk-diff-guard.ts"
+	},
 	"exports": {
 		".": "./index.ts"
 	},

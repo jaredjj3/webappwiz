@@ -203,12 +203,20 @@ CDK_CONTEXT=(
 	--context "webImageDigest=$WEB_IMAGE_DIGEST"
 	--context "apiImageDigest=$API_IMAGE_DIGEST"
 )
+bunx --package @webappwiz/aws webappwiz-cdk-guard \
+	Staging/App Prod/App "${CDK_CONTEXT[@]}"
 cdk deploy Staging/App "${CDK_CONTEXT[@]}"
 ```
 
+The guard needs `aws-cdk` 2.1145.0 or newer installed in the app. It uses a CloudFormation
+change set and fails CI when an RDS instance or cluster, Route53 hosted zone, S3 bucket, or
+Secrets Manager secret would be replaced, deleted, or orphaned. Other changes, including
+stateless resource replacements, do not fail the guard.
+
 Inspect staging, then approve a manual CI job that reuses the same digest variables and runs
-`cdk deploy Prod/App "${CDK_CONTEXT[@]}"`. Do not rebuild or retag for prod: `EcrImage` makes
-both stages run the identical image and uses its digest as the CloudFront invalidation key.
+the guard for `Prod/App` before `cdk deploy Prod/App "${CDK_CONTEXT[@]}"`. Do not rebuild or
+retag for prod: `EcrImage` makes both stages run the identical image and uses its digest as the
+CloudFront invalidation key.
 
 Avoid console changes in either stage. Activate the `app` and `stage` user-defined cost
 allocation tags in the AWS Billing and Cost Management console to split costs by app and
