@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import * as route53 from "aws-cdk-lib/aws-route53";
 import { Domain } from "./domain";
 
 describe("Domain", () => {
@@ -51,6 +52,28 @@ describe("Domain", () => {
 				"www.example.net",
 			].sort(),
 		);
+	});
+
+	it("adds subdomain records to an existing hosted zone", () => {
+		const hostedZone = new route53.HostedZone(stack, "ProdHostedZone", {
+			zoneName: "example.com",
+		});
+		new Domain(stack, "Domain", {
+			originLoadBalancer,
+			domainName: "staging.example.com",
+			hostedZone,
+			includeWww: false,
+		});
+		const template = Template.fromStack(stack);
+
+		template.resourceCountIs("AWS::Route53::HostedZone", 1);
+		template.hasResourceProperties("AWS::Route53::RecordSet", {
+			Name: "staging.example.com.",
+			Type: "A",
+		});
+		template.hasResourceProperties("AWS::CertificateManager::Certificate", {
+			DomainName: "staging.example.com",
+		});
 	});
 
 	it("skips the redirect distribution when there's nothing to redirect", () => {

@@ -22,13 +22,12 @@ export type RedirectDomain = {
 };
 
 export type DomainProps = {
-	/**
-	 * Internal ALB the apex distribution serves from, reached privately via a CloudFront VPC origin
-	 * (plain HTTP, since the hop stays on AWS's network).
-	 */
+	/** Application load balancer that serves the app. */
 	originLoadBalancer: elbv2.IApplicationLoadBalancer;
-	/** Apex domain the app is served from, e.g. 'example.com'. Gets its own hosted zone. */
+	/** Domain the app is served from, e.g. 'example.com' or 'staging.example.com'. */
 	domainName: string;
+	/** Existing zone to create records in. Defaults to a new zone for domainName. */
+	hostedZone?: route53.IHostedZone;
 	/** Redirect www.domainName to domainName. Defaults to true. */
 	includeWww?: boolean;
 	/** Other domains that should redirect to `domainName` rather than serve the app themselves. */
@@ -52,7 +51,7 @@ export interface Cacheable extends IConstruct {
  * redirect to it.
  */
 export class Domain extends Construct {
-	readonly hostedZone: route53.HostedZone;
+	readonly hostedZone: route53.IHostedZone;
 	readonly certificate: certificateManager.Certificate;
 	readonly distribution: cloudfront.Distribution;
 	readonly redirectDistribution?: cloudfront.Distribution;
@@ -63,13 +62,11 @@ export class Domain extends Construct {
 		const includeWww = props.includeWww ?? true;
 		const redirectDomains = props.redirectDomains ?? [];
 
-		this.hostedZone = new route53.HostedZone(
-			this,
-			zoneIdFor(props.domainName),
-			{
+		this.hostedZone =
+			props.hostedZone ??
+			new route53.HostedZone(this, zoneIdFor(props.domainName), {
 				zoneName: props.domainName,
-			},
-		);
+			});
 
 		const redirectZones = redirectDomains.map((redirect) => ({
 			...redirect,
@@ -81,7 +78,8 @@ export class Domain extends Construct {
 
 		// Every hostname other than the apex, each mapped to the hosted zone that owns it. Needed
 		// both for certificate DNS validation and for the redirect distribution's alternate names.
-		const redirectNames: Array<{ name: string; zone: route53.HostedZone }> = [];
+		const redirectNames: Array<{ name: string; zone: route53.IHostedZone }> =
+			[];
 		if (includeWww) {
 			redirectNames.push({
 				name: `www.${props.domainName}`,
@@ -189,6 +187,10 @@ export class Domain extends Construct {
 
 		new route53.ARecord(this, "AliasRecord", {
 			zone: this.hostedZone,
+			recordName:
+				props.domainName === this.hostedZone.zoneName
+					? undefined
+					: props.domainName.replace(`.${this.hostedZone.zoneName}`, ""),
 			target: route53.RecordTarget.fromAlias(
 				new route53Targets.CloudFrontTarget(this.distribution),
 			),
@@ -254,12 +256,7 @@ export class Domain extends Construct {
 		}
 	}
 
-	/**
-	 * Invalidates the entire cache (`/*`) whenever `origin`'s content changes.
-	 * The distribution is also ordered after `origin`, so the invalidation runs
-	 * once the new content is live. Re-invalidates only when `origin.cacheKey`
-	 * changes, and no-ops otherwise.
-	 */
+	/** Call with a versioned origin to clear the CloudFront cache when its content changes. */
 	invalidateOnUpdate(origin: Cacheable): void {
 		this.distribution.node.addDependency(origin);
 

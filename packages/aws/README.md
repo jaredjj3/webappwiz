@@ -12,9 +12,7 @@ and flow logs are opt-in.
 
 ```ts
 import * as cdk from "aws-cdk-lib";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as ecs from "aws-cdk-lib/aws-ecs";
-import { Network, Database, DockerImage, Domain, Service } from "@webappwiz/aws";
+import { Network } from "@webappwiz/aws";
 import type { Construct } from "constructs";
 
 // In the network CDK app. Deploy this before synthesizing the app stacks.
@@ -25,32 +23,71 @@ export class NetworkStack extends cdk.Stack {
 		new Network(this, "Network", { name: "shared", cidr: "10.0.0.0/16" });
 	}
 }
+```
 
-// In each app's own CDK app. Network.lookup reads the shared VPC's Name tag at synth time.
-export class AppStack extends cdk.Stack {
-	constructor(scope: Construct, id: string) {
-		super(scope, id);
+`cdk synth` fails with the requested network name when no VPC has that tag. The lookup is
+cached in the app's `cdk.context.json`; remove that file to look up a changed network again.
+
+## Permanent staging and prod
+
+Keep both stages in the same CDK app and AWS account. They share the network and prod's
+hosted zone, but each stage creates its own cluster, database and secret, security groups,
+services and CloudFront distributions. Instantiate one stack class twice so infrastructure
+changes reach staging first without a separate implementation that can drift.
+
+```ts
+import * as cdk from "aws-cdk-lib";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as ecs from "aws-cdk-lib/aws-ecs";
+import * as route53 from "aws-cdk-lib/aws-route53";
+import {
+	Database,
+	DockerImage,
+	Domain,
+	Network,
+	SERVICE_INSTANCES,
+	Service,
+	type ServiceInstance,
+} from "@webappwiz/aws";
+import type { Construct } from "constructs";
+
+type AppStackProps = cdk.StackProps & {
+	domainName: string;
+	hostedZone: route53.IHostedZone;
+	instance: ServiceInstance;
+	maxCapacity: number;
+};
+
+class AppStack extends cdk.Stack {
+	constructor(scope: Construct, id: string, props: AppStackProps) {
+		super(scope, id, props);
 
 		const network = Network.lookup(this, "Network", { name: "shared" });
-		const database = new Database(this, "Database", { vpc: network.vpc, databaseName: "app" });
+		const database = new Database(this, "Database", {
+			vpc: network.vpc,
+			databaseName: "app",
+			// These are the defaults too: permanent staging matches prod's data protection.
+			deletionProtection: true,
+			removalPolicy: cdk.RemovalPolicy.RETAIN,
+		});
 
 		const cluster = new ecs.Cluster(this, "Cluster", { vpc: network.vpc });
 		cluster.addDefaultCloudMapNamespace({ name: "app.internal" });
 
-		// Public-facing web service, behind an internal ALB in the internet tier.
 		const web = new Service(this, "Web", {
 			cluster,
 			image: new DockerImage(this, "WebImage", { filePath, buildContext }),
 			containerPort: 3000,
-			loadBalancer: { maxCapacity: 2 },
+			instance: props.instance,
+			loadBalancer: { maxCapacity: props.maxCapacity },
 		});
 
-		// AWS-only api in the no-internet tier, reached at api.app.internal:3000 by web alone.
 		const api = new Service(this, "Api", {
 			cluster,
 			image: new DockerImage(this, "ApiImage", { filePath, buildContext }),
 			containerPort: 3000,
 			containerName: "api",
+			instance: props.instance,
 			subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
 			discoveryName: "api",
 			secrets: { DB_PASSWORD: ecs.Secret.fromSecretsManager(database.secret, "password") },
@@ -61,13 +98,65 @@ export class AppStack extends cdk.Stack {
 		const domain = new Domain(this, "Domain", {
 			// biome-ignore lint/style/noNonNullAssertion: this service has a load balancer
 			originLoadBalancer: web.loadBalancer!,
-			domainName: "example.com",
-			redirectDomains: [{ domainName: "example.net" }],
+			domainName: props.domainName,
+			hostedZone: props.hostedZone,
 		});
 		domain.invalidateOnUpdate(web);
 	}
 }
+
+type AppStageProps = cdk.StageProps &
+	Omit<AppStackProps, keyof cdk.StackProps> & {
+		appName: string;
+		stageName: string;
+	};
+
+class AppStage extends cdk.Stage {
+	constructor(scope: Construct, id: string, props: AppStageProps) {
+		super(scope, id, props);
+
+		new AppStack(this, "App", props);
+		cdk.Tags.of(this).add("app", props.appName);
+		cdk.Tags.of(this).add("stage", props.stageName);
+	}
+}
+
+const app = new cdk.App();
+const env = { account: "123456789012", region: "us-east-1" };
+// Create and delegate this prod zone before deploying either stage, then use its real ID.
+const prodHostedZone = route53.HostedZone.fromHostedZoneAttributes(
+	app,
+	"ProdHostedZone",
+	{ hostedZoneId: "Z0123456789ABCDEFGHIJ", zoneName: "example.com" },
+);
+
+new AppStage(app, "Staging", {
+	env,
+	appName: "my-app",
+	stageName: "staging",
+	domainName: "staging.example.com",
+	hostedZone: prodHostedZone,
+	instance: SERVICE_INSTANCES.MICRO,
+	maxCapacity: 2,
+});
+new AppStage(app, "Prod", {
+	env,
+	appName: "my-app",
+	stageName: "prod",
+	domainName: "example.com",
+	hostedZone: prodHostedZone,
+	instance: SERVICE_INSTANCES.MICRO,
+	maxCapacity: 10,
+});
 ```
 
-`cdk synth` fails with the requested network name when no VPC has that tag. The lookup is
-cached in the app's `cdk.context.json`; remove that file to look up a changed network again.
+`Domain` creates a hosted zone for `domainName` when `hostedZone` is omitted. Pass an
+existing zone as above for staging: its `staging.example.com` and `www.staging.example.com`
+records go into prod's zone instead of creating a zone that needs separate delegation.
+The zone must contain `domainName`.
+
+Deploy `Staging/App` on every merge, then inspect it and deploy `Prod/App` by hand. Avoid
+console changes in either stage. Activate the `app` and `stage` user-defined cost allocation
+tags in the AWS Billing and Cost Management console to split costs by app and environment;
+CDK applies them to every taggable resource in each stage. The separately deployed shared
+network is billed to the account rather than to one app's stage.
