@@ -46,18 +46,17 @@ describe("registry artifact", () => {
 		);
 	});
 
-	it("declares publishing and registry availability separately", async () => {
+	it("publishes and moves on, waiting on no install to resolve it", async () => {
 		const cut = cutting();
-		const steps = new RegistryArtifact("@scope/one", new FakeRegistry()).steps(
-			cut,
-		);
+		const registry = new FakeRegistry();
+		const steps = new RegistryArtifact("@scope/one", registry).steps(cut);
 
 		expect(steps.map((step) => step.name)).toEqual([
 			"Publish @scope/one@1.2.4",
-			"Available @scope/one@1.2.4",
 		]);
+		expect(steps[0]?.check).toBeUndefined();
 		await steps[0]?.run(cut);
-		expect(await steps[1]?.check?.(cut)).toBe(true);
+		expect(registry.publishes).toEqual(["/repo/packages/one"]);
 	});
 
 	it("answers what is live with what the registry holds", async () => {

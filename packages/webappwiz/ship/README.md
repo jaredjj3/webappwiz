@@ -169,7 +169,10 @@ already went out.
 
 ## What is live
 
-A release pushes versions out; `status()` reads them back. Every artifact
+A release pushes versions out and moves on: it never waits for a registry or
+its CDN to serve what it published, so the tag goes on as soon as the last
+package is out. Whether a version is installable yet is for whoever needs it
+to ask. `status()` reads back what is live. Every artifact
 that can say what it has live answers `deployed()`, and `status()` asks them
 all beside the workspace's own version, so a caller can show what lags:
 

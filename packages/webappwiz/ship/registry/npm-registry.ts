@@ -1,22 +1,17 @@
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { type Fs, NodeFs, NodePs, type Ps } from "webappwiz/system";
+import { NodePs, type Ps } from "webappwiz/system";
 import type { Registry } from "./registry";
 
-/** The filesystem and processes `NpmRegistry` uses; real ones by default. */
+/** The processes `NpmRegistry` spawns through; the real ones by default. */
 export interface NpmRegistryOptions {
-	fs?: Fs;
 	ps?: Ps;
 }
 
-/** Publishes packages to npm and checks exact versions with `bun install`. */
+/** Publishes packages to npm and reads back what it holds. */
 export class NpmRegistry implements Registry {
-	private readonly fs: Fs;
 	private readonly ps: Ps;
 	private authed?: Promise<void>;
 
 	constructor(opts: NpmRegistryOptions = {}) {
-		this.fs = opts.fs ?? new NodeFs();
 		this.ps = opts.ps ?? new NodePs();
 	}
 
@@ -47,23 +42,6 @@ export class NpmRegistry implements Registry {
 			return undefined;
 		}
 		throw new Error(`npm view ${name}: ${stderr.trim() || stdout.trim()}`);
-	}
-
-	async available(name: string, version: string): Promise<boolean> {
-		const dir = join(tmpdir(), `webappwiz-ship-${crypto.randomUUID()}`);
-		await this.fs.mkdir(dir);
-		try {
-			await this.fs.write(
-				join(dir, "package.json"),
-				`${JSON.stringify({ private: true, dependencies: { [name]: version } })}\n`,
-			);
-			const { exitCode } = await this.ps.spawnCapture(["bun", "install"], {
-				cwd: dir,
-			});
-			return exitCode === 0;
-		} finally {
-			await this.fs.rm(dir, { recursive: true, force: true });
-		}
 	}
 
 	async publish(dir: string): Promise<void> {

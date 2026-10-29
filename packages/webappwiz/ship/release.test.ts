@@ -124,19 +124,14 @@ describe("release", () => {
 			"Preflight",
 			"Version 1.2.4",
 			"Publish @scope/one@1.2.4",
-			"Available @scope/one@1.2.4",
 			"Publish @scope/two@1.2.4",
-			"Available @scope/two@1.2.4",
 			"Push branch",
 			"Tag v1.2.4",
 			"Push v1.2.4",
 			"Release notes",
 		]);
-		expect(
-			written
-				.filter((event) => event.type === "check")
-				.map((event) => event.passed),
-		).toEqual([true, true]);
+		// Nothing waits on a registry to serve what went out.
+		expect(written.filter((event) => event.type === "check")).toEqual([]);
 		expect(written.at(-1)).toMatchObject({
 			type: "done",
 			name: "Release notes",
@@ -198,7 +193,7 @@ describe("release", () => {
 			(await events())
 				.filter((event) => event.type === "check")
 				.map((event) => event.passed),
-		).toEqual([false, true, true, true]);
+		).toEqual([false, true]);
 	});
 
 	it("reports steps already done on resume without starting them again", async () => {
@@ -305,8 +300,8 @@ describe("release", () => {
 
 		const state = JSON.parse(await fs.read("/repo/RELEASE"));
 		expect(state.version).toBe("1.2.4");
-		// Both publishes and availability checks, then branch push, tag and tag push.
-		expect(state.done).toHaveLength(7);
+		// Both publishes, then branch push, tag and tag push.
+		expect(state.done).toHaveLength(5);
 
 		// The retry finishes 1.2.4 whatever bump it asked for, skipping every
 		// step RELEASE says landed without so much as a registry lookup.

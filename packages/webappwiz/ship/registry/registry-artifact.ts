@@ -29,18 +29,6 @@ export class RegistryArtifact implements Artifact {
 				stage: "publish",
 				run: () => this.publish(cut),
 			},
-			{
-				name: `Available ${this.name}@${cut.version}`,
-				deadline: Duration.mins(15),
-				stage: "publish",
-				run: async () => {},
-				check: async () => {
-					if (this.registry.available !== undefined) {
-						return this.registry.available(this.name, cut.version);
-					}
-					return this.registry.published(this.name, cut.version);
-				},
-			},
 		];
 	}
 

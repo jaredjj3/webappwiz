@@ -17,10 +17,6 @@ export class FakeRegistry implements Registry {
 		return this.latest.get(name);
 	}
 
-	async available(): Promise<boolean> {
-		return true;
-	}
-
 	async publish(dir: string): Promise<void> {
 		if (dir === this.fails) {
 			throw new Error(`publish failed in ${dir}`);
