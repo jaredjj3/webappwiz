@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { catalog } from "@webappwiz/scry/catalog";
-import { MemoryLogger } from "webappwiz/log";
+import { color, MemoryLogger } from "webappwiz/log";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
-import { ship } from "./ship";
+import { ship, status } from "./ship";
 
 describe("ship", () => {
 	// The gate runs through the same FakePs the release does, so its commands
@@ -139,5 +139,32 @@ describe("ship", () => {
 		);
 		expect(typechecked).toBeGreaterThan(-1);
 		expect(typechecked).toBeLessThan(versioned);
+	});
+
+	it("prints what each artifact has live, marking what lags", async () => {
+		// The reads run at once, so each answers through its own command rather
+		// than through one output a sibling could overwrite first.
+		const live: Record<string, string> = {
+			npm: "1.2.3\n",
+			git: "abc123\trefs/tags/v1.2.3\n",
+			gh: "v1.2.2\n",
+		};
+		const read = ps.spawnCapture.bind(ps);
+		ps.spawnCapture = async (argv, spawnOpts) => ({
+			...(await read(argv, spawnOpts)),
+			stdout: live[argv[0] ?? ""] ?? "",
+		});
+
+		await status({ log, fs, ps });
+
+		const lines = log.entries.map((entry) => color.strip(entry.message));
+		expect(lines).toEqual([
+			"workspace 1.2.3",
+			"  @scope/solo     1.2.3",
+			"  git tag         1.2.3",
+			"  GitHub release  1.2.2 (behind)",
+		]);
+		// Reading publishes nothing and stamps nothing.
+		expect(ps.getCalls()).not.toContain("npm publish --access public");
 	});
 });

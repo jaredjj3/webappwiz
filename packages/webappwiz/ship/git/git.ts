@@ -10,4 +10,6 @@ export interface Git {
 	/** Tags the commit at HEAD. A tag already there is left where it is. */
 	tag(tag: string): Promise<void>;
 	push(ref: string): Promise<void>;
+	/** The names of origin's tags matching `pattern`, a glob such as `v*`. */
+	remoteTags(pattern: string): Promise<string[]>;
 }

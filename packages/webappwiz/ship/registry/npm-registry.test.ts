@@ -80,4 +80,29 @@ describe("npm registry", () => {
 		expect(dir).not.toBe("");
 		expect(await fs.exists(dir)).toBe(false);
 	});
+
+	it("reads the version installs get from the latest dist-tag", async () => {
+		ps.setCaptureOutput("1.2.3\n", "");
+
+		expect(await new NpmRegistry({ ps }).deployed("@scope/one")).toBe("1.2.3");
+		expect(ps.getCalls()).toEqual(["npm view @scope/one dist-tags.latest"]);
+	});
+
+	it("reads nothing out yet for a name npm has never seen", async () => {
+		ps.simulate(async () => 1);
+		ps.setCaptureOutput("", "npm error code E404\n");
+
+		expect(
+			await new NpmRegistry({ ps }).deployed("@scope/new"),
+		).toBeUndefined();
+	});
+
+	it("throws a read npm could not make, rather than guess", async () => {
+		ps.simulate(async () => 1);
+		ps.setCaptureOutput("", "npm error code ENOTFOUND\n");
+
+		await expect(
+			new NpmRegistry({ ps }).deployed("@scope/one"),
+		).rejects.toThrow("npm view @scope/one: npm error code ENOTFOUND");
+	});
 });

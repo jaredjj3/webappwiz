@@ -59,4 +59,14 @@ describe("registry artifact", () => {
 		await steps[0]?.run(cut);
 		expect(await steps[1]?.check?.(cut)).toBe(true);
 	});
+
+	it("answers what is live with what the registry holds", async () => {
+		const registry = new FakeRegistry();
+		const artifact = new RegistryArtifact("@scope/one", registry);
+
+		expect(await artifact.deployed()).toBeUndefined();
+		registry.latest.set("@scope/one", "1.2.3");
+		expect(await artifact.deployed()).toBe("1.2.3");
+		expect(artifact.name).toBe("@scope/one");
+	});
 });

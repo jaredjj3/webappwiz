@@ -9,7 +9,13 @@ export type { Github } from "./github/github";
 export { order } from "./order";
 export type { NpmRegistryOptions } from "./registry/npm-registry";
 export type { Registry } from "./registry/registry";
-export { Release, type ReleaseOptions } from "./release";
+export {
+	type DeployedArtifact,
+	Release,
+	type ReleaseOptions,
+	type ReleaseStatus,
+	type StatusOptions,
+} from "./release";
 export { releases, type WorkspaceReleaseOptions } from "./releases";
 export type { SkillArtifactOptions } from "./skill-artifact";
 export type { Step, StepStage } from "./step";

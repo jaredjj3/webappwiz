@@ -107,6 +107,9 @@ class CrateRegistry implements Registry {
 	async published(name: string, version: string) {
 		return false;
 	}
+	async deployed(name: string) {
+		return undefined; // the version installs get now, once there is one
+	}
 	async publish(dir: string) {
 		// log in if that is what publishing here takes, then publish or throw
 	}
@@ -119,8 +122,9 @@ await releases.lockstep(
 ).release();
 ```
 
-A registry answers two questions: do you already have this version, and please
-publish this directory. Implement those and it composes with everything else.
+A registry answers three questions: do you already have this version, which
+version do installs get now, and please publish this directory. Implement those
+and it composes with everything else.
 
 For a workspace whose packages all go to npm, `releases.workspace()` reads the
 roster off your manifest instead:
@@ -162,6 +166,49 @@ class DockerArtifact implements Artifact {
 
 Make `publish` repeatable: a retried release runs it again, so skip whatever
 already went out.
+
+## What is live
+
+A release pushes versions out; `status()` reads them back. Every artifact
+that can say what it has live answers `deployed()`, and `status()` asks them
+all beside the workspace's own version, so a caller can show what lags:
+
+```ts
+const { version, artifacts } = await release.status();
+for (const { name, deployed } of artifacts) {
+	console.log(name, deployed === version ? "live" : `at ${deployed ?? "nothing"}`);
+}
+```
+
+`releases.npm` answers with the `latest` dist-tag, the version installs get;
+`releases.git()` with the newest `v*` tag on origin; `releases.github()` with
+the release GitHub marks latest. `undefined` means nothing is out yet.
+Artifacts with nowhere to ask, a build or a skill stamp, leave `deployed` off
+and `status()` skips them. `wiz dev ship status` in this repository prints it,
+and is the example to copy for a project's own command.
+
+A custom artifact answers from wherever it publishes to. A web service can
+serve the version it was built at and have `deployed()` fetch it back:
+
+```ts
+class ServiceArtifact implements Artifact {
+	readonly name = "api";
+	readonly packages = [];
+
+	async publish(cut: Cut) {
+		// deploy with DockerImage's env.variables holding { APP_VERSION: cut.version },
+		// which the service's /version route returns
+	}
+
+	async deployed() {
+		const res = await fetch("https://api.example.com/version");
+		return res.ok ? (await res.text()).trim() : undefined;
+	}
+}
+```
+
+`name` is what `status()` calls the artifact; without one it goes by its
+packages, or its stage when it has none.
 
 ## What `release()` will not do
 

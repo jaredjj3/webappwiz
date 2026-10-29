@@ -26,4 +26,13 @@ describe("github artifact", () => {
 			),
 		).rejects.toThrow("not logged in to GitHub");
 	});
+
+	it("answers what is live with the latest release", async () => {
+		const github = new FakeGithub();
+		const artifact = new GithubArtifact(github);
+
+		expect(await artifact.deployed()).toBeUndefined();
+		await artifact.publish(new Cut("1.2.4", [], { log: new MemoryLogger() }));
+		expect(await artifact.deployed()).toBe("1.2.4");
+	});
 });

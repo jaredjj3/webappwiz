@@ -64,6 +64,20 @@ export class CliGit implements Git {
 		await this.out("push", "origin", ref);
 	}
 
+	async remoteTags(pattern: string): Promise<string[]> {
+		const out = await this.out(
+			"ls-remote",
+			"--tags",
+			"--refs",
+			"origin",
+			pattern,
+		);
+		return out
+			.split("\n")
+			.filter((line) => line !== "")
+			.map((line) => line.replace(/^\S+\trefs\/tags\//, ""));
+	}
+
 	private run(...args: string[]) {
 		return this.ps.spawnCapture(["git", "-C", this.root, ...args]);
 	}

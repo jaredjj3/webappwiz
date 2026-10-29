@@ -46,4 +46,14 @@ describe("git artifact", () => {
 		expect(git.pushes).toEqual(["main", "v1.2.4"]);
 		expect([...git.tags]).toEqual(["v1.2.4"]);
 	});
+
+	it("answers what is live with the newest release tag on origin", async () => {
+		const git = new FakeGit();
+		const artifact = new GitArtifact({ git });
+
+		expect(await artifact.deployed()).toBeUndefined();
+		git.remote.add("v1.9.0").add("v1.10.0").add("v1.2.4").add("vnext");
+		// By version, not by name: 1.10.0 sorts before 1.9.0 as a string.
+		expect(await artifact.deployed()).toBe("1.10.0");
+	});
 });

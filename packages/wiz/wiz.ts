@@ -3,7 +3,7 @@ import { webappwiz } from "@webappwiz/cli/webappwiz";
 import { z } from "zod";
 import { fix } from "./fix";
 import { path } from "./path";
-import { ship } from "./ship";
+import { ship, status } from "./ship";
 import { test } from "./test";
 
 /** Everything `wiz` is run with, which is what the cli it is built on needs. */
@@ -47,14 +47,26 @@ dev
 	})
 	.action((opts, { log, fs, ps }) => path({ ...opts, log, fs, ps }));
 
-dev
-	.command("ship")
+const shipping = dev
+	.group("ship")
+	.description("release the workspace, or say what it has live")
+	.fallback("release");
+
+shipping
+	.command("release")
 	.description("release every package in the workspace at one patch version")
 	.option("yes", z.boolean(), {
 		default: false,
 		description: "skip the confirmation, for runs without a terminal",
 	})
 	.action(({ yes }, { log, fs, ps }) => ship({ yes, log, fs, ps }));
+
+shipping
+	.command("status")
+	.description(
+		"print the version each artifact has live beside the workspace's",
+	)
+	.action((_, { log, fs, ps }) => status({ log, fs, ps }));
 
 dev
 	.command("test")

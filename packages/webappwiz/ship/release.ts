@@ -37,6 +37,31 @@ export interface ReleaseOptions {
 	yes?: boolean;
 }
 
+/** Where `Release.status()` reads the workspace version from; the real system by default. */
+export interface StatusOptions {
+	/** The workspace whose version the artifacts are held against. */
+	workspace?: Workspace;
+	fs?: Fs;
+	ps?: Ps;
+}
+
+/** One artifact's live version, as `Release.status()` reads it. */
+export interface DeployedArtifact {
+	name: string;
+	/** The workspace packages the artifact publishes, if any. */
+	packages: readonly string[];
+	/** What is live now; `undefined` when nothing is out yet. */
+	deployed: string | undefined;
+}
+
+/** The workspace's version beside what each artifact has live. */
+export interface ReleaseStatus {
+	/** The version the workspace stands at, which the last release stamped. */
+	version: string;
+	/** Every artifact that can say what it has live, in release order. */
+	artifacts: DeployedArtifact[];
+}
+
 /**
  * Everything a release ships, ready to go out at one version. `releases`
  * composes these; `release()` runs the whole flow as declared steps: preflight,
@@ -71,6 +96,33 @@ export class Release {
 	/** The workspace packages this publishes, gathered from every artifact. */
 	get packages(): readonly string[] {
 		return this.artifacts.flatMap((artifact) => [...artifact.packages]);
+	}
+
+	/**
+	 * What every artifact that can say has live, beside the workspace's own
+	 * version, so a caller can show which lags. Artifacts with no `deployed`,
+	 * such as a build, are left out.
+	 */
+	async status(opts: StatusOptions = {}): Promise<ReleaseStatus> {
+		const ps = opts.ps ?? new NodePs();
+		const workspace =
+			opts.workspace ??
+			(await ManifestWorkspace.at(ps.cwd(), { fs: opts.fs, ps }));
+		const reading = this.artifacts.flatMap((artifact) => {
+			const deployed = artifact.deployed?.bind(artifact);
+			return deployed === undefined ? [] : [{ artifact, deployed }];
+		});
+		const [version, artifacts] = await Promise.all([
+			workspace.version(),
+			Promise.all(
+				reading.map(async ({ artifact, deployed }) => ({
+					name: artifact.name ?? statusName(artifact),
+					packages: artifact.packages,
+					deployed: await deployed(),
+				})),
+			),
+		]);
+		return { version, artifacts };
 	}
 
 	/** Releases everything, asking first. Run it again after a failure. */
@@ -259,6 +311,13 @@ function artifactName(artifact: Artifact): string {
 		default:
 			return "Publish";
 	}
+}
+
+/** What status calls an artifact that names itself nothing. */
+function statusName(artifact: Artifact): string {
+	return artifact.packages.length > 0
+		? artifact.packages.join(" ")
+		: (artifact.stage ?? "publish");
 }
 
 function deadlineFor(stage: Stage | undefined): Duration {

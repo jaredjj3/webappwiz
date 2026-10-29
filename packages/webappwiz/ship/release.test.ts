@@ -537,4 +537,41 @@ describe("release", () => {
 			"/repo/packages/two/dist",
 		]);
 	});
+
+	describe("status", () => {
+		it("reads what each artifact has live beside the workspace version", async () => {
+			registry.latest.set("@scope/one", "1.2.3");
+			git.remote.add("v1.2.3");
+			github.releases.push("v1.2.2");
+
+			const status = await releases
+				.lockstep(release, releases.build(new FakeBundle()))
+				.status({ workspace });
+
+			// The build has nowhere to ask, so it is left out.
+			expect(status).toEqual({
+				version: await workspace.version(),
+				artifacts: [
+					{ name: "@scope/one", packages: ["@scope/one"], deployed: "1.2.3" },
+					{ name: "@scope/two", packages: ["@scope/two"], deployed: undefined },
+					{ name: "git tag", packages: [], deployed: "1.2.3" },
+					{ name: "GitHub release", packages: [], deployed: "1.2.2" },
+				],
+			});
+		});
+
+		it("names an artifact that names itself nothing by what it publishes", async () => {
+			const status = await releases
+				.lockstep({
+					packages: ["@scope/one"],
+					publish: async () => {},
+					deployed: async () => "1.2.3",
+				})
+				.status({ workspace });
+
+			expect(status.artifacts).toEqual([
+				{ name: "@scope/one", packages: ["@scope/one"], deployed: "1.2.3" },
+			]);
+		});
+	});
 });

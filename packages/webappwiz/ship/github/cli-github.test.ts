@@ -44,4 +44,20 @@ describe("cli github", () => {
 		);
 		expect(ps.getCalls()).toEqual(["gh auth status"]);
 	});
+
+	it("reads the latest release without asking anybody to log in", async () => {
+		ps.setCaptureOutput("v1.2.4\n", "");
+
+		expect(await new CliGithub({ ps }).latest()).toBe("v1.2.4");
+		expect(ps.getCalls()).toEqual([
+			"gh release view --json tagName --jq .tagName",
+		]);
+	});
+
+	it("reads no release for a repository that has none", async () => {
+		ps.simulate(async () => 1);
+		ps.setCaptureOutput("", "release not found\n");
+
+		expect(await new CliGithub({ ps }).latest()).toBeUndefined();
+	});
 });

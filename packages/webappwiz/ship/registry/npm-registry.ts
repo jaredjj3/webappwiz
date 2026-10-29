@@ -32,6 +32,23 @@ export class NpmRegistry implements Registry {
 		return exitCode === 0 && stdout.trim() !== "";
 	}
 
+	async deployed(name: string): Promise<string | undefined> {
+		const { exitCode, stdout, stderr } = await this.ps.spawnCapture([
+			"npm",
+			"view",
+			name,
+			"dist-tags.latest",
+		]);
+		if (exitCode === 0) {
+			return stdout.trim() || undefined;
+		}
+		// A name nobody has published is a 404, which is an answer: nothing yet.
+		if (stderr.includes("E404")) {
+			return undefined;
+		}
+		throw new Error(`npm view ${name}: ${stderr.trim() || stdout.trim()}`);
+	}
+
 	async available(name: string, version: string): Promise<boolean> {
 		const dir = join(tmpdir(), `webappwiz-ship-${crypto.randomUUID()}`);
 		await this.fs.mkdir(dir);

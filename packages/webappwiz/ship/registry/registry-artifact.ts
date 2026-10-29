@@ -11,10 +11,14 @@ export class RegistryArtifact implements Artifact {
 	readonly stage: Stage = "publish";
 
 	constructor(
-		private readonly name: string,
+		readonly name: string,
 		private readonly registry: Registry,
 	) {
 		this.packages = [name];
+	}
+
+	deployed(): Promise<string | undefined> {
+		return this.registry.deployed(this.name);
 	}
 
 	steps(cut: Cut): readonly Step[] {

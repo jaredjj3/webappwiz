@@ -11,6 +11,8 @@ export class FakeGit implements Git {
 	readonly tags = new Set<string>();
 	readonly commits: string[] = [];
 	readonly pushes: string[] = [];
+	/** Tags origin holds, whatever the pattern; `push` of a tag adds to them. */
+	readonly remote = new Set<string>();
 	/** Refs push refuses, as origin does when somebody else got there first. */
 	readonly rejects = new Set<string>();
 
@@ -39,5 +41,12 @@ export class FakeGit implements Git {
 			throw new Error(`git push origin ${ref}: rejected`);
 		}
 		this.pushes.push(ref);
+		if (this.tags.has(ref)) {
+			this.remote.add(ref);
+		}
+	}
+
+	async remoteTags(): Promise<string[]> {
+		return [...this.remote];
 	}
 }

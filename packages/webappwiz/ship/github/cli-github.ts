@@ -38,6 +38,29 @@ export class CliGithub implements Github {
 		}
 	}
 
+	/**
+	 * The tag of the release GitHub marks latest. Reading asks for no login,
+	 * since a status check is no time to stop for a browser.
+	 */
+	async latest(): Promise<string | undefined> {
+		const { exitCode, stdout, stderr } = await this.ps.spawnCapture([
+			"gh",
+			"release",
+			"view",
+			"--json",
+			"tagName",
+			"--jq",
+			".tagName",
+		]);
+		if (exitCode === 0) {
+			return stdout.trim() || undefined;
+		}
+		if (stderr.includes("release not found")) {
+			return undefined;
+		}
+		throw new Error(`gh release view: ${stderr.trim() || stdout.trim()}`);
+	}
+
 	/** Runs `gh auth login` unless somebody is already logged in. GH_TOKEN counts. */
 	private async login(): Promise<void> {
 		if ((await this.ps.spawnCapture(["gh", "auth", "status"])).exitCode === 0) {

@@ -15,6 +15,8 @@ export const STAGES: readonly Stage[] = [
 
 /** Implement an artifact to add a publishing operation to `releases.lockstep`. */
 export interface Artifact {
+	/** What `Release.status()` calls it; its packages or its stage when omitted. */
+	readonly name?: string;
 	/** The public workspace packages this artifact publishes, if any. */
 	readonly packages: readonly string[];
 	/** When this runs relative to the other artifacts; `publish` when omitted. */
@@ -28,4 +30,10 @@ export interface Artifact {
 	steps?(cut: Cut): readonly Step[];
 	/** Removes output this artifact created, after success or failure. */
 	clean?(cut: Cut): Promise<void>;
+	/**
+	 * The version live wherever this artifact publishes to, or `undefined` when
+	 * nothing is out yet. Leave it off when there is nowhere to ask, as for a
+	 * build or a stamp, and `Release.status()` skips the artifact.
+	 */
+	deployed?(): Promise<string | undefined>;
 }

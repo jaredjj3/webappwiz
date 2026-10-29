@@ -4,6 +4,7 @@ import { Duration } from "webappwiz/time";
 import type { Artifact, Stage } from "../artifact/artifact";
 import type { Cut } from "../cut";
 import type { Step } from "../step";
+import { newest } from "../version";
 import { CliGit } from "./cli-git";
 import type { Git } from "./git";
 
@@ -15,6 +16,7 @@ export interface GitArtifactOptions {
 
 /** Pushes the release commit and tag after every package has published. */
 export class GitArtifact implements Artifact {
+	readonly name = "git tag";
 	readonly packages: readonly string[] = [];
 	readonly stage: Stage = "tag";
 
@@ -56,6 +58,12 @@ export class GitArtifact implements Artifact {
 		await this.git.tag(cut.tag);
 		await this.git.push(cut.tag);
 		cut.log.info(`${cut.tag} ${color.green("pushed")}`);
+	}
+
+	/** The version of the newest release tag on origin. */
+	async deployed(): Promise<string | undefined> {
+		const tags = await this.git.remoteTags("v*");
+		return newest(tags.map((tag) => tag.slice(1)));
 	}
 
 	private async pushBranch(): Promise<void> {

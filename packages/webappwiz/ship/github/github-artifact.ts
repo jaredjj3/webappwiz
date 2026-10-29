@@ -7,6 +7,7 @@ import type { Github } from "./github";
  * which is what it writes about.
  */
 export class GithubArtifact implements Artifact {
+	readonly name = "GitHub release";
 	readonly packages: readonly string[] = [];
 	readonly stage: Stage = "notes";
 
@@ -14,5 +15,10 @@ export class GithubArtifact implements Artifact {
 
 	async publish(cut: Cut): Promise<void> {
 		await this.github.release(cut.tag);
+	}
+
+	/** The version of the release GitHub marks latest. */
+	async deployed(): Promise<string | undefined> {
+		return (await this.github.latest())?.replace(/^v/, "");
 	}
 }

@@ -1,6 +1,6 @@
 import { catalog } from "@webappwiz/scry/catalog";
-import { ConsoleLogger, type Logger } from "webappwiz/log";
-import { type Bump, releases } from "webappwiz/ship";
+import { ConsoleLogger, color, type Logger } from "webappwiz/log";
+import { type Bump, type Release, releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
 import { Duration } from "webappwiz/time";
 import { fix } from "./fix";
@@ -45,7 +45,54 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 	const log = opts.log ?? new ConsoleLogger();
 	const bump = bumpOf(opts.env ?? process.env);
 	const ps = opts.ps ?? new NodePs();
-	const declared = releases.lockstep(
+	const declared = await declaration(log, opts.fs, ps);
+	await declared.release({
+		bump,
+		prompt: opts.prompt,
+		yes: opts.yes,
+		log,
+		fs: opts.fs,
+		ps,
+	});
+}
+
+/** Where `status` reads from and prints to; the real system by default. */
+export interface StatusOptions {
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+}
+
+/**
+ * Prints the workspace's version and what each artifact has live, marking
+ * those that lag. A project copying this for its own command needs only its
+ * own declaration in place of this one.
+ */
+export async function status(opts: StatusOptions = {}): Promise<void> {
+	const log = opts.log ?? new ConsoleLogger();
+	const ps = opts.ps ?? new NodePs();
+	const declared = await declaration(log, opts.fs, ps);
+	const { version, artifacts } = await declared.status({ fs: opts.fs, ps });
+	const width = Math.max(...artifacts.map(({ name }) => name.length));
+	log.info(`workspace ${color.bold(version)}`);
+	for (const { name, deployed } of artifacts) {
+		const live =
+			deployed === undefined
+				? color.yellow("nothing out")
+				: deployed === version
+					? color.green(deployed)
+					: color.yellow(`${deployed} (behind)`);
+		log.info(`  ${name.padEnd(width)}  ${live}`);
+	}
+}
+
+/** Everything this workspace ships, as both `ship` and `status` read it. */
+async function declaration(
+	log: Logger,
+	fs: Fs | undefined,
+	ps: Ps,
+): Promise<Release> {
+	return releases.lockstep(
 		releases.push({ ps }),
 		releases.step({
 			name: "Typecheck",
@@ -55,19 +102,9 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 			// The suite is expected to have run before anybody ships.
 			run: async () => fix({ check: true, log, ps }),
 		}),
-		await releases.workspace({ fs: opts.fs, ps }),
-		...[...SKILLS, ...RULES].map((path) =>
-			releases.skill(path, { fs: opts.fs }),
-		),
+		await releases.workspace({ fs, ps }),
+		...[...SKILLS, ...RULES].map((path) => releases.skill(path, { fs })),
 	);
-	await declared.release({
-		bump,
-		prompt: opts.prompt,
-		yes: opts.yes,
-		log,
-		fs: opts.fs,
-		ps,
-	});
 }
 
 const BUMPS: readonly Bump[] = ["patch", "minor", "major"];

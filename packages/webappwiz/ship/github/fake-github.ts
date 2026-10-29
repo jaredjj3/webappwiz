@@ -12,4 +12,8 @@ export class FakeGithub implements Github {
 		}
 		this.releases.push(tag);
 	}
+
+	async latest(): Promise<string | undefined> {
+		return this.releases.at(-1);
+	}
 }

@@ -1,6 +1,8 @@
 /** The package registry, as a release touches it. */
 export interface Registry {
 	published(name: string, version: string): Promise<boolean>;
+	/** The version an install of `name` gets now, or `undefined` before any is out. */
+	deployed(name: string): Promise<string | undefined>;
 	/** Whether an install can resolve the version now, rather than only list it. */
 	available?(name: string, version: string): Promise<boolean>;
 	/**

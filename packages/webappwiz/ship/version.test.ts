@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { bump } from "./version";
+import { bump, newest } from "./version";
 
 describe("version", () => {
 	it("bumps the patch", () => {
@@ -20,5 +20,11 @@ describe("version", () => {
 
 	it("refuses a prerelease rather than truncating it", () => {
 		expect(() => bump("1.2.3-beta.1", "patch")).toThrow("invalid version");
+	});
+
+	it("picks the newest version by number, skipping what is not one", () => {
+		expect(newest(["1.9.0", "1.10.0", "next", "0.12.3"])).toBe("1.10.0");
+		expect(newest(["next"])).toBeUndefined();
+		expect(newest([])).toBeUndefined();
 	});
 });
