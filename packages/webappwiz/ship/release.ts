@@ -145,7 +145,7 @@ export class Release {
 		const cut = new Cut(version, packages, { log, root: workspace.root });
 		const runner = new StepRunner(
 			new StepEvents(
-				ps.env("WEBAPPWIZ_SHIP_EVENTS"),
+				ps.env("WEBAPPWIZ_SHIP_EVENTS") ?? ps.env("SPLATES_SHIP_EVENTS"),
 				fs,
 				opts.wallClock,
 				ps.env("WEBAPPWIZ_SHIP_PROGRESS") === "1"
@@ -482,17 +482,11 @@ interface Declaring {
 	version: string;
 }
 
-/** A declared step and what it covers. */
-interface Covering extends StepDeclaration {
-	artifact?: string;
-	packages?: readonly string[];
-}
-
 interface Declared {
-	preflight: Covering;
-	before: Covering[];
-	versionStep: Covering;
-	going: Covering[];
+	preflight: StepDeclaration;
+	before: StepDeclaration[];
+	versionStep: StepDeclaration;
+	going: StepDeclaration[];
 }
 
 /** Where `Release.plan()` reads from; the real system by default. */

@@ -1,6 +1,9 @@
 import type { Fs } from "webappwiz/system";
 import { SystemWallClock, type WallClock } from "webappwiz/time";
-import type { Step } from "./step";
+import type { Step, StepStage } from "./step";
+
+/** The version of the event line shape; grows only by adding fields. */
+export const EVENTS_SCHEMA = 1 as const;
 
 /** The states a progress line reports; the vocabulary of `wiz dev ship plan` ids. */
 type ProgressState = "start" | "done" | "failed" | "skipped";
@@ -18,11 +21,19 @@ export class StepEvents {
 		private readonly progress?: ProgressSink,
 	) {}
 
-	async declared({ id, step }: StepDeclaration): Promise<void> {
+	async declared({
+		id,
+		step,
+		packages,
+		artifact,
+	}: StepDeclaration): Promise<void> {
 		await this.write({
 			type: "declared",
 			id,
 			name: step.name,
+			stage: step.stage ?? "publish",
+			packages: [...(packages ?? [])],
+			...(artifact === undefined ? {} : { artifact }),
 			deadlineMs: step.deadline.ms,
 			at: this.at(),
 		});
@@ -71,9 +82,12 @@ export class StepEvents {
 		);
 	}
 
-	private async write(event: ReleaseStepEvent): Promise<void> {
+	private async write(event: Unversioned): Promise<void> {
 		if (this.path !== undefined && this.path !== "") {
-			await this.fs.append(this.path, `${JSON.stringify(event)}\n`);
+			await this.fs.append(
+				this.path,
+				`${JSON.stringify({ schema: EVENTS_SCHEMA, ...event })}\n`,
+			);
 		}
 	}
 
@@ -88,6 +102,7 @@ export interface ProgressSink {
 }
 
 interface StepEvent {
+	readonly schema: typeof EVENTS_SCHEMA;
 	readonly id: string;
 	readonly name: string;
 	readonly at: string;
@@ -95,6 +110,9 @@ interface StepEvent {
 
 export interface StepDeclaredEvent extends StepEvent {
 	readonly type: "declared";
+	readonly stage: StepStage;
+	readonly packages: string[];
+	readonly artifact?: string;
 	readonly deadlineMs: number;
 }
 
@@ -120,7 +138,7 @@ export interface StepFailedEvent extends StepEvent {
 	readonly error: string;
 }
 
-/** One line in the release event file named by WEBAPPWIZ_SHIP_EVENTS. */
+/** One line in the release event file named by WEBAPPWIZ_SHIP_EVENTS or SPLATES_SHIP_EVENTS. */
 export type ReleaseStepEvent =
 	| StepDeclaredEvent
 	| StepStartedEvent
@@ -129,8 +147,19 @@ export type ReleaseStepEvent =
 	| StepSkippedEvent
 	| StepFailedEvent;
 
+/** An event as built here, before `write` stamps its schema. */
+type Unversioned = ReleaseStepEvent extends infer E
+	? E extends ReleaseStepEvent
+		? Omit<E, "schema">
+		: never
+	: never;
+
 /** What a step runner reports, identified independently of its display name. */
 export interface StepDeclaration {
 	readonly id: string;
 	readonly step: Step;
+	/** The artifact the step belongs to, when it came from one. */
+	readonly artifact?: string;
+	/** The workspace packages the step publishes, if any. */
+	readonly packages?: readonly string[];
 }

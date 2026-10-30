@@ -115,7 +115,11 @@ describe("release", () => {
 			id: "preflight",
 			name: "Preflight",
 			deadlineMs: 30_000,
+			schema: 1,
+			stage: "preflight",
+			packages: [],
 		});
+		expect(written.every((event) => event.schema === 1)).toBe(true);
 		expect(
 			written
 				.filter((event) => event.type === "declared")
@@ -140,6 +144,16 @@ describe("release", () => {
 		expect(written.every((event) => !Number.isNaN(Date.parse(event.at)))).toBe(
 			true,
 		);
+	});
+
+	it("writes the event file named by SPLATES_SHIP_EVENTS alone", async () => {
+		ps.setEnv({ SPLATES_SHIP_EVENTS: "/repo/events.jsonl" });
+
+		await release.release(answering("y"));
+
+		const written = await events();
+		expect(written[0]).toMatchObject({ type: "declared", id: "preflight" });
+		expect(written.at(-1)).toMatchObject({ type: "done" });
 	});
 
 	it("writes no event file when WEBAPPWIZ_SHIP_EVENTS is unset", async () => {

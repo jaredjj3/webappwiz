@@ -198,6 +198,27 @@ progress matches the plan by `id`. `stage` is `preflight`, `stamp`, `build`,
 `publish`, `tag` or `notes`; `artifact` is present only for a step an artifact
 declared.
 
+## The events file
+
+When `WEBAPPWIZ_SHIP_EVENTS` (else `SPLATES_SHIP_EVENTS`) names a file,
+`release()` appends one JSON object per line to it: first a `declared` line
+for every step in order, then the run-time lines as they happen. Every line
+carries `schema` (now `1`, growing only by adding fields), `type`, the step's
+`id` (the plan's `id`), `name`, and `at`, an ISO timestamp. Unset or empty, no
+file is written.
+
+| `type`     | Extra fields                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------------- |
+| `declared` | `stage` (as in the plan), `packages` (string array), `artifact` (when declared by one), `deadlineMs` |
+| `started`  | none                                                                                           |
+| `check`    | `passed` (boolean), one per poll of a step's check                                             |
+| `done`     | none                                                                                           |
+| `skipped`  | none: a resumed release found the step already landed                                          |
+| `failed`   | `error`, the message; the release stops after it                                               |
+
+`declared` matches the plan's step by `id`, with the same `stage`, `packages`
+and `artifact`.
+
 ## Live progress
 
 With `WEBAPPWIZ_SHIP_PROGRESS=1`, `release()` also prints one JSON line per
