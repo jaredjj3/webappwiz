@@ -4,6 +4,7 @@ import { type Bump, type Release, releases } from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
 import { Duration } from "webappwiz/time";
 import { fix } from "./fix";
+import { PUBLISH_COMMAND } from "./publish-workflow";
 
 /**
  * Every agent skill this workspace ships, listed rather than discovered so
@@ -54,6 +55,25 @@ export async function ship(opts: ShipOptions = {}): Promise<void> {
 		fs: opts.fs,
 		ps,
 	});
+}
+
+/** Where `publish` reads from and prints to; the real system by default. */
+export interface PublishOptions {
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+}
+
+/**
+ * Publishes what the declaration names that npm lacks, at the version the
+ * checkout stands at, as the generated publish workflow runs it: trusted,
+ * with no tag, stamp, approval or notes.
+ */
+export async function publish(opts: PublishOptions = {}): Promise<void> {
+	const log = opts.log ?? new ConsoleLogger();
+	const ps = opts.ps ?? new NodePs();
+	const declared = await declaration(log, opts.fs, ps);
+	await declared.publish({ log, fs: opts.fs, ps });
 }
 
 /** Where `status` reads from and prints to; the real system by default. */
@@ -131,13 +151,15 @@ async function declaration(
 ): Promise<Release> {
 	return releases.lockstep(
 		releases.push({ ps }),
+		// Before the typecheck, whose fix refuses a stub that has drifted.
+		releases.publishWorkflow({ command: PUBLISH_COMMAND, fs }),
 		releases.step({
 			name: "Typecheck",
 			deadline: Duration.mins(10),
 			stage: "preflight",
 			// The build compiles without checking types, so this is the only gate.
 			// The suite is expected to have run before anybody ships.
-			run: async () => fix({ check: true, log, ps }),
+			run: async () => fix({ check: true, log, ps, fs }),
 		}),
 		await releases.workspace({ fs, ps }),
 		...[...SKILLS, ...RULES].map((path) => releases.skill(path, { fs })),

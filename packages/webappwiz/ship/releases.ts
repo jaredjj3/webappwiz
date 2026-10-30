@@ -8,6 +8,10 @@ import { CliGit } from "./git/cli-git";
 import { GitArtifact, type GitArtifactOptions } from "./git/git-artifact";
 import { CliGithub, type CliGithubOptions } from "./github/cli-github";
 import { GithubArtifact } from "./github/github-artifact";
+import {
+	PublishWorkflow,
+	type PublishWorkflowOptions,
+} from "./publish-workflow";
 import { NpmRegistry, type NpmRegistryOptions } from "./registry/npm-registry";
 import type { Registry } from "./registry/registry";
 import { RegistryArtifact } from "./registry/registry-artifact";
@@ -66,6 +70,26 @@ export class releases {
 			run: async (cut) => {
 				const git = opts.git ?? new CliGit(cut.root, { ps: opts.ps });
 				await git.push(await git.branch());
+			},
+		});
+	}
+
+	/**
+	 * Keeps the generated publish workflow current: a preflight step writes it
+	 * when it is missing or stale, so it lands in the release commit.
+	 */
+	static publishWorkflow(opts: PublishWorkflowOptions): Release {
+		const workflow = new PublishWorkflow(opts);
+		return releases.step({
+			name: "Publish workflow",
+			deadline: Duration.secs(30),
+			stage: "preflight",
+			run: async (cut) => {
+				if (await workflow.write(cut.root)) {
+					cut.log.info(
+						"wrote the publish workflow: commit it with the release",
+					);
+				}
 			},
 		});
 	}

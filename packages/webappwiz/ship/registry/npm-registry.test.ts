@@ -145,4 +145,39 @@ describe("npm registry", () => {
 			new NpmRegistry({ ps }).deployed("@scope/one"),
 		).rejects.toThrow("npm view @scope/one: npm error code ENOTFOUND");
 	});
+
+	// Trusted publishing, from a CI job npm trusts
+	const trusted = () => new NpmRegistry({ ps }).trusted();
+
+	it("trusted: publishes plainly: no version check, no login, no stage", async () => {
+		const registry = trusted();
+		const got = await registry.publish("/repo/packages/one");
+
+		expect(registry.staged).toBe(false);
+		expect(got).toEqual({});
+		expect(ps.getCalls()).toEqual([
+			"npm publish --access public --loglevel verbose",
+		]);
+	});
+
+	it("trusted: takes npm's 409 for a version it already has", async () => {
+		ps.setCaptureOutput("", "npm error code E409\n");
+		ps.exit(1);
+
+		expect(await trusted().publish("/repo/packages/one")).toEqual({
+			already: true,
+		});
+	});
+
+	it("trusted: names a failed OIDC exchange rather than the bare 404", async () => {
+		ps.setCaptureOutput(
+			"",
+			"npm verbose oidc Failed token exchange request with body message: OIDC token exchange error - package not found\nnpm error code E404\n",
+		);
+		ps.exit(1);
+
+		await expect(trusted().publish("/repo/packages/one")).rejects.toThrow(
+			"no trusted publisher entry",
+		);
+	});
 });

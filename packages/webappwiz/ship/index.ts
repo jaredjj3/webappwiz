@@ -7,6 +7,11 @@ export type { GitArtifactOptions } from "./git/git-artifact";
 export type { CliGithubOptions } from "./github/cli-github";
 export type { Github } from "./github/github";
 export { order } from "./order";
+export {
+	PUBLISH_WORKFLOW_PATH,
+	PublishWorkflow,
+	type PublishWorkflowOptions,
+} from "./publish-workflow";
 export type { NpmRegistryOptions } from "./registry/npm-registry";
 export type {
 	Publication,
@@ -17,6 +22,7 @@ export {
 	type DeployedArtifact,
 	type PlannedStep,
 	type PlanOptions,
+	type PublishOptions,
 	Release,
 	type ReleaseOptions,
 	type ReleasePlan,

@@ -1,5 +1,6 @@
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
-import { NodePs, type Ps } from "webappwiz/system";
+import { type Fs, NodePs, type Ps } from "webappwiz/system";
+import { publishWorkflow } from "./publish-workflow";
 
 export interface FixOptions {
 	/** Report problems without writing fixes, as CI wants it. */
@@ -8,10 +9,12 @@ export interface FixOptions {
 	codeOnly?: boolean;
 	log?: Logger;
 	ps?: Ps;
+	fs?: Fs;
 }
 
 /**
- * Runs biome, the type checker, then scry on what changed since main, in
+ * Fails when the generated publish workflow has drifted, then runs biome,
+ * the type checker, then scry on what changed since main, in
  * that order. Scry leaves off each model its budget no longer covers, so a
  * spent budget narrows the check rather than fail it.
  */
@@ -27,6 +30,16 @@ export async function fix(opts: FixOptions): Promise<void> {
 			throw new Error(failure);
 		}
 	};
+
+	// Written by a release, never here: a stale stub is a release that was not
+	// committed whole, and only a check can catch that.
+	const drift = await publishWorkflow(opts.fs)
+		.check(ps.cwd())
+		.then(
+			() => undefined,
+			(error: Error) => error.message,
+		);
+	step("publish workflow", drift === undefined, drift ?? "");
 
 	const flags = opts.check ? [] : ["--write", "--unsafe"];
 	const biome = await ps.spawn(["bunx", "biome", "check", ...flags, "."]);

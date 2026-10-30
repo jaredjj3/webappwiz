@@ -29,6 +29,11 @@ export interface Artifact {
 	 * wraps `publish` in one step.
 	 */
 	steps?(cut: Cut): readonly Step[];
+	/**
+	 * This artifact as `Release.publish()` runs it, from a CI job the registry
+	 * trusts. Leave it off when it goes out the same way anywhere.
+	 */
+	trusted?(): Artifact;
 	/** Removes output this artifact created, after success or failure. */
 	clean?(cut: Cut): Promise<void>;
 	/**

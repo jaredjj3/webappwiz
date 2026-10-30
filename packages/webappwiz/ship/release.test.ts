@@ -775,4 +775,42 @@ describe("release", () => {
 			{ name: "@scope/one", packages: ["@scope/one"], deployed: "1.2.3" },
 		]);
 	});
+
+	describe("publish", () => {
+		it("publishes only what the registry lacks, at the version already stamped, with no tag or notes", async () => {
+			registry.has.add("@scope/one@1.2.3");
+
+			await release.publish({ workspace, log, fs, ps });
+
+			expect(registry.publishes).toEqual(["/repo/packages/two"]);
+			expect(registry.viaTrust).toBe(true);
+			expect(workspace.stamped).toEqual([]);
+			expect(git.commits).toEqual([]);
+			expect([...git.tags]).toEqual([]);
+			expect(git.pushes).toEqual([]);
+			expect(github.releases).toEqual([]);
+		});
+
+		it("publishes unstaged and waits on nothing, even for a registry that stages a release", async () => {
+			registry.staging = (dir) => ({ stageId: dir, url: "https://registry/" });
+			registry.scanning = true;
+
+			await release.publish({ workspace, log, fs, ps });
+
+			expect(registry.publishes).toEqual([
+				"/repo/packages/one",
+				"/repo/packages/two",
+			]);
+			expect(said()).not.toContain("staged");
+		});
+
+		it("publishes nothing on a rerun", async () => {
+			registry.has.add("@scope/one@1.2.3");
+			registry.has.add("@scope/two@1.2.3");
+
+			await release.publish({ workspace, log, fs, ps });
+
+			expect(registry.publishes).toEqual([]);
+		});
+	});
 });

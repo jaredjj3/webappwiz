@@ -23,6 +23,13 @@ export class RegistryArtifact implements Artifact {
 		this.packages = [name];
 	}
 
+	trusted(): Artifact {
+		const registry = this.registry.trusted?.();
+		return registry === undefined
+			? this
+			: new RegistryArtifact(this.name, registry);
+	}
+
 	deployed(): Promise<string | undefined> {
 		return this.registry.deployed(this.name);
 	}

@@ -3,7 +3,7 @@ import { webappwiz } from "@webappwiz/cli/webappwiz";
 import { z } from "zod";
 import { fix } from "./fix";
 import { path } from "./path";
-import { plan, ship, status } from "./ship";
+import { plan, publish, ship, status } from "./ship";
 import { test } from "./test";
 
 /** Everything `wiz` is run with, which is what the cli it is built on needs. */
@@ -67,6 +67,13 @@ shipping
 		"print the version each artifact has live beside the workspace's",
 	)
 	.action((_, { log, fs, ps }) => status({ log, fs, ps }));
+
+shipping
+	.command("publish")
+	.description(
+		"publish what npm lacks at the checked-out version, as the generated GitHub Actions workflow does",
+	)
+	.action((_, { log, fs, ps }) => publish({ log, fs, ps }));
 
 shipping
 	.command("plan")

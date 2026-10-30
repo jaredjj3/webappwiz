@@ -44,6 +44,11 @@ export interface Registry {
 	 * publishing here takes. Throws if the registry does not take it.
 	 */
 	publish(dir: string): Promise<Publication>;
+	/**
+	 * This registry as a CI job it trusts publishes to it, with no stage and
+	 * no login. Leave it off when there is no such way to publish.
+	 */
+	trusted?(): Registry;
 	/** Where a person can see `version` of `name`, and why it is not live yet. */
 	page?(name: string, version: string): string;
 }

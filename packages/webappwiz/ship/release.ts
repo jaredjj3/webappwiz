@@ -205,6 +205,65 @@ export class Release {
 		log.info(color.green(`shipped ${version}`));
 	}
 
+	/**
+	 * Publishes what the declaration names that the registry lacks, at the
+	 * version the workspace already stands at, from a checkout of a release
+	 * commit. It is the half of a release a CI job npm trusts can do: only the
+	 * build and publish stages run, each registry in its trusted mode, so
+	 * nothing is stamped, tagged, approved or noted. A version the registry
+	 * already has is skipped, so a rerun publishes nothing it did.
+	 */
+	async publish(opts: PublishOptions = {}): Promise<void> {
+		const ps = opts.ps ?? new NodePs();
+		const log = opts.log ?? new ConsoleLogger();
+		const fs = opts.fs ?? new NodeFs();
+		const workspace =
+			opts.workspace ?? (await ManifestWorkspace.at(ps.cwd(), { fs, ps }));
+		const packages = order(await workspace.packages());
+		declares(this.packages, packages);
+		const version = await workspace.version();
+		const cut = new Cut(version, packages, { log, root: workspace.root });
+		const going = sequence(
+			this.artifacts.filter(
+				(artifact) =>
+					artifact.stage === "build" ||
+					artifact.stage === undefined ||
+					artifact.stage === "publish",
+			),
+			packages,
+		);
+		const publishing = going.map(
+			(artifact) => artifact.trusted?.() ?? artifact,
+		);
+		const steps = publishing
+			.flatMap((artifact) => stepsFor(artifact, cut))
+			.filter((step) => step.stage === "build" || step.stage === "publish")
+			.toSorted((left, right) => stageRank(left) - stageRank(right))
+			.map((step, index) => ({
+				id: `step:${index}:${step.name}`,
+				step,
+			}));
+		const runner = new StepRunner(
+			new StepEvents(
+				ps.env("WEBAPPWIZ_SHIP_EVENTS") ?? ps.env("SPLATES_SHIP_EVENTS"),
+				fs,
+				opts.wallClock,
+			),
+			opts.timer,
+		);
+		await runner.declare(steps);
+		try {
+			for (const declaration of steps) {
+				await runner.run(declaration, cut);
+			}
+		} finally {
+			for (const artifact of publishing) {
+				await artifact.clean?.(cut);
+			}
+		}
+		log.info(color.green(`published ${version}`));
+	}
+
 	/** Every step a release runs, in order, as both `release()` and `plan()` read it. */
 	private declare(at: Declaring): Declared {
 		const { workspace, git, packages, cut, version } = at;
@@ -498,6 +557,17 @@ export interface PlanOptions {
 	log?: Logger;
 	fs?: Fs;
 	ps?: Ps;
+}
+
+/** What `Release.publish()` publishes through; the real system by default. */
+export interface PublishOptions {
+	/** The packages to publish, at the version the workspace stands at. */
+	workspace?: Workspace;
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+	timer?: Timer;
+	wallClock?: WallClock;
 }
 
 /** One step of a release, as `Release.plan()` lists it. */

@@ -322,6 +322,24 @@ other than a terminal, a `log` to say it somewhere else, and a `workspace` or
 `git` to point it at a repository that is not the one around the working
 directory.
 
+## Publishing from GitHub Actions
+
+`release.publish()` is the half of a release a CI job can do. It runs only the
+build and publish stages at the version the checkout already stands at, with
+each registry in its trusted mode (`Registry.trusted()`): for npm a plain
+`npm publish`, which npm authorizes from the job's OIDC identity, with no
+token, no login and no stage. It publishes each package the registry lacks and
+nothing else: no stamp, tag, approval or notes, and a rerun publishes nothing.
+
+`releases.publishWorkflow({ command })` keeps the workflow that calls it
+current. The file lives at `.github/workflows/webappwiz-publish.yml` (npm's
+trusted publisher entry names it, so the path is fixed), is generated, and
+holds no package list: it checks out the commit it is dispatched with and runs
+`command`. A release writes it into the release commit when it is missing or
+stale; commit it like a lockfile. `PublishWorkflow.check(root)` throws on
+drift, and `wiz dev fix` runs it. This workspace's command is
+`wiz dev ship publish`.
+
 ## Logging in is part of publishing
 
 Nothing asks you to be logged in beforehand. An artifact that needs credentials

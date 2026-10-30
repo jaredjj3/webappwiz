@@ -4,6 +4,12 @@ import type { Publication, Registry } from "./registry";
 /** Pass `ps` to run `NpmRegistry`'s npm commands through a fake in tests; the real processes by default. */
 export interface NpmRegistryOptions {
 	ps?: Ps;
+	/**
+	 * Publish as npm's trusted publishing wants it, from a CI job that npm
+	 * trusts: a plain `npm publish` that npm authorizes from the job's OIDC
+	 * identity, with no token, no login and no stage. `trusted()` makes one.
+	 */
+	trusted?: boolean;
 }
 
 /**
@@ -13,13 +19,20 @@ export interface NpmRegistryOptions {
  */
 // Staging needs no 2FA, which is what lets a stage-only token publish.
 export class NpmRegistry implements Registry {
-	readonly staged = true;
+	readonly staged: boolean;
 	readonly scans = true;
 	private readonly ps: Ps;
+	private readonly isTrusted: boolean;
 	private authed?: Promise<void>;
 
 	constructor(opts: NpmRegistryOptions = {}) {
 		this.ps = opts.ps ?? new NodePs();
+		this.isTrusted = opts.trusted === true;
+		this.staged = !this.isTrusted;
+	}
+
+	trusted(): Registry {
+		return new NpmRegistry({ ps: this.ps, trusted: true });
 	}
 
 	async published(name: string, version: string): Promise<boolean> {
@@ -53,6 +66,9 @@ export class NpmRegistry implements Registry {
 	}
 
 	async publish(dir: string): Promise<Publication> {
+		if (this.isTrusted) {
+			return this.publishTrusted(dir);
+		}
 		this.authed ??= this.checkVersion().then(() => this.login());
 		await this.authed;
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(
@@ -83,6 +99,33 @@ export class NpmRegistry implements Registry {
 				url: `https://www.npmjs.com/package/${found[1]}`,
 			},
 		};
+	}
+
+	/**
+	 * `npm publish` from a job npm trusts. Verbose, because a package with no
+	 * matching trusted publisher entry fails with the same 404 as a logged-out
+	 * publish, and only the verbose log says the OIDC exchange is what refused.
+	 */
+	private async publishTrusted(dir: string): Promise<Publication> {
+		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(
+			["npm", "publish", "--access", "public", "--loglevel", "verbose"],
+			{ cwd: dir },
+		);
+		if (exitCode === 0) {
+			return {};
+		}
+		const output = `${stdout}\n${stderr}`;
+		if (/E409|previously published/i.test(output)) {
+			return { already: true };
+		}
+		if (/OIDC token exchange error/i.test(output)) {
+			throw new Error(
+				`npm refused the OIDC token exchange for ${dir}: the package has no trusted publisher entry naming this repository and workflow, or it does not exist yet`,
+			);
+		}
+		throw new Error(
+			`publish failed in ${dir}: ${stderr.trim() || stdout.trim()}`,
+		);
 	}
 
 	page(name: string, version: string): string {
