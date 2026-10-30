@@ -4,6 +4,28 @@ import { color, MemoryLogger } from "webappwiz/log";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { plan, ship, status } from "./ship";
 
+/**
+ * Makes `ps` stage with an id and approve instantly: `npm view` answers only
+ * once something has been staged.
+ */
+function stagesInstantly(ps: FakePs): void {
+	const capture = ps.spawnCapture.bind(ps);
+	let staged = false;
+	ps.spawnCapture = async (argv, opts) => {
+		const result = await capture(argv, opts);
+		if (argv[1] === "stage") {
+			staged = true;
+			return {
+				...result,
+				stdout: "+ @scope/solo@1.2.4 (staged with id st-1)\n",
+			};
+		}
+		return argv[1] === "view" && staged
+			? { ...result, stdout: "1.2.4\n" }
+			: result;
+	};
+}
+
 describe("ship", () => {
 	// The gate runs through the same FakePs the release does, so its commands
 	// show up in `getCalls()` ahead of anything the release itself spawns.
@@ -26,6 +48,7 @@ describe("ship", () => {
 	beforeEach(async () => {
 		log = new MemoryLogger();
 		ps = new FakePs();
+		stagesInstantly(ps);
 		ps.setCwd("/repo");
 		fs = new FakeFs();
 		await fs.mkdir("/repo");
@@ -87,7 +110,9 @@ describe("ship", () => {
 		expect(push).toBeGreaterThan(-1);
 		expect(push).toBeLessThan(gate);
 		expect(calls.slice(gate, gate + GATE.length)).toEqual(GATE);
-		expect(gate).toBeLessThan(calls.indexOf("npm publish --access public"));
+		expect(gate).toBeLessThan(
+			calls.indexOf("npm stage publish --access public"),
+		);
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
 			"1.2.4",
 		);
@@ -165,7 +190,7 @@ describe("ship", () => {
 			"  GitHub release  1.2.2 (behind)",
 		]);
 		// Reading publishes nothing and stamps nothing.
-		expect(ps.getCalls()).not.toContain("npm publish --access public");
+		expect(ps.getCalls()).not.toContain("npm stage publish --access public");
 	});
 
 	it("plan: prints the steps as JSON and runs none of them", async () => {

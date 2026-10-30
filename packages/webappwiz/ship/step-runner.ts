@@ -28,7 +28,9 @@ export class StepRunner {
 		}
 		await this.events.started(declaration);
 		try {
-			await declaration.step.run(cut);
+			await declaration.step.run(cut, {
+				staged: (info) => this.events.staged(declaration, info),
+			});
 			while (declaration.step.check !== undefined) {
 				const passed = await declaration.step.check(cut);
 				await this.events.check(declaration, passed);

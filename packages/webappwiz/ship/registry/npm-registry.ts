@@ -1,13 +1,17 @@
 import { NodePs, type Ps } from "webappwiz/system";
-import type { Registry } from "./registry";
+import type { Registry, StagedPackage } from "./registry";
 
 /** The processes `NpmRegistry` spawns through; the real ones by default. */
 export interface NpmRegistryOptions {
 	ps?: Ps;
 }
 
-/** Publishes packages to npm and reads back what it holds. */
+/**
+ * Stages packages on npm and reads back what it holds. Staging needs no 2FA,
+ * so a stage-only token will do; a person approves each version on npmjs.com.
+ */
 export class NpmRegistry implements Registry {
+	readonly staged = true;
 	private readonly ps: Ps;
 	private authed?: Promise<void>;
 
@@ -44,18 +48,30 @@ export class NpmRegistry implements Registry {
 		throw new Error(`npm view ${name}: ${stderr.trim() || stdout.trim()}`);
 	}
 
-	async publish(dir: string): Promise<void> {
+	async publish(dir: string): Promise<StagedPackage> {
 		this.authed ??= this.login();
 		await this.authed;
-		// Inherits stdio: publishing is the slow step, and watching it beats
-		// holding its output back until it fails.
-		const { exitCode } = await this.ps.spawn(
-			["npm", "publish", "--access", "public"],
+		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(
+			["npm", "stage", "publish", "--access", "public"],
 			{ cwd: dir },
 		);
 		if (exitCode !== 0) {
-			throw new Error(`publish failed in ${dir}`);
+			throw new Error(
+				`stage publish failed in ${dir}: ${stderr.trim() || stdout.trim()}`,
+			);
 		}
+		const found = /\+ (\S+)@[^@\s]+ \(staged with id ([^)\s]+)\)/.exec(
+			`${stdout}\n${stderr}`,
+		);
+		if (found?.[1] === undefined || found[2] === undefined) {
+			throw new Error(`npm staged ${dir} but printed no stage id`);
+		}
+		// npm documents no URL for one staged version; its Staged Packages tab
+		// sits on the package page.
+		return {
+			stageId: found[2],
+			url: `https://www.npmjs.com/package/${found[1]}`,
+		};
 	}
 
 	/** Runs `npm login` unless somebody is already logged in. NPM_TOKEN counts. */

@@ -68,4 +68,33 @@ describe("registry artifact", () => {
 		expect(await artifact.deployed()).toBe("1.2.3");
 		expect(artifact.name).toBe("@scope/one");
 	});
+
+	it("stages then waits for approval when the registry stages", async () => {
+		const cut = cutting();
+		const registry = new FakeRegistry();
+		registry.staging = () => ({ stageId: "st-1", url: "https://npm/one" });
+		const steps = new RegistryArtifact("@scope/one", registry).steps(cut);
+		const staged: unknown[] = [];
+
+		expect(steps.map((step) => [step.name, step.stage])).toEqual([
+			["Stage @scope/one@1.2.4", "publish"],
+			["Approve @scope/one@1.2.4", "approve"],
+		]);
+		await steps[0]?.run(cut, {
+			staged: async (info) => {
+				staged.push(info);
+			},
+		});
+		expect(staged).toEqual([
+			{
+				package: "@scope/one",
+				version: "1.2.4",
+				stageId: "st-1",
+				url: "https://npm/one",
+			},
+		]);
+		expect(await steps[1]?.check?.(cut)).toBe(false);
+		registry.has.add("@scope/one@1.2.4");
+		expect(await steps[1]?.check?.(cut)).toBe(true);
+	});
 });

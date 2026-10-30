@@ -44,6 +44,20 @@ export class StepEvents {
 		await this.write({ type: "started", id, name: step.name, at: this.at() });
 	}
 
+	/** A package staged for approval, with where to approve it. */
+	async staged(
+		{ id, step }: StepDeclaration,
+		info: { package: string; version: string; stageId: string; url: string },
+	): Promise<void> {
+		await this.write({
+			type: "staged",
+			id,
+			name: step.name,
+			...info,
+			at: this.at(),
+		});
+	}
+
 	async check(declaration: StepDeclaration, passed: boolean): Promise<void> {
 		await this.write({
 			type: "check",
@@ -120,6 +134,14 @@ export interface StepStartedEvent extends StepEvent {
 	readonly type: "started";
 }
 
+export interface StepStagedEvent extends StepEvent {
+	readonly type: "staged";
+	readonly package: string;
+	readonly version: string;
+	readonly stageId: string;
+	readonly url: string;
+}
+
 export interface StepCheckEvent extends StepEvent {
 	readonly type: "check";
 	readonly passed: boolean;
@@ -142,6 +164,7 @@ export interface StepFailedEvent extends StepEvent {
 export type ReleaseStepEvent =
 	| StepDeclaredEvent
 	| StepStartedEvent
+	| StepStagedEvent
 	| StepCheckEvent
 	| StepDoneEvent
 	| StepSkippedEvent

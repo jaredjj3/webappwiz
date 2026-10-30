@@ -24,7 +24,7 @@ commit, and carry each artifact out. `bump` says how far the version moves, and
 ## Declaration order does not matter
 
 Every artifact carries a stage: a `stamp` goes into the release commit, packages
-`publish`, then the `tag` goes on, then the `notes` are written about it. A
+`publish`, then (for a registry that stages) `approve`, then the `tag` goes on, then the `notes` are written about it. A
 release runs its artifacts by stage, so this declaration goes out in exactly the
 same order as the one above:
 
@@ -195,7 +195,7 @@ document for a program to read:
 `schema` is the shape's version and grows only by adding fields. Each `id` is
 the one the step's run-time events carry (`WEBAPPWIZ_SHIP_EVENTS`), so live
 progress matches the plan by `id`. `stage` is `preflight`, `stamp`, `build`,
-`publish`, `tag` or `notes`; `artifact` is present only for a step an artifact
+`publish`, `approve`, `tag` or `notes`; `artifact` is present only for a step an artifact
 declared.
 
 ## The events file
@@ -211,6 +211,7 @@ file is written.
 | ---------- | ---------------------------------------------------------------------------------------------- |
 | `declared` | `stage` (as in the plan), `packages` (string array), `artifact` (when declared by one), `deadlineMs` |
 | `started`  | none                                                                                           |
+| `staged`   | `package`, `version`, `stageId` (what `npm stage approve` takes) and `url`, the npm page to approve it on |
 | `check`    | `passed` (boolean), one per poll of a step's check                                             |
 | `done`     | none                                                                                           |
 | `skipped`  | none: a resumed release found the step already landed                                          |
@@ -237,7 +238,14 @@ unchanged.
 
 A release pushes versions out and moves on: it never waits for a registry or
 its CDN to serve what it published, so the tag goes on as soon as the last
-package is out. Whether a version is installable yet is for whoever needs it
+package is out. The exception is a registry that stages. `releases.npm` runs
+`npm stage publish` (npm CLI 11.15+, so a stage-only `NPM_TOKEN` works), which
+holds each version until a person approves it on npmjs.com or with
+`npm stage approve <stage-id>`. It declares a `Stage` step per package, each
+reporting a `staged` event, then an `Approve` step per package, in the `approve`
+stage, that polls the registry up to an hour, so every package is staged before
+any wait and the tag never names a version that is not live. A brand-new package
+cannot be staged: publish its first version by hand. Whether a version is installable yet is for whoever needs it
 to ask. `status()` reads back what is live. Every artifact
 that can say what it has live answers `deployed()`, and `status()` asks them
 all beside the workspace's own version, so a caller can show what lags:

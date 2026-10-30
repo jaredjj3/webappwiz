@@ -2,13 +2,14 @@ import type { Cut } from "../cut";
 import type { Step } from "../step";
 
 /** Use a stage to place an artifact before or after the other release work. */
-export type Stage = "stamp" | "build" | "publish" | "tag" | "notes";
+export type Stage = "stamp" | "build" | "publish" | "approve" | "tag" | "notes";
 
 /** Every stage, in the order a release runs them. */
 export const STAGES: readonly Stage[] = [
 	"stamp",
 	"build",
 	"publish",
+	"approve",
 	"tag",
 	"notes",
 ];

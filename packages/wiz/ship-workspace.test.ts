@@ -5,6 +5,30 @@ import { MemoryLogger } from "webappwiz/log";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { ship } from "./ship";
 
+/**
+ * Makes `ps` stage each package with an id and approve it instantly: `npm view`
+ * answers for a package only once it has been staged.
+ */
+function stagesInstantly(ps: FakePs, fs: FakeFs): void {
+	const capture = ps.spawnCapture.bind(ps);
+	const staged = new Set<string>();
+	ps.spawnCapture = async (argv, opts) => {
+		const result = await capture(argv, opts);
+		if (argv[1] === "stage" && result.exitCode === 0) {
+			const { name } = JSON.parse(await fs.read(`${opts?.cwd}/package.json`));
+			staged.add(name);
+			return {
+				...result,
+				stdout: `+ ${name}@1.2.4 (staged with id st-${staged.size})\n`,
+			};
+		}
+		const asked = argv[1] === "view" ? argv[2]?.replace(/@1\.2\.4$/, "") : "";
+		return asked !== undefined && staged.has(asked)
+			? { ...result, stdout: "1.2.4\n" }
+			: result;
+	};
+}
+
 describe("workspace publication", () => {
 	let fs: FakeFs;
 	let ps: FakePs;
@@ -16,6 +40,7 @@ describe("workspace publication", () => {
 	beforeEach(async () => {
 		fs = new FakeFs();
 		ps = new FakePs();
+		stagesInstantly(ps, fs);
 		ps.setCwd("/repo");
 		await fs.mkdir("/repo");
 		const documents = [
@@ -52,7 +77,7 @@ describe("workspace publication", () => {
 		fail = true;
 		sent = [];
 		ps.simulate(async () => {
-			if (ps.getCalls().at(-1) !== "npm publish --access public") {
+			if (ps.getCalls().at(-1) !== "npm stage publish --access public") {
 				return 0;
 			}
 			if (fail) {

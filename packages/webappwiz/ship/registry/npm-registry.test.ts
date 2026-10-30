@@ -7,22 +7,40 @@ describe("npm registry", () => {
 
 	beforeEach(() => {
 		ps = new FakePs();
+		ps.setCaptureOutput("+ @scope/one@1.2.4 (staged with id st-123)\n", "");
 	});
 
 	/** Fails every `npm whoami`, so nobody is logged in. */
 	const loggedOut = () =>
 		ps.simulate(async () => (ps.getCalls().at(-1) === "npm whoami" ? 1 : 0));
 
-	it("publishes without a word when npm already has somebody", async () => {
+	it("stages without a word when npm already has somebody", async () => {
 		await new NpmRegistry({ ps }).publish("/repo/packages/one");
 
 		expect(ps.getCalls()).toEqual([
 			"npm whoami",
-			"npm publish --access public",
+			"npm stage publish --access public",
 		]);
 	});
 
-	it("logs in when npm has nobody, then publishes", async () => {
+	it("reports the stage id and the page to approve on", async () => {
+		const staged = await new NpmRegistry({ ps }).publish("/repo/packages/one");
+
+		expect(staged).toEqual({
+			stageId: "st-123",
+			url: "https://www.npmjs.com/package/@scope/one",
+		});
+	});
+
+	it("fails when npm stages without printing an id", async () => {
+		ps.setCaptureOutput("", "");
+
+		await expect(
+			new NpmRegistry({ ps }).publish("/repo/packages/one"),
+		).rejects.toThrow("printed no stage id");
+	});
+
+	it("logs in when npm has nobody, then stages", async () => {
 		loggedOut();
 
 		await new NpmRegistry({ ps }).publish("/repo/packages/one");
@@ -30,7 +48,7 @@ describe("npm registry", () => {
 		expect(ps.getCalls()).toEqual([
 			"npm whoami",
 			"npm login --auth-type=web",
-			"npm publish --access public",
+			"npm stage publish --access public",
 		]);
 	});
 

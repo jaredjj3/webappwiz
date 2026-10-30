@@ -104,6 +104,51 @@ describe("release", () => {
 		expect(await fs.exists("/repo/RELEASE")).toBe(false);
 	});
 
+	it("stages every package before waiting on any approval, then tags", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
+		// Approved the moment it is staged: the declared order alone shows
+		// both staged before the first approval is asked for.
+		registry.staging = (dir) => {
+			registry.has.add(`@scope/${dir.split("/").at(-1)}@1.2.4`);
+			return { stageId: `id-${dir}`, url: `https://npm${dir}` };
+		};
+		const approving = releases.lockstep(
+			releases.custom("@scope/one", registry),
+			releases.custom("@scope/two", registry),
+			releases.git({ git }),
+		);
+		await approving.release({ ...answering("y"), timer: new FakeTimer() });
+
+		const written = await events();
+		expect(
+			written
+				.filter((event) => event.type === "declared")
+				.map((event) => event.name),
+		).toEqual([
+			"Preflight",
+			"Version 1.2.4",
+			"Stage @scope/one@1.2.4",
+			"Stage @scope/two@1.2.4",
+			"Approve @scope/one@1.2.4",
+			"Approve @scope/two@1.2.4",
+			"Push branch",
+			"Tag v1.2.4",
+			"Push v1.2.4",
+		]);
+		expect(written.filter((event) => event.type === "staged")).toMatchObject([
+			{
+				package: "@scope/one",
+				version: "1.2.4",
+				stageId: "id-/repo/packages/one",
+			},
+			{
+				package: "@scope/two",
+				version: "1.2.4",
+				stageId: "id-/repo/packages/two",
+			},
+		]);
+	});
+
 	it("writes every declared step and its transitions as JSON lines", async () => {
 		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
 
