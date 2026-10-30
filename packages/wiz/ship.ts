@@ -1,10 +1,15 @@
 import { catalog } from "@webappwiz/scry/catalog";
 import { ConsoleLogger, color, type Logger } from "webappwiz/log";
-import { type Bump, type Release, releases } from "webappwiz/ship";
+import {
+	type Bump,
+	githubActions,
+	type Release,
+	releases,
+} from "webappwiz/ship";
 import { type Fs, NodePs, type Ps } from "webappwiz/system";
 import { Duration } from "webappwiz/time";
 import { fix } from "./fix";
-import { PUBLISH_COMMAND } from "./publish-workflow";
+import { PUBLISH_COMMAND, TRUST_COMMAND } from "./publish-workflow";
 
 /**
  * Every agent skill this workspace ships, listed rather than discovered so
@@ -74,6 +79,25 @@ export async function publish(opts: PublishOptions = {}): Promise<void> {
 	const ps = opts.ps ?? new NodePs();
 	const declared = await declaration(log, opts.fs, ps);
 	await declared.publish({ log, fs: opts.fs, ps });
+}
+
+/** Where `trust` reads from and prints to; the real system by default. */
+export interface TrustOptions {
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+}
+
+/**
+ * Has npm trust the generated publish workflow for every package the
+ * declaration names, the once-per-package setup that publishing through
+ * GitHub Actions, with no token or 2FA, takes.
+ */
+export async function trust(opts: TrustOptions = {}): Promise<void> {
+	const log = opts.log ?? new ConsoleLogger();
+	const ps = opts.ps ?? new NodePs();
+	const declared = await declaration(log, opts.fs, ps);
+	await declared.trust({ log });
 }
 
 /** Where `status` reads from and prints to; the real system by default. */
@@ -161,7 +185,11 @@ async function declaration(
 			// The suite is expected to have run before anybody ships.
 			run: async () => fix({ check: true, log, ps, fs }),
 		}),
-		await releases.workspace({ fs, ps }),
+		await releases.workspace({
+			fs,
+			ps,
+			via: githubActions({ ps, trustCommand: TRUST_COMMAND }),
+		}),
 		...[...SKILLS, ...RULES].map((path) => releases.skill(path, { fs })),
 	);
 }

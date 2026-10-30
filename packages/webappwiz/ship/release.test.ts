@@ -813,4 +813,37 @@ describe("release", () => {
 			expect(registry.publishes).toEqual([]);
 		});
 	});
+
+	describe("trust", () => {
+		it("trusts every package, naming the ones that failed together", async () => {
+			const registry = new FakeRegistry();
+			registry.untrustable.add("@s/one");
+			const log = new MemoryLogger();
+			const release = releases.lockstep(
+				releases.custom("@s/one", registry),
+				releases.custom("@s/two", registry),
+			);
+
+			await expect(
+				release.trust({ log, pause: Duration.zero() }),
+			).rejects.toThrow("@s/one refused");
+			expect(registry.trusts).toEqual(["@s/one", "@s/two"]);
+			expect(log.entries.map(({ message }) => String(message))).toEqual([
+				expect.stringContaining("@s/two"),
+			]);
+		});
+
+		it("refuses a release with nothing that publishes from CI", async () => {
+			const release = releases.step({
+				name: "Typecheck",
+				deadline: Duration.secs(1),
+				stage: "preflight",
+				run: async () => {},
+			});
+
+			await expect(release.trust({ log: new MemoryLogger() })).rejects.toThrow(
+				"via: githubActions()",
+			);
+		});
+	});
 });

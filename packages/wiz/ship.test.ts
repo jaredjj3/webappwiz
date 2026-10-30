@@ -5,26 +5,36 @@ import { FakeFs, FakePs } from "webappwiz/system/testing";
 import { plan, ship, status } from "./ship";
 
 /**
- * Makes `ps` stage with an id and approve instantly: `npm view` answers only
- * once something has been staged.
+ * Makes `ps` run the publish workflow instantly: once it is dispatched, its
+ * run reads as succeeded and `npm view` answers.
  */
-function stagesInstantly(ps: FakePs): void {
+function publishesInstantly(ps: FakePs): void {
 	const capture = ps.spawnCapture.bind(ps);
-	let staged = false;
+	let dispatched = false;
 	ps.spawnCapture = async (argv, opts) => {
 		const result = await capture(argv, opts);
-		if (argv[1] === "stage") {
-			staged = true;
-			return {
-				...result,
-				stdout: "+ @scope/solo@1.2.4 (staged with id st-1)\n",
-			};
+		const command = argv.slice(0, 3).join(" ");
+		if (command === "gh workflow run") {
+			dispatched = true;
 		}
-		return argv[1] === "view" && staged
+		if (command === "gh run list") {
+			const run = {
+				databaseId: 1,
+				url: "https://github.com/o/r/actions/runs/1",
+				status: "completed",
+				conclusion: "success",
+				attempt: 1,
+			};
+			return { ...result, stdout: JSON.stringify(dispatched ? [run] : []) };
+		}
+		return argv[1] === "view" && dispatched
 			? { ...result, stdout: "1.2.4\n" }
 			: result;
 	};
 }
+
+/** Whether `call` starts the publish workflow, which publishes in place of this machine. */
+const dispatches = (call: string) => call.startsWith("gh workflow run");
 
 describe("ship", () => {
 	// The gate runs through the same FakePs the release does, so its commands
@@ -48,7 +58,7 @@ describe("ship", () => {
 	beforeEach(async () => {
 		log = new MemoryLogger();
 		ps = new FakePs();
-		stagesInstantly(ps);
+		publishesInstantly(ps);
 		ps.setCwd("/repo");
 		fs = new FakeFs();
 		await fs.mkdir("/repo");
@@ -110,9 +120,7 @@ describe("ship", () => {
 		expect(push).toBeGreaterThan(-1);
 		expect(push).toBeLessThan(gate);
 		expect(calls.slice(gate, gate + GATE.length)).toEqual(GATE);
-		expect(gate).toBeLessThan(
-			calls.indexOf("npm stage publish --access public"),
-		);
+		expect(gate).toBeLessThan(calls.findIndex(dispatches));
 		expect(JSON.parse(await fs.read("/repo/package.json")).version).toBe(
 			"1.2.4",
 		);
@@ -190,7 +198,7 @@ describe("ship", () => {
 			"  GitHub release  1.2.2 (behind)",
 		]);
 		// Reading publishes nothing and stamps nothing.
-		expect(ps.getCalls()).not.toContain("npm stage publish --access public");
+		expect(ps.getCalls().some(dispatches)).toBe(false);
 	});
 
 	it("plan: prints the steps as JSON and runs none of them", async () => {

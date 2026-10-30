@@ -27,7 +27,7 @@ import { StderrScreen } from "./scry/screen";
 import { test as testRules } from "./scry/test";
 import { update as updateRules } from "./scry/update";
 import { why } from "./scry/why";
-import { publish } from "./ship/publish";
+import { publish, trust as trustPublisher } from "./ship/declaration";
 import { add } from "./skills/add";
 import { list } from "./skills/list";
 import { update as updateSkills } from "./skills/update";
@@ -447,6 +447,13 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 			"publish what the registries lack at the checked-out version, as the generated GitHub Actions workflow does",
 		)
 		.action((_opts, { log, fs, ps }) => publish({ log, fs, ps }));
+
+	shipping
+		.command("trust")
+		.description(
+			"have npm trust the generated publish workflow for every package, once, so the workflow publishes with no token or 2FA",
+		)
+		.action((_opts, { log, fs, ps }) => trustPublisher({ log, fs, ps }));
 
 	const skills = program
 		.group("skills")

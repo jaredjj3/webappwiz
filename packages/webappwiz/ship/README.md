@@ -348,7 +348,7 @@ Its `Publish` step pushes the release commit, starts the workflow on it
 (`gh workflow run`, with the commit as the `ref` input), and follows the run
 through the step's `check` events: `status` is the run's (`queued`,
 `in_progress`), `url` its page. A run that ends any other way than success
-fails the step with the end of its log. `Release.workspace({ via })` does the
+fails the step with the end of its log. `releases.workspace({ via })` does the
 same for every public package, and this workspace's ship uses it.
 
 One run publishes every package, found again by its commit: later packages
@@ -356,9 +356,15 @@ reuse it, a resumed release reuses a run still going or finished, and reruns
 one that failed (`gh run rerun --failed`). The `Live` step still asks npm
 whether the version is installable, and the tag still goes on only once it is.
 
-Each package needs a trusted publisher entry on npmjs.com once. When npm
-refuses the run for want of one, the failure says what to enter: the
-repository, the workflow file, and direct publishing. The package must exist
+Each package needs a trusted publisher entry on npm once. `release.trust()`
+makes them: for each package it runs `npm trust github`, naming the
+repository and the workflow file. npm asks you to authenticate in a browser;
+choose to skip two-factor authentication for the next 5 minutes there, and
+the other packages go through without asking. `bunx @webappwiz/cli ship
+trust` runs it for a project's `.wiz/ship.ts`, and `wiz dev ship trust` for
+this workspace. When npm refuses a run for want of an entry, the failure names
+that command (`githubActions({ trustCommand })` sets which) and the
+`npm trust github` line for that package alone. The package must exist
 already, and a new entry lapses after about two days unless a publish uses it.
 
 ## Logging in is part of publishing

@@ -3,36 +3,15 @@ import { readdir, readFile } from "node:fs/promises";
 import { catalog } from "@webappwiz/scry/catalog";
 import { MemoryLogger } from "webappwiz/log";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
-import { ship } from "./ship";
+import { publish } from "./ship";
 
-/**
- * Makes `ps` stage each package with an id and approve it instantly: `npm view`
- * answers for a package only once it has been staged.
- */
-function stagesInstantly(ps: FakePs, fs: FakeFs): void {
-	const capture = ps.spawnCapture.bind(ps);
-	const staged = new Set<string>();
-	ps.spawnCapture = async (argv, opts) => {
-		const result = await capture(argv, opts);
-		if (argv[1] === "stage" && result.exitCode === 0) {
-			const { name } = JSON.parse(await fs.read(`${opts?.cwd}/package.json`));
-			staged.add(name);
-			return {
-				...result,
-				stdout: `+ ${name}@1.2.4 (staged with id st-${staged.size})\n`,
-			};
-		}
-		const asked = argv[1] === "view" ? argv[2]?.replace(/@1\.2\.4$/, "") : "";
-		return asked !== undefined && staged.has(asked)
-			? { ...result, stdout: "1.2.4\n" }
-			: result;
-	};
-}
+/** What the publish workflow runs for each package, from a job npm trusts. */
+const PUBLISH = "npm publish --access public --loglevel verbose";
 
 describe("workspace publication", () => {
 	let fs: FakeFs;
 	let ps: FakePs;
-	const opts = () => ({ fs, ps, log: new MemoryLogger(), prompt: () => "y" });
+	const opts = () => ({ fs, ps, log: new MemoryLogger() });
 	let sources: Map<string, Record<string, unknown>>;
 	let fail: boolean;
 	let sent: Array<{ dir: string; manifest: Record<string, unknown> }>;
@@ -40,7 +19,6 @@ describe("workspace publication", () => {
 	beforeEach(async () => {
 		fs = new FakeFs();
 		ps = new FakePs();
-		stagesInstantly(ps, fs);
 		ps.setCwd("/repo");
 		await fs.mkdir("/repo");
 		const documents = [
@@ -64,9 +42,13 @@ describe("workspace publication", () => {
 		sources = new Map();
 		const packages = new URL("../", import.meta.url);
 		for (const dir of await readdir(packages)) {
-			const manifest = JSON.parse(
-				await readFile(new URL(`${dir}/package.json`, packages), "utf8"),
-			);
+			// At the workspace's version, as a release commit leaves them.
+			const manifest = {
+				...JSON.parse(
+					await readFile(new URL(`${dir}/package.json`, packages), "utf8"),
+				),
+				version: "1.2.3",
+			};
 			sources.set(`/repo/packages/${dir}`, manifest);
 			await fs.mkdir(`/repo/packages/${dir}`);
 			await fs.write(
@@ -77,7 +59,7 @@ describe("workspace publication", () => {
 		fail = true;
 		sent = [];
 		ps.simulate(async () => {
-			if (ps.getCalls().at(-1) !== "npm stage publish --access public") {
+			if (ps.getCalls().at(-1) !== PUBLISH) {
 				return 0;
 			}
 			if (fail) {
@@ -93,15 +75,15 @@ describe("workspace publication", () => {
 	});
 
 	it("publishes built metadata for every public package after a fresh retry", async () => {
-		await expect(ship(opts())).rejects.toThrow("publish failed");
+		await expect(publish(opts())).rejects.toThrow("publish failed");
 		expect(
 			await Promise.all(
 				[...sources.keys()].map((dir) => fs.exists(`${dir}/dist`)),
 			),
 		).toEqual([...sources.keys()].map(() => false));
 		fail = false;
-		// ship constructs new release artifacts and a new Cut, as another CLI run does.
-		await ship(opts());
+		// publish constructs new release artifacts and a new Cut, as another CLI run does.
+		await publish(opts());
 
 		const publicSources = [...sources.entries()].filter(
 			([, manifest]) => !manifest.private,
@@ -110,16 +92,16 @@ describe("workspace publication", () => {
 			publicSources.map(([dir]) => `${dir}/dist`).sort(),
 		);
 		expect(sent.map(({ manifest }) => manifest.version)).toEqual(
-			publicSources.map(() => "1.2.4"),
+			publicSources.map(() => "1.2.3"),
 		);
 		expect(JSON.stringify(sent)).not.toContain("workspace:");
 		const dependencies = Object.fromEntries(
 			sent.map(({ manifest }) => [manifest.name, manifest.dependencies]),
 		);
 		expect(dependencies).toMatchObject({
-			"@webappwiz/cli": { "@webappwiz/scry": "^1.2.4", webappwiz: "^1.2.4" },
-			"@webappwiz/scry": { webappwiz: "^1.2.4" },
-			"@webappwiz/react": { webappwiz: "^1.2.4" },
+			"@webappwiz/cli": { "@webappwiz/scry": "^1.2.3", webappwiz: "^1.2.3" },
+			"@webappwiz/scry": { webappwiz: "^1.2.3" },
+			"@webappwiz/react": { webappwiz: "^1.2.3" },
 		});
 		expect(
 			await Promise.all(
@@ -127,12 +109,6 @@ describe("workspace publication", () => {
 					JSON.parse(await fs.read(`${dir}/package.json`)),
 				),
 			),
-		).toEqual(
-			[...sources.values()].map((source) => ({
-				...source,
-				version: "1.2.4",
-			})),
-		);
-		expect(await fs.exists("/repo/RELEASE")).toBe(false);
+		).toEqual([...sources.values()]);
 	});
 });

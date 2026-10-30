@@ -15,6 +15,11 @@ export interface GithubActionsOptions {
 	git?: Git;
 	workflows?: Workflows;
 	ps?: Ps;
+	/**
+	 * What a refused run says to run to set up npm's trust, which calls
+	 * `Release.trust()`; `bunx @webappwiz/cli ship trust` by default.
+	 */
+	trustCommand?: string;
 }
 
 /** Use it as `releases.npm`'s `via`: `githubActions()` makes one. */
@@ -33,15 +38,24 @@ export function githubActions(opts: GithubActionsOptions = {}): GithubActions {
  * finished, and reruns one that failed.
  */
 export class GithubActions {
+	/** The workflow's file name, as npm's trusted publisher entry names it. */
+	readonly file = basename(PUBLISH_WORKFLOW_PATH);
 	private readonly git: Git;
 	private readonly workflows: Workflows;
 	/** The attempt of the run a rerun started from, whose result is stale until a newer one shows. */
 	private rerunFrom?: { id: string; attempt: number };
+	private readonly trustCommand: string;
 
 	constructor(opts: GithubActionsOptions = {}) {
 		const ps = opts.ps ?? new NodePs();
 		this.git = opts.git ?? new CliGit(ps.cwd(), { ps });
 		this.workflows = opts.workflows ?? new CliWorkflows({ ps });
+		this.trustCommand = opts.trustCommand ?? "bunx @webappwiz/cli ship trust";
+	}
+
+	/** The repository the workflow runs in, as `owner/name`. */
+	repo(): Promise<string> {
+		return this.workflows.repo();
 	}
 
 	/**
@@ -53,9 +67,9 @@ export class GithubActions {
 		const branch = await this.git.branch();
 		await this.git.push(branch);
 		const sha = await this.git.head();
-		const [latest] = await this.workflows.runs(file(), sha);
+		const [latest] = await this.workflows.runs(this.file, sha);
 		if (latest === undefined) {
-			await this.workflows.dispatch(file(), branch, { ref: sha });
+			await this.workflows.dispatch(this.file, branch, { ref: sha });
 			return;
 		}
 		if (latest.status === "completed" && latest.conclusion !== "success") {
@@ -73,7 +87,7 @@ export class GithubActions {
 	 * all that passes a release that never started a run.
 	 */
 	async watch(name: string, live: boolean): Promise<CheckReport> {
-		const [run] = await this.workflows.runs(file(), await this.git.head());
+		const [run] = await this.workflows.runs(this.file, await this.git.head());
 		if (run === undefined) {
 			return live ? { passed: true } : { passed: false, status: "waiting" };
 		}
@@ -108,20 +122,13 @@ export class GithubActions {
 		return `the publish run ${conclusion ?? "ended"}: ${url}\n${tail}${refused}`;
 	}
 
-	/** What to enter on npmjs.com for npm to trust the workflow, once per package. */
+	/** What to run for npm to trust the workflow, once per package. */
 	private async setup(name: string): Promise<string> {
 		const repo = await this.workflows.repo();
 		return [
-			`npm refused the run: ${name} has no trusted publisher entry for it. On npmjs.com, open the package's Settings, then Trusted Publisher, and choose GitHub Actions:`,
-			`  repository:  ${repo}`,
-			`  workflow:    ${file()}`,
-			`  environment: (blank)`,
-			`  publishing:  allow direct publish`,
+			`npm refused the run: ${name} has no trusted publisher entry for it. Run \`${this.trustCommand}\` to set one up for every package, or for this one alone:`,
+			`  npm trust github ${name} --repo ${repo} --file ${this.file} --allow-publish`,
 			"The package must already exist. A new entry lapses after about two days unless a publish uses it. Then ship again to rerun the failed run.",
 		].join("\n");
 	}
-}
-
-function file(): string {
-	return basename(PUBLISH_WORKFLOW_PATH);
 }

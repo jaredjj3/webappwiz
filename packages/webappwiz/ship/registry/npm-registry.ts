@@ -1,3 +1,4 @@
+import type { Logger } from "webappwiz/log";
 import { NodePs, type Ps } from "webappwiz/system";
 import { Duration } from "webappwiz/time";
 import type { CheckReport } from "../step";
@@ -33,10 +34,13 @@ export class NpmRegistry implements Registry {
 	readonly publishDeadline?: Duration;
 	/** Set only for a `via` publish, whose run it follows. */
 	readonly watch?: (name: string, version: string) => Promise<CheckReport>;
+	/** Set only for a `via` publish, whose workflow npm has to trust. */
+	readonly trust?: (name: string, log: Logger) => Promise<void>;
 	private readonly ps: Ps;
 	private readonly isTrusted: boolean;
 	private readonly via?: GithubActions;
 	private authed?: Promise<void>;
+	private saidSkip = false;
 
 	constructor(opts: NpmRegistryOptions = {}) {
 		this.ps = opts.ps ?? new NodePs();
@@ -49,6 +53,44 @@ export class NpmRegistry implements Registry {
 				via.watch(name, await this.published(name, version));
 			// A run waits for a runner before it publishes anything.
 			this.publishDeadline = Duration.mins(30);
+			this.trust = (name, log) => this.trustWorkflow(name, via, log);
+		}
+	}
+
+	/**
+	 * `npm trust github`, run where the person can see it: npm asks them to
+	 * authenticate in a browser, even to list what a package trusts.
+	 */
+	private async trustWorkflow(
+		name: string,
+		via: GithubActions,
+		log: Logger,
+	): Promise<void> {
+		if (!this.saidSkip) {
+			this.saidSkip = true;
+			log.info(
+				"npm asks you to authenticate in a browser: choose to skip two-factor authentication for the next 5 minutes, and the other packages go through without asking",
+			);
+		}
+		const argv = [
+			"npm",
+			"trust",
+			"github",
+			name,
+			"--repo",
+			await via.repo(),
+			"--file",
+			via.file,
+			"--allow-publish",
+			"--yes",
+		];
+		const { exitCode } = await this.ps.spawn(argv);
+		if (exitCode !== 0) {
+			// npm keeps one trusted publisher per package, and its error goes to
+			// the terminal rather than here.
+			throw new Error(
+				`${argv.join(" ")} failed: if ${name} already trusts another workflow, \`npm trust list ${name}\` shows it and \`npm trust revoke ${name} --id <id>\` clears it`,
+			);
 		}
 	}
 

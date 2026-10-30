@@ -15,6 +15,11 @@ export class FakeRegistry implements Registry {
 	/** Makes the registry scan what it accepts, as npm does. */
 	scanning?: boolean;
 
+	/** Names `trust` was asked for, in order. */
+	readonly trusts: string[] = [];
+	/** Names whose `trust` throws. */
+	readonly untrustable = new Set<string>();
+
 	/** Set once `trusted()` is asked for: publishes then go out unstaged, as CI's do. */
 	viaTrust = false;
 
@@ -49,6 +54,13 @@ export class FakeRegistry implements Registry {
 		this.publishes.push(dir);
 		const staged = this.viaTrust ? undefined : this.staging?.(dir);
 		return staged === undefined ? {} : { staged };
+	}
+
+	async trust(name: string): Promise<void> {
+		this.trusts.push(name);
+		if (this.untrustable.has(name)) {
+			throw new Error(`${name} refused`);
+		}
 	}
 
 	page(name: string, version: string): string {

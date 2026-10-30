@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import { MemoryLogger } from "webappwiz/log";
 import { FakePs } from "webappwiz/system/testing";
 import { FakeGit } from "../git/fake-git";
 import { FakeWorkflows } from "../github/fake-workflows";
@@ -216,5 +217,48 @@ describe("npm registry via github actions", () => {
 
 		expect(registry.trusted().staged).toBe(false);
 		expect((registry.trusted() as NpmRegistry).watch).toBeUndefined();
+	});
+
+	it("has npm trust the workflow, saying once how to skip 2FA for the rest", async () => {
+		const ps = new FakePs();
+		const log = new MemoryLogger();
+		const registry = new NpmRegistry({
+			ps,
+			via: new GithubActions({
+				git: new FakeGit(),
+				workflows: new FakeWorkflows(),
+			}),
+		});
+
+		await registry.trust?.("@s/one", log);
+		await registry.trust?.("@s/two", log);
+
+		expect(ps.getCalls()).toEqual([
+			"npm trust github @s/one --repo owner/repo --file webappwiz-publish.yml --allow-publish --yes",
+			"npm trust github @s/two --repo owner/repo --file webappwiz-publish.yml --allow-publish --yes",
+		]);
+		expect(
+			log.entries.filter(({ message }) => String(message).includes("skip")),
+		).toHaveLength(1);
+	});
+
+	it("says how to clear another trusted publisher when npm refuses", async () => {
+		const ps = new FakePs();
+		ps.simulate(() => Promise.resolve(1));
+		const registry = new NpmRegistry({
+			ps,
+			via: new GithubActions({
+				git: new FakeGit(),
+				workflows: new FakeWorkflows(),
+			}),
+		});
+
+		await expect(
+			registry.trust?.("@s/one", new MemoryLogger()),
+		).rejects.toThrow("`npm trust revoke @s/one --id <id>` clears it");
+	});
+
+	it("has nothing to trust when it publishes from this machine", () => {
+		expect(new NpmRegistry().trust).toBeUndefined();
 	});
 });

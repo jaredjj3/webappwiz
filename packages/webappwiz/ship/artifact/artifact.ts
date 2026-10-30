@@ -1,3 +1,4 @@
+import type { Logger } from "webappwiz/log";
 import type { Cut } from "../cut";
 import type { Step } from "../step";
 
@@ -34,6 +35,11 @@ export interface Artifact {
 	 * trusts. Leave it off when it goes out the same way anywhere.
 	 */
 	trusted?(): Artifact;
+	/**
+	 * Has wherever this publishes trust the CI job `Release.publish()` runs in.
+	 * Leave it off when nothing about it publishes from CI.
+	 */
+	trust?(log: Logger): Promise<void>;
 	/** Removes output this artifact created, after success or failure. */
 	clean?(cut: Cut): Promise<void>;
 	/**

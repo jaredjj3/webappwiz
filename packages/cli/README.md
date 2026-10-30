@@ -22,6 +22,7 @@ bunx @webappwiz/cli creds add <NAME>          # keep one, typed at a hidden prom
 bunx @webappwiz/cli creds remove <NAME>
 bunx @webappwiz/cli creds run -- <command>    # run it with the stored keys in its environment
 bunx @webappwiz/cli ship publish              # publish what the registries lack, as CI does
+bunx @webappwiz/cli ship trust                # have npm trust that workflow, once per package
 ```
 
 ## scry
@@ -354,17 +355,24 @@ project declares what it ships as the default export of `.wiz/ship.ts`, a
 `Release` or a promise of one, built with [`webappwiz/ship`](../webappwiz/ship):
 
 ```ts
-import { releases } from "webappwiz/ship";
+import { githubActions, releases } from "webappwiz/ship";
 
 export default releases.lockstep(
 	releases.publishWorkflow({ command: "bunx @webappwiz/cli ship publish" }),
-	await releases.workspace(),
+	await releases.workspace({ via: githubActions() }),
 );
 ```
 
 The command publishes each package the registries lack at the checked-out
 version, in their trusted mode, and nothing else: no stamp, tag, approval or
 notes. A rerun publishes nothing it already did.
+
+`ship trust` is the setup that takes, once per package: it runs `npm trust
+github` for each, naming the repository and the workflow. npm asks you to
+authenticate in a browser; choose to skip two-factor authentication for the
+next 5 minutes there, and the other packages go through without asking. A
+package that already trusts another workflow fails, and the error says how to
+clear it.
 
 ## creds
 

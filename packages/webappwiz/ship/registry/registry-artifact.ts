@@ -1,4 +1,4 @@
-import { color } from "webappwiz/log";
+import { color, type Logger } from "webappwiz/log";
 import { Duration } from "webappwiz/time";
 import type { Artifact, Stage } from "../artifact/artifact";
 import type { Cut } from "../cut";
@@ -14,6 +14,8 @@ const HELD_AFTER = Duration.mins(20);
 export class RegistryArtifact implements Artifact {
 	readonly packages: readonly string[];
 	readonly stage: Stage = "publish";
+	/** Set only when the registry has a CI job to trust. */
+	readonly trust?: (log: Logger) => Promise<void>;
 	private saidHeld = false;
 
 	constructor(
@@ -21,6 +23,10 @@ export class RegistryArtifact implements Artifact {
 		private readonly registry: Registry,
 	) {
 		this.packages = [name];
+		const { trust } = registry;
+		if (trust !== undefined) {
+			this.trust = (log) => trust.call(registry, name, log);
+		}
 	}
 
 	trusted(): Artifact {

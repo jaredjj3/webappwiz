@@ -12,6 +12,7 @@ import {
 	PublishWorkflow,
 	type PublishWorkflowOptions,
 } from "./publish-workflow";
+import type { GithubActions } from "./registry/github-actions";
 import { NpmRegistry, type NpmRegistryOptions } from "./registry/npm-registry";
 import type { Registry } from "./registry/registry";
 import { RegistryArtifact } from "./registry/registry-artifact";
@@ -24,6 +25,8 @@ import { ManifestWorkspace } from "./workspace/manifest-workspace";
 export interface WorkspaceReleaseOptions {
 	fs?: Fs;
 	ps?: Ps;
+	/** Publish through GitHub Actions instead of from this machine, as `releases.npm`'s `via`. */
+	via?: GithubActions;
 }
 
 /**
@@ -151,7 +154,7 @@ export class releases {
 	static async workspace(opts: WorkspaceReleaseOptions = {}): Promise<Release> {
 		const ps = opts.ps ?? new NodePs();
 		const workspace = await ManifestWorkspace.at(ps.cwd(), { fs: opts.fs, ps });
-		const registry = new NpmRegistry({ ps });
+		const registry = new NpmRegistry({ ps, via: opts.via });
 		const artifacts: Artifact[] = (await workspace.packages())
 			.filter((pkg) => !pkg.private)
 			.map((pkg) => new RegistryArtifact(pkg.name, registry));

@@ -1,3 +1,4 @@
+import type { Logger } from "webappwiz/log";
 import type { Duration } from "webappwiz/time";
 import type { CheckReport } from "../step";
 
@@ -64,6 +65,11 @@ export interface Registry {
 	 * `publish` returns once the registry has the version.
 	 */
 	watch?(name: string, version: string): Promise<CheckReport>;
+	/**
+	 * Has the registry trust the CI job that publishes `name`, which takes a
+	 * person to authenticate. Leave it off when nothing publishes from CI.
+	 */
+	trust?(name: string, log: Logger): Promise<void>;
 	/** Where a person can see `version` of `name`, and why it is not live yet. */
 	page?(name: string, version: string): string;
 }

@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { MemoryLogger } from "webappwiz/log";
 import { NodeFs } from "webappwiz/system";
 import { FakePs } from "webappwiz/system/testing";
-import { publish } from "./publish";
+import { publish, trust } from "./declaration";
 
-describe("publish", () => {
+describe("ship declaration", () => {
 	let root: string;
 	let ps: FakePs;
 
@@ -25,6 +25,12 @@ describe("publish", () => {
 
 	it("names the declaration when the project has none", async () => {
 		await expect(run()).rejects.toThrow(".wiz/ship.ts not found");
+	});
+
+	it("trusts nothing when the project has no declaration", async () => {
+		await expect(
+			trust({ log: new MemoryLogger(), fs: new NodeFs(), ps }),
+		).rejects.toThrow(".wiz/ship.ts not found");
 	});
 
 	it("refuses a declaration that is not a Release", async () => {

@@ -10,6 +10,7 @@ import { ReleaseFile } from "./release-file";
 import type { Step, StepStage } from "./step";
 import { type StepDeclaration, StepEvents } from "./step-events";
 import { StepRunner } from "./step-runner";
+import { type TrustOptions, trust } from "./trust";
 import { type Bump, bump } from "./version";
 import { ManifestWorkspace } from "./workspace/manifest-workspace";
 import type { Package, Workspace } from "./workspace/workspace";
@@ -203,6 +204,16 @@ export class Release {
 		}
 		await file.clear();
 		log.info(color.green(`shipped ${version}`));
+	}
+
+	/**
+	 * Has each registry trust the CI job that `publish()` runs in, as npm's
+	 * trusted publisher entry for each package: the one setup publishing
+	 * without a token or 2FA takes. Every artifact is tried, and the ones that
+	 * failed are named together at the end.
+	 */
+	async trust(opts: TrustOptions = {}): Promise<void> {
+		await trust(this.artifacts, opts);
 	}
 
 	/**
@@ -443,7 +454,7 @@ function artifactName(artifact: Artifact): string {
 }
 
 /** What status calls an artifact that names itself nothing. */
-function statusName(artifact: Artifact): string {
+export function statusName(artifact: Artifact): string {
 	return artifact.packages.length > 0
 		? artifact.packages.join(" ")
 		: (artifact.stage ?? "publish");

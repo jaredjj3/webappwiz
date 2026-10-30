@@ -12,6 +12,11 @@ export {
 	PublishWorkflow,
 	type PublishWorkflowOptions,
 } from "./publish-workflow";
+export {
+	GithubActions,
+	type GithubActionsOptions,
+	githubActions,
+} from "./registry/github-actions";
 export type { NpmRegistryOptions } from "./registry/npm-registry";
 export type {
 	Publication,
@@ -40,5 +45,6 @@ export type {
 	StepFailedEvent,
 	StepStartedEvent,
 } from "./step-events";
+export type { TrustOptions } from "./trust";
 export type { Bump } from "./version";
 export type { Package, Workspace } from "./workspace/workspace";

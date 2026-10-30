@@ -3,7 +3,7 @@ import { webappwiz } from "@webappwiz/cli/webappwiz";
 import { z } from "zod";
 import { fix } from "./fix";
 import { path } from "./path";
-import { plan, publish, ship, status } from "./ship";
+import { plan, publish, ship, status, trust } from "./ship";
 import { test } from "./test";
 
 /** Everything `wiz` is run with, which is what the cli it is built on needs. */
@@ -74,6 +74,13 @@ shipping
 		"publish what npm lacks at the checked-out version, as the generated GitHub Actions workflow does",
 	)
 	.action((_, { log, fs, ps }) => publish({ log, fs, ps }));
+
+shipping
+	.command("trust")
+	.description(
+		"have npm trust the generated publish workflow for every package, once, so ships publish with no token or 2FA",
+	)
+	.action((_, { log, fs, ps }) => trust({ log, fs, ps }));
 
 shipping
 	.command("plan")

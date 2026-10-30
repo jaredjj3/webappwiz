@@ -100,7 +100,7 @@ describe("github actions", () => {
 		workflows.log = "npm refused the OIDC token exchange for /x";
 
 		await expect(actions.watch("@s/one", false)).rejects.toThrow(
-			/repository: {2}owner\/repo\n {2}workflow: {4}webappwiz-publish\.yml/,
+			"Run `bunx @webappwiz/cli ship trust` to set one up for every package, or for this one alone:\n  npm trust github @s/one --repo owner/repo --file webappwiz-publish.yml --allow-publish",
 		);
 	});
 
