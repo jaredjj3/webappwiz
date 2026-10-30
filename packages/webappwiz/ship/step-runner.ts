@@ -23,7 +23,7 @@ export class StepRunner {
 		opts: StepRunOptions = {},
 	): Promise<void> {
 		if (opts.done === true) {
-			await this.events.done(declaration);
+			await this.events.skipped(declaration);
 			return;
 		}
 		await this.events.started(declaration);

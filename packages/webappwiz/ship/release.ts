@@ -144,7 +144,14 @@ export class Release {
 		const version = found?.version ?? bump(next.current, next.bump);
 		const cut = new Cut(version, packages, { log, root: workspace.root });
 		const runner = new StepRunner(
-			new StepEvents(ps.env("WEBAPPWIZ_SHIP_EVENTS"), fs, opts.wallClock),
+			new StepEvents(
+				ps.env("WEBAPPWIZ_SHIP_EVENTS"),
+				fs,
+				opts.wallClock,
+				ps.env("WEBAPPWIZ_SHIP_PROGRESS") === "1"
+					? { line: (text) => log.info(text) }
+					: undefined,
+			),
 			opts.timer,
 		);
 

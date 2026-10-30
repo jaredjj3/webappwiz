@@ -211,7 +211,42 @@ describe("release", () => {
 			(event) =>
 				event.name === "Publish @scope/one@1.2.4" && event.type !== "declared",
 		);
-		expect(publish.map((event) => event.type)).toEqual(["done"]);
+		expect(publish.map((event) => event.type)).toEqual(["skipped"]);
+	});
+
+	it("prints a JSON line per step transition when WEBAPPWIZ_SHIP_PROGRESS is 1", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_PROGRESS: "1" });
+		github.error = new Error("stop after the tag");
+		await expect(release.release(answering("y"))).rejects.toThrow();
+		const lines = () =>
+			log.entries
+				.map((entry) => String(entry.message))
+				.filter((line) => line.startsWith("{"))
+				.map((line) => JSON.parse(line));
+		const first = lines();
+		expect(first[0]).toMatchObject({
+			event: "step",
+			id: "preflight",
+			state: "start",
+		});
+		expect(first.at(-1)).toMatchObject({ state: "failed" });
+		expect(first.every((line) => !Number.isNaN(Date.parse(line.at)))).toBe(
+			true,
+		);
+
+		log.clear();
+		github.error = undefined;
+		await release.release(answering("y"));
+
+		const states = lines().map((line) => line.state);
+		expect(states).toContain("skipped");
+		expect(states).not.toContain("failed");
+	});
+
+	it("prints no progress lines unless asked", async () => {
+		await release.release(answering("y"));
+
+		expect(said()).not.toContain('"event":"step"');
 	});
 
 	it("goes ahead without asking when told yes", async () => {

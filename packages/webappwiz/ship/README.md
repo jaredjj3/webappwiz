@@ -198,6 +198,20 @@ progress matches the plan by `id`. `stage` is `preflight`, `stamp`, `build`,
 `publish`, `tag` or `notes`; `artifact` is present only for a step an artifact
 declared.
 
+## Live progress
+
+With `WEBAPPWIZ_SHIP_PROGRESS=1`, `release()` also prints one JSON line per
+step event beside its usual output, each a line of its own that starts with `{`:
+
+```json
+{"event":"step","id":"step:0:Publish @scope/one","state":"start","at":"2026-10-30T12:00:00.000Z"}
+```
+
+`state` is `start`, `done`, `failed` or `skipped`, the last for a step a resumed
+release (see the RELEASE file) found already landed. `id` is the plan's `id`, so
+every line matches a step in `wiz dev ship plan --json`. Unset, the output is
+unchanged.
+
 ## What is live
 
 A release pushes versions out and moves on: it never waits for a registry or
