@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { catalog } from "@webappwiz/scry/catalog";
 import { color, MemoryLogger } from "webappwiz/log";
 import { FakeFs, FakePs } from "webappwiz/system/testing";
-import { ship, status } from "./ship";
+import { plan, ship, status } from "./ship";
 
 describe("ship", () => {
 	// The gate runs through the same FakePs the release does, so its commands
@@ -166,5 +166,26 @@ describe("ship", () => {
 		]);
 		// Reading publishes nothing and stamps nothing.
 		expect(ps.getCalls()).not.toContain("npm publish --access public");
+	});
+
+	it("plan: prints the steps as JSON and runs none of them", async () => {
+		await plan({ log, fs, ps, json: true });
+
+		const printed = JSON.parse(String(log.entries[0]?.message));
+		expect(printed.schema).toBe(1);
+		expect(printed.version).toBe("1.2.4");
+		expect(printed.steps[0].id).toBe("preflight");
+		expect(printed.steps.map((step: { name: string }) => step.name)).toContain(
+			"Typecheck",
+		);
+		expect(ps.getCalls()).toEqual([]);
+	});
+
+	it("plan: prints a readable list without --json", async () => {
+		await plan({ log, fs, ps });
+
+		const said = log.entries.map((entry) => String(entry.message)).join("\n");
+		expect(said).toContain("[preflight] Typecheck");
+		expect(said).toContain("[tag]");
 	});
 });

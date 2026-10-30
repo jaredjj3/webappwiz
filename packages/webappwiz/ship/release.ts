@@ -7,7 +7,7 @@ import { CliGit } from "./git/cli-git";
 import type { Git } from "./git/git";
 import { order } from "./order";
 import { ReleaseFile } from "./release-file";
-import type { Step } from "./step";
+import type { Step, StepStage } from "./step";
 import { type StepDeclaration, StepEvents } from "./step-events";
 import { StepRunner } from "./step-runner";
 import { type Bump, bump } from "./version";
@@ -148,6 +148,59 @@ export class Release {
 			opts.timer,
 		);
 
+		const { preflight, before, versionStep, going } = this.declare({
+			workspace,
+			git,
+			packages,
+			cut,
+			version,
+		});
+		await runner.declare([preflight, ...before, versionStep, ...going]);
+		await runner.run(preflight, cut);
+		for (const step of before) {
+			await runner.run(step, cut);
+		}
+
+		if (
+			!confirm(
+				opts.prompt ?? prompt,
+				log,
+				this.packages,
+				version,
+				next,
+				opts.yes,
+			)
+		) {
+			log.info(color.red("aborted"));
+			return;
+		}
+
+		const state = found ?? { version, done: [] };
+		await file.write(state);
+		try {
+			await runner.run(versionStep, cut);
+			for (const declaration of going) {
+				const done =
+					declaration.step.stage !== "build" &&
+					state.done.includes(declaration.id);
+				await runner.run(declaration, cut, { done });
+				if (!state.done.includes(declaration.id)) {
+					state.done.push(declaration.id);
+				}
+				await file.write(state);
+			}
+		} finally {
+			for (const artifact of this.artifacts) {
+				await artifact.clean?.(cut);
+			}
+		}
+		await file.clear();
+		log.info(color.green(`shipped ${version}`));
+	}
+
+	/** Every step a release runs, in order, as both `release()` and `plan()` read it. */
+	private declare(at: Declaring): Declared {
+		const { workspace, git, packages, cut, version } = at;
 		const preflight: StepDeclaration = {
 			id: "preflight",
 			step: {
@@ -198,54 +251,64 @@ export class Release {
 		const going = [
 			...ordered
 				.filter((artifact) => artifact.stage !== "stamp")
-				.flatMap((artifact) => stepsFor(artifact, cut)),
-			...this.steps.filter(
-				(step) => step.stage !== "preflight" && step.stage !== "stamp",
-			),
+				.flatMap((artifact) =>
+					stepsFor(artifact, cut).map((step) => ({ step, artifact })),
+				),
+			...this.steps
+				.filter((step) => step.stage !== "preflight" && step.stage !== "stamp")
+				.map((step) => ({ step, artifact: undefined })),
 		]
-			.toSorted((left, right) => stageRank(left) - stageRank(right))
-			.map((step, index) => ({ id: `step:${index}:${step.name}`, step }));
-		await runner.declare([preflight, ...before, versionStep, ...going]);
-		await runner.run(preflight, cut);
-		for (const step of before) {
-			await runner.run(step, cut);
-		}
+			.toSorted((left, right) => stageRank(left.step) - stageRank(right.step))
+			.map(({ step, artifact }, index) => ({
+				id: `step:${index}:${step.name}`,
+				step,
+				artifact: artifact && (artifact.name ?? statusName(artifact)),
+				packages: artifact?.packages,
+			}));
+		return { preflight, before, versionStep, going };
+	}
 
-		if (
-			!confirm(
-				opts.prompt ?? prompt,
-				log,
-				this.packages,
-				version,
-				next,
-				opts.yes,
-			)
-		) {
-			log.info(color.red("aborted"));
-			return;
-		}
-
-		const state = found ?? { version, done: [] };
-		await file.write(state);
-		try {
-			await runner.run(versionStep, cut);
-			for (const declaration of going) {
-				const done =
-					declaration.step.stage !== "build" &&
-					state.done.includes(declaration.id);
-				await runner.run(declaration, cut, { done });
-				if (!state.done.includes(declaration.id)) {
-					state.done.push(declaration.id);
-				}
-				await file.write(state);
-			}
-		} finally {
-			for (const artifact of this.artifacts) {
-				await artifact.clean?.(cut);
-			}
-		}
-		await file.clear();
-		log.info(color.green(`shipped ${version}`));
+	/**
+	 * What `release()` would run, in order, without running any of it. Reads the
+	 * workspace and a RELEASE file left by a run that died, and nothing else, so
+	 * the version and the step ids are the ones the run's events will carry.
+	 */
+	async plan(opts: PlanOptions = {}): Promise<ReleasePlan> {
+		const ps = opts.ps ?? new NodePs();
+		const fs = opts.fs ?? new NodeFs();
+		const workspace =
+			opts.workspace ?? (await ManifestWorkspace.at(ps.cwd(), { fs, ps }));
+		const git = opts.git ?? new CliGit(workspace.root, { ps });
+		const packages = order(await workspace.packages());
+		const found = await new ReleaseFile(workspace.root, { fs }).read();
+		const version =
+			found?.version ?? bump(await workspace.version(), opts.bump ?? "patch");
+		const cut = new Cut(version, packages, {
+			log: opts.log ?? new ConsoleLogger(),
+			root: workspace.root,
+		});
+		const { preflight, before, versionStep, going } = this.declare({
+			workspace,
+			git,
+			packages,
+			cut,
+			version,
+		});
+		return {
+			schema: 1,
+			version,
+			resuming: found !== null,
+			steps: [preflight, ...before, versionStep, ...going].map(
+				({ id, step, artifact, packages: covered }) => ({
+					id,
+					name: step.name,
+					stage: step.stage ?? "publish",
+					packages: [...(covered ?? [])],
+					...(artifact === undefined ? {} : { artifact }),
+					deadlineMs: step.deadline.ms,
+				}),
+			),
+		};
 	}
 }
 
@@ -401,4 +464,60 @@ function confirm(
 		color.yellow(`publish ${packages.length} packages as ${version}? (y/n)`),
 	);
 	return answer?.trim().toLowerCase() === "y";
+}
+
+/** What the steps are declared against. */
+interface Declaring {
+	workspace: Workspace;
+	git: Git;
+	packages: Package[];
+	cut: Cut;
+	version: string;
+}
+
+/** A declared step and what it covers. */
+interface Covering extends StepDeclaration {
+	artifact?: string;
+	packages?: readonly string[];
+}
+
+interface Declared {
+	preflight: Covering;
+	before: Covering[];
+	versionStep: Covering;
+	going: Covering[];
+}
+
+/** Where `Release.plan()` reads from; the real system by default. */
+export interface PlanOptions {
+	/** How far the version would move; `patch` by default. */
+	bump?: Bump;
+	workspace?: Workspace;
+	git?: Git;
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+}
+
+/** One step of a release, as `Release.plan()` lists it. */
+export interface PlannedStep {
+	/** The id this step's run-time events carry. */
+	id: string;
+	name: string;
+	stage: StepStage;
+	/** The workspace packages the step publishes, if any. */
+	packages: string[];
+	/** The artifact the step belongs to, when it came from one. */
+	artifact?: string;
+	deadlineMs: number;
+}
+
+/** Every step a release would run, in order. `schema` grows with the shape. */
+export interface ReleasePlan {
+	schema: 1;
+	/** The version the release would go out at. */
+	version: string;
+	/** Whether a RELEASE file from a run that died fixed that version. */
+	resuming: boolean;
+	steps: PlannedStep[];
 }

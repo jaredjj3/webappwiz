@@ -86,6 +86,43 @@ export async function status(opts: StatusOptions = {}): Promise<void> {
 	}
 }
 
+/** Where `plan` reads from and prints to; the real system by default. */
+export interface PlanOptions {
+	log?: Logger;
+	fs?: Fs;
+	ps?: Ps;
+	/** Print the plan as one JSON document instead of a list. */
+	json?: boolean;
+}
+
+/**
+ * Prints every step `ship` would run, in order, and runs none of them. With
+ * `json`, the document is `ReleasePlan`, whose `schema` field versions it.
+ */
+export async function plan(opts: PlanOptions = {}): Promise<void> {
+	const log = opts.log ?? new ConsoleLogger();
+	const ps = opts.ps ?? new NodePs();
+	const declared = await declaration(log, opts.fs, ps);
+	const planned = await declared.plan({ fs: opts.fs, ps, log });
+	if (opts.json) {
+		log.info(JSON.stringify(planned));
+		return;
+	}
+	log.info(
+		planned.resuming
+			? `finishing the release of ${color.bold(planned.version)}`
+			: `releasing ${color.bold(planned.version)}`,
+	);
+	const width = String(planned.steps.length).length;
+	for (const [index, step] of planned.steps.entries()) {
+		const covers =
+			step.packages.length > 0 ? `  ${step.packages.join(" ")}` : "";
+		log.info(
+			`  ${String(index + 1).padStart(width)}. [${step.stage}] ${step.name}${covers}  ${color.dim(`${step.deadlineMs / 1000}s  ${step.id}`)}`,
+		);
+	}
+}
+
 /** Everything this workspace ships, as both `ship` and `status` read it. */
 async function declaration(
 	log: Logger,

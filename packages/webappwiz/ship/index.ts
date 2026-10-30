@@ -11,8 +11,11 @@ export type { NpmRegistryOptions } from "./registry/npm-registry";
 export type { Registry } from "./registry/registry";
 export {
 	type DeployedArtifact,
+	type PlannedStep,
+	type PlanOptions,
 	Release,
 	type ReleaseOptions,
+	type ReleasePlan,
 	type ReleaseStatus,
 	type StatusOptions,
 } from "./release";

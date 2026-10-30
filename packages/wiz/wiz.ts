@@ -3,7 +3,7 @@ import { webappwiz } from "@webappwiz/cli/webappwiz";
 import { z } from "zod";
 import { fix } from "./fix";
 import { path } from "./path";
-import { ship, status } from "./ship";
+import { plan, ship, status } from "./ship";
 import { test } from "./test";
 
 /** Everything `wiz` is run with, which is what the cli it is built on needs. */
@@ -67,6 +67,15 @@ shipping
 		"print the version each artifact has live beside the workspace's",
 	)
 	.action((_, { log, fs, ps }) => status({ log, fs, ps }));
+
+shipping
+	.command("plan")
+	.description("list the steps a release would run, in order, running none")
+	.option("json", z.boolean(), {
+		default: false,
+		description: "print one JSON document for a program to read",
+	})
+	.action(({ json }, { log, fs, ps }) => plan({ json, log, fs, ps }));
 
 dev
 	.command("test")

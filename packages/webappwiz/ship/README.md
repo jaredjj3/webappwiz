@@ -167,6 +167,37 @@ class DockerArtifact implements Artifact {
 Make `publish` repeatable: a retried release runs it again, so skip whatever
 already went out.
 
+## The plan
+
+`plan()` lists what `release()` would run, in order, and runs none of it. It
+reads the workspace and a RELEASE file, never writes, and touches neither git
+nor the network. `wiz dev ship plan` prints it as a list, and `--json` as one
+document for a program to read:
+
+```json
+{
+	"schema": 1,
+	"version": "1.2.4",
+	"resuming": false,
+	"steps": [
+		{
+			"id": "step:0:Publish @scope/one",
+			"name": "Publish @scope/one",
+			"stage": "publish",
+			"packages": ["@scope/one"],
+			"artifact": "@scope/one",
+			"deadlineMs": 300000
+		}
+	]
+}
+```
+
+`schema` is the shape's version and grows only by adding fields. Each `id` is
+the one the step's run-time events carry (`WEBAPPWIZ_SHIP_EVENTS`), so live
+progress matches the plan by `id`. `stage` is `preflight`, `stamp`, `build`,
+`publish`, `tag` or `notes`; `artifact` is present only for a step an artifact
+declared.
+
 ## What is live
 
 A release pushes versions out and moves on: it never waits for a registry or

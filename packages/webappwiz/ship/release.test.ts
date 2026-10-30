@@ -533,40 +533,88 @@ describe("release", () => {
 		]);
 	});
 
-	describe("status", () => {
-		it("reads what each artifact has live beside the workspace version", async () => {
-			registry.latest.set("@scope/one", "1.2.3");
-			git.remote.add("v1.2.3");
-			github.releases.push("v1.2.2");
+	it("plan: lists the steps release() runs, under the ids its events carry", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
+		const planned = await release.plan({ workspace, git, fs, ps });
+		await release.release(answering("y"));
 
-			const status = await releases
-				.lockstep(release, releases.build(new FakeBundle()))
-				.status({ workspace });
-
-			// The build has nowhere to ask, so it is left out.
-			expect(status).toEqual({
-				version: await workspace.version(),
-				artifacts: [
-					{ name: "@scope/one", packages: ["@scope/one"], deployed: "1.2.3" },
-					{ name: "@scope/two", packages: ["@scope/two"], deployed: undefined },
-					{ name: "git tag", packages: [], deployed: "1.2.3" },
-					{ name: "GitHub release", packages: [], deployed: "1.2.2" },
-				],
-			});
+		expect(planned.schema).toBe(1);
+		expect(planned.version).toBe("1.2.4");
+		expect(planned.resuming).toBe(false);
+		const declared = (await events()).filter(
+			(event) => event.type === "declared",
+		);
+		expect(planned.steps.map(({ id, name }) => [id, name])).toEqual(
+			declared.map(({ id, name }) => [id, name]),
+		);
+		expect(planned.steps[0]).toMatchObject({
+			id: "preflight",
+			stage: "preflight",
+			deadlineMs: 30_000,
 		});
+		expect(planned.steps.find(({ stage }) => stage === "publish")).toEqual({
+			id: expect.stringContaining("Publish @scope/one"),
+			name: "Publish @scope/one@1.2.4",
+			stage: "publish",
+			packages: ["@scope/one"],
+			artifact: "@scope/one",
+			deadlineMs: 300_000,
+		});
+	});
 
-		it("names an artifact that names itself nothing by what it publishes", async () => {
-			const status = await releases
-				.lockstep({
-					packages: ["@scope/one"],
-					publish: async () => {},
-					deployed: async () => "1.2.3",
-				})
-				.status({ workspace });
+	it("plan: changes nothing", async () => {
+		await release.plan({ workspace, git, fs, ps });
 
-			expect(status.artifacts).toEqual([
+		expect(workspace.stamped).toEqual([]);
+		expect(git.commits).toEqual([]);
+		expect(registry.publishes).toEqual([]);
+		expect(await fs.exists("/repo/RELEASE")).toBe(false);
+	});
+
+	it("plan: holds the version a RELEASE file left", async () => {
+		await fs.write(
+			"/repo/RELEASE",
+			JSON.stringify({ version: "1.2.9", done: [] }),
+		);
+
+		const planned = await release.plan({ workspace, git, fs, ps });
+
+		expect(planned.version).toBe("1.2.9");
+		expect(planned.resuming).toBe(true);
+	});
+
+	it("status: reads what each artifact has live beside the workspace version", async () => {
+		registry.latest.set("@scope/one", "1.2.3");
+		git.remote.add("v1.2.3");
+		github.releases.push("v1.2.2");
+
+		const status = await releases
+			.lockstep(release, releases.build(new FakeBundle()))
+			.status({ workspace });
+
+		// The build has nowhere to ask, so it is left out.
+		expect(status).toEqual({
+			version: await workspace.version(),
+			artifacts: [
 				{ name: "@scope/one", packages: ["@scope/one"], deployed: "1.2.3" },
-			]);
+				{ name: "@scope/two", packages: ["@scope/two"], deployed: undefined },
+				{ name: "git tag", packages: [], deployed: "1.2.3" },
+				{ name: "GitHub release", packages: [], deployed: "1.2.2" },
+			],
 		});
+	});
+
+	it("status: names an artifact that names itself nothing by what it publishes", async () => {
+		const status = await releases
+			.lockstep({
+				packages: ["@scope/one"],
+				publish: async () => {},
+				deployed: async () => "1.2.3",
+			})
+			.status({ workspace });
+
+		expect(status.artifacts).toEqual([
+			{ name: "@scope/one", packages: ["@scope/one"], deployed: "1.2.3" },
+		]);
 	});
 });
