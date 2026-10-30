@@ -1,6 +1,6 @@
 ---
 name: webappwiz
-description: "Check whether the webappwiz package already covers a piece of infrastructure before writing it by hand or adding a dependency for it. Read this before writing any of: time, clocks, durations or timers; logging; id generation; CLI argument parsing; background tasks or queues; web workers; markdown parsing; typed event emitters; 2D geometry or spatial indexes; filesystem, env or process access; API keys, tokens, secrets or credentials; AbortSignal plumbing; disposable resources; browser scroll, animation frames or visibility. Also use when asked to update or upgrade webappwiz in a project, and whenever the user says webappwiz."
+description: "Check whether the webappwiz package already covers a piece of infrastructure before writing it by hand or adding a dependency for it. Read this before writing any of: time, clocks, durations or timers; logging; id generation; CLI argument parsing; background tasks or queues; web workers; markdown parsing; typed event emitters; 2D geometry or spatial indexes; filesystem, env or process access; API keys, tokens, secrets or credentials; AbortSignal plumbing; disposable resources; browser scroll, animation frames or visibility. Also use when a release publishes to npm through GitHub Actions (`via: githubActions()`), when asked to update or upgrade webappwiz in a project, and whenever the user says webappwiz."
 version: 0.0.58
 ---
 
@@ -149,6 +149,28 @@ Nothing reads a value back out for you to see, and nothing should: do not
 print one, log one, or look one up with the system's own tools
 (`security`, `secret-tool`, `cmdkey`). Code that needs a value reads it
 itself.
+
+## Publishing from GitHub Actions
+
+A release whose npm packages publish `via: githubActions()` (from
+`webappwiz/ship`) publishes from the generated workflow, with no token and no
+2FA code. npm allows that only once each package has a trusted publisher
+entry naming the repository and the workflow, and making one takes the
+user's own npm login in a browser. You cannot do it for them, so when you
+add `via: githubActions()`, or a ship fails with "npm refused the run",
+guide the user through it:
+
+1. Have them run the project's trust command once: `bunx @webappwiz/cli ship
+   trust` when the release is declared in `.wiz/ship.ts`, or the project's
+   own command that calls `release.trust()`. It runs `npm trust github` for
+   each package.
+2. Tell them npm asks them to authenticate in a browser, and that ticking
+   "skip two-factor authentication for the next 5 minutes" there lets the
+   other packages go through without asking again.
+3. A package must already be on npm before it can trust anything, so a
+   package that has never been published goes out once the old way first.
+4. Then they ship as usual. A package that already trusts another workflow
+   fails, and the error says how to clear it.
 
 ## Updating
 
