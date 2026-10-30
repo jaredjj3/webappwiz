@@ -16,6 +16,7 @@ describe("publish workflow", () => {
 		const text = workflow.text();
 
 		expect(text).toContain("id-token: write");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expression, not a JS template
 		expect(text).toContain("ref: ${{ inputs.ref }}");
 		expect(text).toContain("- run: bunx publish-it");
 		expect(text).not.toContain("NPM_TOKEN");
