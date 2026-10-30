@@ -21,6 +21,7 @@ bunx @webappwiz/cli creds                   # the API keys the project uses, nev
 bunx @webappwiz/cli creds add <NAME>          # keep one, typed at a hidden prompt
 bunx @webappwiz/cli creds remove <NAME>
 bunx @webappwiz/cli creds run -- <command>    # run it with the stored keys in its environment
+bunx @webappwiz/cli ship publish              # publish what the registries lack, as CI does
 ```
 
 ## scry
@@ -345,6 +346,25 @@ store has, with the `creds add` command a person runs for each.
 ```bash
 bunx @webappwiz/cli update ./apps --version 1.4.0
 ```
+
+## ship
+
+`ship publish` is the command a project's generated publish workflow runs. The
+project declares what it ships as the default export of `.wiz/ship.ts`, a
+`Release` or a promise of one, built with [`webappwiz/ship`](../webappwiz/ship):
+
+```ts
+import { releases } from "webappwiz/ship";
+
+export default releases.lockstep(
+	releases.publishWorkflow({ command: "bunx @webappwiz/cli ship publish" }),
+	await releases.workspace(),
+);
+```
+
+The command publishes each package the registries lack at the checked-out
+version, in their trusted mode, and nothing else: no stamp, tag, approval or
+notes. A rerun publishes nothing it already did.
 
 ## creds
 

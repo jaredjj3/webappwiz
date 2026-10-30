@@ -27,6 +27,7 @@ import { StderrScreen } from "./scry/screen";
 import { test as testRules } from "./scry/test";
 import { update as updateRules } from "./scry/update";
 import { why } from "./scry/why";
+import { publish } from "./ship/publish";
 import { add } from "./skills/add";
 import { list } from "./skills/list";
 import { update as updateSkills } from "./skills/update";
@@ -435,6 +436,17 @@ export function webappwiz(name = "webappwiz"): Cli<CommandDeps> {
 		.passThroughOptions()
 		.allowUnknownOption()
 		.action((opts, { log, ps }) => runWithCredentials({ ...opts, log, ps }));
+
+	const shipping = program
+		.group("ship")
+		.description("release what the project declares in .wiz/ship.ts");
+
+	shipping
+		.command("publish")
+		.description(
+			"publish what the registries lack at the checked-out version, as the generated GitHub Actions workflow does",
+		)
+		.action((_opts, { log, fs, ps }) => publish({ log, fs, ps }));
 
 	const skills = program
 		.group("skills")
