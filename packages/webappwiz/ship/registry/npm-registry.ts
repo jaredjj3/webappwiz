@@ -1,4 +1,7 @@
 import { NodePs, type Ps } from "webappwiz/system";
+import { Duration } from "webappwiz/time";
+import type { CheckReport } from "../step";
+import type { GithubActions } from "./github-actions";
 import type { Publication, Registry } from "./registry";
 
 /** Pass `ps` to run `NpmRegistry`'s npm commands through a fake in tests; the real processes by default. */
@@ -10,6 +13,12 @@ export interface NpmRegistryOptions {
 	 * identity, with no token, no login and no stage. `trusted()` makes one.
 	 */
 	trusted?: boolean;
+	/**
+	 * Publish by running the generated workflow on GitHub Actions, where npm
+	 * trusts the job, instead of staging from this machine: no token, no
+	 * login and no approval. `githubActions()` makes one.
+	 */
+	via?: GithubActions;
 }
 
 /**
@@ -21,14 +30,26 @@ export interface NpmRegistryOptions {
 export class NpmRegistry implements Registry {
 	readonly staged: boolean;
 	readonly scans = true;
+	readonly publishDeadline?: Duration;
+	/** Set only for a `via` publish, whose run it follows. */
+	readonly watch?: (name: string, version: string) => Promise<CheckReport>;
 	private readonly ps: Ps;
 	private readonly isTrusted: boolean;
+	private readonly via?: GithubActions;
 	private authed?: Promise<void>;
 
 	constructor(opts: NpmRegistryOptions = {}) {
 		this.ps = opts.ps ?? new NodePs();
 		this.isTrusted = opts.trusted === true;
-		this.staged = !this.isTrusted;
+		this.via = opts.via;
+		this.staged = !this.isTrusted && this.via === undefined;
+		const { via } = this;
+		if (via !== undefined) {
+			this.watch = async (name, version) =>
+				via.watch(name, await this.published(name, version));
+			// A run waits for a runner before it publishes anything.
+			this.publishDeadline = Duration.mins(30);
+		}
 	}
 
 	trusted(): Registry {
@@ -66,6 +87,10 @@ export class NpmRegistry implements Registry {
 	}
 
 	async publish(dir: string): Promise<Publication> {
+		if (this.via !== undefined && !this.isTrusted) {
+			await this.via.start();
+			return {};
+		}
 		if (this.isTrusted) {
 			return this.publishTrusted(dir);
 		}

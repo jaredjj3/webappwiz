@@ -3,6 +3,8 @@ export interface Git {
 	/** Whether the tree has no uncommitted changes. */
 	clean(): Promise<boolean>;
 	branch(): Promise<string>;
+	/** The commit HEAD is at. */
+	head(): Promise<string>;
 	/** Where releases go out from. */
 	defaultBranch(): Promise<string>;
 	/** Commits every tracked change. A clean tree is already committed, so it passes. */

@@ -24,6 +24,13 @@ export class FakeGit implements Git {
 		return this.current;
 	}
 
+	/** The commit HEAD reads as. */
+	sha = "abc123";
+
+	async head(): Promise<string> {
+		return this.sha;
+	}
+
 	async defaultBranch(): Promise<string> {
 		return this.trunk;
 	}

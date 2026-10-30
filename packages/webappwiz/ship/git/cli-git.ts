@@ -25,6 +25,10 @@ export class CliGit implements Git {
 		return this.out("rev-parse", "--abbrev-ref", "HEAD");
 	}
 
+	head(): Promise<string> {
+		return this.out("rev-parse", "HEAD");
+	}
+
 	/** Where releases go out from. */
 	async defaultBranch(): Promise<string> {
 		const head = await this.run(

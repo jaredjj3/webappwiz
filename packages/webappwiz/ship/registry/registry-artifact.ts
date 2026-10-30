@@ -37,9 +37,10 @@ export class RegistryArtifact implements Artifact {
 	steps(cut: Cut): readonly Step[] {
 		const publish: Step = {
 			name: `${this.registry.staged ? "Stage" : "Publish"} ${this.name}@${cut.version}`,
-			deadline: Duration.mins(5),
+			deadline: this.registry.publishDeadline ?? Duration.mins(5),
 			stage: "publish",
 			run: (at, report) => this.publish(at, report),
+			...this.watching(),
 		};
 		if (this.registry.staged !== true && this.registry.scans !== true) {
 			return [publish];
@@ -58,6 +59,23 @@ export class RegistryArtifact implements Artifact {
 				check: (at, waited) => this.live(at, waited),
 			},
 		];
+	}
+
+	/** The check that follows a publish handed off to a run elsewhere, when this registry has one. */
+	private watching(): Pick<Step, "check"> {
+		const { watch } = this.registry;
+		if (watch === undefined) {
+			return {};
+		}
+		return {
+			check: async ({ version, log }) => {
+				const found = await watch.call(this.registry, this.name, version);
+				if (found.passed) {
+					log.info(`${this.name}@${version} ${color.green("run finished")}`);
+				}
+				return found;
+			},
+		};
 	}
 
 	/** Whether the version is installable yet, and if not, what it may be waiting on. */

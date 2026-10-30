@@ -340,6 +340,27 @@ stale; commit it like a lockfile. `PublishWorkflow.check(root)` throws on
 drift, and `wiz dev fix` runs it. This workspace's command is
 `wiz dev ship publish`.
 
+### Starting that workflow from a release
+
+`releases.npm("@scope/foo", { via: githubActions() })` publishes through the
+workflow instead of from this machine, so nothing stages and nobody approves.
+Its `Publish` step pushes the release commit, starts the workflow on it
+(`gh workflow run`, with the commit as the `ref` input), and follows the run
+through the step's `check` events: `status` is the run's (`queued`,
+`in_progress`), `url` its page. A run that ends any other way than success
+fails the step with the end of its log. `Release.workspace({ via })` does the
+same for every public package, and this workspace's ship uses it.
+
+One run publishes every package, found again by its commit: later packages
+reuse it, a resumed release reuses a run still going or finished, and reruns
+one that failed (`gh run rerun --failed`). The `Live` step still asks npm
+whether the version is installable, and the tag still goes on only once it is.
+
+Each package needs a trusted publisher entry on npmjs.com once. When npm
+refuses the run for want of one, the failure says what to enter: the
+repository, the workflow file, and direct publishing. The package must exist
+already, and a new entry lapses after about two days unless a publish uses it.
+
 ## Logging in is part of publishing
 
 Nothing asks you to be logged in beforehand. An artifact that needs credentials

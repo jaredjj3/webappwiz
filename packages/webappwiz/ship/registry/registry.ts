@@ -1,3 +1,6 @@
+import type { Duration } from "webappwiz/time";
+import type { CheckReport } from "../step";
+
 /** A package a registry holds back until somebody approves it. */
 export interface StagedPackage {
 	/** What approves it, as `npm stage approve` takes it. */
@@ -49,6 +52,18 @@ export interface Registry {
 	 * no login. Leave it off when there is no such way to publish.
 	 */
 	trusted?(): Registry;
+	/**
+	 * How long `publish` and its `watch` may take before the release considers
+	 * them hung; five minutes when omitted.
+	 */
+	readonly publishDeadline?: Duration;
+	/**
+	 * Whether what `publish` handed off has finished, when it hands off to a
+	 * run elsewhere and returns before the version is accepted. The release
+	 * polls it after `publish`; throwing fails the step. Leave it off when
+	 * `publish` returns once the registry has the version.
+	 */
+	watch?(name: string, version: string): Promise<CheckReport>;
 	/** Where a person can see `version` of `name`, and why it is not live yet. */
 	page?(name: string, version: string): string;
 }

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { FakePs } from "webappwiz/system/testing";
+import { FakeGit } from "../git/fake-git";
+import { FakeWorkflows } from "../github/fake-workflows";
+import { GithubActions } from "./github-actions";
 import { NpmRegistry } from "./npm-registry";
 
 describe("npm registry", () => {
@@ -179,5 +182,39 @@ describe("npm registry", () => {
 		await expect(trusted().publish("/repo/packages/one")).rejects.toThrow(
 			"no trusted publisher entry",
 		);
+	});
+});
+
+describe("npm registry via github actions", () => {
+	it("starts the run instead of publishing, and watches it", async () => {
+		const ps = new FakePs();
+		const workflows = new FakeWorkflows();
+		const git = new FakeGit();
+		const registry = new NpmRegistry({
+			ps,
+			via: new GithubActions({ git, workflows }),
+		});
+
+		expect(registry.staged).toBe(false);
+		expect(registry.publishDeadline?.ms).toBeGreaterThan(5 * 60 * 1000);
+		expect(await registry.publish("/repo/one")).toEqual({});
+		expect(ps.getCalls()).toEqual([]);
+		expect(workflows.dispatches).toHaveLength(1);
+		expect(await registry.watch?.("@s/one", "1.2.4")).toMatchObject({
+			passed: false,
+			status: "waiting",
+		});
+	});
+
+	it("is trusted without the run it started", () => {
+		const registry = new NpmRegistry({
+			via: new GithubActions({
+				git: new FakeGit(),
+				workflows: new FakeWorkflows(),
+			}),
+		});
+
+		expect(registry.trusted().staged).toBe(false);
+		expect((registry.trusted() as NpmRegistry).watch).toBeUndefined();
 	});
 });
