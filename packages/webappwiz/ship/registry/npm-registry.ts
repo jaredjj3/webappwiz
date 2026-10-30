@@ -49,7 +49,7 @@ export class NpmRegistry implements Registry {
 	}
 
 	async publish(dir: string): Promise<StagedPackage> {
-		this.authed ??= this.login();
+		this.authed ??= this.checkVersion().then(() => this.login());
 		await this.authed;
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(
 			["npm", "stage", "publish", "--access", "public"],
@@ -72,6 +72,21 @@ export class NpmRegistry implements Registry {
 			stageId: found[2],
 			url: `https://www.npmjs.com/package/${found[1]}`,
 		};
+	}
+
+	/** `npm stage` arrived in npm 11.15; older CLIs die with a bare "Unknown command". */
+	private async checkVersion(): Promise<void> {
+		const { stdout } = await this.ps.spawnCapture(["npm", "--version"]);
+		const found = /^(\d+)\.(\d+)/.exec(stdout.trim());
+		if (!found) {
+			return;
+		}
+		const [major, minor] = [Number(found[1]), Number(found[2])];
+		if (major < 11 || (major === 11 && minor < 15)) {
+			throw new Error(
+				`npm ${stdout.trim()} cannot stage packages: npm 11.15 or newer is required (npm install -g npm@latest)`,
+			);
+		}
 	}
 
 	/** Runs `npm login` unless somebody is already logged in. NPM_TOKEN counts. */

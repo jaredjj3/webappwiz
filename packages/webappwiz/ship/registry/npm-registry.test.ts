@@ -18,9 +18,19 @@ describe("npm registry", () => {
 		await new NpmRegistry({ ps }).publish("/repo/packages/one");
 
 		expect(ps.getCalls()).toEqual([
+			"npm --version",
 			"npm whoami",
 			"npm stage publish --access public",
 		]);
+	});
+
+	it("refuses to stage with an npm older than 11.15", async () => {
+		ps.setCaptureOutput("10.9.4\n", "");
+
+		await expect(
+			new NpmRegistry({ ps }).publish("/repo/packages/one"),
+		).rejects.toThrow("npm 11.15 or newer is required");
+		expect(ps.getCalls()).toEqual(["npm --version"]);
 	});
 
 	it("reports the stage id and the page to approve on", async () => {
@@ -46,6 +56,7 @@ describe("npm registry", () => {
 		await new NpmRegistry({ ps }).publish("/repo/packages/one");
 
 		expect(ps.getCalls()).toEqual([
+			"npm --version",
 			"npm whoami",
 			"npm login --auth-type=web",
 			"npm stage publish --access public",
@@ -71,7 +82,7 @@ describe("npm registry", () => {
 		await expect(
 			new NpmRegistry({ ps }).publish("/repo/packages/one"),
 		).rejects.toThrow("not logged in to npm: set NPM_TOKEN");
-		expect(ps.getCalls()).toEqual(["npm whoami"]);
+		expect(ps.getCalls()).toEqual(["npm --version", "npm whoami"]);
 	});
 
 	it("reads the version installs get from the latest dist-tag", async () => {
