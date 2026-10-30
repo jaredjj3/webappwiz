@@ -12,8 +12,6 @@ export class FakeRegistry implements Registry {
 	fails?: string;
 	/** Makes `publish` stage, reporting this for each directory. */
 	staging?: (dir: string) => StagedPackage;
-	/** Makes the registry scan what it accepts, as npm does. */
-	scanning?: boolean;
 
 	/** Names `trust` was asked for, in order. */
 	readonly trusts: string[] = [];
@@ -30,10 +28,6 @@ export class FakeRegistry implements Registry {
 	trusted(): Registry {
 		this.viaTrust = true;
 		return this;
-	}
-
-	get scans(): boolean {
-		return this.scanning === true;
 	}
 
 	async published(name: string, version: string): Promise<boolean> {

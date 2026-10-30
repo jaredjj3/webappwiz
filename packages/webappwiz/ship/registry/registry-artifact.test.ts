@@ -103,33 +103,20 @@ describe("registry artifact", () => {
 		});
 	});
 
-	it("waits for a scanning registry to serve what it accepted", async () => {
+	it("is done once the registry accepts a version, though it is still scanning it", async () => {
 		const cut = cutting();
 		const registry = new FakeRegistry();
-		registry.scanning = true;
 		const steps = new RegistryArtifact("@scope/one", registry).steps(cut);
 
 		expect(steps.map((step) => step.name)).toEqual([
 			"Publish @scope/one@1.2.4",
-			"Live @scope/one@1.2.4",
 		]);
-		await steps[0]?.run(cut);
-		expect(await steps[1]?.check?.(cut, Duration.zero())).toEqual({
-			passed: false,
-			status: "pending",
-			url: "https://registry/@scope/one/v/1.2.4",
-		});
-		registry.has.add("@scope/one@1.2.4");
-		expect(await steps[1]?.check?.(cut, Duration.mins(5))).toEqual({
-			passed: true,
-		});
 	});
 
 	it("says a version may be held once it is long past the usual scan", async () => {
 		const log = new MemoryLogger();
 		const cut = new Cut("1.2.4", [], { log });
 		const registry = new FakeRegistry();
-		registry.scanning = true;
 		const artifact = new RegistryArtifact("@scope/one", registry);
 
 		expect(await artifact.live(cut, Duration.mins(19))).toMatchObject({

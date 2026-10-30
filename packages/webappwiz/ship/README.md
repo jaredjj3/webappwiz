@@ -24,7 +24,7 @@ commit, and carry each artifact out. `bump` says how far the version moves, and
 ## Declaration order does not matter
 
 Every artifact carries a stage: a `stamp` goes into the release commit, packages
-`publish`, then (for a registry that stages or scans) wait in `approve` until
+`publish`, then (for a registry that stages) wait in `approve` until
 each is live, then the `tag` goes on, then the `notes` are written about it. A
 release runs its artifacts by stage, so this declaration goes out in exactly the
 same order as the one above:
@@ -237,24 +237,20 @@ unchanged.
 
 ## What is live
 
-A release finishes only once every package it publishes is live: installable,
-not merely accepted. npm scans every publish for malware before it serves it,
+A release that publishes straight to a registry is done once the registry
+accepts each package: npm scans every publish for malware before it serves it,
 typically for about five minutes and fifteen at its busiest, and may hold a
-version for a person at npm to review; while it scans, `npm view` says the
-version does not exist, yet publishing it again fails with a 409. So
-`releases.npm` declares a `Live` step per package, in the `approve` stage after
-every package went out, that polls the registry, backing off from 10 seconds to
-every 2 minutes, and never gives up. Each failed poll's `check` event carries
-`status`: `pending` at first, then `held` once 20 minutes have gone by, when the
-release also says the registry may be holding it for review, and `url`, the
-version's page on npm. A rerun of a release whose publish npm took (its 409)
-counts the version accepted, publishes nothing, and only waits again.
+version for a person at npm to review, so `npm view` can say a version does not
+exist for a while after its publish succeeded. The release does not wait on
+that, and tags once every package is accepted. A rerun of a release whose
+publish npm took (its 409) counts the version accepted and publishes nothing.
 
-The tag goes on once every package is live, so it never names a version that
-is not installable. npm reports no block to poll for, so a version it blocks
-never goes live and its release waits until somebody stops it. A registry with no
-scan or staging (`Registry.scans` and `staged` both unset) serves what it
-accepts at once, and the release tags without a wait.
+A registry that stages (`Registry.staged`) holds each version until a person
+approves it, so its packages get a `Live` step in the `approve` stage after
+every package went out. It polls the registry, backing off from 10 seconds to
+every 2 minutes, and never gives up. Each failed poll's `check` event carries
+`status`: `pending` at first, then `held` once 20 minutes have gone by, and
+`url`, the version's page. The tag goes on once every staged package is live.
 
 `releases.npm` runs `npm stage publish` (npm CLI 11.15+, so a stage-only
 `NPM_TOKEN` works), which holds each version until a person approves it on
@@ -353,8 +349,8 @@ same for every public package, and this workspace's ship uses it.
 
 One run publishes every package, found again by its commit: later packages
 reuse it, a resumed release reuses a run still going or finished, and reruns
-one that failed (`gh run rerun --failed`). The `Live` step still asks npm
-whether the version is installable, and the tag still goes on only once it is.
+one that failed (`gh run rerun --failed`). The release is done once the run
+succeeds and npm has accepted the version, which may not be installable yet.
 
 Each package needs a trusted publisher entry on npm once. `release.trust()`
 makes them: for each package it runs `npm trust github`, naming the

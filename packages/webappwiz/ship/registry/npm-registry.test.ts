@@ -73,10 +73,9 @@ describe("npm registry", () => {
 		).rejects.toThrow("stage publish failed in /repo/packages/one");
 	});
 
-	it("waits on the scan and links each version's page", () => {
+	it("links each version's page", () => {
 		const registry = new NpmRegistry({ ps });
 
-		expect(registry.scans).toBe(true);
 		expect(registry.page("@scope/one", "1.2.4")).toBe(
 			"https://www.npmjs.com/package/@scope/one/v/1.2.4",
 		);
