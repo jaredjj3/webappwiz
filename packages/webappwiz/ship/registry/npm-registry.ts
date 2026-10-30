@@ -1,17 +1,20 @@
 import { NodePs, type Ps } from "webappwiz/system";
-import type { Registry, StagedPackage } from "./registry";
+import type { Publication, Registry } from "./registry";
 
-/** The processes `NpmRegistry` spawns through; the real ones by default. */
+/** Pass `ps` to run `NpmRegistry`'s npm commands through a fake in tests; the real processes by default. */
 export interface NpmRegistryOptions {
 	ps?: Ps;
 }
 
 /**
- * Stages packages on npm and reads back what it holds. Staging needs no 2FA,
- * so a stage-only token will do; a person approves each version on npmjs.com.
+ * Use it to stage packages on npm and read back what npm holds. A stage-only
+ * token will do, and a person approves each version on npmjs.com; npm then
+ * scans it, typically for about five minutes, before anyone can install it.
  */
+// Staging needs no 2FA, which is what lets a stage-only token publish.
 export class NpmRegistry implements Registry {
 	readonly staged = true;
+	readonly scans = true;
 	private readonly ps: Ps;
 	private authed?: Promise<void>;
 
@@ -28,6 +31,7 @@ export class NpmRegistry implements Registry {
 		]);
 		// A name nobody has published fails outright, but a known name missing
 		// this one version succeeds and says nothing, so the output decides.
+		// A version npm is still scanning reads as missing too.
 		return exitCode === 0 && stdout.trim() !== "";
 	}
 
@@ -48,7 +52,7 @@ export class NpmRegistry implements Registry {
 		throw new Error(`npm view ${name}: ${stderr.trim() || stdout.trim()}`);
 	}
 
-	async publish(dir: string): Promise<StagedPackage> {
+	async publish(dir: string): Promise<Publication> {
 		this.authed ??= this.checkVersion().then(() => this.login());
 		await this.authed;
 		const { exitCode, stdout, stderr } = await this.ps.spawnCapture(
@@ -56,6 +60,11 @@ export class NpmRegistry implements Registry {
 			{ cwd: dir },
 		);
 		if (exitCode !== 0) {
+			// npm refuses a version it took, even one `npm view` cannot see yet
+			// while it scans, so a rerun after a lost run lands here.
+			if (/E409|previously published/i.test(`${stdout}\n${stderr}`)) {
+				return { already: true };
+			}
 			throw new Error(
 				`stage publish failed in ${dir}: ${stderr.trim() || stdout.trim()}`,
 			);
@@ -69,9 +78,15 @@ export class NpmRegistry implements Registry {
 		// npm documents no URL for one staged version; its Staged Packages tab
 		// sits on the package page.
 		return {
-			stageId: found[2],
-			url: `https://www.npmjs.com/package/${found[1]}`,
+			staged: {
+				stageId: found[2],
+				url: `https://www.npmjs.com/package/${found[1]}`,
+			},
 		};
+	}
+
+	page(name: string, version: string): string {
+		return `https://www.npmjs.com/package/${name}/v/${version}`;
 	}
 
 	/** `npm stage` arrived in npm 11.15; older CLIs die with a bare "Unknown command". */

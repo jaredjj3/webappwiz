@@ -129,8 +129,8 @@ describe("release", () => {
 			"Version 1.2.4",
 			"Stage @scope/one@1.2.4",
 			"Stage @scope/two@1.2.4",
-			"Approve @scope/one@1.2.4",
-			"Approve @scope/two@1.2.4",
+			"Live @scope/one@1.2.4",
+			"Live @scope/two@1.2.4",
 			"Push branch",
 			"Tag v1.2.4",
 			"Push v1.2.4",
@@ -147,6 +147,69 @@ describe("release", () => {
 				stageId: "id-/repo/packages/two",
 			},
 		]);
+	});
+
+	it("waits out a registry's scan, backing off, before it tags", async () => {
+		ps.setEnv({ WEBAPPWIZ_SHIP_EVENTS: "/repo/events.jsonl" });
+		registry.scanning = true;
+		const timer = new FakeTimer();
+		const tagged: string[] = [];
+		git.tag = async (tag: string) => {
+			tagged.push(tag);
+			git.tags.add(tag);
+		};
+
+		const running = release.release({ ...answering("y"), timer });
+		/** Lets the release reach its next wait, then ends it, saying how long it was. */
+		const poll = async () => {
+			await Bun.sleep(0);
+			const delays = timer.timeouts.map((entry) => entry.delay.secs);
+			timer.fireTimeouts();
+			return delays;
+		};
+		const delays = [await poll(), await poll(), await poll()];
+		expect(tagged).toEqual([]);
+		registry.has.add("@scope/one@1.2.4");
+		registry.has.add("@scope/two@1.2.4");
+		await Bun.sleep(0);
+		timer.fireTimeouts();
+		await running;
+
+		expect(delays).toEqual([[10], [20], [40]]);
+		expect(tagged).toEqual(["v1.2.4"]);
+		const checks = (await events()).filter((event) => event.type === "check");
+		expect(checks[0]).toMatchObject({
+			name: "Live @scope/one@1.2.4",
+			passed: false,
+			status: "pending",
+			url: "https://registry/@scope/one/v/1.2.4",
+		});
+		expect(checks.at(-1)).toMatchObject({
+			name: "Live @scope/two@1.2.4",
+			passed: true,
+		});
+		expect(said()).toContain("not live yet");
+	});
+
+	it("only waits on a version the registry took on a run that was lost", async () => {
+		// The run that died got both packages to the registry but wrote down
+		// neither, so this one publishes into a 409.
+		await fs.write(
+			"/repo/RELEASE",
+			JSON.stringify({ version: "1.2.4", done: [] }),
+		);
+		registry.scanning = true;
+		registry.accepted.add("/repo/packages/one");
+		registry.accepted.add("/repo/packages/two");
+		// npm answers each version absent while it scans, through both publishes.
+		let views = 0;
+		registry.published = async () => ++views > 2;
+
+		await release.release({ ...answering("y"), timer: new FakeTimer() });
+
+		expect(registry.publishes).toEqual([]);
+		expect(said()).toContain("already accepted");
+		expect(said()).toContain("shipped 1.2.4");
 	});
 
 	it("writes every declared step and its transitions as JSON lines", async () => {
@@ -331,6 +394,7 @@ describe("release", () => {
 		const order: string[] = [];
 		registry.publish = async (dir: string) => {
 			order.push(`publish ${dir}`);
+			return {};
 		};
 		git.tag = async (tag: string) => {
 			order.push(`tag ${tag}`);

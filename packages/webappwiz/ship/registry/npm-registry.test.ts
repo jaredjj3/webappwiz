@@ -37,9 +37,45 @@ describe("npm registry", () => {
 		const staged = await new NpmRegistry({ ps }).publish("/repo/packages/one");
 
 		expect(staged).toEqual({
-			stageId: "st-123",
-			url: "https://www.npmjs.com/package/@scope/one",
+			staged: {
+				stageId: "st-123",
+				url: "https://www.npmjs.com/package/@scope/one",
+			},
 		});
+	});
+
+	it("takes npm's 409 for a version it already has, still scanning or not", async () => {
+		ps.simulate(async () =>
+			ps.getCalls().at(-1) === "npm stage publish --access public" ? 1 : 0,
+		);
+		ps.setCaptureOutput(
+			"11.15.0\n",
+			"npm error code E409\nnpm error 409 Conflict - Cannot stage previously published version\n",
+		);
+
+		expect(await new NpmRegistry({ ps }).publish("/repo/packages/one")).toEqual(
+			{ already: true },
+		);
+	});
+
+	it("still fails a stage npm refuses for any other reason", async () => {
+		ps.simulate(async () =>
+			ps.getCalls().at(-1) === "npm stage publish --access public" ? 1 : 0,
+		);
+		ps.setCaptureOutput("11.15.0\n", "npm error code E403\n");
+
+		await expect(
+			new NpmRegistry({ ps }).publish("/repo/packages/one"),
+		).rejects.toThrow("stage publish failed in /repo/packages/one");
+	});
+
+	it("waits on the scan and links each version's page", () => {
+		const registry = new NpmRegistry({ ps });
+
+		expect(registry.scans).toBe(true);
+		expect(registry.page("@scope/one", "1.2.4")).toBe(
+			"https://www.npmjs.com/package/@scope/one/v/1.2.4",
+		);
 	});
 
 	it("fails when npm stages without printing an id", async () => {

@@ -6,6 +6,20 @@ export interface StagedPackage {
 	url: string;
 }
 
+/**
+ * What a registry took from one publish. Either way it now has the version,
+ * though it may not serve it yet: it is accepted, and live once installable.
+ */
+export interface Publication {
+	/**
+	 * The registry had this version already, as npm answers a retry of one it
+	 * took but is still scanning, so nothing went out this time.
+	 */
+	readonly already?: boolean;
+	/** Set when the registry holds the version until somebody approves it. */
+	readonly staged?: StagedPackage;
+}
+
 /** The package registry, as a release touches it. */
 export interface Registry {
 	/**
@@ -14,13 +28,22 @@ export interface Registry {
 	 * before it tags.
 	 */
 	readonly staged?: boolean;
+	/**
+	 * Whether the registry checks each version it accepts before serving it,
+	 * as npm scans every publish for malware. A release then waits for
+	 * `published` to turn true before it tags. A registry with no scan serves
+	 * what it accepts at once.
+	 */
+	readonly scans?: boolean;
+	/** Whether `version` of `name` is live: installable, not merely accepted. */
 	published(name: string, version: string): Promise<boolean>;
 	/** The version an install of `name` gets now, or `undefined` before any is out. */
 	deployed(name: string): Promise<string | undefined>;
 	/**
 	 * Publishes the package in `dir`, logging in along the way if that is what
-	 * publishing here takes. Throws if it does not go out. A registry that
-	 * stages says what it staged.
+	 * publishing here takes. Throws if the registry does not take it.
 	 */
-	publish(dir: string): Promise<StagedPackage | undefined>;
+	publish(dir: string): Promise<Publication>;
+	/** Where a person can see `version` of `name`, and why it is not live yet. */
+	page?(name: string, version: string): string;
 }

@@ -24,7 +24,8 @@ commit, and carry each artifact out. `bump` says how far the version moves, and
 ## Declaration order does not matter
 
 Every artifact carries a stage: a `stamp` goes into the release commit, packages
-`publish`, then (for a registry that stages) `approve`, then the `tag` goes on, then the `notes` are written about it. A
+`publish`, then (for a registry that stages or scans) wait in `approve` until
+each is live, then the `tag` goes on, then the `notes` are written about it. A
 release runs its artifacts by stage, so this declaration goes out in exactly the
 same order as the one above:
 
@@ -212,7 +213,7 @@ file is written.
 | `declared` | `stage` (as in the plan), `packages` (string array), `artifact` (when declared by one), `deadlineMs` |
 | `started`  | none                                                                                           |
 | `staged`   | `package`, `version`, `stageId` (what `npm stage approve` takes) and `url`, the npm page to approve it on |
-| `check`    | `passed` (boolean), one per poll of a step's check                                             |
+| `check`    | `passed` (boolean), one per poll of a step's check; a failed one may add `status` and `url` (see What is live) |
 | `done`     | none                                                                                           |
 | `skipped`  | none: a resumed release found the step already landed                                          |
 | `failed`   | `error`, the message; the release stops after it                                               |
@@ -236,18 +237,33 @@ unchanged.
 
 ## What is live
 
-A release pushes versions out and moves on: it never waits for a registry or
-its CDN to serve what it published, so the tag goes on as soon as the last
-package is out. The exception is a registry that stages. `releases.npm` runs
-`npm stage publish` (npm CLI 11.15+, so a stage-only `NPM_TOKEN` works), which
-holds each version until a person approves it on npmjs.com or with
-`npm stage approve <stage-id>`. It declares a `Stage` step per package, each
-reporting a `staged` event, then an `Approve` step per package, in the `approve`
-stage, that polls the registry up to an hour, so every package is staged before
-any wait and the tag never names a version that is not live. A brand-new package
-cannot be staged: publish its first version by hand. Whether a version is installable yet is for whoever needs it
-to ask. `status()` reads back what is live. Every artifact
-that can say what it has live answers `deployed()`, and `status()` asks them
+A release finishes only once every package it publishes is live: installable,
+not merely accepted. npm scans every publish for malware before it serves it,
+typically for about five minutes and fifteen at its busiest, and may hold a
+version for a person at npm to review; while it scans, `npm view` says the
+version does not exist, yet publishing it again fails with a 409. So
+`releases.npm` declares a `Live` step per package, in the `approve` stage after
+every package went out, that polls the registry, backing off from 10 seconds to
+every 2 minutes, and never gives up. Each failed poll's `check` event carries
+`status`: `pending` at first, then `held` once 20 minutes have gone by, when the
+release also says the registry may be holding it for review, and `url`, the
+version's page on npm. A rerun of a release whose publish npm took (its 409)
+counts the version accepted, publishes nothing, and only waits again.
+
+The tag goes on once every package is live, so it never names a version that
+is not installable. npm reports no block to poll for, so a version it blocks
+never goes live and its release waits until somebody stops it. A registry with no
+scan or staging (`Registry.scans` and `staged` both unset) serves what it
+accepts at once, and the release tags without a wait.
+
+`releases.npm` runs `npm stage publish` (npm CLI 11.15+, so a stage-only
+`NPM_TOKEN` works), which holds each version until a person approves it on
+npmjs.com or with `npm stage approve <stage-id>`. Its `Stage` step per package
+reports a `staged` event, and every package stages before any `Live` wait, so
+a person approves them in one sitting; the scan follows each approval. A
+brand-new package cannot be staged: publish its first version by hand.
+
+`status()` reads back what is live. Every artifact that can say what it has live answers `deployed()`, and `status()` asks them
 all beside the workspace's own version, so a caller can show what lags:
 
 ```ts

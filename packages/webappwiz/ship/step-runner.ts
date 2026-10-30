@@ -2,7 +2,9 @@ import { Duration, SystemTimer, type Timer } from "webappwiz/time";
 import type { Cut } from "./cut";
 import type { StepDeclaration, StepEvents } from "./step-events";
 
+/** The first wait between checks, doubling each time up to `CHECK_BACKOFF_MAX`. */
 const CHECK_INTERVAL = Duration.secs(10);
+const CHECK_BACKOFF_MAX = Duration.mins(2);
 
 /** Runs declared work and its checks, reporting every transition. */
 export class StepRunner {
@@ -31,13 +33,18 @@ export class StepRunner {
 			await declaration.step.run(cut, {
 				staged: (info) => this.events.staged(declaration, info),
 			});
+			let waited = Duration.zero();
+			let interval = CHECK_INTERVAL;
 			while (declaration.step.check !== undefined) {
-				const passed = await declaration.step.check(cut);
-				await this.events.check(declaration, passed);
-				if (passed) {
+				const found = await declaration.step.check(cut, waited);
+				const report = typeof found === "boolean" ? { passed: found } : found;
+				await this.events.check(declaration, report);
+				if (report.passed) {
 					break;
 				}
-				await this.wait();
+				await this.wait(interval);
+				waited = waited.add(interval);
+				interval = Duration.min(interval.multiply(2), CHECK_BACKOFF_MAX);
 			}
 			await this.events.done(declaration);
 		} catch (error) {
@@ -46,12 +53,12 @@ export class StepRunner {
 		}
 	}
 
-	private async wait(): Promise<void> {
+	private async wait(interval: Duration): Promise<void> {
 		await new Promise<void>((resolve) => {
 			const waiting = this.timer.setTimeout(() => {
 				waiting.dispose();
 				resolve();
-			}, CHECK_INTERVAL);
+			}, interval);
 		});
 	}
 }

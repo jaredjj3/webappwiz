@@ -1,8 +1,8 @@
 import type { Fs } from "webappwiz/system";
 import { SystemWallClock, type WallClock } from "webappwiz/time";
-import type { Step, StepStage } from "./step";
+import type { CheckReport, Step, StepStage } from "./step";
 
-/** The version of the event line shape; grows only by adding fields. */
+/** Check an event line's `schema` against this before reading the rest of it. */
 export const EVENTS_SCHEMA = 1 as const;
 
 /** The states a progress line reports; the vocabulary of `wiz dev ship plan` ids. */
@@ -58,12 +58,17 @@ export class StepEvents {
 		});
 	}
 
-	async check(declaration: StepDeclaration, passed: boolean): Promise<void> {
+	async check(
+		declaration: StepDeclaration,
+		{ passed, status, url }: CheckReport,
+	): Promise<void> {
 		await this.write({
 			type: "check",
 			id: declaration.id,
 			name: declaration.step.name,
 			passed,
+			...(status === undefined ? {} : { status }),
+			...(url === undefined ? {} : { url }),
 			at: this.at(),
 		});
 	}
@@ -145,6 +150,10 @@ export interface StepStagedEvent extends StepEvent {
 export interface StepCheckEvent extends StepEvent {
 	readonly type: "check";
 	readonly passed: boolean;
+	/** What a failed check still waits on, when its step says. */
+	readonly status?: string;
+	/** Where a person can look into it. */
+	readonly url?: string;
 }
 
 export interface StepDoneEvent extends StepEvent {

@@ -1,18 +1,26 @@
-import type { Registry, StagedPackage } from "./registry";
+import type { Publication, Registry, StagedPackage } from "./registry";
 
 /** A test registry whose published versions and publish calls are easy to set and read. */
 export class FakeRegistry implements Registry {
 	/** Entries read `name@version`. */
 	readonly has = new Set<string>();
 	readonly publishes: string[] = [];
+	/** Directories whose publish the registry took already, answering a retry with `already`. */
+	readonly accepted = new Set<string>();
 	/** Name to the version installs get, as `latest` reads on npm. */
 	readonly latest = new Map<string, string>();
 	fails?: string;
 	/** Makes `publish` stage, reporting this for each directory. */
 	staging?: (dir: string) => StagedPackage;
+	/** Makes the registry scan what it accepts, as npm does. */
+	scanning?: boolean;
 
 	get staged(): boolean {
 		return this.staging !== undefined;
+	}
+
+	get scans(): boolean {
+		return this.scanning === true;
 	}
 
 	async published(name: string, version: string): Promise<boolean> {
@@ -23,11 +31,19 @@ export class FakeRegistry implements Registry {
 		return this.latest.get(name);
 	}
 
-	async publish(dir: string): Promise<StagedPackage | undefined> {
+	async publish(dir: string): Promise<Publication> {
 		if (dir === this.fails) {
 			throw new Error(`publish failed in ${dir}`);
 		}
+		if (this.accepted.has(dir)) {
+			return { already: true };
+		}
 		this.publishes.push(dir);
-		return this.staging?.(dir);
+		const staged = this.staging?.(dir);
+		return staged === undefined ? {} : { staged };
+	}
+
+	page(name: string, version: string): string {
+		return `https://registry/${name}/v/${version}`;
 	}
 }

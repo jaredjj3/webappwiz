@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { MemoryLogger } from "webappwiz/log";
+import { Duration } from "webappwiz/time";
 import { Cut } from "../cut";
 import { FakeRegistry } from "./fake-registry";
 import { RegistryArtifact } from "./registry-artifact";
@@ -78,7 +79,7 @@ describe("registry artifact", () => {
 
 		expect(steps.map((step) => [step.name, step.stage])).toEqual([
 			["Stage @scope/one@1.2.4", "publish"],
-			["Approve @scope/one@1.2.4", "approve"],
+			["Live @scope/one@1.2.4", "approve"],
 		]);
 		await steps[0]?.run(cut, {
 			staged: async (info) => {
@@ -93,8 +94,66 @@ describe("registry artifact", () => {
 				url: "https://npm/one",
 			},
 		]);
-		expect(await steps[1]?.check?.(cut)).toBe(false);
+		expect(await steps[1]?.check?.(cut, Duration.zero())).toMatchObject({
+			passed: false,
+		});
 		registry.has.add("@scope/one@1.2.4");
-		expect(await steps[1]?.check?.(cut)).toBe(true);
+		expect(await steps[1]?.check?.(cut, Duration.secs(10))).toEqual({
+			passed: true,
+		});
+	});
+
+	it("waits for a scanning registry to serve what it accepted", async () => {
+		const cut = cutting();
+		const registry = new FakeRegistry();
+		registry.scanning = true;
+		const steps = new RegistryArtifact("@scope/one", registry).steps(cut);
+
+		expect(steps.map((step) => step.name)).toEqual([
+			"Publish @scope/one@1.2.4",
+			"Live @scope/one@1.2.4",
+		]);
+		await steps[0]?.run(cut);
+		expect(await steps[1]?.check?.(cut, Duration.zero())).toEqual({
+			passed: false,
+			status: "pending",
+			url: "https://registry/@scope/one/v/1.2.4",
+		});
+		registry.has.add("@scope/one@1.2.4");
+		expect(await steps[1]?.check?.(cut, Duration.mins(5))).toEqual({
+			passed: true,
+		});
+	});
+
+	it("says a version may be held once it is long past the usual scan", async () => {
+		const log = new MemoryLogger();
+		const cut = new Cut("1.2.4", [], { log });
+		const registry = new FakeRegistry();
+		registry.scanning = true;
+		const artifact = new RegistryArtifact("@scope/one", registry);
+
+		expect(await artifact.live(cut, Duration.mins(19))).toMatchObject({
+			status: "pending",
+		});
+		expect(await artifact.live(cut, Duration.mins(20))).toEqual({
+			passed: false,
+			status: "held",
+			url: "https://registry/@scope/one/v/1.2.4",
+		});
+		await artifact.live(cut, Duration.mins(22));
+		const held = log.entries
+			.map((entry) => String(entry.message))
+			.filter((line) => line.includes("for review"));
+		expect(held).toHaveLength(1);
+		expect(held[0]).toContain("https://registry/@scope/one/v/1.2.4");
+	});
+
+	it("waits on a version the registry already took, publishing nothing", async () => {
+		const registry = new FakeRegistry();
+		registry.accepted.add("/repo/packages/one");
+
+		await new RegistryArtifact("@scope/one", registry).publish(cutting());
+
+		expect(registry.publishes).toEqual([]);
 	});
 });

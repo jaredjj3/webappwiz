@@ -16,15 +16,25 @@ export interface StepReport {
 	}): Promise<void>;
 }
 
+/** What one poll of a step's check found, for a check with more to say than pass or fail. */
+export interface CheckReport {
+	readonly passed: boolean;
+	/** What the step is still waiting on, in a word, such as `pending` or `held`. */
+	readonly status?: string;
+	/** Where a person can look into what it waits on. */
+	readonly url?: string;
+}
+
 /**
  * One named unit of release work. A deadline tells callers when to consider the
- * step hung; it never cancels the work. A check, when present, retries until it
- * confirms that the work really landed.
+ * step hung; it never cancels the work. A check, when present, retries, backing
+ * off, until it confirms that the work really landed; `waited` is how long it
+ * has waited so far.
  */
 export interface Step {
 	readonly name: string;
 	readonly deadline: Duration;
 	readonly stage?: StepStage;
 	run(cut: Cut, report?: StepReport): Promise<void>;
-	check?(cut: Cut): Promise<boolean>;
+	check?(cut: Cut, waited: Duration): Promise<boolean | CheckReport>;
 }

@@ -8,7 +8,11 @@ export type { CliGithubOptions } from "./github/cli-github";
 export type { Github } from "./github/github";
 export { order } from "./order";
 export type { NpmRegistryOptions } from "./registry/npm-registry";
-export type { Registry } from "./registry/registry";
+export type {
+	Publication,
+	Registry,
+	StagedPackage,
+} from "./registry/registry";
 export {
 	type DeployedArtifact,
 	type PlannedStep,
@@ -21,7 +25,7 @@ export {
 } from "./release";
 export { releases, type WorkspaceReleaseOptions } from "./releases";
 export type { SkillArtifactOptions } from "./skill-artifact";
-export type { Step, StepStage } from "./step";
+export type { CheckReport, Step, StepStage } from "./step";
 export type {
 	ReleaseStepEvent,
 	StepCheckEvent,
